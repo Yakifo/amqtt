@@ -440,7 +440,8 @@ class Broker:
                                 client_session,
                                 client_session.will_topic,
                                 client_session.will_message,
-                                client_session.will_qos)
+                                client_session.will_qos
+                                )
                             if client_session.will_retain:
                                 self.retain_message(client_session,
                                                     client_session.will_topic,
@@ -493,7 +494,7 @@ class Broker:
                     yield from self.plugins_manager.fire_event(EVENT_BROKER_MESSAGE_RECEIVED,
                                                                client_id=client_session.client_id,
                                                                message=app_message)
-                    yield from self._broadcast_message(client_session, app_message.topic, app_message.data)
+                    yield from self._broadcast_message_acl(client_session, app_message.topic, app_message.data)
                     if app_message.publish_packet.retain_flag:
                         self.retain_message(client_session, app_message.topic, app_message.data, app_message.qos)
                     wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message(), loop=self._loop)
@@ -598,6 +599,7 @@ class Broker:
         return topic_result
 
     def retain_message(self, source_session, topic_name, data, qos=None):
+        print("RETAIN M")
         if data is not None and data != b'':
             # If retained flag set, store the message for further subscriptions
             self.logger.debug("Retaining message on topic %s" % topic_name)
@@ -725,8 +727,22 @@ class Broker:
             if running_tasks:
                 yield from asyncio.wait(running_tasks, loop=self._loop)
 
+
+
+
+    @asyncio.coroutine
+    def _broadcast_message_acl(self, session, topic, data, force_qos=None):
+        permitted = yield from self.topic_filtering(session, topic=topic)
+
+        if permitted:
+            yield from self._broadcast_message(session, topic, data, force_qos)
+
+
     @asyncio.coroutine
     def _broadcast_message(self, session, topic, data, force_qos=None):
+
+        print("data"+str(data))
+
         broadcast = {
             'session': session,
             'topic': topic,
@@ -738,6 +754,8 @@ class Broker:
 
     @asyncio.coroutine
     def publish_session_retained_messages(self, session):
+        print("111111#############################")
+        print(session)
         self.logger.debug("Publishing %d messages retained for session %s" %
                           (session.retained_messages.qsize(), format_client_message(session=session))
                           )
