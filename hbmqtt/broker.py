@@ -440,8 +440,7 @@ class Broker:
                                 client_session,
                                 client_session.will_topic,
                                 client_session.will_message,
-                                client_session.will_qos
-                                )
+                                client_session.will_qos)
                             if client_session.will_retain:
                                 self.retain_message(client_session,
                                                     client_session.will_topic,
@@ -599,7 +598,6 @@ class Broker:
         return topic_result
 
     def retain_message(self, source_session, topic_name, data, qos=None):
-        print("RETAIN M")
         if data is not None and data != b'':
             # If retained flag set, store the message for further subscriptions
             self.logger.debug("Retaining message on topic %s" % topic_name)
@@ -727,9 +725,6 @@ class Broker:
             if running_tasks:
                 yield from asyncio.wait(running_tasks, loop=self._loop)
 
-
-
-
     @asyncio.coroutine
     def _broadcast_message_acl(self, session, topic, data, force_qos=None):
         permitted = yield from self.topic_filtering(session, topic=topic)
@@ -737,12 +732,8 @@ class Broker:
         if permitted:
             yield from self._broadcast_message(session, topic, data, force_qos)
 
-
     @asyncio.coroutine
     def _broadcast_message(self, session, topic, data, force_qos=None):
-
-        print("data"+str(data))
-
         broadcast = {
             'session': session,
             'topic': topic,
