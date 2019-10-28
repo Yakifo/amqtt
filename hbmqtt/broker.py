@@ -745,8 +745,6 @@ class Broker:
 
     @asyncio.coroutine
     def publish_session_retained_messages(self, session):
-        print("111111#############################")
-        print(session)
         self.logger.debug("Publishing %d messages retained for session %s" %
                           (session.retained_messages.qsize(), format_client_message(session=session))
                           )
