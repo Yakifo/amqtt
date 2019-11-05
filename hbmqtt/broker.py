@@ -728,6 +728,7 @@ class Broker:
     @asyncio.coroutine
     def _broadcast_message_acl(self, session, topic, data, force_qos=None):
         permitted = yield from self.topic_filtering(session, topic=topic)
+        
         if permitted:
             yield from self._broadcast_message(session, topic, data, force_qos)
 
