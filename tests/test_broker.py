@@ -446,7 +446,7 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
     ret = await sub_client.subscribe([("+/monitor/Clients", QOS_0)])
     assert ret == [QOS_0]
 
-    await _client_publish("/test/monitor/Clients", b"data", QOS_0)
+    await _client_publish("test/monitor/Clients", b"data", QOS_0)
     message = await sub_client.deliver_message()
     assert message is not None
 
@@ -500,3 +500,39 @@ async def _client_publish(topic, data, qos, retain=False):
     ret = await pub_client.publish(topic, data, qos, retain)
     await pub_client.disconnect()
     return ret
+
+
+def test_matches_multi_level_wildcard(broker):
+    test_filter = "sport/tennis/player1/#"
+
+    for bad_topic in [
+        "sport/tennis",
+        "sport/tennis/",
+    ]:
+        assert not broker.matches(bad_topic, test_filter)
+
+    for good_topic in [
+        "sport/tennis/player1",
+        "sport/tennis/player1/",
+        "sport/tennis/player1/ranking",
+        "sport/tennis/player1/score/wimbledon",
+    ]:
+        assert broker.matches(good_topic, test_filter)
+
+
+def test_matches_single_level_wildcard(broker):
+    test_filter = "sport/tennis/+"
+
+    for bad_topic in [
+        "sport/tennis",
+        "sport/tennis/player1/",
+        "sport/tennis/player1/ranking",
+    ]:
+        assert not broker.matches(bad_topic, test_filter)
+
+    for good_topic in [
+        "sport/tennis/",
+        "sport/tennis/player1",
+        "sport/tennis/player2",
+    ]:
+        assert broker.matches(good_topic, test_filter)
