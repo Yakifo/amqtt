@@ -847,11 +847,12 @@ class Broker:
         else:
             # else use regex
             match_pattern = re.compile(
-                a_filter.replace("#", ".*")
-                .replace("$", "\$")
-                .replace("+", "[/\$\s\w\d]+")
+                re.escape(a_filter)
+                .replace("\\#", "?.*")
+                .replace("\\+", "[^/]*")
+                .lstrip("?")
             )
-            return match_pattern.match(topic)
+            return match_pattern.fullmatch(topic)
 
     async def _broadcast_loop(self):
         running_tasks = deque()
