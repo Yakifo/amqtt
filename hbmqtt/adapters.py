@@ -115,7 +115,10 @@ class WebSocketsWriter(WriterAdapter):
         self._stream = io.BytesIO(b'')
 
     def get_peer_info(self):
-        return self._protocol.remote_address
+        # remote_address can be either a 4-tuple or 2-tuple depending on whether
+        # it is an IPv6 or IPv4 address, so we take their shared (host, port)
+        # prefix here to present a uniform return value.
+        return self._protocol.remote_address[:2]
 
     async def close(self):
         await self._protocol.close()
