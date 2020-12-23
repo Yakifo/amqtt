@@ -473,6 +473,7 @@ class Broker:
                         client_session.client_id,
                     )
                     old_session = self._sessions[client_session.client_id]
+                    await old_session[1].handle_connection_closed()
                     await old_session[1].stop()
                     break
                 else:
