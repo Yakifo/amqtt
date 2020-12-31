@@ -57,13 +57,12 @@ class MQTTClientTest(unittest.TestCase):
         shutil.rmtree(self.temp_dir)
 
     def test_connect_tcp(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 client = MQTTClient()
-                yield from client.connect('mqtt://test.mosquitto.org/')
+                await client.connect('mqtt://test.mosquitto.org/')
                 self.assertIsNotNone(client.session)
-                yield from client.disconnect()
+                await client.disconnect()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -74,13 +73,12 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_connect_tcp_secure(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 client = MQTTClient(config={'check_hostname': False})
-                yield from client.connect('mqtts://test.mosquitto.org/', cafile=self.ca_file)
+                await client.connect('mqtts://test.mosquitto.org/', cafile=self.ca_file)
                 self.assertIsNotNone(client.session)
-                yield from client.disconnect()
+                await client.disconnect()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -91,12 +89,11 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_connect_tcp_failure(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 config = {'auto_reconnect': False}
                 client = MQTTClient(config=config)
-                yield from client.connect('mqtt://127.0.0.1/')
+                await client.connect('mqtt://127.0.0.1/')
             except ConnectException as e:
                 future.set_result(True)
 
@@ -106,16 +103,15 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_connect_ws(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('ws://127.0.0.1:8080/')
+                await client.connect('ws://127.0.0.1:8080/')
                 self.assertIsNotNone(client.session)
-                yield from client.disconnect()
-                yield from broker.shutdown()
+                await client.disconnect()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -126,20 +122,19 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_reconnect_ws_retain_username_password(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('ws://fred:password@127.0.0.1:8080/')
+                await client.connect('ws://fred:password@127.0.0.1:8080/')
                 self.assertIsNotNone(client.session)
-                yield from client.disconnect()
-                yield from client.reconnect()
+                await client.disconnect()
+                await client.reconnect()
 
                 self.assertIsNotNone(client.session.username)
                 self.assertIsNotNone(client.session.password)
-                yield from broker.shutdown()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -150,16 +145,15 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_connect_ws_secure(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('ws://127.0.0.1:8081/', cafile=self.ca_file)
+                await client.connect('ws://127.0.0.1:8081/', cafile=self.ca_file)
                 self.assertIsNotNone(client.session)
-                yield from client.disconnect()
-                yield from broker.shutdown()
+                await client.disconnect()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -170,17 +164,16 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_ping(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('mqtt://127.0.0.1/')
+                await client.connect('mqtt://127.0.0.1/')
                 self.assertIsNotNone(client.session)
-                yield from client.ping()
-                yield from client.disconnect()
-                yield from broker.shutdown()
+                await client.ping()
+                await client.disconnect()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -191,15 +184,14 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_subscribe(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('mqtt://127.0.0.1/')
+                await client.connect('mqtt://127.0.0.1/')
                 self.assertIsNotNone(client.session)
-                ret = yield from client.subscribe([
+                ret = await client.subscribe([
                     ('$SYS/broker/uptime', QOS_0),
                     ('$SYS/broker/uptime', QOS_1),
                     ('$SYS/broker/uptime', QOS_2),
@@ -207,8 +199,8 @@ class MQTTClientTest(unittest.TestCase):
                 self.assertEqual(ret[0], QOS_0)
                 self.assertEqual(ret[1], QOS_1)
                 self.assertEqual(ret[2], QOS_2)
-                yield from client.disconnect()
-                yield from broker.shutdown()
+                await client.disconnect()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -219,21 +211,20 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_unsubscribe(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('mqtt://127.0.0.1/')
+                await client.connect('mqtt://127.0.0.1/')
                 self.assertIsNotNone(client.session)
-                ret = yield from client.subscribe([
+                ret = await client.subscribe([
                     ('$SYS/broker/uptime', QOS_0),
                 ])
                 self.assertEqual(ret[0], QOS_0)
-                yield from client.unsubscribe(['$SYS/broker/uptime'])
-                yield from client.disconnect()
-                yield from broker.shutdown()
+                await client.unsubscribe(['$SYS/broker/uptime'])
+                await client.disconnect()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -246,29 +237,28 @@ class MQTTClientTest(unittest.TestCase):
     def test_deliver(self):
         data = b'data'
 
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('mqtt://127.0.0.1/')
+                await client.connect('mqtt://127.0.0.1/')
                 self.assertIsNotNone(client.session)
-                ret = yield from client.subscribe([
+                ret = await client.subscribe([
                     ('test_topic', QOS_0),
                 ])
                 self.assertEqual(ret[0], QOS_0)
                 client_pub = MQTTClient()
-                yield from client_pub.connect('mqtt://127.0.0.1/')
-                yield from client_pub.publish('test_topic', data, QOS_0)
-                yield from client_pub.disconnect()
-                message = yield from client.deliver_message()
+                await client_pub.connect('mqtt://127.0.0.1/')
+                await client_pub.publish('test_topic', data, QOS_0)
+                await client_pub.disconnect()
+                message = await client.deliver_message()
                 self.assertIsNotNone(message)
                 self.assertIsNotNone(message.publish_packet)
                 self.assertEqual(message.data, data)
-                yield from client.unsubscribe(['$SYS/broker/uptime'])
-                yield from client.disconnect()
-                yield from broker.shutdown()
+                await client.unsubscribe(['$SYS/broker/uptime'])
+                await client.disconnect()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
@@ -279,23 +269,22 @@ class MQTTClientTest(unittest.TestCase):
             raise future.exception()
 
     def test_deliver_timeout(self):
-        @asyncio.coroutine
-        def test_coro():
+        async def test_coro():
             try:
                 broker = Broker(broker_config, plugin_namespace="hbmqtt.test.plugins")
-                yield from broker.start()
+                await broker.start()
                 client = MQTTClient()
-                yield from client.connect('mqtt://127.0.0.1/')
+                await client.connect('mqtt://127.0.0.1/')
                 self.assertIsNotNone(client.session)
-                ret = yield from client.subscribe([
+                ret = await client.subscribe([
                     ('test_topic', QOS_0),
                 ])
                 self.assertEqual(ret[0], QOS_0)
                 with self.assertRaises(asyncio.TimeoutError):
-                    yield from client.deliver_message(timeout=2)
-                yield from client.unsubscribe(['$SYS/broker/uptime'])
-                yield from client.disconnect()
-                yield from broker.shutdown()
+                    await client.deliver_message(timeout=2)
+                await client.unsubscribe(['$SYS/broker/uptime'])
+                await client.disconnect()
+                await broker.shutdown()
                 future.set_result(True)
             except Exception as ae:
                 future.set_exception(ae)
