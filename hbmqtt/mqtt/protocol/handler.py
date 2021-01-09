@@ -432,7 +432,7 @@ class ProtocolHandler:
 
     async def _send_packet(self, packet):
         try:
-            with (await self._write_lock):
+            async with self._write_lock:
                 await packet.to_stream(self.writer)
             if self._keepalive_task:
                 self._keepalive_task.cancel()
