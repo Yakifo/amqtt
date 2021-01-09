@@ -62,7 +62,7 @@ class PluginManager:
         for ep in pkg_resources.iter_entry_points(group=namespace):
             plugin = self._load_plugin(ep)
             self._plugins.append(plugin)
-            self.logger.debug(" Plugin %s ready" % plugin.ep.name)
+            self.logger.debug(" Plugin %s ready" % ep.name)
 
     def _load_plugin(self, ep: pkg_resources.EntryPoint):
         try:
