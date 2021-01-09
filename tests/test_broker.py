@@ -60,6 +60,9 @@ class BrokerTest(unittest.TestCase):
         asyncio.set_event_loop(self.loop)
 
     def tearDown(self):
+        pending = asyncio.all_tasks(loop=self.loop)
+        self.loop.run_until_complete(asyncio.gather(*pending))
+
         self.loop.close()
 
     @patch('hbmqtt.broker.PluginManager')
