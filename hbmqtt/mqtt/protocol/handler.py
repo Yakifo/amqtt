@@ -408,7 +408,7 @@ class ProtocolHandler:
                         if task:
                             running_tasks.append(task)
                 else:
-                    self.logger.debug("No more data (EOF received), stopping reader coro")
+                    self.logger.debug("%s No more data (EOF received), stopping reader coro" % self.session.client_id)
                     break
             except MQTTException:
                 self.logger.debug("Message discarded")
@@ -416,10 +416,10 @@ class ProtocolHandler:
                 self.logger.debug("Task cancelled, reader loop ending")
                 break
             except asyncio.TimeoutError:
-                self.logger.debug("Input stream read timeout")
+                self.logger.debug("%s Input stream read timeout" % self.session.client_id)
                 self.handle_read_timeout()
             except NoDataException:
-                self.logger.debug("No data available")
+                self.logger.debug("%s No data available" % self.session.client_id)
             except BaseException as e:
                 self.logger.warning("%s Unhandled exception in reader coro: %r" % (type(self).__name__, e))
                 break

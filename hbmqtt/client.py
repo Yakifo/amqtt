@@ -443,7 +443,7 @@ class MQTTClient:
             while self.client_tasks:
                 task = self.client_tasks.popleft()
                 if not task.done():
-                    task.cancel()
+                    task.set_exception(ClientException("Connection lost"))
 
         self.logger.debug("Watch broker disconnection")
         # Wait for disconnection from broker (like connection lost)

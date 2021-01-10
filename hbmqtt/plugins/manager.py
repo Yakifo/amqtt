@@ -147,8 +147,7 @@ class PluginManager:
         if wait:
             if tasks:
                 await asyncio.wait(tasks, loop=self._loop)
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug("Plugins len(_fired_events)=%d" % (len(self._fired_events)))
+        self.logger.debug("Plugins len(_fired_events)=%d" % (len(self._fired_events)))
 
     async def map(self, coro, *args, **kwargs):
         """
