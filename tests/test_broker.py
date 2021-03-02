@@ -27,7 +27,7 @@ from hbmqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.DEBUG, format=formatter)
+logging.basicConfig(level=logging.INFO, format=formatter)
 log = logging.getLogger(__name__)
 
 test_config = {

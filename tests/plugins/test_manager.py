@@ -7,7 +7,7 @@ import asyncio
 from hbmqtt.plugins.manager import PluginManager
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=formatter)
+logging.basicConfig(level=logging.CRITICAL, format=formatter)
 
 
 class TestPlugin:

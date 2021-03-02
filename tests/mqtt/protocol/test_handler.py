@@ -17,7 +17,7 @@ from hbmqtt.mqtt.pubrel import PubrelPacket
 from hbmqtt.mqtt.pubcomp import PubcompPacket
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.DEBUG, format=formatter)
+logging.basicConfig(level=logging.CRITICAL, format=formatter)
 log = logging.getLogger(__name__)
 
 

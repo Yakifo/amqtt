@@ -11,7 +11,7 @@ from hbmqtt.plugins.manager import BaseContext
 from hbmqtt.plugins.persistence import SQLitePlugin
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.DEBUG, format=formatter)
+logging.basicConfig(level=logging.CRITICAL, format=formatter)
 
 
 class TestSQLitePlugin(unittest.TestCase):

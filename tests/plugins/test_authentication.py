@@ -11,7 +11,7 @@ from hbmqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
 from hbmqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.DEBUG, format=formatter)
+logging.basicConfig(level=logging.CRITICAL, format=formatter)
 
 
 class TestAnonymousAuthPlugin(unittest.TestCase):
