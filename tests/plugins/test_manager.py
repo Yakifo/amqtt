@@ -4,6 +4,9 @@
 import unittest
 import logging
 import asyncio
+
+import pytest
+
 from hbmqtt.plugins.manager import PluginManager
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -39,10 +42,12 @@ class TestPluginManager(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
 
+    @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_load_plugin(self):
         manager = PluginManager("hbmqtt.test.plugins", context=None)
         self.assertTrue(len(manager._plugins) > 0)
 
+    @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_fire_event(self):
         @asyncio.coroutine
         def fire_event():
@@ -55,6 +60,7 @@ class TestPluginManager(unittest.TestCase):
         plugin = manager.get_plugin("event_plugin")
         self.assertTrue(plugin.object.test_flag)
 
+    @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_fire_event_wait(self):
         @asyncio.coroutine
         def fire_event():
@@ -66,6 +72,7 @@ class TestPluginManager(unittest.TestCase):
         plugin = manager.get_plugin("event_plugin")
         self.assertTrue(plugin.object.test_flag)
 
+    @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_map_coro(self):
         @asyncio.coroutine
         def call_coro():
@@ -76,6 +83,7 @@ class TestPluginManager(unittest.TestCase):
         plugin = manager.get_plugin("event_plugin")
         self.assertTrue(plugin.object.test_coro)
 
+    @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_map_coro_return(self):
         @asyncio.coroutine
         def call_coro():
@@ -86,6 +94,7 @@ class TestPluginManager(unittest.TestCase):
         plugin = manager.get_plugin("event_plugin")
         self.assertEqual(ret[plugin], "TEST")
 
+    @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_map_coro_filter(self):
         """
         Run plugin coro but expect no return as an empty filter is given
