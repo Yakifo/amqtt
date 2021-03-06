@@ -19,12 +19,12 @@ class ConnectPacketTest(unittest.TestCase):
         message = self.loop.run_until_complete(ConnectPacket.from_stream(stream))
         self.assertEqual(message.variable_header.proto_name, "MQTT")
         self.assertEqual(message.variable_header.proto_level, 4)
-        self.assertTrue(message.variable_header.username_flag)
-        self.assertTrue(message.variable_header.password_flag)
+        assert message.variable_header.username_flag
+        assert message.variable_header.password_flag
         self.assertFalse(message.variable_header.will_retain_flag)
         self.assertEqual(message.variable_header.will_qos, 1)
-        self.assertTrue(message.variable_header.will_flag)
-        self.assertTrue(message.variable_header.clean_session_flag)
+        assert message.variable_header.will_flag
+        assert message.variable_header.clean_session_flag
         self.assertFalse(message.variable_header.reserved_flag)
         self.assertEqual(message.payload.client_id, '0123456789')
         self.assertEqual(message.payload.will_topic, 'WillTopic')
@@ -38,12 +38,12 @@ class ConnectPacketTest(unittest.TestCase):
         message = self.loop.run_until_complete(ConnectPacket.from_stream(stream))
         self.assertEqual(message.variable_header.proto_name, "MQTT")
         self.assertEqual(message.variable_header.proto_level, 4)
-        self.assertTrue(message.variable_header.username_flag)
-        self.assertTrue(message.variable_header.password_flag)
+        assert message.variable_header.username_flag
+        assert message.variable_header.password_flag
         self.assertFalse(message.variable_header.will_retain_flag)
         self.assertEqual(message.variable_header.will_qos, 1)
         self.assertFalse(message.variable_header.will_flag)
-        self.assertTrue(message.variable_header.clean_session_flag)
+        assert message.variable_header.clean_session_flag
         self.assertFalse(message.variable_header.reserved_flag)
         self.assertEqual(message.payload.client_id, '0123456789')
         self.assertEqual(message.payload.will_topic, None)
@@ -55,7 +55,7 @@ class ConnectPacketTest(unittest.TestCase):
         data = b'\x10\x3e\x00\x04MQTT\x04\xcf\x00\x00\x00\x0a0123456789\x00\x09WillTopic\x00\x0bWillMessage\x00\x04user\x00\x08password'
         stream = BufferReader(data)
         message = self.loop.run_until_complete(ConnectPacket.from_stream(stream))
-        self.assertTrue(message.variable_header.reserved_flag)
+        assert message.variable_header.reserved_flag
 
     def test_decode_fail_miss_clientId(self):
         data = b'\x10\x0a\x00\x04MQTT\x04\xce\x00\x00'
@@ -97,18 +97,18 @@ class ConnectPacketTest(unittest.TestCase):
         self.assertEqual(message.proto_name, "MQTT")
         self.assertEqual(message.variable_header.proto_level, 4)
         self.assertEqual(message.proto_level, 4)
-        self.assertTrue(message.variable_header.username_flag)
-        self.assertTrue(message.username_flag)
-        self.assertTrue(message.variable_header.password_flag)
-        self.assertTrue(message.password_flag)
+        assert message.variable_header.username_flag
+        assert message.username_flag
+        assert message.variable_header.password_flag
+        assert message.password_flag
         self.assertFalse(message.variable_header.will_retain_flag)
         self.assertFalse(message.will_retain_flag)
         self.assertEqual(message.variable_header.will_qos, 1)
         self.assertEqual(message.will_qos, 1)
-        self.assertTrue(message.variable_header.will_flag)
-        self.assertTrue(message.will_flag)
-        self.assertTrue(message.variable_header.clean_session_flag)
-        self.assertTrue(message.clean_session_flag)
+        assert message.variable_header.will_flag
+        assert message.will_flag
+        assert message.variable_header.clean_session_flag
+        assert message.clean_session_flag
         self.assertFalse(message.variable_header.reserved_flag)
         self.assertFalse(message.reserved_flag)
         self.assertEqual(message.payload.client_id, '0123456789')
