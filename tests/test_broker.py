@@ -33,19 +33,7 @@ formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 log = logging.getLogger(__name__)
 
-test_config = {
-    'listeners': {
-        'default': {
-            'type': 'tcp',
-            'bind': '127.0.0.1:1883',
-            'max_connections': 10
-        },
-    },
-    'sys_interval': 0,
-    'auth': {
-        'allow-anonymous': True,
-    }
-}
+
 
 # monkey patch MagicMock
 # taken from https://stackoverflow.com/questions/51394411/python-object-magicmock-cant-be-used-in-await-expression
@@ -57,53 +45,36 @@ MagicMock.__await__ = lambda x: async_magic().__await__()
 
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_start_stop(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    
-    await broker.start()
-    assert broker.transitions.is_started()
-    assert broker._sessions == {}
-    assert 'default' in broker._servers
-    MockPluginManager.assert_has_calls(
+async def test_start_stop(broker, mock_plugin_manager):
+    mock_plugin_manager.assert_has_calls(
         [call().fire_event(EVENT_BROKER_PRE_START),
             call().fire_event(EVENT_BROKER_POST_START)], any_order=True)
-    MockPluginManager.reset_mock()
+    mock_plugin_manager.reset_mock()
     await broker.shutdown()
-    MockPluginManager.assert_has_calls(
+    mock_plugin_manager.assert_has_calls(
         [call().fire_event(EVENT_BROKER_PRE_SHUTDOWN),
             call().fire_event(EVENT_BROKER_POST_SHUTDOWN)], any_order=True)
     assert broker.transitions.is_stopped()
 
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_connect(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_connect(broker, mock_plugin_manager):
     client = MQTTClient()
     ret = await client.connect('mqtt://127.0.0.1/')
     assert ret == 0
     assert client.session.client_id in broker._sessions
     await client.disconnect()
-    await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
-    assert broker._sessions == {}
-    MockPluginManager.assert_has_calls(
+
+    await asyncio.sleep(0.01)
+
+    mock_plugin_manager.assert_has_calls(
         [call().fire_event(EVENT_BROKER_CLIENT_CONNECTED, client_id=client.session.client_id),
             call().fire_event(EVENT_BROKER_CLIENT_DISCONNECTED, client_id=client.session.client_id)],
         any_order=True)
 
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_connect_will_flag(MockPluginManager, event_loop):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
-
+async def test_client_connect_will_flag(broker, event_loop):
     conn_reader, conn_writer = \
         await asyncio.open_connection('127.0.0.1', 1883, loop=event_loop)
     reader = StreamReaderAdapter(conn_reader)
@@ -130,17 +101,10 @@ async def test_client_connect_will_flag(MockPluginManager, event_loop):
     await disconnect.to_stream(writer)
 
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
-    assert broker._sessions == {}
 
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_connect_clean_session_false(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_connect_clean_session_false(broker):
     client = MQTTClient(client_id="", config={'auto_reconnect': False})
     return_code = None
     try:
@@ -151,14 +115,10 @@ async def test_client_connect_clean_session_false(MockPluginManager):
     assert client.session.client_id not in broker._sessions
     await client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
+
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_subscribe(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_subscribe(broker, mock_plugin_manager):
     client = MQTTClient()
     ret = await client.connect('mqtt://127.0.0.1/')
     assert ret == 0
@@ -174,19 +134,14 @@ async def test_client_subscribe(MockPluginManager):
 
     await client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
-    MockPluginManager.assert_has_calls(
+
+    mock_plugin_manager.assert_has_calls(
         [call().fire_event(EVENT_BROKER_CLIENT_SUBSCRIBED,
                             client_id=client.session.client_id,
                             topic='/topic', qos=QOS_0)], any_order=True)
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_subscribe_twice(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_subscribe_twice(broker, mock_plugin_manager):
     client = MQTTClient()
     ret = await client.connect('mqtt://127.0.0.1/')
     assert ret == 0
@@ -208,20 +163,15 @@ async def test_client_subscribe_twice(MockPluginManager):
 
     await client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
-    MockPluginManager.assert_has_calls(
+
+    mock_plugin_manager.assert_has_calls(
         [call().fire_event(EVENT_BROKER_CLIENT_SUBSCRIBED,
                             client_id=client.session.client_id,
                             topic='/topic', qos=QOS_0)], any_order=True)
 
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_unsubscribe(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_unsubscribe(broker, mock_plugin_manager):
     client = MQTTClient()
     ret = await client.connect('mqtt://127.0.0.1/')
     assert ret == 0
@@ -240,9 +190,8 @@ async def test_client_unsubscribe(MockPluginManager):
     assert broker._subscriptions['/topic'] == []
     await client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
-    MockPluginManager.assert_has_calls(
+
+    mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(EVENT_BROKER_CLIENT_SUBSCRIBED,
                                 client_id=client.session.client_id,
@@ -254,11 +203,7 @@ async def test_client_unsubscribe(MockPluginManager):
 
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_publish(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_publish(broker, mock_plugin_manager):
     pub_client = MQTTClient()
     ret = await pub_client.connect('mqtt://127.0.0.1/')
     assert ret == 0
@@ -268,9 +213,8 @@ async def test_client_publish(MockPluginManager):
     assert broker._retained_messages == {}
 
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
-    MockPluginManager.assert_has_calls(
+
+    mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(EVENT_BROKER_MESSAGE_RECEIVED,
                                 client_id=pub_client.session.client_id,
@@ -278,11 +222,7 @@ async def test_client_publish(MockPluginManager):
         ], any_order=True)
 
 @pytest.mark.asyncio
-async def test_client_publish_dup(event_loop):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
-
+async def test_client_publish_dup(broker, event_loop):
     conn_reader, conn_writer = \
         await asyncio.open_connection('127.0.0.1', 1883, loop=event_loop)
     reader = StreamReaderAdapter(conn_reader)
@@ -315,15 +255,9 @@ async def test_client_publish_dup(event_loop):
     disconnect = DisconnectPacket()
     await disconnect.to_stream(writer)
 
-    await asyncio.sleep(0.1)
-    await broker.shutdown()
-
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_publish_invalid_topic(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
+async def test_client_publish_invalid_topic(broker):
     assert broker.transitions.is_started()
     pub_client = MQTTClient()
     ret = await pub_client.connect('mqtt://127.0.0.1/')
@@ -333,16 +267,9 @@ async def test_client_publish_invalid_topic(MockPluginManager):
     await asyncio.sleep(0.1)
     await pub_client.disconnect()
 
-    await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_publish_big(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_publish_big(broker, mock_plugin_manager):
     pub_client = MQTTClient()
     ret = await pub_client.connect('mqtt://127.0.0.1/')
     assert ret == 0
@@ -352,9 +279,8 @@ async def test_client_publish_big(MockPluginManager):
     assert broker._retained_messages == {}
 
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
-    MockPluginManager.assert_has_calls(
+
+    mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(EVENT_BROKER_MESSAGE_RECEIVED,
                                 client_id=pub_client.session.client_id,
@@ -362,12 +288,7 @@ async def test_client_publish_big(MockPluginManager):
         ], any_order=True)
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_publish_retain(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
-
+async def test_client_publish_retain(broker):
     pub_client = MQTTClient()
     ret = await pub_client.connect('mqtt://127.0.0.1/')
     assert ret == 0
@@ -380,16 +301,10 @@ async def test_client_publish_retain(MockPluginManager):
     assert retained_message.topic == '/topic'
     assert retained_message.data == b'data'
     assert retained_message.qos == QOS_0
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
+
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_publish_retain_delete(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
-
+async def test_client_publish_retain_delete(broker):
     pub_client = MQTTClient()
     ret = await pub_client.connect('mqtt://127.0.0.1/')
     assert ret == 0
@@ -397,15 +312,10 @@ async def test_client_publish_retain_delete(MockPluginManager):
     await pub_client.disconnect()
     await asyncio.sleep(0.1)
     assert '/topic' not in broker._retained_messages
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
+
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_subscribe_publish(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_subscribe_publish(broker):
     sub_client = MQTTClient()
     await sub_client.connect('mqtt://127.0.0.1')
     ret = await sub_client.subscribe([('/qos0', QOS_0), ('/qos1', QOS_1), ('/qos2', QOS_2)])
@@ -423,15 +333,9 @@ async def test_client_subscribe_publish(MockPluginManager):
         assert message.qos == qos
     await sub_client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_subscribe_invalid(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_subscribe_invalid(broker):
     sub_client = MQTTClient()
     await sub_client.connect('mqtt://127.0.0.1')
     ret = await sub_client.subscribe(
@@ -441,14 +345,10 @@ async def test_client_subscribe_invalid(MockPluginManager):
     await asyncio.sleep(0.1)
     await sub_client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
+
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_subscribe_publish_dollar_topic_1(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
+async def test_client_subscribe_publish_dollar_topic_1(broker):
     assert broker.transitions.is_started()
     sub_client = MQTTClient()
     await sub_client.connect('mqtt://127.0.0.1')
@@ -469,15 +369,10 @@ async def test_client_subscribe_publish_dollar_topic_1(MockPluginManager):
     assert message is None
     await sub_client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
+
 
 @pytest.mark.asyncio
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_subscribe_publish_dollar_topic_2(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_subscribe_publish_dollar_topic_2(broker):
     sub_client = MQTTClient()
     await sub_client.connect('mqtt://127.0.0.1')
     ret = await sub_client.subscribe([('+/monitor/Clients', QOS_0)])
@@ -497,17 +392,11 @@ async def test_client_subscribe_publish_dollar_topic_2(MockPluginManager):
     assert message is None
     await sub_client.disconnect()
     await asyncio.sleep(0.1)
-    await broker.shutdown()
-    assert broker.transitions.is_stopped()
 
 
 @pytest.mark.asyncio
 @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/16", strict=False)
-@patch('hbmqtt.broker.PluginManager')
-async def test_client_publish_retain_subscribe(MockPluginManager):
-    broker = Broker(test_config, plugin_namespace="hbmqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
+async def test_client_publish_retain_subscribe(broker):
     sub_client = MQTTClient()
     await sub_client.connect('mqtt://127.0.0.1', cleansession=False)
     ret = await sub_client.subscribe([('/qos0', QOS_0), ('/qos1', QOS_1), ('/qos2', QOS_2)])
