@@ -334,11 +334,11 @@ class ProtocolHandlerTest(unittest.TestCase):
         self.check_empty_waiters(handler)
         self.check_no_message(session)
         await handler.start()
-        self.assertTrue(handler._reader_ready)
+        assert handler._reader_ready
 
     async def stop_handler(self, handler, session):
         await handler.stop()
-        self.assertTrue(handler._reader_stopped)
+        assert handler._reader_stopped
         self.check_empty_waiters(handler)
         self.check_no_message(session)
 

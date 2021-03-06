@@ -30,7 +30,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        self.assertTrue(ret)
+        assert ret
 
     def test_disallow_anonymous(self):
         context = BaseContext()
@@ -58,7 +58,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
         s.username = "test"
         auth_plugin = AnonymousAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        self.assertTrue(ret)
+        assert ret
 
 
 class TestFileAuthPlugin(unittest.TestCase):
@@ -78,7 +78,7 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.password = "test"
         auth_plugin = FileAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        self.assertTrue(ret)
+        assert ret
 
     def test_wrong_password(self):
         context = BaseContext()

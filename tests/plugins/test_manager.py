@@ -42,7 +42,7 @@ class TestPluginManager(unittest.TestCase):
     @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_load_plugin(self):
         manager = PluginManager("hbmqtt.test.plugins", context=None)
-        self.assertTrue(len(manager._plugins) > 0)
+        assert len(manager._plugins) > 0
 
     @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_fire_event(self):
@@ -54,7 +54,7 @@ class TestPluginManager(unittest.TestCase):
         manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
         self.loop.run_until_complete(fire_event())
         plugin = manager.get_plugin("event_plugin")
-        self.assertTrue(plugin.object.test_flag)
+        assert plugin.object.test_flag
 
     @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_fire_event_wait(self):
@@ -65,7 +65,7 @@ class TestPluginManager(unittest.TestCase):
         manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
         self.loop.run_until_complete(fire_event())
         plugin = manager.get_plugin("event_plugin")
-        self.assertTrue(plugin.object.test_flag)
+        assert plugin.object.test_flag
 
     @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_map_coro(self):
@@ -75,7 +75,7 @@ class TestPluginManager(unittest.TestCase):
         manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
         self.loop.run_until_complete(call_coro())
         plugin = manager.get_plugin("event_plugin")
-        self.assertTrue(plugin.object.test_coro)
+        assert plugin.object.test_coro
 
     @pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/15", strict=False)
     def test_map_coro_return(self):
@@ -98,4 +98,4 @@ class TestPluginManager(unittest.TestCase):
 
         manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
         ret = self.loop.run_until_complete(call_coro())
-        self.assertTrue(len(ret) == 0)
+        assert len(ret) == 0
