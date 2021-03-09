@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 from hbmqtt.version import get_version
 
 setup(
-    name="hbmqtt",
+    name="amqtt",
     version=get_version(),
     description="MQTT client/broker using Python asyncio",
     author="Nicolas Jouanin",
