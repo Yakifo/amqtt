@@ -14,6 +14,16 @@
     :target: https://gitter.im/amqtt/community
     :alt: 'Join the chat at https://gitter.im/amqtt/community'
 
+.. image:: https://img.shields.io/pypi/pyversions/amqtt?style=flat-square
+    :alt: PyPI - Python Version
+
+.. image:: https://img.shields.io/pypi/wheel/amqtt?style=flat-square 
+    :alt: supports python wheel
+
+.. image:: https://img.shields.io/pypi/v/amqtt?style=flat-square
+    :target: https://pypi.org/project/amqtt/
+    :alt: PyPI
+
 
 AMQTT
 ======
