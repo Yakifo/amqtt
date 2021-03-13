@@ -1,8 +1,8 @@
 Changelog
 ---------
 
-0.10.0a0 - [unreleased]
------------------------
+0.10.0 - [unreleased]
+---------------------
 
  * first release under new package name: amqtt
  * reworked unit tests
