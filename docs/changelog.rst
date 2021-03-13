@@ -1,6 +1,18 @@
 Changelog
 ---------
 
+0.10.0a0 - [unreleased]
+-----------------------
+
+ * first release under new package name: amqtt
+ * reworked unit tests
+ * dropped support for python3.5 and earlier
+ * added support for python3.8 and 3.9
+ * Pass in loop to PluginManager, from https://github.com/beerfactory/hbmqtt/pull/126
+ * Fixes taboo topic checking without session username, from https://github.com/beerfactory/hbmqtt/pull/151
+ * Move scripts module into hbmqtt module, from https://github.com/beerfactory/hbmqtt/pull/167
+ * Download mosquitto certificate on the fly
+
 0.9.5
 .....
 
