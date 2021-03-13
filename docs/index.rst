@@ -23,9 +23,8 @@ HBMQTT implements the full set of `MQTT 3.1.1`_ protocol specifications and prov
 Requirements
 ------------
 
-HBMQTT is built on Python :mod:`asyncio` library which was introduced in Python 3.4. Tests have shown that HBMQTT run
-best with Python 3.4.3. Python 3.5.0 is also fully supported and recommended. Make sure you use one of these version
-before installing HBMQTT.
+aMQTT is built on Python's `asyncio`.
+It requires Python 3.6 or newer.
 
 Installation
 ------------
