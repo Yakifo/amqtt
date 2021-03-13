@@ -1,15 +1,15 @@
 Quickstart
 ==========
 
-A quick way for getting started with ``HBMQTT`` is to use console scripts provided for :
+A quick way for getting started with ``aMQTT`` is to use console scripts provided for :
 
 * publishing a message on some topic on an external MQTT broker.
 * subscribing some topics and getting published messages.
 * running a autonomous MQTT broker
 
-These scripts are installed automatically when installing ``HBMQTT`` with the following command ::
+These scripts are installed automatically when installing ``aMQTT`` with the following command ::
 
-  (venv) $ pip install hbmqtt
+  (venv) $ pip install amqtt
 
 Publishing messages
 -------------------
@@ -57,7 +57,7 @@ See :doc:`references/hbmqtt_sub` reference documentation for details about avail
 URL Scheme
 ----------
 
-HBMQTT command line tools use the ``--url`` to establish a network connection with the broker. The ``--url`` parameter value must conform to the `MQTT URL scheme`_. The general accepted form is :
+aMQTT command line tools use the ``--url`` to establish a network connection with the broker. The ``--url`` parameter value must conform to the `MQTT URL scheme`_. The general accepted form is :
 ::
 
     [mqtt|ws][s]://[username][:password]@host.domain[:port]
