@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="amqtt",
-    version="0.10.0a0",
+    version="0.10.0-alpha.1",
     description="MQTT client/broker using Python asyncio",
     author="aMQTT Contributers (https://github.com/Yakifo/amqtt/graphs/contributors)",
     url="https://github.com/Yakifo/amqtt",
