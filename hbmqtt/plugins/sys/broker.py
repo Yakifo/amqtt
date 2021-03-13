@@ -2,6 +2,7 @@
 #
 # See the file license.txt for copying permission.
 from datetime import datetime
+import hbmqtt
 from hbmqtt.mqtt.packet import PUBLISH
 from hbmqtt.codecs import int_to_bytes_str
 import asyncio
@@ -58,8 +59,7 @@ class BrokerSysPlugin:
 
     async def on_broker_post_start(self, *args, **kwargs):
         self._stats[STAT_START_TIME] = datetime.now()
-        from hbmqtt.version import get_version
-        version = 'HBMQTT version ' + get_version()
+        version = f'HBMQTT version {hbmqtt.__version__}'
         self.context.retain_message(DOLLAR_SYS_ROOT + 'version', version.encode())
 
         # Start $SYS topics management
