@@ -3,22 +3,12 @@
 .. image:: https://img.shields.io/github/workflow/status/Yakifo/amqtt/Python%20package?style=flat-square
     :target: https://github.com/Yakifo/amqtt/actions/workflows/python-package.yml
 
+.. image:: https://img.shields.io/coveralls/github/Yakifo/amqtt?style=flat-square
+    :target: https://coveralls.io/github/Yakifo/amqtt?branch=master
 
-.. 
-
-   TODO
-   image:: https://coveralls.io/repos/beerfactory/hbmqtt/badge.svg?branch=master&service=github
-    :target: https://coveralls.io/github/beerfactory/hbmqtt?branch=master
-
-
-
-..
-
-   TODO
-   image:: https://readthedocs.org/projects/hbmqtt/badge/?version=latest
-    :target: http://hbmqtt.readthedocs.org/en/latest/?badge=latest
+.. image:: https://img.shields.io/readthedocs/amqtt?style=flat-square
+    :target: https://amqtt.readthedocs.io/en/latest/
     :alt: Documentation Status
-
 
 .. image:: https://img.shields.io/gitter/room/Yakifo/amqtt?style=flat-square
     :target: https://gitter.im/amqtt/community
