@@ -36,9 +36,10 @@ import logging
 import asyncio
 import os
 import json
+
+import hbmqtt
 from hbmqtt.client import MQTTClient, ConnectException
 from hbmqtt.errors import MQTTException
-from hbmqtt.version import get_version
 from docopt import docopt
 from hbmqtt.mqtt.constants import QOS_0
 from hbmqtt.utils import read_yaml_config
@@ -110,7 +111,7 @@ def main(*args, **kwargs):
         logger.fatal("Error: Python 3.4+ is required")
         sys.exit(-1)
 
-    arguments = docopt(__doc__, version=get_version())
+    arguments = docopt(__doc__, version=hbmqtt.__version__)
     #print(arguments)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 

@@ -20,8 +20,9 @@ import sys
 import logging
 import asyncio
 import os
+
+import hbmqtt
 from hbmqtt.broker import Broker
-from hbmqtt.version import get_version
 from docopt import docopt
 from hbmqtt.utils import read_yaml_config
 
@@ -54,7 +55,7 @@ def main(*args, **kwargs):
         logger.fatal("Error: Python 3.4+ is required")
         sys.exit(-1)
 
-    arguments = docopt(__doc__, version=get_version())
+    arguments = docopt(__doc__, version=hbmqtt.__version__)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     if arguments['-d']:

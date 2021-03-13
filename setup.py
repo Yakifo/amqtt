@@ -3,11 +3,10 @@
 # See the file license.txt for copying permission.
 
 from setuptools import setup, find_packages
-from hbmqtt.version import get_version
 
 setup(
     name="amqtt",
-    version=get_version(),
+    version="0.10.0a0",
     description="MQTT client/broker using Python asyncio",
     author="Nicolas Jouanin",
     author_email='nico@beerfactory.org',
