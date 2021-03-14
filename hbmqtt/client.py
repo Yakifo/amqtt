@@ -9,7 +9,6 @@ import copy
 from urllib.parse import urlparse, urlunparse
 from functools import wraps
 
-from hbmqtt.utils import not_in_dict_or_none
 from hbmqtt.session import Session
 from hbmqtt.mqtt.connack import CONNECTION_ACCEPTED
 from hbmqtt.mqtt.protocol.client_handler import ClientProtocolHandler
@@ -556,7 +555,7 @@ class MQTTClient:
             broker_conf["cleansession"] = cleansession
 
         for key in ["uri"]:
-            if not_in_dict_or_none(broker_conf, key):
+            if not broker_conf.get(key):
                 raise ClientException("Missing connection parameter '%s'" % key)
 
         s = Session()
