@@ -554,12 +554,11 @@ class MQTTClient:
         if cleansession is not None:
             broker_conf["cleansession"] = cleansession
 
-        for key in ["uri"]:
-            if not broker_conf.get(key):
-                raise ClientException("Missing connection parameter '%s'" % key)
+        if not broker_conf.get("uri"):
+            raise ClientException("Missing connection parameter 'uri'")
 
         s = Session()
-        s.broker_uri = uri
+        s.broker_uri = broker_conf["uri"]
         s.client_id = self.client_id
         s.cafile = broker_conf["cafile"]
         s.capath = broker_conf["capath"]
