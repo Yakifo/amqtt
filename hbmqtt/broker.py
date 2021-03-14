@@ -130,7 +130,7 @@ class BrokerContext(BaseContext):
 
     @property
     def sessions(self):
-        for k, session in self._broker_instance._sessions.items():
+        for session in self._broker_instance._sessions.values():
             yield session[0]
 
     @property
