@@ -15,12 +15,20 @@ INCOMING = 1
 class ApplicationMessage:
 
     """
-        ApplicationMessage and subclasses are used to store published message information flow. These objects can contain different information depending on the way they were created (incoming or outgoing) and the quality of service used between peers.
+    ApplicationMessage and subclasses are used to store published message information flow. These objects can contain different information depending on the way they were created (incoming or outgoing) and the quality of service used between peers.
     """
 
     __slots__ = (
-        'packet_id', 'topic', 'qos', 'data', 'retain', 'publish_packet',
-        'puback_packet', 'pubrec_packet', 'pubrel_packet', 'pubcomp_packet',
+        "packet_id",
+        "topic",
+        "qos",
+        "data",
+        "retain",
+        "publish_packet",
+        "puback_packet",
+        "pubrec_packet",
+        "pubrel_packet",
+        "pubcomp_packet",
     )
 
     def __init__(self, packet_id, topic, qos, data, retain):
@@ -61,7 +69,9 @@ class ApplicationMessage:
         :param dup: force dup flag
         :return: :class:`hbmqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
         """
-        return PublishPacket.build(self.topic, self.data, self.packet_id, dup, self.qos, self.retain)
+        return PublishPacket.build(
+            self.topic, self.data, self.packet_id, dup, self.qos, self.retain
+        )
 
     def __eq__(self, other):
         return self.packet_id == other.packet_id
@@ -70,10 +80,10 @@ class ApplicationMessage:
 class IncomingApplicationMessage(ApplicationMessage):
 
     """
-        Incoming :class:`~hbmqtt.session.ApplicationMessage`.
+    Incoming :class:`~hbmqtt.session.ApplicationMessage`.
     """
 
-    __slots__ = ('direction',)
+    __slots__ = ("direction",)
 
     def __init__(self, packet_id, topic, qos, data, retain):
         super().__init__(packet_id, topic, qos, data, retain)
@@ -83,10 +93,10 @@ class IncomingApplicationMessage(ApplicationMessage):
 class OutgoingApplicationMessage(ApplicationMessage):
 
     """
-        Outgoing :class:`~hbmqtt.session.ApplicationMessage`.
+    Outgoing :class:`~hbmqtt.session.ApplicationMessage`.
     """
 
-    __slots__ = ('direction',)
+    __slots__ = ("direction",)
 
     def __init__(self, packet_id, topic, qos, data, retain):
         super().__init__(packet_id, topic, qos, data, retain)
@@ -94,7 +104,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
 
 class Session:
-    states = ['new', 'connected', 'disconnected']
+    states = ["new", "connected", "disconnected"]
 
     def __init__(self, loop=None):
         self._init_states()
@@ -135,12 +145,18 @@ class Session:
         self.delivered_message_queue = Queue(loop=self._loop)
 
     def _init_states(self):
-        self.transitions = Machine(states=Session.states, initial='new')
-        self.transitions.add_transition(trigger='connect', source='new', dest='connected')
-        self.transitions.add_transition(trigger='connect', source='disconnected', dest='connected')
-        self.transitions.add_transition(trigger='disconnect', source='connected', dest='disconnected')
-        self.transitions.add_transition(trigger='disconnect', source='new', dest='disconnected')
-        self.transitions.add_transition(trigger='disconnect', source='disconnected', dest='disconnected')
+        self.transitions = Machine(states=Session.states, initial="new")
+        self.transitions.add_transition(trigger="connect", source="new", dest="connected")
+        self.transitions.add_transition(
+            trigger="connect", source="disconnected", dest="connected"
+        )
+        self.transitions.add_transition(
+            trigger="disconnect", source="connected", dest="disconnected"
+        )
+        self.transitions.add_transition(trigger="disconnect", source="new", dest="disconnected")
+        self.transitions.add_transition(
+            trigger="disconnect", source="disconnected", dest="disconnected"
+        )
 
     @property
     def next_packet_id(self):
@@ -167,14 +183,16 @@ class Session:
         return self.retained_messages.qsize()
 
     def __repr__(self):
-        return type(self).__name__ + '(clientId={0}, state={1})'.format(self.client_id, self.transitions.state)
+        return type(self).__name__ + "(clientId={0}, state={1})".format(
+            self.client_id, self.transitions.state
+        )
 
     def __getstate__(self):
         state = self.__dict__.copy()
         # Remove the unpicklable entries.
         # del state['transitions']
-        del state['retained_messages']
-        del state['delivered_message_queue']
+        del state["retained_messages"]
+        del state["delivered_message_queue"]
         return state
 
     def __setstate(self, state):

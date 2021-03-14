@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 def _gen_client_id():
     import os
     import socket
+
     pid = os.getpid()
     hostname = socket.gethostname()
     return "hbmqtt_sub/%d-%s" % (pid, hostname)
@@ -57,13 +58,14 @@ def _gen_client_id():
 
 def _get_qos(arguments):
     try:
-        return int(arguments['--qos'][0])
+        return int(arguments["--qos"][0])
     except:
         return QOS_0
 
+
 def _get_extra_headers(arguments):
     try:
-        return json.loads(arguments['--extra-headers'])
+        return json.loads(arguments["--extra-headers"])
     except:
         return {}
 
@@ -71,19 +73,21 @@ def _get_extra_headers(arguments):
 async def do_sub(client, arguments):
 
     try:
-        await client.connect(uri=arguments['--url'],
-                                  cleansession=arguments['--clean-session'],
-                                  cafile=arguments['--ca-file'],
-                                  capath=arguments['--ca-path'],
-                                  cadata=arguments['--ca-data'],
-                                  extra_headers=_get_extra_headers(arguments))
+        await client.connect(
+            uri=arguments["--url"],
+            cleansession=arguments["--clean-session"],
+            cafile=arguments["--ca-file"],
+            capath=arguments["--ca-path"],
+            cadata=arguments["--ca-data"],
+            extra_headers=_get_extra_headers(arguments),
+        )
         qos = _get_qos(arguments)
         filters = []
-        for topic in arguments['-t']:
+        for topic in arguments["-t"]:
             filters.append((topic, qos))
         await client.subscribe(filters)
-        if arguments['-n']:
-            max_count = int(arguments['-n'])
+        if arguments["-n"]:
+            max_count = int(arguments["-n"])
         else:
             max_count = None
         count = 0
@@ -94,14 +98,14 @@ async def do_sub(client, arguments):
                 message = await client.deliver_message()
                 count += 1
                 sys.stdout.buffer.write(message.publish_packet.data)
-                sys.stdout.write('\n')
+                sys.stdout.write("\n")
             except MQTTException:
                 logger.debug("Error reading packet")
         await client.disconnect()
     except KeyboardInterrupt:
         await client.disconnect()
     except ConnectException as ce:
-        logger.fatal("connection to '%s' failed: %r" % (arguments['--url'], ce))
+        logger.fatal("connection to '%s' failed: %r" % (arguments["--url"], ce))
     except asyncio.CancelledError as cae:
         logger.fatal("Publish canceled due to prvious error")
 
@@ -112,21 +116,25 @@ def main(*args, **kwargs):
         sys.exit(-1)
 
     arguments = docopt(__doc__, version=hbmqtt.__version__)
-    #print(arguments)
+    # print(arguments)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
-    if arguments['-d']:
+    if arguments["-d"]:
         level = logging.DEBUG
     else:
         level = logging.INFO
     logging.basicConfig(level=level, format=formatter)
 
     config = None
-    if arguments['-c']:
-        config = read_yaml_config(arguments['-c'])
+    if arguments["-c"]:
+        config = read_yaml_config(arguments["-c"])
     else:
-        config = read_yaml_config(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'default_client.yaml'))
-        logger.debug(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'default_client.yaml'))
+        config = read_yaml_config(
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_client.yaml")
+        )
+        logger.debug(
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_client.yaml")
+        )
         logger.debug("Using default configuration")
     loop = asyncio.get_event_loop()
 
@@ -134,15 +142,15 @@ def main(*args, **kwargs):
     if not client_id:
         client_id = _gen_client_id()
 
-    if arguments['-k']:
-        config['keep_alive'] = int(arguments['-k'])
+    if arguments["-k"]:
+        config["keep_alive"] = int(arguments["-k"])
 
-    if arguments['--will-topic'] and arguments['--will-message'] and arguments['--will-qos']:
-        config['will'] = dict()
-        config['will']['topic'] = arguments['--will-topic']
-        config['will']['message'] = arguments['--will-message'].encode('utf-8')
-        config['will']['qos'] = int(arguments['--will-qos'])
-        config['will']['retain'] = arguments['--will-retain']
+    if arguments["--will-topic"] and arguments["--will-message"] and arguments["--will-qos"]:
+        config["will"] = dict()
+        config["will"]["topic"] = arguments["--will-topic"]
+        config["will"]["message"] = arguments["--will-message"].encode("utf-8")
+        config["will"]["qos"] = int(arguments["--will-qos"])
+        config["will"]["retain"] = arguments["--will-retain"]
 
     client = MQTTClient(client_id=client_id, config=config, loop=loop)
     loop.run_until_complete(do_sub(client, arguments))

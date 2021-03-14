@@ -28,23 +28,19 @@ from hbmqtt.utils import read_yaml_config
 
 
 default_config = {
-    'listeners': {
-        'default': {
-            'type': 'tcp',
-            'bind': '0.0.0.0:1883',
+    "listeners": {
+        "default": {
+            "type": "tcp",
+            "bind": "0.0.0.0:1883",
         },
     },
-    'sys_interval': 10,
-    'auth': {
-        'allow-anonymous': True,
-        'password-file': os.path.join(os.path.dirname(os.path.realpath(__file__)), "passwd"),
-        'plugins': [
-            'auth_file', 'auth_anonymous'
-        ]
+    "sys_interval": 10,
+    "auth": {
+        "allow-anonymous": True,
+        "password-file": os.path.join(os.path.dirname(os.path.realpath(__file__)), "passwd"),
+        "plugins": ["auth_file", "auth_anonymous"],
     },
-    'topic-check': {
-        'enabled': False
-    }
+    "topic-check": {"enabled": False},
 }
 
 logger = logging.getLogger(__name__)
@@ -58,17 +54,19 @@ def main(*args, **kwargs):
     arguments = docopt(__doc__, version=hbmqtt.__version__)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
-    if arguments['-d']:
+    if arguments["-d"]:
         level = logging.DEBUG
     else:
         level = logging.INFO
     logging.basicConfig(level=level, format=formatter)
 
     config = None
-    if arguments['-c']:
-        config = read_yaml_config(arguments['-c'])
+    if arguments["-c"]:
+        config = read_yaml_config(arguments["-c"])
     else:
-        config = read_yaml_config(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'default_broker.yaml'))
+        config = read_yaml_config(
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_broker.yaml")
+        )
         logger.debug("Using default configuration")
     loop = asyncio.get_event_loop()
     broker = Broker(config)

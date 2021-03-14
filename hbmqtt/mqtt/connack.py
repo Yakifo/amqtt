@@ -17,7 +17,7 @@ NOT_AUTHORIZED = 0x05
 
 class ConnackVariableHeader(MQTTVariableHeader):
 
-    __slots__ = ('session_parent', 'return_code')
+    __slots__ = ("session_parent", "return_code")
 
     def __init__(self, session_parent=None, return_code=None):
         super().__init__()
@@ -44,8 +44,9 @@ class ConnackVariableHeader(MQTTVariableHeader):
         return out
 
     def __repr__(self):
-        return type(self).__name__ + '(session_parent={0}, return_code={1})'\
-            .format(hex(self.session_parent), hex(self.return_code))
+        return type(self).__name__ + "(session_parent={0}, return_code={1})".format(
+            hex(self.session_parent), hex(self.return_code)
+        )
 
 
 class ConnackPacket(MQTTPacket):
@@ -68,12 +69,19 @@ class ConnackPacket(MQTTPacket):
     def session_parent(self, session_parent):
         self.variable_header.session_parent = session_parent
 
-    def __init__(self, fixed: MQTTFixedHeader=None, variable_header: ConnackVariableHeader=None, payload=None):
+    def __init__(
+        self,
+        fixed: MQTTFixedHeader = None,
+        variable_header: ConnackVariableHeader = None,
+        payload=None,
+    ):
         if fixed is None:
             header = MQTTFixedHeader(CONNACK, 0x00)
         else:
             if fixed.packet_type is not CONNACK:
-                raise HBMQTTException("Invalid fixed packet type %s for ConnackPacket init" % fixed.packet_type)
+                raise HBMQTTException(
+                    "Invalid fixed packet type %s for ConnackPacket init" % fixed.packet_type
+                )
             header = fixed
         super().__init__(header)
         self.variable_header = variable_header

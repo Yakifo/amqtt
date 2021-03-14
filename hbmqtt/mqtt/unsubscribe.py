@@ -3,28 +3,39 @@
 # See the file license.txt for copying permission.
 import asyncio
 
-from hbmqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, UNSUBSCRIBE, PacketIdVariableHeader, MQTTPayload, MQTTVariableHeader
+from hbmqtt.mqtt.packet import (
+    MQTTPacket,
+    MQTTFixedHeader,
+    UNSUBSCRIBE,
+    PacketIdVariableHeader,
+    MQTTPayload,
+    MQTTVariableHeader,
+)
 from hbmqtt.errors import HBMQTTException, NoDataException
 from hbmqtt.codecs import decode_string, encode_string
 
 
 class UnubscribePayload(MQTTPayload):
 
-    __slots__ = ('topics',)
+    __slots__ = ("topics",)
 
     def __init__(self, topics=[]):
         super().__init__()
         self.topics = topics
 
     def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
-        out = b''
+        out = b""
         for topic in self.topics:
             out += encode_string(topic)
         return out
 
     @classmethod
-    async def from_stream(cls, reader: asyncio.StreamReader, fixed_header: MQTTFixedHeader,
-                    variable_header: MQTTVariableHeader):
+    async def from_stream(
+        cls,
+        reader: asyncio.StreamReader,
+        fixed_header: MQTTFixedHeader,
+        variable_header: MQTTVariableHeader,
+    ):
         topics = []
         payload_length = fixed_header.remaining_length - variable_header.bytes_length
         read_bytes = 0
@@ -32,7 +43,7 @@ class UnubscribePayload(MQTTPayload):
             try:
                 topic = await decode_string(reader)
                 topics.append(topic)
-                read_bytes += 2 + len(topic.encode('utf-8'))
+                read_bytes += 2 + len(topic.encode("utf-8"))
             except NoDataException:
                 break
         return cls(topics)
@@ -42,12 +53,20 @@ class UnsubscribePacket(MQTTPacket):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = UnubscribePayload
 
-    def __init__(self, fixed: MQTTFixedHeader=None, variable_header: PacketIdVariableHeader=None, payload=None):
+    def __init__(
+        self,
+        fixed: MQTTFixedHeader = None,
+        variable_header: PacketIdVariableHeader = None,
+        payload=None,
+    ):
         if fixed is None:
             header = MQTTFixedHeader(UNSUBSCRIBE, 0x02)  # [MQTT-3.10.1-1]
         else:
             if fixed.packet_type is not UNSUBSCRIBE:
-                raise HBMQTTException("Invalid fixed packet type %s for UnsubscribePacket init" % fixed.packet_type)
+                raise HBMQTTException(
+                    "Invalid fixed packet type %s for UnsubscribePacket init"
+                    % fixed.packet_type
+                )
             header = fixed
 
         super().__init__(header)

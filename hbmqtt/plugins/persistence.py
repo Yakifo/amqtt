@@ -13,13 +13,15 @@ class SQLitePlugin:
         self.cursor = None
         self.db_file = None
         try:
-            self.persistence_config = self.context.config['persistence']
+            self.persistence_config = self.context.config["persistence"]
             self.init_db()
         except KeyError:
-            self.context.logger.warning("'persistence' section not found in context configuration")
+            self.context.logger.warning(
+                "'persistence' section not found in context configuration"
+            )
 
     def init_db(self):
-        self.db_file = self.persistence_config.get('file', None)
+        self.db_file = self.persistence_config.get("file", None)
         if not self.db_file:
             self.context.logger.warning("'file' persistence parameter not found")
         else:
@@ -28,23 +30,31 @@ class SQLitePlugin:
                 self.cursor = self.conn.cursor()
                 self.context.logger.info("Database file '%s' opened" % self.db_file)
             except Exception as e:
-                self.context.logger.error("Error while initializing database '%s' : %s" % (self.db_file, e))
+                self.context.logger.error(
+                    "Error while initializing database '%s' : %s" % (self.db_file, e)
+                )
         if self.cursor:
-            self.cursor.execute("CREATE TABLE IF NOT EXISTS session(client_id TEXT PRIMARY KEY, data BLOB)")
+            self.cursor.execute(
+                "CREATE TABLE IF NOT EXISTS session(client_id TEXT PRIMARY KEY, data BLOB)"
+            )
 
     async def save_session(self, session):
         if self.cursor:
             dump = pickle.dumps(session)
             try:
                 self.cursor.execute(
-                    "INSERT OR REPLACE INTO session (client_id, data) VALUES (?,?)", (session.client_id, dump))
+                    "INSERT OR REPLACE INTO session (client_id, data) VALUES (?,?)",
+                    (session.client_id, dump),
+                )
                 self.conn.commit()
             except Exception as e:
                 self.context.logger.error("Failed saving session '%s': %s" % (session, e))
 
     async def find_session(self, client_id):
         if self.cursor:
-            row = self.cursor.execute("SELECT data FROM session where client_id=?", (client_id,)).fetchone()
+            row = self.cursor.execute(
+                "SELECT data FROM session where client_id=?", (client_id,)
+            ).fetchone()
             if row:
                 return pickle.loads(row[0])
             else:

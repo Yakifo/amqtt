@@ -19,7 +19,7 @@ from hbmqtt.plugins.manager import PluginManager
 
 
 class ClientProtocolHandler(ProtocolHandler):
-    def __init__(self, plugins_manager: PluginManager, session: Session=None, loop=None):
+    def __init__(self, plugins_manager: PluginManager, session: Session = None, loop=None):
         super().__init__(plugins_manager, session, loop=loop)
         self._ping_task = None
         self._pingresp_queue = asyncio.Queue(loop=self._loop)
@@ -79,7 +79,9 @@ class ClientProtocolHandler(ProtocolHandler):
         connect_packet = self._build_connect_packet()
         await self._send_packet(connect_packet)
         connack = await ConnackPacket.from_stream(self.reader)
-        await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session)
+        await self.plugins_manager.fire_event(
+            EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session
+        )
         return connack.return_code
 
     def handle_write_timeout(self):
@@ -117,7 +119,9 @@ class ClientProtocolHandler(ProtocolHandler):
             waiter = self._subscriptions_waiter.get(packet_id)
             waiter.set_result(suback.payload.return_codes)
         except KeyError as ke:
-            self.logger.warning("Received SUBACK for unknown pending subscription with Id: %s" % packet_id)
+            self.logger.warning(
+                "Received SUBACK for unknown pending subscription with Id: %s" % packet_id
+            )
 
     async def mqtt_unsubscribe(self, topics, packet_id):
         """
@@ -138,7 +142,9 @@ class ClientProtocolHandler(ProtocolHandler):
             waiter = self._unsubscriptions_waiter.get(packet_id)
             waiter.set_result(None)
         except KeyError as ke:
-            self.logger.warning("Received UNSUBACK for unknown pending subscription with Id: %s" % packet_id)
+            self.logger.warning(
+                "Received UNSUBACK for unknown pending subscription with Id: %s" % packet_id
+            )
 
     async def mqtt_disconnect(self):
         disconnect_packet = DisconnectPacket()

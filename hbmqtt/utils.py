@@ -37,7 +37,8 @@ def gen_client_id():
     :return:
     """
     import random
-    gen_id = 'hbmqtt/'
+
+    gen_id = "hbmqtt/"
 
     for i in range(7, 23):
         gen_id += chr(random.randint(0, 74) + 48)
@@ -47,8 +48,8 @@ def gen_client_id():
 def read_yaml_config(config_file):
     config = None
     try:
-        with open(config_file, 'r') as stream:
-            config = yaml.full_load(stream) if hasattr(yaml, 'full_load') else yaml.load(stream)
+        with open(config_file, "r") as stream:
+            config = yaml.full_load(stream) if hasattr(yaml, "full_load") else yaml.load(stream)
     except yaml.YAMLError as exc:
         logger.error("Invalid config_file %s: %s" % (config_file, exc))
     return config

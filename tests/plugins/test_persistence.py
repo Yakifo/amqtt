@@ -22,11 +22,7 @@ class TestSQLitePlugin(unittest.TestCase):
         dbfile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test.db")
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
-        context.config = {
-            'persistence': {
-                'file': dbfile
-            }
-        }
+        context.config = {"persistence": {"file": dbfile}}
         SQLitePlugin(context)
 
         conn = sqlite3.connect(dbfile)

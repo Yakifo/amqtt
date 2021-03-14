@@ -17,12 +17,16 @@ class PubrecPacket(MQTTPacket):
     def packet_id(self, val: int):
         self.variable_header.packet_id = val
 
-    def __init__(self, fixed: MQTTFixedHeader=None, variable_header: PacketIdVariableHeader=None):
+    def __init__(
+        self, fixed: MQTTFixedHeader = None, variable_header: PacketIdVariableHeader = None
+    ):
         if fixed is None:
             header = MQTTFixedHeader(PUBREC, 0x00)
         else:
             if fixed.packet_type is not PUBREC:
-                raise HBMQTTException("Invalid fixed packet type %s for PubrecPacket init" % fixed.packet_type)
+                raise HBMQTTException(
+                    "Invalid fixed packet type %s for PubrecPacket init" % fixed.packet_type
+                )
             header = fixed
         super().__init__(header)
         self.variable_header = variable_header

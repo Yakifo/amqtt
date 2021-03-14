@@ -12,7 +12,7 @@ def bytes_to_hex_str(data):
     :param data: byte sequence
     :return: Hexadecimal displayable representation
     """
-    return '0x' + ''.join(format(b, '02x') for b in data)
+    return "0x" + "".join(format(b, "02x") for b in data)
 
 
 def bytes_to_int(data):
@@ -22,7 +22,7 @@ def bytes_to_int(data):
     :return: integer value
     """
     try:
-        return int.from_bytes(data, byteorder='big')
+        return int.from_bytes(data, byteorder="big")
     except:
         return data
 
@@ -68,11 +68,11 @@ async def decode_string(reader) -> bytes:
     if str_length[0]:
         byte_str = await read_or_raise(reader, str_length[0])
         try:
-            return byte_str.decode(encoding='utf-8')
+            return byte_str.decode(encoding="utf-8")
         except:
             return str(byte_str)
     else:
-        return ''
+        return ""
 
 
 async def decode_data_with_length(reader) -> bytes:
@@ -88,7 +88,7 @@ async def decode_data_with_length(reader) -> bytes:
 
 
 def encode_string(string: str) -> bytes:
-    data = string.encode(encoding='utf-8')
+    data = string.encode(encoding="utf-8")
     data_length = len(data)
     return int_to_bytes(data_length, 2) + data
 
@@ -116,4 +116,4 @@ def int_to_bytes_str(value: int) -> bytes:
     :param value: int value to convert
     :return: bytes array
     """
-    return str(value).encode('utf-8')
+    return str(value).encode("utf-8")

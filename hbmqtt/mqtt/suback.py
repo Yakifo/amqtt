@@ -3,7 +3,14 @@
 # See the file license.txt for copying permission.
 import asyncio
 
-from hbmqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, SUBACK, PacketIdVariableHeader, MQTTPayload, MQTTVariableHeader
+from hbmqtt.mqtt.packet import (
+    MQTTPacket,
+    MQTTFixedHeader,
+    SUBACK,
+    PacketIdVariableHeader,
+    MQTTPayload,
+    MQTTVariableHeader,
+)
 from hbmqtt.errors import HBMQTTException, NoDataException
 from hbmqtt.adapters import ReaderAdapter
 from hbmqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
@@ -11,7 +18,7 @@ from hbmqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
 
 class SubackPayload(MQTTPayload):
 
-    __slots__ = ('return_codes',)
+    __slots__ = ("return_codes",)
 
     RETURN_CODE_00 = 0x00
     RETURN_CODE_01 = 0x01
@@ -23,17 +30,21 @@ class SubackPayload(MQTTPayload):
         self.return_codes = return_codes
 
     def __repr__(self):
-        return type(self).__name__ + '(return_codes={0})'.format(repr(self.return_codes))
+        return type(self).__name__ + "(return_codes={0})".format(repr(self.return_codes))
 
     def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
-        out = b''
+        out = b""
         for return_code in self.return_codes:
             out += int_to_bytes(return_code, 1)
         return out
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader,
-                    variable_header: MQTTVariableHeader):
+    async def from_stream(
+        cls,
+        reader: ReaderAdapter,
+        fixed_header: MQTTFixedHeader,
+        variable_header: MQTTVariableHeader,
+    ):
         return_codes = []
         bytes_to_read = fixed_header.remaining_length - variable_header.bytes_length
         for i in range(0, bytes_to_read):
@@ -50,12 +61,19 @@ class SubackPacket(MQTTPacket):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = SubackPayload
 
-    def __init__(self, fixed: MQTTFixedHeader=None, variable_header: PacketIdVariableHeader=None, payload=None):
+    def __init__(
+        self,
+        fixed: MQTTFixedHeader = None,
+        variable_header: PacketIdVariableHeader = None,
+        payload=None,
+    ):
         if fixed is None:
             header = MQTTFixedHeader(SUBACK, 0x00)
         else:
             if fixed.packet_type is not SUBACK:
-                raise HBMQTTException("Invalid fixed packet type %s for SubackPacket init" % fixed.packet_type)
+                raise HBMQTTException(
+                    "Invalid fixed packet type %s for SubackPacket init" % fixed.packet_type
+                )
             header = fixed
 
         super().__init__(header)
