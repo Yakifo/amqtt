@@ -2,6 +2,7 @@
 #
 # See the file license.txt for copying permission.
 import logging
+import random
 
 import yaml
 
@@ -31,13 +32,8 @@ def format_client_message(session=None, address=None, port=None):
         return "(unknown client)"
 
 
-def gen_client_id():
-    """
-    Generates random client ID
-    :return:
-    """
-    import random
-
+def gen_client_id() -> str:
+    """Generates random client ID"""
     gen_id = "hbmqtt/"
 
     for i in range(7, 23):
