@@ -8,7 +8,9 @@ import hbmqtt
 
 
 def get_version():
-    warnings.warn("hbmqtt.version.get_version() is deprecated, use hbmqtt.__version__ instead")
+    warnings.warn(
+        "hbmqtt.version.get_version() is deprecated, use hbmqtt.__version__ instead"
+    )
     return hbmqtt.__version__
 
 

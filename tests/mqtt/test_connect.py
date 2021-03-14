@@ -84,7 +84,9 @@ class ConnectPacketTest(unittest.TestCase):
     def test_encode(self):
         header = MQTTFixedHeader(CONNECT, 0x00, 0)
         variable_header = ConnectVariableHeader(0xCE, 0, "MQTT", 4)
-        payload = ConnectPayload("0123456789", "WillTopic", b"WillMessage", "user", "password")
+        payload = ConnectPayload(
+            "0123456789", "WillTopic", b"WillMessage", "user", "password"
+        )
         message = ConnectPacket(header, variable_header, payload)
         encoded = message.to_bytes()
         self.assertEqual(

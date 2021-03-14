@@ -80,7 +80,8 @@ class ConnackPacket(MQTTPacket):
         else:
             if fixed.packet_type is not CONNACK:
                 raise HBMQTTException(
-                    "Invalid fixed packet type %s for ConnackPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for ConnackPacket init"
+                    % fixed.packet_type
                 )
             header = fixed
         super().__init__(header)

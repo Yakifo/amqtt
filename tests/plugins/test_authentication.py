@@ -10,7 +10,9 @@ from hbmqtt.plugins.manager import BaseContext
 from hbmqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
 from hbmqtt.session import Session
 
-formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+formatter = (
+    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+)
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 
 

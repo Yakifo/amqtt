@@ -68,7 +68,9 @@ class ProtocolHandler:
     Class implementing the MQTT communication protocol using asyncio features
     """
 
-    def __init__(self, plugins_manager: PluginManager, session: Session = None, loop=None):
+    def __init__(
+        self, plugins_manager: PluginManager, session: Session = None, loop=None
+    ):
         self.logger = logging.getLogger(__name__)
         if session:
             self._init_session(session)
@@ -175,12 +177,16 @@ class ProtocolHandler:
             self.session.inflight_in.values(), self.session.inflight_out.values()
         ):
             tasks.append(
-                asyncio.wait_for(self._handle_message_flow(message), 10, loop=self._loop)
+                asyncio.wait_for(
+                    self._handle_message_flow(message), 10, loop=self._loop
+                )
             )
         if tasks:
             done, pending = await asyncio.wait(tasks, loop=self._loop)
             self.logger.debug("%d messages redelivered" % len(done))
-            self.logger.debug("%d messages not redelivered due to timeout" % len(pending))
+            self.logger.debug(
+                "%d messages not redelivered due to timeout" % len(pending)
+            )
         self.logger.debug("End messages delivery retries")
 
     async def mqtt_publish(self, topic, data, qos, retain, ack_timeout=None):
@@ -199,7 +205,8 @@ class ProtocolHandler:
             packet_id = self.session.next_packet_id
             if packet_id in self.session.inflight_out:
                 raise HBMQTTException(
-                    "A message with the same packet ID '%d' is already in flight" % packet_id
+                    "A message with the same packet ID '%d' is already in flight"
+                    % packet_id
                 )
         else:
             packet_id = None
@@ -324,7 +331,8 @@ class ProtocolHandler:
                     # This is a retry flow, no need to store just check the message exists in session
                     if app_message.packet_id not in self.session.inflight_out:
                         raise HBMQTTException(
-                            "Unknown inflight message '%d' in session" % app_message.packet_id
+                            "Unknown inflight message '%d' in session"
+                            % app_message.packet_id
                         )
                     publish_packet = app_message.build_publish_packet(dup=True)
                 else:
@@ -409,7 +417,9 @@ class ProtocolHandler:
                     self.logger.debug("handler running tasks: %d" % len(running_tasks))
 
                 fixed_header = await asyncio.wait_for(
-                    MQTTFixedHeader.from_stream(self.reader), keepalive_timeout, loop=self._loop
+                    MQTTFixedHeader.from_stream(self.reader),
+                    keepalive_timeout,
+                    loop=self._loop,
                 )
                 if fixed_header:
                     if (
@@ -423,9 +433,13 @@ class ProtocolHandler:
                         await self.handle_connection_closed()
                     else:
                         cls = packet_class(fixed_header)
-                        packet = await cls.from_stream(self.reader, fixed_header=fixed_header)
+                        packet = await cls.from_stream(
+                            self.reader, fixed_header=fixed_header
+                        )
                         await self.plugins_manager.fire_event(
-                            EVENT_MQTT_PACKET_RECEIVED, packet=packet, session=self.session
+                            EVENT_MQTT_PACKET_RECEIVED,
+                            packet=packet,
+                            session=self.session,
                         )
                         task = None
                         if packet.fixed_header.packet_type == CONNACK:
@@ -485,7 +499,10 @@ class ProtocolHandler:
                         else:
                             self.logger.warning(
                                 "%s Unhandled packet type: %s"
-                                % (self.session.client_id, packet.fixed_header.packet_type)
+                                % (
+                                    self.session.client_id,
+                                    packet.fixed_header.packet_type,
+                                )
                             )
                         if task:
                             running_tasks.append(task)
@@ -501,13 +518,16 @@ class ProtocolHandler:
                 self.logger.debug("Task cancelled, reader loop ending")
                 break
             except asyncio.TimeoutError:
-                self.logger.debug("%s Input stream read timeout" % self.session.client_id)
+                self.logger.debug(
+                    "%s Input stream read timeout" % self.session.client_id
+                )
                 self.handle_read_timeout()
             except NoDataException:
                 self.logger.debug("%s No data available" % self.session.client_id)
             except BaseException as e:
                 self.logger.warning(
-                    "%s Unhandled exception in reader coro: %r" % (type(self).__name__, e)
+                    "%s Unhandled exception in reader coro: %r"
+                    % (type(self).__name__, e)
                 )
                 break
         while running_tasks:

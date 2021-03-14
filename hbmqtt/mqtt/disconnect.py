@@ -15,7 +15,8 @@ class DisconnectPacket(MQTTPacket):
         else:
             if fixed.packet_type is not DISCONNECT:
                 raise HBMQTTException(
-                    "Invalid fixed packet type %s for DisconnectPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for DisconnectPacket init"
+                    % fixed.packet_type
                 )
             header = fixed
         super().__init__(header)

@@ -31,7 +31,9 @@ class PacketLoggerPlugin:
         session = kwargs.get("session", None)
         if self.context.logger.isEnabledFor(logging.DEBUG):
             if session:
-                self.context.logger.debug("%s <-in-- %s" % (session.client_id, repr(packet)))
+                self.context.logger.debug(
+                    "%s <-in-- %s" % (session.client_id, repr(packet))
+                )
             else:
                 self.context.logger.debug("<-in-- %s" % repr(packet))
 
@@ -40,6 +42,8 @@ class PacketLoggerPlugin:
         session = kwargs.get("session", None)
         if self.context.logger.isEnabledFor(logging.DEBUG):
             if session:
-                self.context.logger.debug("%s -out-> %s" % (session.client_id, repr(packet)))
+                self.context.logger.debug(
+                    "%s -out-> %s" % (session.client_id, repr(packet))
+                )
             else:
                 self.context.logger.debug("-out-> %s" % repr(packet))

@@ -37,7 +37,9 @@ default_config = {
     "sys_interval": 10,
     "auth": {
         "allow-anonymous": True,
-        "password-file": os.path.join(os.path.dirname(os.path.realpath(__file__)), "passwd"),
+        "password-file": os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "passwd"
+        ),
         "plugins": ["auth_file", "auth_anonymous"],
     },
     "topic-check": {"enabled": False},
@@ -65,7 +67,9 @@ def main(*args, **kwargs):
         config = read_yaml_config(arguments["-c"])
     else:
         config = read_yaml_config(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_broker.yaml")
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "default_broker.yaml"
+            )
         )
         logger.debug("Using default configuration")
     loop = asyncio.get_event_loop()

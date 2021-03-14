@@ -124,7 +124,9 @@ class MQTTClient:
         # Init plugins manager
         context = ClientContext()
         context.config = self.config
-        self.plugins_manager = PluginManager("hbmqtt.client.plugins", context, loop=self._loop)
+        self.plugins_manager = PluginManager(
+            "hbmqtt.client.plugins", context, loop=self._loop
+        )
         self.client_tasks = deque()
 
     async def connect(
@@ -186,7 +188,9 @@ class MQTTClient:
             await self._handler.stop()
             self.session.transitions.disconnect()
         else:
-            self.logger.warning("Client session is not currently connected, ignoring call")
+            self.logger.warning(
+                "Client session is not currently connected, ignoring call"
+            )
 
     async def cancel_tasks(self):
         """
@@ -205,7 +209,7 @@ class MQTTClient:
         Reconnect a previously connected broker.
 
         Reconnection tries to establish a network connection and send a `CONNECT <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028>`_ message.
-        Retries interval and attempts can be controled with the ``reconnect_max_interval`` and ``reconnect_retries`` configuration parameters.
+        Retries interval and attempts can be controlled with the ``reconnect_max_interval`` and ``reconnect_retries`` configuration parameters.
 
         This method is a *coroutine*.
 
@@ -477,7 +481,9 @@ class MQTTClient:
                 )
             return return_code
         except InvalidURI as iuri:
-            self.logger.warning("connection failed: invalid URI '%s'" % self.session.broker_uri)
+            self.logger.warning(
+                "connection failed: invalid URI '%s'" % self.session.broker_uri
+            )
             self.session.transitions.disconnect()
             raise ConnectException(
                 "connection failed: invalid URI '%s'" % self.session.broker_uri, iuri
@@ -485,7 +491,9 @@ class MQTTClient:
         except InvalidHandshake as ihs:
             self.logger.warning("connection failed: invalid websocket handshake")
             self.session.transitions.disconnect()
-            raise ConnectException("connection failed: invalid websocket handshake", ihs)
+            raise ConnectException(
+                "connection failed: invalid websocket handshake", ihs
+            )
         except (ProtocolHandlerException, ConnectionError, OSError) as e:
             self.logger.warning("MQTT connection failed: %r" % e)
             self.session.transitions.disconnect()

@@ -13,31 +13,31 @@ from hbmqtt.mqtt.constants import QOS_1, QOS_2
 logger = logging.getLogger(__name__)
 
 config = {
-    'will': {
-        'topic': '/will/client',
-        'message': b'Dead or alive',
-        'qos': 0x01,
-        'retain': True
+    "will": {
+        "topic": "/will/client",
+        "message": b"Dead or alive",
+        "qos": 0x01,
+        "retain": True,
     },
-    'capath': '.',
+    "capath": ".",
 }
 C = MQTTClient(config=config)
-#C = MQTTClient()
+# C = MQTTClient()
 
 
 async def test_coro():
-    await C.connect('wss://test.mosquitto.org:8081/', cafile='mosquitto.org.crt')
+    await C.connect("wss://test.mosquitto.org:8081/", cafile="mosquitto.org.crt")
     tasks = [
-        asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_0')),
-        asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_1', qos=QOS_1)),
-        asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_2', qos=QOS_2)),
+        asyncio.ensure_future(C.publish("a/b", b"TEST MESSAGE WITH QOS_0")),
+        asyncio.ensure_future(C.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)),
+        asyncio.ensure_future(C.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=QOS_2)),
     ]
     await asyncio.wait(tasks)
     logger.info("messages published")
     await C.disconnect()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     formatter = "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
     asyncio.get_event_loop().run_until_complete(test_coro())

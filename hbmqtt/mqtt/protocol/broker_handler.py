@@ -28,7 +28,9 @@ from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
 
 class BrokerProtocolHandler(ProtocolHandler):
-    def __init__(self, plugins_manager: PluginManager, session: Session = None, loop=None):
+    def __init__(
+        self, plugins_manager: PluginManager, session: Session = None, loop=None
+    ):
         super().__init__(plugins_manager, session, loop)
         self._disconnect_waiter = None
         self._pending_subscriptions = Queue(loop=self._loop)
@@ -134,7 +136,10 @@ class BrokerProtocolHandler(ProtocolHandler):
             raise MQTTException("[[MQTT-3.1.3-3]] : Client identifier must be present")
 
         if connect.variable_header.will_flag:
-            if connect.payload.will_topic is None or connect.payload.will_message is None:
+            if (
+                connect.payload.will_topic is None
+                or connect.payload.will_message is None
+            ):
                 raise MQTTException(
                     "will flag set, but will topic/message not present in payload"
                 )
@@ -175,7 +180,9 @@ class BrokerProtocolHandler(ProtocolHandler):
             connack = ConnackPacket.build(
                 0, BAD_USERNAME_PASSWORD
             )  # [MQTT-3.2.2-4] session_parent=0
-        elif connect.clean_session_flag is False and (connect.payload.client_id_is_random):
+        elif connect.clean_session_flag is False and (
+            connect.payload.client_id_is_random
+        ):
             error_msg = (
                 "[MQTT-3.1.3-8] [MQTT-3.1.3-9] %s: No client Id provided (cleansession=0)"
                 % (format_client_message(address=remote_address, port=remote_port))

@@ -146,14 +146,18 @@ class Session:
 
     def _init_states(self):
         self.transitions = Machine(states=Session.states, initial="new")
-        self.transitions.add_transition(trigger="connect", source="new", dest="connected")
+        self.transitions.add_transition(
+            trigger="connect", source="new", dest="connected"
+        )
         self.transitions.add_transition(
             trigger="connect", source="disconnected", dest="connected"
         )
         self.transitions.add_transition(
             trigger="disconnect", source="connected", dest="disconnected"
         )
-        self.transitions.add_transition(trigger="disconnect", source="new", dest="disconnected")
+        self.transitions.add_transition(
+            trigger="disconnect", source="new", dest="disconnected"
+        )
         self.transitions.add_transition(
             trigger="disconnect", source="disconnected", dest="disconnected"
         )
@@ -163,10 +167,14 @@ class Session:
         self._packet_id += 1
         if self._packet_id > 65535:
             self._packet_id = 1
-        while self._packet_id in self.inflight_in or self._packet_id in self.inflight_out:
+        while (
+            self._packet_id in self.inflight_in or self._packet_id in self.inflight_out
+        ):
             self._packet_id += 1
             if self._packet_id > 65535:
-                raise HBMQTTException("More than 65525 messages pending. No free packet ID")
+                raise HBMQTTException(
+                    "More than 65525 messages pending. No free packet ID"
+                )
 
         return self._packet_id
 

@@ -48,7 +48,9 @@ class SQLitePlugin:
                 )
                 self.conn.commit()
             except Exception as e:
-                self.context.logger.error("Failed saving session '%s': %s" % (session, e))
+                self.context.logger.error(
+                    "Failed saving session '%s': %s" % (session, e)
+                )
 
     async def find_session(self, client_id):
         if self.cursor:

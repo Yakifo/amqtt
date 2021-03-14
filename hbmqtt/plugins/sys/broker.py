@@ -111,7 +111,8 @@ class BrokerSysPlugin:
         tasks = deque()
         tasks.append(
             self.schedule_broadcast_sys_topic(
-                "load/bytes/received", int_to_bytes_str(self._stats[STAT_BYTES_RECEIVED])
+                "load/bytes/received",
+                int_to_bytes_str(self._stats[STAT_BYTES_RECEIVED]),
             )
         )
         tasks.append(
@@ -130,7 +131,9 @@ class BrokerSysPlugin:
             )
         )
         tasks.append(
-            self.schedule_broadcast_sys_topic("time", str(datetime.now()).encode("utf-8"))
+            self.schedule_broadcast_sys_topic(
+                "time", str(datetime.now()).encode("utf-8")
+            )
         )
         tasks.append(
             self.schedule_broadcast_sys_topic(
@@ -138,7 +141,9 @@ class BrokerSysPlugin:
             )
         )
         tasks.append(
-            self.schedule_broadcast_sys_topic("uptime/formated", str(uptime).encode("utf-8"))
+            self.schedule_broadcast_sys_topic(
+                "uptime/formated", str(uptime).encode("utf-8")
+            )
         )
         tasks.append(
             self.schedule_broadcast_sys_topic(
@@ -157,7 +162,8 @@ class BrokerSysPlugin:
         )
         tasks.append(
             self.schedule_broadcast_sys_topic(
-                "clients/total", int_to_bytes_str(client_connected + client_disconnected)
+                "clients/total",
+                int_to_bytes_str(client_connected + client_disconnected),
             )
         )
         tasks.append(
@@ -188,12 +194,14 @@ class BrokerSysPlugin:
         )
         tasks.append(
             self.schedule_broadcast_sys_topic(
-                "messages/publish/sent", int_to_bytes_str(self._stats[STAT_PUBLISH_SENT])
+                "messages/publish/sent",
+                int_to_bytes_str(self._stats[STAT_PUBLISH_SENT]),
             )
         )
         tasks.append(
             self.schedule_broadcast_sys_topic(
-                "messages/retained/count", int_to_bytes_str(len(self.context.retained_messages))
+                "messages/retained/count",
+                int_to_bytes_str(len(self.context.retained_messages)),
             )
         )
         tasks.append(

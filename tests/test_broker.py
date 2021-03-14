@@ -36,7 +36,9 @@ from hbmqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload
 from hbmqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 
-formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+formatter = (
+    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+)
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 log = logging.getLogger(__name__)
 
@@ -53,7 +55,10 @@ MagicMock.__await__ = lambda x: async_magic().__await__()
 @pytest.mark.asyncio
 async def test_start_stop(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
-        [call().fire_event(EVENT_BROKER_PRE_START), call().fire_event(EVENT_BROKER_POST_START)],
+        [
+            call().fire_event(EVENT_BROKER_PRE_START),
+            call().fire_event(EVENT_BROKER_POST_START),
+        ],
         any_order=True,
     )
     mock_plugin_manager.reset_mock()
@@ -93,7 +98,9 @@ async def test_client_connect(broker, mock_plugin_manager):
 
 @pytest.mark.asyncio
 async def test_client_connect_will_flag(broker, event_loop):
-    conn_reader, conn_writer = await asyncio.open_connection("127.0.0.1", 1883, loop=event_loop)
+    conn_reader, conn_writer = await asyncio.open_connection(
+        "127.0.0.1", 1883, loop=event_loop
+    )
     reader = StreamReaderAdapter(conn_reader)
     writer = StreamWriterAdapter(conn_writer)
 
@@ -267,7 +274,9 @@ async def test_client_publish(broker, mock_plugin_manager):
 
 @pytest.mark.asyncio
 async def test_client_publish_dup(broker, event_loop):
-    conn_reader, conn_writer = await asyncio.open_connection("127.0.0.1", 1883, loop=event_loop)
+    conn_reader, conn_writer = await asyncio.open_connection(
+        "127.0.0.1", 1883, loop=event_loop
+    )
     reader = StreamReaderAdapter(conn_reader)
     writer = StreamWriterAdapter(conn_writer)
 
@@ -317,7 +326,9 @@ async def test_client_publish_big(broker, mock_plugin_manager):
     ret = await pub_client.connect("mqtt://127.0.0.1/")
     assert ret == 0
 
-    ret_message = await pub_client.publish("/topic", bytearray(b"\x99" * 256 * 1024), QOS_2)
+    ret_message = await pub_client.publish(
+        "/topic", bytearray(b"\x99" * 256 * 1024), QOS_2
+    )
     await pub_client.disconnect()
     assert broker._retained_messages == {}
 
@@ -366,7 +377,9 @@ async def test_client_publish_retain_delete(broker):
 async def test_client_subscribe_publish(broker):
     sub_client = MQTTClient()
     await sub_client.connect("mqtt://127.0.0.1")
-    ret = await sub_client.subscribe([("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)])
+    ret = await sub_client.subscribe(
+        [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)]
+    )
     assert ret == [QOS_0, QOS_1, QOS_2]
 
     await _client_publish("/qos0", b"data", QOS_0)
@@ -388,7 +401,12 @@ async def test_client_subscribe_invalid(broker):
     sub_client = MQTTClient()
     await sub_client.connect("mqtt://127.0.0.1")
     ret = await sub_client.subscribe(
-        [("+", QOS_0), ("+/tennis/#", QOS_0), ("sport+", QOS_0), ("sport/+/player1", QOS_0)]
+        [
+            ("+", QOS_0),
+            ("+/tennis/#", QOS_0),
+            ("sport+", QOS_0),
+            ("sport/+/player1", QOS_0),
+        ]
     )
     assert ret == [QOS_0, QOS_0, 0x80, QOS_0]
 
@@ -445,11 +463,15 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(reason="see https://github.com/Yakifo/aio-hbmqtt/issues/16", strict=False)
+@pytest.mark.xfail(
+    reason="see https://github.com/Yakifo/aio-hbmqtt/issues/16", strict=False
+)
 async def test_client_publish_retain_subscribe(broker):
     sub_client = MQTTClient()
     await sub_client.connect("mqtt://127.0.0.1", cleansession=False)
-    ret = await sub_client.subscribe([("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)])
+    ret = await sub_client.subscribe(
+        [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)]
+    )
     assert ret == [QOS_0, QOS_1, QOS_2]
     await sub_client.disconnect()
     await asyncio.sleep(0.1)

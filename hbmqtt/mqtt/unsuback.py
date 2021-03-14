@@ -1,7 +1,12 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from hbmqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, UNSUBACK, PacketIdVariableHeader
+from hbmqtt.mqtt.packet import (
+    MQTTPacket,
+    MQTTFixedHeader,
+    UNSUBACK,
+    PacketIdVariableHeader,
+)
 from hbmqtt.errors import HBMQTTException
 
 
@@ -20,7 +25,8 @@ class UnsubackPacket(MQTTPacket):
         else:
             if fixed.packet_type is not UNSUBACK:
                 raise HBMQTTException(
-                    "Invalid fixed packet type %s for UnsubackPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for UnsubackPacket init"
+                    % fixed.packet_type
                 )
             header = fixed
 
