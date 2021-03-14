@@ -14,7 +14,9 @@ class BaseTopicPlugin:
     def topic_filtering(self, *args, **kwargs):
         if not self.topic_config:
             # auth config section not found
-            self.context.logger.warning("'auth' section not found in context configuration")
+            self.context.logger.warning(
+                "'auth' section not found in context configuration"
+            )
             return False
         return True
 

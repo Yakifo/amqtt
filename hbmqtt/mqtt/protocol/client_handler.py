@@ -19,7 +19,9 @@ from hbmqtt.plugins.manager import PluginManager
 
 
 class ClientProtocolHandler(ProtocolHandler):
-    def __init__(self, plugins_manager: PluginManager, session: Session = None, loop=None):
+    def __init__(
+        self, plugins_manager: PluginManager, session: Session = None, loop=None
+    ):
         super().__init__(plugins_manager, session, loop=loop)
         self._ping_task = None
         self._pingresp_queue = asyncio.Queue(loop=self._loop)
@@ -120,7 +122,8 @@ class ClientProtocolHandler(ProtocolHandler):
             waiter.set_result(suback.payload.return_codes)
         except KeyError as ke:
             self.logger.warning(
-                "Received SUBACK for unknown pending subscription with Id: %s" % packet_id
+                "Received SUBACK for unknown pending subscription with Id: %s"
+                % packet_id
             )
 
     async def mqtt_unsubscribe(self, topics, packet_id):
@@ -143,7 +146,8 @@ class ClientProtocolHandler(ProtocolHandler):
             waiter.set_result(None)
         except KeyError as ke:
             self.logger.warning(
-                "Received UNSUBACK for unknown pending subscription with Id: %s" % packet_id
+                "Received UNSUBACK for unknown pending subscription with Id: %s"
+                % packet_id
             )
 
     async def mqtt_disconnect(self):

@@ -1,7 +1,12 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from hbmqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, PUBREL, PacketIdVariableHeader
+from hbmqtt.mqtt.packet import (
+    MQTTPacket,
+    MQTTFixedHeader,
+    PUBREL,
+    PacketIdVariableHeader,
+)
 from hbmqtt.errors import HBMQTTException
 
 
@@ -18,14 +23,17 @@ class PubrelPacket(MQTTPacket):
         self.variable_header.packet_id = val
 
     def __init__(
-        self, fixed: MQTTFixedHeader = None, variable_header: PacketIdVariableHeader = None
+        self,
+        fixed: MQTTFixedHeader = None,
+        variable_header: PacketIdVariableHeader = None,
     ):
         if fixed is None:
             header = MQTTFixedHeader(PUBREL, 0x02)  # [MQTT-3.6.1-1]
         else:
             if fixed.packet_type is not PUBREL:
                 raise HBMQTTException(
-                    "Invalid fixed packet type %s for PubrelPacket init" % fixed.packet_type
+                    "Invalid fixed packet type %s for PubrelPacket init"
+                    % fixed.packet_type
                 )
             header = fixed
         super().__init__(header)

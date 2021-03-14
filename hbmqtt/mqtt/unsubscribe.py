@@ -23,7 +23,9 @@ class UnubscribePayload(MQTTPayload):
         super().__init__()
         self.topics = topics
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader):
+    def to_bytes(
+        self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
+    ):
         out = b""
         for topic in self.topics:
             out += encode_string(topic)

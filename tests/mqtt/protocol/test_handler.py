@@ -6,7 +6,11 @@ import asyncio
 import logging
 import random
 from hbmqtt.plugins.manager import PluginManager
-from hbmqtt.session import Session, OutgoingApplicationMessage, IncomingApplicationMessage
+from hbmqtt.session import (
+    Session,
+    OutgoingApplicationMessage,
+    IncomingApplicationMessage,
+)
 from hbmqtt.mqtt.protocol.handler import ProtocolHandler
 from hbmqtt.adapters import StreamWriterAdapter, StreamReaderAdapter
 from hbmqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
@@ -16,7 +20,9 @@ from hbmqtt.mqtt.pubrec import PubrecPacket
 from hbmqtt.mqtt.pubrel import PubrelPacket
 from hbmqtt.mqtt.pubcomp import PubcompPacket
 
-formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+formatter = (
+    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+)
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 log = logging.getLogger(__name__)
 
@@ -33,7 +39,9 @@ class ProtocolHandlerTest(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
-        self.plugin_manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
+        self.plugin_manager = PluginManager(
+            "hbmqtt.test.plugins", context=None, loop=self.loop
+        )
 
     def tearDown(self):
         self.loop.close()
@@ -91,7 +99,9 @@ class ProtocolHandlerTest(unittest.TestCase):
                 handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
                 handler.attach(s, reader_adapted, writer_adapted)
                 await self.start_handler(handler, s)
-                message = await handler.mqtt_publish("/topic", b"test_data", QOS_0, False)
+                message = await handler.mqtt_publish(
+                    "/topic", b"test_data", QOS_0, False
+                )
                 self.assertIsInstance(message, OutgoingApplicationMessage)
                 self.assertIsNotNone(message.publish_packet)
                 self.assertIsNone(message.puback_packet)
@@ -135,7 +145,9 @@ class ProtocolHandlerTest(unittest.TestCase):
                 self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
-                message = await self.handler.mqtt_publish("/topic", b"test_data", QOS_1, False)
+                message = await self.handler.mqtt_publish(
+                    "/topic", b"test_data", QOS_1, False
+                )
                 self.assertIsInstance(message, OutgoingApplicationMessage)
                 self.assertIsNotNone(message.publish_packet)
                 self.assertIsNotNone(message.puback_packet)
@@ -188,7 +200,9 @@ class ProtocolHandlerTest(unittest.TestCase):
                 self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
-                message = await self.handler.mqtt_publish("/topic", b"test_data", QOS_2, False)
+                message = await self.handler.mqtt_publish(
+                    "/topic", b"test_data", QOS_2, False
+                )
                 self.assertIsInstance(message, OutgoingApplicationMessage)
                 self.assertIsNotNone(message.publish_packet)
                 self.assertIsNone(message.puback_packet)

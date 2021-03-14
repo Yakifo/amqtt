@@ -77,7 +77,9 @@ class PluginManager:
         except ImportError as ie:
             self.logger.warning("Plugin %r import failed: %s" % (ep, ie))
         except pkg_resources.UnknownExtra as ue:
-            self.logger.warning("Plugin %r dependencies resolution failed: %s" % (ep, ue))
+            self.logger.warning(
+                "Plugin %r dependencies resolution failed: %s" % (ep, ue)
+            )
 
     def get_plugin(self, name):
         """

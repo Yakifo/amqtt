@@ -153,7 +153,9 @@ def main(*args, **kwargs):
         config = read_yaml_config(arguments["-c"])
     else:
         config = read_yaml_config(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), "default_client.yaml")
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
+            )
         )
         logger.debug("Using default configuration")
     loop = asyncio.get_event_loop()
@@ -165,7 +167,11 @@ def main(*args, **kwargs):
     if arguments["-k"]:
         config["keep_alive"] = int(arguments["-k"])
 
-    if arguments["--will-topic"] and arguments["--will-message"] and arguments["--will-qos"]:
+    if (
+        arguments["--will-topic"]
+        and arguments["--will-message"]
+        and arguments["--will-qos"]
+    ):
         config["will"] = dict()
         config["will"]["topic"] = arguments["--will-topic"]
         config["will"]["message"] = arguments["--will-message"].encode("utf-8")
