@@ -57,11 +57,11 @@ async def read_or_raise(reader, n=-1):
     return data
 
 
-async def decode_string(reader) -> bytes:
+async def decode_string(reader) -> str:
     """
     Read a string from a reader and decode it according to MQTT string specification
     :param reader: Stream reader
-    :return: UTF-8 string read from stream
+    :return: string read from stream
     """
     length_bytes = await read_or_raise(reader, 2)
     str_length = unpack("!H", length_bytes)
