@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-import asyncio
+
 import io
 from websockets.protocol import WebSocketCommonProtocol
 from websockets.exceptions import ConnectionClosed
@@ -13,19 +13,20 @@ class ReaderAdapter:
     """
     Base class for all network protocol reader adapter.
 
-    Reader adapters are used to adapt read operations on the network depending on the protocol used
+    Reader adapters are used to adapt read operations on the network depending on the
+    protocol used
     """
 
     async def read(self, n=-1) -> bytes:
         """
-        Read up to n bytes. If n is not provided, or set to -1, read until EOF and return all read bytes.
-        If the EOF was received and the internal buffer is empty, return an empty bytes object.
-        :return: packet read as bytes data
+        Read up to n bytes. If n is not provided, or set to -1, read until EOF and
+        return all read bytes. If the EOF was received and the internal buffer is
+        empty, return an empty bytes object. :return: packet read as bytes data
         """
 
     def feed_eof(self):
         """
-        Acknowleddge EOF
+        Acknowledge EOF
         """
 
 
@@ -33,7 +34,8 @@ class WriterAdapter:
     """
     Base class for all network protocol writer adapter.
 
-    Writer adapters are used to adapt write operations on the network depending on the protocol used
+    Writer adapters are used to adapt write operations on the network depending on
+    the protocol used
     """
 
     def write(self, data):

@@ -2,12 +2,12 @@
 #
 # See the file license.txt for copying permission.
 from datetime import datetime
+from collections import deque
+import asyncio
+
 import hbmqtt
 from hbmqtt.mqtt.packet import PUBLISH
 from hbmqtt.codecs import int_to_bytes_str
-import asyncio
-import sys
-from collections import deque
 
 
 DOLLAR_SYS_ROOT = "$SYS/broker/"
@@ -69,7 +69,7 @@ class BrokerSysPlugin:
             sys_interval = int(self.context.config.get("sys_interval", 0))
             if sys_interval > 0:
                 self.context.logger.debug(
-                    "Setup $SYS broadcasting every %d secondes" % sys_interval
+                    "Setup $SYS broadcasting every %d seconds" % sys_interval
                 )
                 self.sys_handle = self.context.loop.call_later(
                     sys_interval, self.broadcast_dollar_sys_topics

@@ -30,8 +30,8 @@ jobs:
         python -m pip install .
     - name: Lint with flake8 and black
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+        flake8 . --count --statistics --show-source --ignore=E501,W503,W605,E722
+        flake8 . --count --statistics --exit-zero --max-complexity=10 --ignore=E501,W503
         black . --check
     - name: Test with pytest
       run: |

@@ -25,9 +25,9 @@ class SubscribePayload(MQTTPayload):
 
     __slots__ = ("topics",)
 
-    def __init__(self, topics=[]):
+    def __init__(self, topics=None):
         super().__init__()
-        self.topics = topics
+        self.topics = topics or []
 
     def to_bytes(
         self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
@@ -55,7 +55,7 @@ class SubscribePayload(MQTTPayload):
                 qos = bytes_to_int(qos_byte)
                 topics.append((topic, qos))
                 read_bytes += 2 + len(topic.encode("utf-8")) + 1
-            except NoDataException as exc:
+            except NoDataException:
                 break
         return cls(topics)
 

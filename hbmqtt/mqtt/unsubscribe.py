@@ -19,9 +19,9 @@ class UnubscribePayload(MQTTPayload):
 
     __slots__ = ("topics",)
 
-    def __init__(self, topics=[]):
+    def __init__(self, topics=None):
         super().__init__()
-        self.topics = topics
+        self.topics = topics or []
 
     def to_bytes(
         self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader

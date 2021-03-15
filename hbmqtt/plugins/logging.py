@@ -4,7 +4,6 @@
 
 
 import logging
-import asyncio
 from functools import partial
 
 

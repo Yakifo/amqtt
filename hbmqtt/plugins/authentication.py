@@ -2,7 +2,6 @@
 #
 # See the file license.txt for copying permission.
 import logging
-import asyncio
 from passlib.apps import custom_app_context as pwd_context
 
 
@@ -55,7 +54,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
                                 "Authentication failure: session has an empty username"
                             )
                 except KeyError:
-                    self.context.logger.warning("Session informations not available")
+                    self.context.logger.warning("Session information not available")
                     authenticated = False
         return authenticated
 
@@ -74,8 +73,8 @@ class FileAuthPlugin(BaseAuthPlugin):
                     self.context.logger.debug(
                         "Reading user database from %s" % password_file
                     )
-                    for l in f:
-                        line = l.strip()
+                    for line in f:
+                        line = line.strip()
                         if not line.startswith("#"):  # Allow comments in files
                             (username, pwd_hash) = line.split(sep=":", maxsplit=3)
                             if username:

@@ -106,17 +106,16 @@ async def do_sub(client, arguments):
         await client.disconnect()
     except ConnectException as ce:
         logger.fatal("connection to '%s' failed: %r" % (arguments["--url"], ce))
-    except asyncio.CancelledError as cae:
-        logger.fatal("Publish canceled due to prvious error")
+    except asyncio.CancelledError:
+        logger.fatal("Publish canceled due to previous error")
 
 
 def main(*args, **kwargs):
-    if sys.version_info[:2] < (3, 4):
-        logger.fatal("Error: Python 3.4+ is required")
+    if sys.version_info[:2] < (3, 6):
+        logger.fatal("Error: Python 3.6+ is required")
         sys.exit(-1)
 
     arguments = docopt(__doc__, version=hbmqtt.__version__)
-    # print(arguments)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     if arguments["-d"]:

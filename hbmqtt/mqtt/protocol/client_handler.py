@@ -3,7 +3,6 @@
 # See the file license.txt for copying permission.
 import asyncio
 from asyncio import futures
-import sys
 from hbmqtt.mqtt.protocol.handler import ProtocolHandler, EVENT_MQTT_PACKET_RECEIVED
 from hbmqtt.mqtt.disconnect import DisconnectPacket
 from hbmqtt.mqtt.pingreq import PingReqPacket
@@ -120,7 +119,7 @@ class ClientProtocolHandler(ProtocolHandler):
         try:
             waiter = self._subscriptions_waiter.get(packet_id)
             waiter.set_result(suback.payload.return_codes)
-        except KeyError as ke:
+        except KeyError:
             self.logger.warning(
                 "Received SUBACK for unknown pending subscription with Id: %s"
                 % packet_id
@@ -144,7 +143,7 @@ class ClientProtocolHandler(ProtocolHandler):
         try:
             waiter = self._unsubscriptions_waiter.get(packet_id)
             waiter.set_result(None)
-        except KeyError as ke:
+        except KeyError:
             self.logger.warning(
                 "Received UNSUBACK for unknown pending subscription with Id: %s"
                 % packet_id

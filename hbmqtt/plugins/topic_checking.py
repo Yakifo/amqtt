@@ -1,6 +1,3 @@
-import asyncio
-
-
 class BaseTopicPlugin:
     def __init__(self, context):
         self.context = context

@@ -1,8 +1,6 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-import asyncio
-
 from hbmqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
@@ -25,9 +23,9 @@ class SubackPayload(MQTTPayload):
     RETURN_CODE_02 = 0x02
     RETURN_CODE_80 = 0x80
 
-    def __init__(self, return_codes=[]):
+    def __init__(self, return_codes=None):
         super().__init__()
-        self.return_codes = return_codes
+        self.return_codes = return_codes or []
 
     def __repr__(self):
         return type(self).__name__ + "(return_codes={0})".format(
