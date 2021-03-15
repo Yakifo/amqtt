@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from typing import Optional, Dict, Union
+from typing import Optional
 import logging
 import ssl
 import websockets
@@ -147,7 +147,7 @@ class Broker:
     MQTT 3.1.1 compliant broker implementation
 
     :param config: Example Yaml config
-    :param loop: asyncio loop to use. Defaults to ``asyncio.get_event_loop()`` if none is given
+    :param loop: asyncio loop to use. Defaults to ``asyncio.get_event_loop()``.
     :param plugin_namespace: Plugin namespace to use when loading plugin entry_points. Defaults to ``hbmqtt.broker.plugins``
 
     """

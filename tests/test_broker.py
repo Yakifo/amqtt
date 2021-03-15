@@ -1,11 +1,9 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-import sys
 import asyncio
 import logging
-import unittest
-from unittest.mock import patch, call, MagicMock
+from unittest.mock import call, MagicMock
 
 import pytest
 
@@ -20,7 +18,6 @@ from hbmqtt.broker import (
     EVENT_BROKER_CLIENT_SUBSCRIBED,
     EVENT_BROKER_CLIENT_UNSUBSCRIBED,
     EVENT_BROKER_MESSAGE_RECEIVED,
-    Broker,
 )
 from hbmqtt.client import MQTTClient, ConnectException
 from hbmqtt.mqtt import (
@@ -432,8 +429,11 @@ async def test_client_subscribe_publish_dollar_topic_1(broker):
     message = None
     try:
         message = await sub_client.deliver_message(timeout=2)
-    except Exception as e:
+    except asyncio.TimeoutError:
         pass
+    except RuntimeError as e:
+        # The loop is closed with pending tasks. Needs fine tuning.
+        log.warning(e)
     assert message is None
     await sub_client.disconnect()
     await asyncio.sleep(0.1)
@@ -455,8 +455,11 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
     message = None
     try:
         message = await sub_client.deliver_message(timeout=2)
-    except Exception as e:
+    except asyncio.TimeoutError:
         pass
+    except RuntimeError as e:
+        # The loop is closed with pending tasks. Needs fine tuning.
+        log.warning(e)
     assert message is None
     await sub_client.disconnect()
     await asyncio.sleep(0.1)

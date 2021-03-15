@@ -8,7 +8,6 @@ import pkg_resources
 import logging
 import asyncio
 import copy
-import sys
 
 from collections import namedtuple
 
@@ -31,9 +30,9 @@ class BaseContext:
 
 class PluginManager:
     """
-    Wraps setuptools Entry point mechanism to provide a basic plugin system.
-    Plugins are loaded for a given namespace (group).
-    This plugin manager uses coroutines to run plugin call asynchronously in an event queue
+    Wraps setuptools Entry point mechanism to provide a basic plugin system. Plugins
+    are loaded for a given namespace (group). This plugin manager uses coroutines to
+    run plugin call asynchronously in an event queue
     """
 
     def __init__(self, namespace, context, loop=None):
@@ -95,7 +94,8 @@ class PluginManager:
     async def close(self):
         """
         Free PluginManager resources and cancel pending event methods
-        This method call a close() coroutine for each plugin, allowing plugins to close and free resources
+        This method call a close() coroutine for each plugin, allowing plugins to close
+        and free resources
         :return:
         """
         await self.map_plugin_coro("close")
@@ -118,8 +118,8 @@ class PluginManager:
         Fire an event to plugins.
         PluginManager schedule async calls for each plugin on method called "on_" + event_name
         For example, on_connect will be called on event 'connect'
-        Method calls are schedule in the asyn loop. wait parameter must be set to true to wait until all
-        mehtods are completed.
+        Method calls are schedule in the async loop. wait parameter must be set to true
+        to wait until all methods are completed.
         :param event_name:
         :param args:
         :param kwargs:
@@ -159,7 +159,8 @@ class PluginManager:
         Schedule a given coroutine call for each plugin.
         The coro called get the Plugin instance as first argument of its method call
         :param coro: coro to call on each plugin
-        :param filter_plugins: list of plugin names to filter (only plugin whose name is in filter are called).
+        :param filter_plugins: list of plugin names to filter (only plugin whose name is
+            in filter are called).
         None will call all plugins. [] will call None.
         :param args: arguments to pass to coro
         :param kwargs: arguments to pass to coro
