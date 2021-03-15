@@ -104,3 +104,6 @@ ENV/
 
 # Project specific
 tests/plugins/test.db
+
+# pycharm
+.idea/
