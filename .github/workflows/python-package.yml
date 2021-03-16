@@ -31,7 +31,6 @@ jobs:
     - name: Lint with flake8 and black
       run: |
         flake8 . --count --statistics --show-source --ignore=E501,W503,W605,E722
-        flake8 . --count --statistics --exit-zero --max-complexity=10 --ignore=E501,W503
         black . --check
     - name: Test with pytest
       run: |
