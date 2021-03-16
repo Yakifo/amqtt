@@ -12,13 +12,12 @@ class BaseTopicPlugin:
             )
 
     def topic_filtering(self, *args, **kwargs):
-        if not self.topic_config:
-            # auth config section not found
-            self.context.logger.warning(
-                "'auth' section not found in context configuration"
-            )
-            return False
-        return True
+        if self.topic_config:
+            return True
+
+        # auth config section not found
+        self.context.logger.warning("'auth' section not found in context configuration")
+        return False
 
 
 class TopicTabooPlugin(BaseTopicPlugin):
@@ -66,20 +65,24 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
 
     async def topic_filtering(self, *args, **kwargs):
         filter_result = super().topic_filtering(*args, **kwargs)
-        if filter_result:
-            session = kwargs.get("session", None)
-            req_topic = kwargs.get("topic", None)
-            if req_topic:
-                username = session.username
-                if username is None:
-                    username = "anonymous"
-                allowed_topics = self.topic_config["acl"].get(username, None)
-                if allowed_topics:
-                    for allowed_topic in allowed_topics:
-                        if self.topic_ac(req_topic, allowed_topic):
-                            return True
-                    return False
-                else:
-                    return False
-            else:
-                return False
+        if not filter_result:
+            return False
+
+        req_topic = kwargs.get("topic", None)
+        if not req_topic:
+            return False
+
+        session = kwargs.get("session", None)
+        username = session.username
+        if username is None:
+            username = "anonymous"
+
+        allowed_topics = self.topic_config["acl"].get(username, None)
+        if not allowed_topics:
+            return False
+
+        for allowed_topic in allowed_topics:
+            if self.topic_ac(req_topic, allowed_topic):
+                return True
+
+        return False
