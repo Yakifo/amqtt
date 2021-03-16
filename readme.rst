@@ -1,26 +1,30 @@
-.. image:: https://img.shields.io/github/license/Yakifo/amqtt?style=flat-square
+|license| |ci| |coverage| |rtfm| |gitter| |python_versions| |python_wheel| |PyPI|
 
-.. image:: https://img.shields.io/github/workflow/status/Yakifo/amqtt/Python%20package?style=flat-square
+.. |license| image:: https://img.shields.io/github/license/Yakifo/amqtt?style=flat-square
+    :target: https://amqtt.readthedocs.io/en/latest/
+    :alt: MIT licensed
+
+.. |ci| image:: https://img.shields.io/github/workflow/status/Yakifo/amqtt/Python%20package?style=flat-square
     :target: https://github.com/Yakifo/amqtt/actions/workflows/python-package.yml
 
-.. image:: https://img.shields.io/coveralls/github/Yakifo/amqtt?style=flat-square
+.. |coverage| image:: https://img.shields.io/coveralls/github/Yakifo/amqtt?style=flat-square
     :target: https://coveralls.io/github/Yakifo/amqtt?branch=master
 
-.. image:: https://img.shields.io/readthedocs/amqtt?style=flat-square
+.. |rtfm| image:: https://img.shields.io/readthedocs/amqtt?style=flat-square
     :target: https://amqtt.readthedocs.io/en/latest/
     :alt: Documentation Status
 
-.. image:: https://img.shields.io/gitter/room/Yakifo/amqtt?style=flat-square
+.. |gitter| image:: https://img.shields.io/gitter/room/Yakifo/amqtt?style=flat-square
     :target: https://gitter.im/amqtt/community
     :alt: 'Join the chat at https://gitter.im/amqtt/community'
 
-.. image:: https://img.shields.io/pypi/pyversions/amqtt?style=flat-square
-    :alt: PyPI - Python Version
+.. |python_versions| image:: https://img.shields.io/pypi/pyversions/amqtt?style=flat-square
+    :alt: Python Version
 
-.. image:: https://img.shields.io/pypi/wheel/amqtt?style=flat-square 
+.. |python_wheel| image:: https://img.shields.io/pypi/wheel/amqtt?style=flat-square 
     :alt: supports python wheel
 
-.. image:: https://img.shields.io/pypi/v/amqtt?style=flat-square
+.. |PyPI| image:: https://img.shields.io/pypi/v/amqtt?style=flat-square
     :target: https://pypi.org/project/amqtt/
     :alt: PyPI
 
