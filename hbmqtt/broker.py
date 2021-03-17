@@ -733,7 +733,7 @@ class Broker:
             session=session,
             topic=topic,
             command=command,
-            filter_plugins=topic_plugins
+            filter_plugins=topic_plugins,
         )
         topic_result = True
         if returns:
