@@ -24,16 +24,24 @@ class BaseTopicPlugin:
 class TopicTabooPlugin(BaseTopicPlugin):
     def __init__(self, context):
         super().__init__(context)
-        self._taboo = ["prohibited", "top-secret", "data/classified"]
+        self._taboo = self.topic_config["taboo"]
+        self._taboo_command = self.topic_config.get(
+            "taboo_command"
+        )  # If None, allow neither
 
     async def topic_filtering(self, *args, **kwargs):
         filter_result = super().topic_filtering(*args, **kwargs)
         if filter_result:
             session = kwargs.get("session", None)
             topic = kwargs.get("topic", None)
+            command = kwargs.get("command")
             if session.username and session.username == "admin":
                 return True
-            if topic and topic in self._taboo:
+            if (
+                topic
+                and topic in self._taboo
+                and (self._taboo_command == None or self._taboo_command == command)
+            ):
                 return False
             return True
         return filter_result
