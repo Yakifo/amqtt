@@ -1,0 +1,72 @@
+[tool.poetry]
+name = "amqtt"
+version = "0.10.0-alpha.1"
+description = "MQTT client/broker using Python asyncio"
+authors = ["aMQTT Contributers"]
+license = "MIT"
+homepage = "https://github.com/Yakifo/amqtt"
+classifiers = [
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Operating System :: POSIX",
+        "Operating System :: MacOS",
+        "Operating System :: Microsoft :: Windows",
+        "Topic :: Communications",
+        "Topic :: Internet",
+]
+packages = [
+    { include = "hbmqtt" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+transitions = "^0.8.0"
+websockets = "^8.0"
+passlib = "^1.7.0"
+docopt = "^0.6.0"
+PyYAML = "^5.4.0"
+coveralls = {version = "^3.0.1", optional = true}
+
+
+[tool.poetry.extras]
+ci = ["coveralls"]
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.2"
+pytest-cov = "^2.11.1"
+pytest-asyncio = "^0.14.0"
+asyncmock = "^0.4.0"
+mypy = "^0.812"
+pylint = "^2.7.2"
+black = "^20.8b1"
+flake8 = "^3.9.0"
+
+[tool.poetry.scripts]
+hbmqtt = 'hbmqtt.scripts.broker_script:main'
+hbmqtt_pub = 'hbmqtt.scripts.pub_script:main'
+hbmqtt_sub = 'hbmqtt.scripts.sub_script:main'
+
+[tool.poetry.plugins]
+
+[tool.poetry.plugins."hbmqtt.test.plugins"]
+"test_plugin" = "tests.plugins.test_manager:TestPlugin"
+"event_plugin" = "tests.plugins.test_manager:EventTestPlugin"
+"packet_logger_plugin" = "hbmqtt.plugins.logging:PacketLoggerPlugin"
+
+[tool.poetry.plugins."hbmqtt.broker.plugins"]
+"event_logger_plugin" = "hbmqtt.plugins.logging:EventLoggerPlugin"
+"packet_logger_plugin" = "hbmqtt.plugins.logging:PacketLoggerPlugin"
+"auth_anonymous" = "hbmqtt.plugins.authentication:AnonymousAuthPlugin"
+"auth_file" = "hbmqtt.plugins.authentication:FileAuthPlugin"
+"topic_taboo" = "hbmqtt.plugins.topic_checking:TopicTabooPlugin"
+"topic_acl" = "hbmqtt.plugins.topic_checking:TopicAccessControlListPlugin"
+"broker_sys" = "hbmqtt.plugins.sys.broker:BrokerSysPlugin"
+
+[tool.poetry.plugins."hbmqtt.client.plugins"]
+"packet_logger_plugin" = "hbmqtt.plugins.logging:PacketLoggerPlugin"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
