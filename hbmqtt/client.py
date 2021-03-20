@@ -135,7 +135,7 @@ class MQTTClient:
         cafile=None,
         capath=None,
         cadata=None,
-        extra_headers={},
+        extra_headers=None,
     ):
         """
         Connect to a remote broker.
@@ -153,6 +153,9 @@ class MQTTClient:
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
         :raise: :class:`hbmqtt.client.ConnectException` if connection fails
         """
+
+        if extra_headers is None:
+            extra_headers = {}
 
         self.session = self._initsession(uri, cleansession, cafile, capath, cadata)
         self.extra_headers = extra_headers
