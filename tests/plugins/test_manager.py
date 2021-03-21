@@ -5,8 +5,6 @@ import unittest
 import logging
 import asyncio
 
-import pytest
-
 from hbmqtt.plugins.manager import PluginManager
 
 formatter = (
