@@ -43,7 +43,7 @@ EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
 EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
 
 
-class BrokerException(BaseException):
+class BrokerException(Exception):
     pass
 
 
