@@ -625,7 +625,7 @@ class Broker:
                         client_id=client_session.client_id,
                         message=app_message,
                     )
-                    await self._broadcast_message(
+                    await self._broadcast_message_acl(
                         client_session, app_message.topic, app_message.data
                     )
                     if app_message.publish_packet.retain_flag:
@@ -703,7 +703,7 @@ class Broker:
         # If all plugins returned True, authentication is success
         return auth_result
 
-    async def topic_filtering(self, session: Session, topic):
+    async def topic_filtering(self, session: Session, topic, command):
         """
         This method call the topic_filtering method on registered plugins to check that the subscription is allowed.
         User is considered allowed if all plugins called return True.
@@ -713,7 +713,8 @@ class Broker:
          - None if topic filtering can't be achieved (then plugin result is then ignored)
         :param session:
         :param listener:
-        :param topic: Topic in which the client wants to subscribe
+        :param topic: Topic in which the client wants to publish or subscribe
+        :param command: Whether it's a publish (1) or subscibe (0) command
         :return:
         """
         topic_plugins = None
@@ -724,6 +725,7 @@ class Broker:
             "topic_filtering",
             session=session,
             topic=topic,
+            command=command,
             filter_plugins=topic_plugins,
         )
         topic_result = True
@@ -773,7 +775,7 @@ class Broker:
                         # [MQTT-4.7.1-3] + wildcard character must occupy entire level
                         return 0x80
             # Check if the client is authorised to connect to the topic
-            permitted = await self.topic_filtering(session, topic=a_filter)
+            permitted = await self.topic_filtering(session, topic=a_filter, command=0)
             if not permitted:
                 return 0x80
             qos = subscription[1]
@@ -929,6 +931,12 @@ class Broker:
             if running_tasks:
                 await asyncio.wait(running_tasks, loop=self._loop)
             raise  # reraise per CancelledError semantics
+
+    async def _broadcast_message_acl(self, session, topic, data, force_qos=None):
+        permitted = await self.topic_filtering(session, topic=topic, command=1)
+
+        if permitted:
+            await self._broadcast_message(session, topic, data, force_qos)
 
     async def _broadcast_message(self, session, topic, data, force_qos=None):
         broadcast = {"session": session, "topic": topic, "data": data}
