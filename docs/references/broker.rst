@@ -96,14 +96,14 @@ The ``listeners`` section allows to define network listeners which must be start
 
 The ``auth`` section setup authentication behaviour:
 
-* ``plugins``: defines the list of activated plugins. Note the plugins must be defined in the ``hbmqtt.broker.plugins`` `entry point <https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins>`_.
+* ``plugins``: defines the list of activated plugins. Note the plugins must be defined in the ``amqtt.broker.plugins`` `entry point <https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins>`_.
 * ``allow-anonymous`` : used by the internal :class:`hbmqtt.plugins.authentication.AnonymousAuthPlugin` plugin. This parameter enables (``on``) or disable anonymous connection, ie. connection without username.
 * ``password-file`` : used by the internal :class:`hbmqtt.plugins.authentication.FileAuthPlugin` plugin. This parameter gives to path of the password file to load for authenticating users.
 
 The ``topic-check`` section setup access control policies for publishing and subscribing to topics:
 
 * ``enabled``: set to true if you want to impose an access control policy. Otherwise, set it to false.
-* ``plugins``: defines the list of activated plugins. Note the plugins must be defined in the ``hbmqtt.broker.plugins`` `entry point <https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins>`_.
+* ``plugins``: defines the list of activated plugins. Note the plugins must be defined in the ``amqtt.broker.plugins`` `entry point <https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins>`_.
 * additional parameters: depending on the plugin used for access control, additional parameters should be added.
     * In case of ``topic_acl`` plugin, the Access Control List (ACL) must be defined in the parameter ``acl``.
         * For each username, a list with the allowed topics must be defined.
