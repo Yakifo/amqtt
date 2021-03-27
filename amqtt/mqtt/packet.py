@@ -3,14 +3,14 @@
 # See the file license.txt for copying permission.
 import asyncio
 
-from hbmqtt.codecs import (
+from amqtt.codecs import (
     bytes_to_hex_str,
     decode_packet_id,
     int_to_bytes,
     read_or_raise,
 )
-from hbmqtt.errors import CodecException, MQTTException, NoDataException
-from hbmqtt.adapters import ReaderAdapter, WriterAdapter
+from amqtt.errors import CodecException, MQTTException, NoDataException
+from amqtt.adapters import ReaderAdapter, WriterAdapter
 from datetime import datetime
 from struct import unpack
 

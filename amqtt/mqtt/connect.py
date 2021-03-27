@@ -2,7 +2,7 @@
 #
 # See the file license.txt for copying permission.
 
-from hbmqtt.codecs import (
+from amqtt.codecs import (
     bytes_to_int,
     decode_data_with_length,
     decode_string,
@@ -11,16 +11,16 @@ from hbmqtt.codecs import (
     int_to_bytes,
     read_or_raise,
 )
-from hbmqtt.mqtt.packet import (
+from amqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     CONNECT,
     MQTTVariableHeader,
     MQTTPayload,
 )
-from hbmqtt.errors import HBMQTTException, NoDataException
-from hbmqtt.adapters import ReaderAdapter
-from hbmqtt.utils import gen_client_id
+from amqtt.errors import HBMQTTException, NoDataException
+from amqtt.adapters import ReaderAdapter
+from amqtt.utils import gen_client_id
 
 
 class ConnectVariableHeader(MQTTVariableHeader):

@@ -5,9 +5,9 @@ from datetime import datetime
 from collections import deque
 import asyncio
 
-import hbmqtt
-from hbmqtt.mqtt.packet import PUBLISH
-from hbmqtt.codecs import int_to_bytes_str
+import amqtt
+from amqtt.mqtt.packet import PUBLISH
+from amqtt.codecs import int_to_bytes_str
 
 
 DOLLAR_SYS_ROOT = "$SYS/broker/"
@@ -61,7 +61,7 @@ class BrokerSysPlugin:
 
     async def on_broker_post_start(self, *args, **kwargs):
         self._stats[STAT_START_TIME] = datetime.now()
-        version = f"HBMQTT version {hbmqtt.__version__}"
+        version = f"HBMQTT version {amqtt.__version__}"
         self.context.retain_message(DOLLAR_SYS_ROOT + "version", version.encode())
 
         # Start $SYS topics management

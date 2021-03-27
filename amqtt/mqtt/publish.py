@@ -3,15 +3,15 @@
 # See the file license.txt for copying permission.
 import asyncio
 
-from hbmqtt.mqtt.packet import (
+from amqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     PUBLISH,
     MQTTVariableHeader,
     MQTTPayload,
 )
-from hbmqtt.errors import HBMQTTException, MQTTException
-from hbmqtt.codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
+from amqtt.errors import HBMQTTException, MQTTException
+from amqtt.codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
 
 
 class PublishVariableHeader(MQTTVariableHeader):

@@ -5,8 +5,8 @@ import asyncio
 from transitions import Machine
 from asyncio import Queue
 from collections import OrderedDict
-from hbmqtt.mqtt.publish import PublishPacket
-from hbmqtt.errors import HBMQTTException
+from amqtt.mqtt.publish import PublishPacket
+from amqtt.errors import HBMQTTException
 
 OUTGOING = 0
 INCOMING = 1
@@ -48,26 +48,26 @@ class ApplicationMessage:
         """ Publish message retain flag"""
 
         self.publish_packet = None
-        """ :class:`hbmqtt.mqtt.publish.PublishPacket` instance corresponding to the `PUBLISH <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718037>`_ packet in the messages flow. ``None`` if the PUBLISH packet has not already been received or sent."""
+        """ :class:`amqtt.mqtt.publish.PublishPacket` instance corresponding to the `PUBLISH <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718037>`_ packet in the messages flow. ``None`` if the PUBLISH packet has not already been received or sent."""
 
         self.puback_packet = None
-        """ :class:`hbmqtt.mqtt.puback.PubackPacket` instance corresponding to the `PUBACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043>`_ packet in the messages flow. ``None`` if QoS != QOS_1 or if the PUBACK packet has not already been received or sent."""
+        """ :class:`amqtt.mqtt.puback.PubackPacket` instance corresponding to the `PUBACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043>`_ packet in the messages flow. ``None`` if QoS != QOS_1 or if the PUBACK packet has not already been received or sent."""
 
         self.pubrec_packet = None
-        """ :class:`hbmqtt.mqtt.puback.PubrecPacket` instance corresponding to the `PUBREC <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREC packet has not already been received or sent."""
+        """ :class:`amqtt.mqtt.puback.PubrecPacket` instance corresponding to the `PUBREC <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREC packet has not already been received or sent."""
 
         self.pubrel_packet = None
-        """ :class:`hbmqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBREL <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREL packet has not already been received or sent."""
+        """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBREL <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREL packet has not already been received or sent."""
 
         self.pubcomp_packet = None
-        """ :class:`hbmqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBCOMP <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBCOMP packet has not already been received or sent."""
+        """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBCOMP <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBCOMP packet has not already been received or sent."""
 
     def build_publish_packet(self, dup=False):
         """
-            Build :class:`hbmqtt.mqtt.publish.PublishPacket` from attributes
+            Build :class:`amqtt.mqtt.publish.PublishPacket` from attributes
 
         :param dup: force dup flag
-        :return: :class:`hbmqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
+        :return: :class:`amqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
         """
         return PublishPacket.build(
             self.topic, self.data, self.packet_id, dup, self.qos, self.retain
@@ -80,7 +80,7 @@ class ApplicationMessage:
 class IncomingApplicationMessage(ApplicationMessage):
 
     """
-    Incoming :class:`~hbmqtt.session.ApplicationMessage`.
+    Incoming :class:`~amqtt.session.ApplicationMessage`.
     """
 
     __slots__ = ("direction",)
@@ -93,7 +93,7 @@ class IncomingApplicationMessage(ApplicationMessage):
 class OutgoingApplicationMessage(ApplicationMessage):
 
     """
-    Outgoing :class:`~hbmqtt.session.ApplicationMessage`.
+    Outgoing :class:`~amqtt.session.ApplicationMessage`.
     """
 
     __slots__ = ("direction",)

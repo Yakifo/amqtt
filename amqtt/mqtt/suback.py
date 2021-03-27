@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from hbmqtt.mqtt.packet import (
+from amqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     SUBACK,
@@ -9,9 +9,9 @@ from hbmqtt.mqtt.packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
-from hbmqtt.errors import HBMQTTException, NoDataException
-from hbmqtt.adapters import ReaderAdapter
-from hbmqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
+from amqtt.errors import HBMQTTException, NoDataException
+from amqtt.adapters import ReaderAdapter
+from amqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
 
 
 class SubackPayload(MQTTPayload):
