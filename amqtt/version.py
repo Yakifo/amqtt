@@ -4,14 +4,14 @@ import os
 import subprocess
 import warnings
 
-import hbmqtt
+import amqtt
 
 
 def get_version():
     warnings.warn(
-        "hbmqtt.version.get_version() is deprecated, use hbmqtt.__version__ instead"
+        "amqtt.version.get_version() is deprecated, use amqtt.__version__ instead"
     )
-    return hbmqtt.__version__
+    return amqtt.__version__
 
 
 def get_git_changeset():

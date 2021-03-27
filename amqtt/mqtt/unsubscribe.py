@@ -3,7 +3,7 @@
 # See the file license.txt for copying permission.
 import asyncio
 
-from hbmqtt.mqtt.packet import (
+from amqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     UNSUBSCRIBE,
@@ -11,8 +11,8 @@ from hbmqtt.mqtt.packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
-from hbmqtt.errors import HBMQTTException, NoDataException
-from hbmqtt.codecs import decode_string, encode_string
+from amqtt.errors import HBMQTTException, NoDataException
+from amqtt.codecs import decode_string, encode_string
 
 
 class UnubscribePayload(MQTTPayload):

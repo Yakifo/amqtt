@@ -3,18 +3,18 @@
 # See the file license.txt for copying permission.
 import asyncio
 from asyncio import futures
-from hbmqtt.mqtt.protocol.handler import ProtocolHandler, EVENT_MQTT_PACKET_RECEIVED
-from hbmqtt.mqtt.disconnect import DisconnectPacket
-from hbmqtt.mqtt.pingreq import PingReqPacket
-from hbmqtt.mqtt.pingresp import PingRespPacket
-from hbmqtt.mqtt.subscribe import SubscribePacket
-from hbmqtt.mqtt.suback import SubackPacket
-from hbmqtt.mqtt.unsubscribe import UnsubscribePacket
-from hbmqtt.mqtt.unsuback import UnsubackPacket
-from hbmqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload, ConnectPacket
-from hbmqtt.mqtt.connack import ConnackPacket
-from hbmqtt.session import Session
-from hbmqtt.plugins.manager import PluginManager
+from amqtt.mqtt.protocol.handler import ProtocolHandler, EVENT_MQTT_PACKET_RECEIVED
+from amqtt.mqtt.disconnect import DisconnectPacket
+from amqtt.mqtt.pingreq import PingReqPacket
+from amqtt.mqtt.pingresp import PingRespPacket
+from amqtt.mqtt.subscribe import SubscribePacket
+from amqtt.mqtt.suback import SubackPacket
+from amqtt.mqtt.unsubscribe import UnsubscribePacket
+from amqtt.mqtt.unsuback import UnsubackPacket
+from amqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload, ConnectPacket
+from amqtt.mqtt.connack import ConnackPacket
+from amqtt.session import Session
+from amqtt.plugins.manager import PluginManager
 
 
 class ClientProtocolHandler(ProtocolHandler):

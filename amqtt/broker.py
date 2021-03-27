@@ -12,11 +12,11 @@ from collections import deque
 
 from functools import partial
 from transitions import Machine, MachineError
-from hbmqtt.session import Session
-from hbmqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
-from hbmqtt.errors import HBMQTTException, MQTTException
-from hbmqtt.utils import format_client_message, gen_client_id
-from hbmqtt.adapters import (
+from amqtt.session import Session
+from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.errors import HBMQTTException, MQTTException
+from amqtt.utils import format_client_message, gen_client_id
+from amqtt.adapters import (
     StreamReaderAdapter,
     StreamWriterAdapter,
     ReaderAdapter,

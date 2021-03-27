@@ -1,8 +1,8 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from hbmqtt.errors import HBMQTTException
-from hbmqtt.mqtt.packet import (
+from amqtt.errors import HBMQTTException
+from amqtt.mqtt.packet import (
     CONNECT,
     CONNACK,
     PUBLISH,
@@ -19,20 +19,20 @@ from hbmqtt.mqtt.packet import (
     DISCONNECT,
     MQTTFixedHeader,
 )
-from hbmqtt.mqtt.connect import ConnectPacket
-from hbmqtt.mqtt.connack import ConnackPacket
-from hbmqtt.mqtt.disconnect import DisconnectPacket
-from hbmqtt.mqtt.pingreq import PingReqPacket
-from hbmqtt.mqtt.pingresp import PingRespPacket
-from hbmqtt.mqtt.publish import PublishPacket
-from hbmqtt.mqtt.puback import PubackPacket
-from hbmqtt.mqtt.pubrec import PubrecPacket
-from hbmqtt.mqtt.pubrel import PubrelPacket
-from hbmqtt.mqtt.pubcomp import PubcompPacket
-from hbmqtt.mqtt.subscribe import SubscribePacket
-from hbmqtt.mqtt.suback import SubackPacket
-from hbmqtt.mqtt.unsubscribe import UnsubscribePacket
-from hbmqtt.mqtt.unsuback import UnsubackPacket
+from amqtt.mqtt.connect import ConnectPacket
+from amqtt.mqtt.connack import ConnackPacket
+from amqtt.mqtt.disconnect import DisconnectPacket
+from amqtt.mqtt.pingreq import PingReqPacket
+from amqtt.mqtt.pingresp import PingRespPacket
+from amqtt.mqtt.publish import PublishPacket
+from amqtt.mqtt.puback import PubackPacket
+from amqtt.mqtt.pubrec import PubrecPacket
+from amqtt.mqtt.pubrel import PubrelPacket
+from amqtt.mqtt.pubcomp import PubcompPacket
+from amqtt.mqtt.subscribe import SubscribePacket
+from amqtt.mqtt.suback import SubackPacket
+from amqtt.mqtt.unsubscribe import UnsubscribePacket
+from amqtt.mqtt.unsuback import UnsubackPacket
 
 packet_dict = {
     CONNECT: ConnectPacket,

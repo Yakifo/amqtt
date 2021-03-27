@@ -1,8 +1,8 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from hbmqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, PINGREQ
-from hbmqtt.errors import HBMQTTException
+from amqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, PINGREQ
+from amqtt.errors import HBMQTTException
 
 
 class PingReqPacket(MQTTPacket):

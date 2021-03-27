@@ -9,18 +9,18 @@ import copy
 from urllib.parse import urlparse, urlunparse
 from functools import wraps
 
-from hbmqtt.session import Session
-from hbmqtt.mqtt.connack import CONNECTION_ACCEPTED
-from hbmqtt.mqtt.protocol.client_handler import ClientProtocolHandler
-from hbmqtt.adapters import (
+from amqtt.session import Session
+from amqtt.mqtt.connack import CONNECTION_ACCEPTED
+from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
+from amqtt.adapters import (
     StreamReaderAdapter,
     StreamWriterAdapter,
     WebSocketsReader,
     WebSocketsWriter,
 )
-from hbmqtt.plugins.manager import PluginManager, BaseContext
-from hbmqtt.mqtt.protocol.handler import ProtocolHandlerException
-from hbmqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.plugins.manager import PluginManager, BaseContext
+from amqtt.mqtt.protocol.handler import ProtocolHandlerException
+from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 import websockets
 from websockets.uri import InvalidURI
 from websockets.exceptions import InvalidHandshake
@@ -90,7 +90,7 @@ class MQTTClient:
 
     MQTTClient instances provides API for connecting to a broker and send/receive messages using the MQTT protocol.
 
-    :param client_id: MQTT client ID to use when connecting to the broker. If none, it will generated randomly by :func:`hbmqtt.utils.gen_client_id`
+    :param client_id: MQTT client ID to use when connecting to the broker. If none, it will generated randomly by :func:`amqtt.utils.gen_client_id`
     :param config: Client configuration
     :param loop: asynio loop to use
     :return: class instance
@@ -104,7 +104,7 @@ class MQTTClient:
         if client_id is not None:
             self.client_id = client_id
         else:
-            from hbmqtt.utils import gen_client_id
+            from amqtt.utils import gen_client_id
 
             self.client_id = gen_client_id()
             self.logger.debug("Using generated client ID : %s" % self.client_id)
@@ -151,7 +151,7 @@ class MQTTClient:
         :param cadata: server certificate authority data (optional, used for secured connection)
         :param extra_headers: a dictionary with additional http headers that should be sent on the initial connection (optional, used only with websocket connections)
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
-        :raise: :class:`hbmqtt.client.ConnectException` if connection fails
+        :raise: :class:`amqtt.client.ConnectException` if connection fails
         """
 
         if extra_headers is None:
@@ -217,7 +217,7 @@ class MQTTClient:
 
         :param cleansession: clean session flag used in MQTT CONNECT messages sent for reconnections.
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
-        :raise: :class:`hbmqtt.client.ConnectException` if re-connection fails after max retries.
+        :raise: :class:`amqtt.client.ConnectException` if re-connection fails after max retries.
         """
 
         if self.session.transitions.is_connected():
@@ -364,7 +364,7 @@ class MQTTClient:
         This method is a *coroutine*.
 
         :param timeout: maximum number of seconds to wait before returning. If timeout is not specified or None, there is no limit to the wait time until next message arrives.
-        :return: instance of :class:`hbmqtt.session.ApplicationMessage` containing received message information flow.
+        :return: instance of :class:`amqtt.session.ApplicationMessage` containing received message information flow.
         :raises: :class:`asyncio.TimeoutError` if timeout occurs before a message is delivered
         """
         deliver_task = asyncio.ensure_future(
