@@ -1,7 +1,7 @@
 import logging
 import asyncio
 
-from hbmqtt.client import MQTTClient, ConnectException
+from amqtt.client import MQTTClient, ConnectException
 
 
 #
@@ -18,11 +18,11 @@ async def test_coro():
         await C.connect("mqtt://0.0.0.0:1883")
         await C.publish("data/classified", b"TOP SECRET", qos=0x01)
         await C.publish("data/memes", b"REAL FUN", qos=0x01)
-        await C.publish("repositories/hbmqtt/master", b"NEW STABLE RELEASE", qos=0x01)
+        await C.publish("repositories/amqtt/master", b"NEW STABLE RELEASE", qos=0x01)
         await C.publish(
-            "repositories/hbmqtt/devel", b"THIS NEEDS TO BE CHECKED", qos=0x01
+            "repositories/amqtt/devel", b"THIS NEEDS TO BE CHECKED", qos=0x01
         )
-        await C.publish("calendar/hbmqtt/releases", b"NEW RELEASE", qos=0x01)
+        await C.publish("calendar/amqtt/releases", b"NEW RELEASE", qos=0x01)
         logger.info("messages published")
         await C.disconnect()
     except ConnectException as ce:
