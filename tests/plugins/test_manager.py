@@ -43,6 +43,13 @@ class TestPluginManager(unittest.TestCase):
         manager = PluginManager("amqtt.test.plugins", context=None)
         assert len(manager._plugins) > 0
 
+    def test_load_plugin_transition(self):
+        # entry points have been renamed from hbmqtt. to amqtt.
+        # For now the plugin manager automatically rewrites
+        # hbmqtt.test.plugins -> amqtt.test.plugins
+        manager = PluginManager("hbmqtt.test.plugins", context=None)
+        assert len(manager._plugins) > 0
+
     def test_fire_event(self):
         async def fire_event():
             await manager.fire_event("test")
