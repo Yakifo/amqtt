@@ -30,7 +30,7 @@ jobs:
         $HOME/.poetry/bin/poetry install --extras ci
     - name: Lint with flake8 and black
       run: |
-        $HOME/.poetry/bin/poetry run flake8 . --count --statistics --show-source --ignore=E501,W503,W605,E722
+        $HOME/.poetry/bin/poetry run flake8 tests/ amqtt/ --count --statistics --show-source --ignore=E501,W503,W605,E722
         $HOME/.poetry/bin/poetry run  black . --check
     - name: Test with pytest
       run: |
