@@ -5,7 +5,7 @@ import unittest
 import logging
 import asyncio
 
-from hbmqtt.plugins.manager import PluginManager
+from amqtt.plugins.manager import PluginManager
 
 formatter = (
     "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -40,7 +40,7 @@ class TestPluginManager(unittest.TestCase):
         self.loop = asyncio.new_event_loop()
 
     def test_load_plugin(self):
-        manager = PluginManager("hbmqtt.test.plugins", context=None)
+        manager = PluginManager("amqtt.test.plugins", context=None)
         assert len(manager._plugins) > 0
 
     def test_fire_event(self):
@@ -49,7 +49,7 @@ class TestPluginManager(unittest.TestCase):
             await asyncio.sleep(1, loop=self.loop)
             await manager.close()
 
-        manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
+        manager = PluginManager("amqtt.test.plugins", context=None, loop=self.loop)
         self.loop.run_until_complete(fire_event())
         plugin = manager.get_plugin("event_plugin")
         assert plugin.object.test_flag
@@ -59,7 +59,7 @@ class TestPluginManager(unittest.TestCase):
             await manager.fire_event("test", wait=True)
             await manager.close()
 
-        manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
+        manager = PluginManager("amqtt.test.plugins", context=None, loop=self.loop)
         self.loop.run_until_complete(fire_event())
         plugin = manager.get_plugin("event_plugin")
         assert plugin.object.test_flag
@@ -68,7 +68,7 @@ class TestPluginManager(unittest.TestCase):
         async def call_coro():
             await manager.map_plugin_coro("test_coro")
 
-        manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
+        manager = PluginManager("amqtt.test.plugins", context=None, loop=self.loop)
         self.loop.run_until_complete(call_coro())
         plugin = manager.get_plugin("event_plugin")
         assert plugin.object.test_coro
@@ -77,7 +77,7 @@ class TestPluginManager(unittest.TestCase):
         async def call_coro():
             return await manager.map_plugin_coro("ret_coro")
 
-        manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
+        manager = PluginManager("amqtt.test.plugins", context=None, loop=self.loop)
         ret = self.loop.run_until_complete(call_coro())
         plugin = manager.get_plugin("event_plugin")
         self.assertEqual(ret[plugin], "TEST")
@@ -91,6 +91,6 @@ class TestPluginManager(unittest.TestCase):
         async def call_coro():
             return await manager.map_plugin_coro("ret_coro", filter_plugins=[])
 
-        manager = PluginManager("hbmqtt.test.plugins", context=None, loop=self.loop)
+        manager = PluginManager("amqtt.test.plugins", context=None, loop=self.loop)
         ret = self.loop.run_until_complete(call_coro())
         assert len(ret) == 0

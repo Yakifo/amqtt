@@ -4,9 +4,9 @@
 import unittest
 import asyncio
 
-from hbmqtt.mqtt.connect import ConnectPacket, ConnectVariableHeader, ConnectPayload
-from hbmqtt.mqtt.packet import MQTTFixedHeader, CONNECT
-from hbmqtt.adapters import BufferReader
+from amqtt.mqtt.connect import ConnectPacket, ConnectVariableHeader, ConnectPayload
+from amqtt.mqtt.packet import MQTTFixedHeader, CONNECT
+from amqtt.adapters import BufferReader
 
 
 class ConnectPacketTest(unittest.TestCase):

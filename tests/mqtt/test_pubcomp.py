@@ -4,8 +4,8 @@
 import asyncio
 import unittest
 
-from hbmqtt.mqtt.pubcomp import PubcompPacket, PacketIdVariableHeader
-from hbmqtt.adapters import BufferReader
+from amqtt.mqtt.pubcomp import PubcompPacket, PacketIdVariableHeader
+from amqtt.adapters import BufferReader
 
 
 class PubcompPacketTest(unittest.TestCase):

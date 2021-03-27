@@ -4,7 +4,7 @@
 import unittest
 import asyncio
 
-from hbmqtt.codecs import (
+from amqtt.codecs import (
     bytes_to_hex_str,
     bytes_to_int,
     decode_string,
