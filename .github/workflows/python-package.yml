@@ -33,7 +33,7 @@ jobs:
         $HOME/.poetry/bin/poetry run  black . --check
     - name: Test with pytest
       run: |
-        $HOME/.poetry/bin/poetry run  pytest --cov hbmqtt --cov tests --cov-report=term --cov-report=xml
+        $HOME/.poetry/bin/poetry run  pytest --cov amqtt --cov tests --cov-report=term --cov-report=xml
 
     - name: Upload coverage data to coveralls.io
       run: |
