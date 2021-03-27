@@ -5,20 +5,20 @@ import unittest
 import asyncio
 import logging
 import random
-from hbmqtt.plugins.manager import PluginManager
-from hbmqtt.session import (
+from amqtt.plugins.manager import PluginManager
+from amqtt.session import (
     Session,
     OutgoingApplicationMessage,
     IncomingApplicationMessage,
 )
-from hbmqtt.mqtt.protocol.handler import ProtocolHandler
-from hbmqtt.adapters import StreamWriterAdapter, StreamReaderAdapter
-from hbmqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from hbmqtt.mqtt.publish import PublishPacket
-from hbmqtt.mqtt.puback import PubackPacket
-from hbmqtt.mqtt.pubrec import PubrecPacket
-from hbmqtt.mqtt.pubrel import PubrelPacket
-from hbmqtt.mqtt.pubcomp import PubcompPacket
+from amqtt.mqtt.protocol.handler import ProtocolHandler
+from amqtt.adapters import StreamWriterAdapter, StreamReaderAdapter
+from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.publish import PublishPacket
+from amqtt.mqtt.puback import PubackPacket
+from amqtt.mqtt.pubrec import PubrecPacket
+from amqtt.mqtt.pubrel import PubrelPacket
+from amqtt.mqtt.pubcomp import PubcompPacket
 
 formatter = (
     "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -40,7 +40,7 @@ class ProtocolHandlerTest(unittest.TestCase):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         self.plugin_manager = PluginManager(
-            "hbmqtt.test.plugins", context=None, loop=self.loop
+            "amqtt.test.plugins", context=None, loop=self.loop
         )
 
     def tearDown(self):

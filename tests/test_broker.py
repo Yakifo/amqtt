@@ -7,8 +7,8 @@ from unittest.mock import call, MagicMock
 
 import pytest
 
-from hbmqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
-from hbmqtt.broker import (
+from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
+from amqtt.broker import (
     EVENT_BROKER_PRE_START,
     EVENT_BROKER_POST_START,
     EVENT_BROKER_PRE_SHUTDOWN,
@@ -19,8 +19,8 @@ from hbmqtt.broker import (
     EVENT_BROKER_CLIENT_UNSUBSCRIBED,
     EVENT_BROKER_MESSAGE_RECEIVED,
 )
-from hbmqtt.client import MQTTClient, ConnectException
-from hbmqtt.mqtt import (
+from amqtt.client import MQTTClient, ConnectException
+from amqtt.mqtt import (
     ConnectPacket,
     ConnackPacket,
     PublishPacket,
@@ -29,8 +29,8 @@ from hbmqtt.mqtt import (
     PubcompPacket,
     DisconnectPacket,
 )
-from hbmqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload
-from hbmqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload
+from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 
 formatter = (
@@ -467,7 +467,7 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
 
 @pytest.mark.asyncio
 @pytest.mark.xfail(
-    reason="see https://github.com/Yakifo/aio-hbmqtt/issues/16", strict=False
+    reason="see https://github.com/Yakifo/aio-amqtt/issues/16", strict=False
 )
 async def test_client_publish_retain_subscribe(broker):
     sub_client = MQTTClient()
