@@ -1,8 +1,8 @@
 import logging
 import asyncio
 
-from hbmqtt.client import MQTTClient, ClientException
-from hbmqtt.mqtt.constants import QOS_1
+from amqtt.client import MQTTClient, ClientException
+from amqtt.mqtt.constants import QOS_1
 
 
 #
@@ -23,9 +23,9 @@ async def uptime_coro():
         [
             ("data/memes", QOS_1),  # Topic allowed
             ("data/classified", QOS_1),  # Topic forbidden
-            ("repositories/hbmqtt/master", QOS_1),  # Topic allowed
-            ("repositories/hbmqtt/devel", QOS_1),  # Topic forbidden
-            ("calendar/hbmqtt/releases", QOS_1),  # Topic allowed
+            ("repositories/amqtt/master", QOS_1),  # Topic allowed
+            ("repositories/amqtt/devel", QOS_1),  # Topic forbidden
+            ("calendar/amqtt/releases", QOS_1),  # Topic allowed
         ]
     )
     logger.info("Subscribed")

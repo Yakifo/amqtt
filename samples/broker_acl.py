@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import os
-from hbmqtt.broker import Broker
+from amqtt.broker import Broker
 
 logger = logging.getLogger(__name__)
 

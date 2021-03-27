@@ -1,7 +1,7 @@
 import logging
 import asyncio
 
-from hbmqtt.client import MQTTClient
+from amqtt.client import MQTTClient
 
 
 #
