@@ -148,7 +148,7 @@ class Broker:
 
     :param config: Example Yaml config
     :param loop: asyncio loop to use. Defaults to ``asyncio.get_event_loop()``.
-    :param plugin_namespace: Plugin namespace to use when loading plugin entry_points. Defaults to ``hbmqtt.broker.plugins``
+    :param plugin_namespace: Plugin namespace to use when loading plugin entry_points. Defaults to ``amqtt.broker.plugins``
 
     """
 
@@ -190,7 +190,7 @@ class Broker:
         if plugin_namespace:
             namespace = plugin_namespace
         else:
-            namespace = "hbmqtt.broker.plugins"
+            namespace = "amqtt.broker.plugins"
         self.plugins_manager = PluginManager(namespace, context, self._loop)
 
     def _build_listeners_config(self, broker_config):
