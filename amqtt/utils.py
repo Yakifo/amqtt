@@ -21,7 +21,7 @@ def format_client_message(session=None, address=None, port=None):
 
 def gen_client_id() -> str:
     """Generates random client ID"""
-    gen_id = "hbmqtt/"
+    gen_id = "amqtt/"
 
     for i in range(7, 23):
         gen_id += chr(random.randint(0, 74) + 48)
