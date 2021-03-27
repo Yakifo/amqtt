@@ -64,6 +64,9 @@ class PluginManager:
             self._plugins.append(plugin)
             self.logger.debug(" Plugin %s ready" % ep.name)
 
+        if namespace.startswith("hbmqtt."):
+            self._load_plugins("amqtt" + namespace[6:])
+
     def _load_plugin(self, ep: pkg_resources.EntryPoint):
         try:
             self.logger.debug(" Loading plugin %s" % ep)
