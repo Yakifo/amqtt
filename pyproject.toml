@@ -15,6 +15,7 @@ classifiers = [
         "Topic :: Internet",
 ]
 packages = [
+    { include = "amqtt" },
     { include = "hbmqtt" },
 ]
 
