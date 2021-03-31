@@ -59,7 +59,7 @@ EVENT_MQTT_PACKET_SENT = "mqtt_packet_sent"
 EVENT_MQTT_PACKET_RECEIVED = "mqtt_packet_received"
 
 
-class ProtocolHandlerException(BaseException):
+class ProtocolHandlerException(Exception):
     pass
 
 
@@ -524,7 +524,7 @@ class ProtocolHandler:
                 self.handle_read_timeout()
             except NoDataException:
                 self.logger.debug("%s No data available" % self.session.client_id)
-            except BaseException as e:
+            except Exception as e:
                 self.logger.warning(
                     "%s Unhandled exception in reader coro: %r"
                     % (type(self).__name__, e)
@@ -554,7 +554,7 @@ class ProtocolHandler:
             await self.handle_connection_closed()
         except asyncio.CancelledError:
             raise
-        except BaseException as e:
+        except Exception as e:
             self.logger.warning("Unhandled exception: %s" % e)
             raise
 

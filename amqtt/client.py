@@ -165,8 +165,8 @@ class MQTTClient:
             return await self._do_connect()
         except asyncio.CancelledError:
             raise
-        except BaseException as be:
-            self.logger.warning("Connection failed: %r" % be)
+        except Exception as e:
+            self.logger.warning("Connection failed: %r" % e)
             auto_reconnect = self.config.get("auto_reconnect", False)
             if not auto_reconnect:
                 raise
@@ -237,13 +237,13 @@ class MQTTClient:
                 return await self._do_connect()
             except asyncio.CancelledError:
                 raise
-            except BaseException as e:
+            except Exception as e:
                 self.logger.warning("Reconnection attempt failed: %r" % e)
                 if reconnect_retries >= 0 and nb_attempt > reconnect_retries:
                     self.logger.error(
                         "Maximum number of connection attempts reached. Reconnection aborted"
                     )
-                    raise ConnectException("Too many connection attempts failed")
+                    raise ConnectException("Too many connection attempts failed") from e
                 exp = 2 ** nb_attempt
                 delay = exp if exp < reconnect_max_interval else reconnect_max_interval
                 self.logger.debug("Waiting %d second before next attempt" % delay)
