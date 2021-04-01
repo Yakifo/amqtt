@@ -35,13 +35,10 @@ class ClientProtocolHandler(ProtocolHandler):
 
     async def stop(self):
         await super().stop()
-        if self._ping_task:
-            try:
-                self.logger.debug("Cancel ping task")
-                self._ping_task.cancel()
-            except Exception as e:
-                self.logger.debug("Silenced exception %r", e)
-                pass
+        if self._ping_task and not self._ping_task.cancelled():
+            self.logger.debug("Cancel ping task")
+            self._ping_task.cancel()
+
         if not self._disconnect_waiter.done():
             self._disconnect_waiter.cancel()
         self._disconnect_waiter = None
