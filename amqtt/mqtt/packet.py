@@ -120,7 +120,7 @@ class MQTTFixedHeader:
             return None
 
     def __repr__(self):
-        return type(self).__name__ + "(length={0}, flags={1})".format(
+        return type(self).__name__ + "(length={}, flags={})".format(
             self.remaining_length, hex(self.flags)
         )
 
@@ -169,7 +169,7 @@ class PacketIdVariableHeader(MQTTVariableHeader):
         return cls(packet_id)
 
     def __repr__(self):
-        return type(self).__name__ + "(packet_id={0})".format(self.packet_id)
+        return type(self).__name__ + f"(packet_id={self.packet_id})"
 
 
 class MQTTPayload:
@@ -274,6 +274,6 @@ class MQTTPacket:
     def __repr__(self):
         return type(
             self
-        ).__name__ + "(ts={0!s}, fixed={1!r}, variable={2!r}, payload={3!r})".format(
+        ).__name__ + "(ts={!s}, fixed={!r}, variable={!r}, payload={!r})".format(
             self.protocol_ts, self.fixed_header, self.variable_header, self.payload
         )

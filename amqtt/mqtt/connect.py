@@ -45,7 +45,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
         self.keep_alive = keep_alive
 
     def __repr__(self):
-        return "ConnectVariableHeader(proto_name={0}, proto_level={1}, flags={2}, keepalive={3})".format(
+        return "ConnectVariableHeader(proto_name={}, proto_level={}, flags={}, keepalive={})".format(
             self.proto_name, self.proto_level, hex(self.flags), self.keep_alive
         )
 
@@ -176,7 +176,7 @@ class ConnectPayload(MQTTPayload):
         self.password = password
 
     def __repr__(self):
-        return "ConnectVariableHeader(client_id={0}, will_topic={1}, will_message={2}, username={3}, password={4})".format(
+        return "ConnectVariableHeader(client_id={}, will_topic={}, will_message={}, username={}, password={})".format(
             self.client_id,
             self.will_topic,
             self.will_message,

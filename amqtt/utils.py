@@ -31,12 +31,12 @@ def gen_client_id() -> str:
 def read_yaml_config(config_file):
     config = None
     try:
-        with open(config_file, "r") as stream:
+        with open(config_file) as stream:
             config = (
                 yaml.full_load(stream)
                 if hasattr(yaml, "full_load")
                 else yaml.load(stream)
             )
     except yaml.YAMLError as exc:
-        logger.error("Invalid config_file %s: %s" % (config_file, exc))
+        logger.error(f"Invalid config_file {config_file}: {exc}")
     return config
