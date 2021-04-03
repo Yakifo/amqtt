@@ -12,6 +12,7 @@ Changelog
  * Fixes taboo topic checking without session username, from https://github.com/beerfactory/hbmqtt/pull/151
  * Move scripts module into hbmqtt module, from https://github.com/beerfactory/hbmqtt/pull/167
  * Download mosquitto certificate on the fly
+ * importing `hbmqtt` is deprecated, use `amqtt`
 
 0.9.5
 .....
