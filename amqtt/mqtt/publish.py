@@ -28,7 +28,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         self.packet_id = packet_id
 
     def __repr__(self):
-        return type(self).__name__ + "(topic={0}, packet_id={1})".format(
+        return type(self).__name__ + "(topic={}, packet_id={})".format(
             self.topic_name, self.packet_id
         )
 
@@ -82,7 +82,7 @@ class PublishPayload(MQTTPayload):
         return cls(data)
 
     def __repr__(self):
-        return type(self).__name__ + "(data={0!r})".format(repr(self.data))
+        return type(self).__name__ + "(data={!r})".format(repr(self.data))
 
 
 class PublishPacket(MQTTPacket):

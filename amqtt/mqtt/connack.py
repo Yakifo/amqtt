@@ -43,7 +43,7 @@ class ConnackVariableHeader(MQTTVariableHeader):
         return out
 
     def __repr__(self):
-        return type(self).__name__ + "(session_parent={0}, return_code={1})".format(
+        return type(self).__name__ + "(session_parent={}, return_code={})".format(
             hex(self.session_parent), hex(self.return_code)
         )
 

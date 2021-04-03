@@ -79,7 +79,7 @@ def _get_message(arguments):
         yield arguments["-m"].encode(encoding="utf-8")
     if arguments["-f"]:
         try:
-            with open(arguments["-f"], "r") as f:
+            with open(arguments["-f"]) as f:
                 for line in f:
                     yield line.encode(encoding="utf-8")
         except:

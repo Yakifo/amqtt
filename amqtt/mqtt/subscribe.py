@@ -60,7 +60,7 @@ class SubscribePayload(MQTTPayload):
         return cls(topics)
 
     def __repr__(self):
-        return type(self).__name__ + "(topics={0!r})".format(self.topics)
+        return type(self).__name__ + f"(topics={self.topics!r})"
 
 
 class SubscribePacket(MQTTPacket):

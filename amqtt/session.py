@@ -191,7 +191,7 @@ class Session:
         return self.retained_messages.qsize()
 
     def __repr__(self):
-        return type(self).__name__ + "(clientId={0}, state={1})".format(
+        return type(self).__name__ + "(clientId={}, state={})".format(
             self.client_id, self.transitions.state
         )
 
