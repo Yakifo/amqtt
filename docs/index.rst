@@ -62,6 +62,7 @@ News and updates are listed in the :doc:`changelog`.
 
    quickstart
    changelog
+   transition
    references/index
    license
 
