@@ -29,12 +29,12 @@
     :alt: PyPI
 
 
-AMQTT
+aMQTT
 ======
 
-``AMQTT`` is an open source `MQTT`_ client and broker implementation.
+``aMQTT`` is an open source `MQTT`_ client and broker implementation.
 
-Built on top of `asyncio`_, Python's standard asynchronous I/O framework, AMQTT provides a straightforward API
+Built on top of `asyncio`_, Python's standard asynchronous I/O framework, aMQTT provides a straightforward API
 based on coroutines, making it easy to write highly concurrent applications.
 
 It was forked from `HBMQTT`_ after it was deprecated by the original author.
