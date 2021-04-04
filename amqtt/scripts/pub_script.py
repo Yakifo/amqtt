@@ -2,12 +2,12 @@
 #
 # See the file license.txt for copying permission.
 """
-hbmqtt_pub - MQTT 3.1.1 publisher
+amqtt_pub - MQTT 3.1.1 publisher
 
 Usage:
-    hbmqtt_pub --version
-    hbmqtt_pub (-h | --help)
-    hbmqtt_pub --url BROKER_URL -t TOPIC (-f FILE | -l | -m MESSAGE | -n | -s) [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER] [-r]
+    amqtt_pub --version
+    amqtt_pub (-h | --help)
+    amqtt_pub --url BROKER_URL -t TOPIC (-f FILE | -l | -m MESSAGE | -n | -s) [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER] [-r]
 
 Options:
     -h --help           Show this screen.
@@ -40,10 +40,10 @@ import asyncio
 import os
 import json
 
-import hbmqtt
-from hbmqtt.client import MQTTClient, ConnectException
+import amqtt
+from amqtt.client import MQTTClient, ConnectException
 from docopt import docopt
-from hbmqtt.utils import read_yaml_config
+from amqtt.utils import read_yaml_config
 
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def _gen_client_id():
 
     pid = os.getpid()
     hostname = socket.gethostname()
-    return "hbmqtt_pub/%d-%s" % (pid, hostname)
+    return "amqtt_pub/%d-%s" % (pid, hostname)
 
 
 def _get_qos(arguments):
@@ -138,7 +138,7 @@ def main(*args, **kwargs):
         logger.fatal("Error: Python 3.6+ is required")
         sys.exit(-1)
 
-    arguments = docopt(__doc__, version=hbmqtt.__version__)
+    arguments = docopt(__doc__, version=amqtt.__version__)
     # print(arguments)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
