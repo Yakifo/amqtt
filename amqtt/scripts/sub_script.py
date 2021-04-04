@@ -2,12 +2,12 @@
 #
 # See the file license.txt for copying permission.
 """
-hbmqtt_sub - MQTT 3.1.1 publisher
+amqtt_sub - MQTT 3.1.1 publisher
 
 Usage:
-    hbmqtt_sub --version
-    hbmqtt_sub (-h | --help)
-    hbmqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
+    amqtt_sub --version
+    amqtt_sub (-h | --help)
+    amqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
 
 Options:
     -h --help           Show this screen.
@@ -37,12 +37,12 @@ import asyncio
 import os
 import json
 
-import hbmqtt
-from hbmqtt.client import MQTTClient, ConnectException
-from hbmqtt.errors import MQTTException
+import amqtt
+from amqtt.client import MQTTClient, ConnectException
+from amqtt.errors import MQTTException
 from docopt import docopt
-from hbmqtt.mqtt.constants import QOS_0
-from hbmqtt.utils import read_yaml_config
+from amqtt.mqtt.constants import QOS_0
+from amqtt.utils import read_yaml_config
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def _gen_client_id():
 
     pid = os.getpid()
     hostname = socket.gethostname()
-    return "hbmqtt_sub/%d-%s" % (pid, hostname)
+    return "amqtt_sub/%d-%s" % (pid, hostname)
 
 
 def _get_qos(arguments):
@@ -115,7 +115,7 @@ def main(*args, **kwargs):
         logger.fatal("Error: Python 3.6+ is required")
         sys.exit(-1)
 
-    arguments = docopt(__doc__, version=hbmqtt.__version__)
+    arguments = docopt(__doc__, version=amqtt.__version__)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     if arguments["-d"]:
