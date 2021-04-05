@@ -2,7 +2,7 @@ import pathlib
 
 
 template = """import warnings
-
+{extra}
 from {module_name} import *
 
 warnings.warn("importing hbmqtt is deprecated. Please import amqtt", DeprecationWarning)
@@ -25,8 +25,12 @@ def main():
         if py_file.name != "__init__.py":
             module_name += "." + py_file.name[:-3]
 
+        extra = ""
+        if str(file_path) == "." and py_file.name == "__init__.py":
+            extra = "\nfrom amqtt import __version__"
+
         dst_file.parent.mkdir(parents=True, exist_ok=True)
-        dst_file.write_text(template.format(module_name=module_name))
+        dst_file.write_text(template.format(module_name=module_name, extra=extra))
 
 
 if __name__ == "__main__":
