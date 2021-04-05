@@ -2,6 +2,7 @@ import pathlib
 
 
 template = """import warnings
+
 from {module_name} import *
 
 warnings.warn("importing hbmqtt is deprecated. Please import amqtt", DeprecationWarning)
