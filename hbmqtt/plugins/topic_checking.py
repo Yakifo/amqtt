@@ -40,7 +40,7 @@ class TopicTabooPlugin(BaseTopicPlugin):
             if (
                 topic
                 and topic in self._taboo
-                and (self._taboo_command == None or self._taboo_command == command)
+                and (self._taboo_command is None or self._taboo_command == command)
             ):
                 return False
             return True

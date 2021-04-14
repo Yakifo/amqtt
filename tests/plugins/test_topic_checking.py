@@ -2,9 +2,6 @@
 #
 # See the file license.txt for copying permission.
 
-import unittest
-import logging
-import os
 import asyncio
 from hbmqtt.plugins.manager import BaseContext
 from hbmqtt.plugins.topic_checking import BaseTopicPlugin, TopicTabooPlugin
@@ -40,7 +37,7 @@ class TestTopicCheckingPlugin(unittest.TestCase):
         ret = self.loop.run_until_complete(
             taboo_topic_plugin.topic_filtering(topic="prohibited", command=1, session=s)
         )
-        assert ret == False
+        assert ret is False
         ret = self.loop.run_until_complete(
             taboo_topic_plugin.topic_filtering(topic="prohibited", command=0, session=s)
         )
@@ -58,11 +55,11 @@ class TestTopicCheckingPlugin(unittest.TestCase):
         ret = self.loop.run_until_complete(
             taboo_topic_plugin.topic_filtering(topic="prohibited", command=1, session=s)
         )
-        assert ret == False
+        assert ret is False
         ret = self.loop.run_until_complete(
             taboo_topic_plugin.topic_filtering(topic="prohibited", command=0, session=s)
         )
-        assert ret == False
+        assert ret is False
         ret = self.loop.run_until_complete(
             taboo_topic_plugin.topic_filtering(topic="allowed", command=1, session=s)
         )
