@@ -41,6 +41,8 @@ mypy = "^0.812"
 pylint = "^2.7.2"
 black = "^20.8b1"
 flake8 = "^3.9.0"
+hypothesis = "^6.10.0"
+
 
 [tool.poetry.scripts]
 hbmqtt = 'amqtt.scripts.broker_script:main'
