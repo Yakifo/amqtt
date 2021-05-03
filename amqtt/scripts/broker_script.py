@@ -49,8 +49,8 @@ logger = logging.getLogger(__name__)
 
 
 def main(*args, **kwargs):
-    if sys.version_info[:2] < (3, 4):
-        logger.fatal("Error: Python 3.4+ is required")
+    if sys.version_info[:2] < (3, 7):
+        logger.fatal("Error: Python 3.7+ is required")
         sys.exit(-1)
 
     arguments = docopt(__doc__, version=hbmqtt.__version__)
