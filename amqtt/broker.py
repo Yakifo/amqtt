@@ -762,43 +762,40 @@ class Broker:
                 del self._retained_messages[topic_name]
 
     async def add_subscription(self, subscription, session):
-        try:
-            a_filter = subscription[0]
-            if "#" in a_filter and not a_filter.endswith("#"):
-                # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
-                return 0x80
-            if a_filter != "+":
-                if "+" in a_filter:
-                    if "/+" not in a_filter and "+/" not in a_filter:
-                        # [MQTT-4.7.1-3] + wildcard character must occupy entire level
-                        return 0x80
-            # Check if the client is authorised to connect to the topic
-            permitted = await self.topic_filtering(session, topic=a_filter)
-            if not permitted:
-                return 0x80
-            qos = subscription[1]
-            if "max-qos" in self.config and qos > self.config["max-qos"]:
-                qos = self.config["max-qos"]
-            if a_filter not in self._subscriptions:
-                self._subscriptions[a_filter] = []
-            already_subscribed = next(
-                (
-                    s
-                    for (s, qos) in self._subscriptions[a_filter]
-                    if s.client_id == session.client_id
-                ),
-                None,
-            )
-            if not already_subscribed:
-                self._subscriptions[a_filter].append((session, qos))
-            else:
-                self.logger.debug(
-                    "Client %s has already subscribed to %s"
-                    % (format_client_message(session=session), a_filter)
-                )
-            return qos
-        except KeyError:
+        a_filter = subscription[0]
+        if "#" in a_filter and not a_filter.endswith("#"):
+            # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
             return 0x80
+        if a_filter != "+":
+            if "+" in a_filter:
+                if "/+" not in a_filter and "+/" not in a_filter:
+                    # [MQTT-4.7.1-3] + wildcard character must occupy entire level
+                    return 0x80
+        # Check if the client is authorised to connect to the topic
+        permitted = await self.topic_filtering(session, topic=a_filter)
+        if not permitted:
+            return 0x80
+        qos = subscription[1]
+        if "max-qos" in self.config and qos > self.config["max-qos"]:
+            qos = self.config["max-qos"]
+        if a_filter not in self._subscriptions:
+            self._subscriptions[a_filter] = []
+        already_subscribed = next(
+            (
+                s
+                for (s, qos) in self._subscriptions[a_filter]
+                if s.client_id == session.client_id
+            ),
+            None,
+        )
+        if not already_subscribed:
+            self._subscriptions[a_filter].append((session, qos))
+        else:
+            self.logger.debug(
+                "Client %s has already subscribed to %s"
+                % (format_client_message(session=session), a_filter)
+            )
+        return qos
 
     def _del_subscription(self, a_filter: str, session: Session) -> int:
         """
