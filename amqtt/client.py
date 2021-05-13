@@ -22,8 +22,8 @@ from amqtt.plugins.manager import PluginManager, BaseContext
 from amqtt.mqtt.protocol.handler import ProtocolHandlerException
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 import websockets
-from websockets.uri import InvalidURI
-from websockets.exceptions import InvalidHandshake
+from websockets import InvalidURI
+from websockets import InvalidHandshake
 from collections import deque
 
 
