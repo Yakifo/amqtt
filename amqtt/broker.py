@@ -620,21 +620,32 @@ class Broker:
                             % client_session.client_id
                         )
                         break
-                    await self.plugins_manager.fire_event(
-                        EVENT_BROKER_MESSAGE_RECEIVED,
-                        client_id=client_session.client_id,
-                        message=app_message,
+
+                    # See if the user is allowed to publish to this topic.
+                    permitted = await self.topic_filtering(
+                            client_session, topic=app_message.topic, action='publish'
                     )
-                    await self._broadcast_message(
-                        client_session, app_message.topic, app_message.data
-                    )
-                    if app_message.publish_packet.retain_flag:
-                        self.retain_message(
-                            client_session,
-                            app_message.topic,
-                            app_message.data,
-                            app_message.qos,
+                    if not permitted:
+                        self.logger.info(
+                                "%s forbidden TOPIC %s sent in PUBLISH message.",
+                                client_session.client_id, app_message.topic
                         )
+                    else:
+                        await self.plugins_manager.fire_event(
+                            EVENT_BROKER_MESSAGE_RECEIVED,
+                            client_id=client_session.client_id,
+                            message=app_message,
+                        )
+                        await self._broadcast_message(
+                            client_session, app_message.topic, app_message.data
+                        )
+                        if app_message.publish_packet.retain_flag:
+                            self.retain_message(
+                                client_session,
+                                app_message.topic,
+                                app_message.data,
+                                app_message.qos,
+                            )
                     wait_deliver = asyncio.Task(
                         handler.mqtt_deliver_next_message(), loop=self._loop
                     )
