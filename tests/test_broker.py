@@ -270,6 +270,104 @@ async def test_client_publish(broker, mock_plugin_manager):
 
 
 @pytest.mark.asyncio
+async def test_client_publish_acl_permitted(acl_broker):
+    sub_client = MQTTClient()
+    ret = await sub_client.connect("mqtt://user2:test@127.0.0.1:1884/")
+    assert ret == 0
+
+    ret = await sub_client.subscribe(
+        [("public/subtopic/test", QOS_0)]
+    )
+    assert ret == [QOS_0]
+
+    pub_client = MQTTClient()
+    ret = await pub_client.connect("mqtt://user1:test@127.0.0.1:1884/")
+    assert ret == 0
+
+    ret_message = await pub_client.publish("public/subtopic/test", b"data", QOS_0)
+
+    message = await sub_client.deliver_message(timeout=1)
+    await pub_client.disconnect()
+    await sub_client.disconnect()
+
+    assert message is not None
+    assert message.topic == "public/subtopic/test"
+    assert message.data == b"data"
+    assert message.qos == QOS_0
+
+
+@pytest.mark.asyncio
+async def test_client_publish_acl_forbidden(acl_broker):
+    sub_client = MQTTClient()
+    ret = await sub_client.connect("mqtt://user2:test@127.0.0.1:1884/")
+    assert ret == 0
+
+    ret = await sub_client.subscribe(
+        [("public/forbidden/test", QOS_0)]
+    )
+    assert ret == [QOS_0]
+
+    pub_client = MQTTClient()
+    ret = await pub_client.connect("mqtt://user1:test@127.0.0.1:1884/")
+    assert ret == 0
+
+    ret_message = await pub_client.publish("public/forbidden/test", b"data", QOS_0)
+
+    try:
+        await sub_client.deliver_message(timeout=1)
+        assert False, 'Should not have worked'
+    except asyncio.exceptions.TimeoutError:
+        pass
+
+    await pub_client.disconnect()
+    await sub_client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
+    sub_client1 = MQTTClient()
+    ret = await sub_client1.connect("mqtt://user2:test@127.0.0.1:1884/")
+    assert ret == 0
+
+    sub_client2 = MQTTClient()
+    ret = await sub_client2.connect("mqtt://user3:test@127.0.0.1:1884/")
+    assert ret == 0
+
+    ret = await sub_client1.subscribe(
+        [("public/subtopic/test", QOS_0)]
+    )
+    assert ret == [QOS_0]
+
+    ret = await sub_client2.subscribe(
+        [("public/subtopic/test", QOS_0)]
+    )
+    assert ret == [0x80]
+
+    pub_client = MQTTClient()
+    ret = await pub_client.connect("mqtt://user1:test@127.0.0.1:1884/")
+    assert ret == 0
+
+    ret_message = await pub_client.publish("public/subtopic/test", b"data", QOS_0)
+
+    message = await sub_client1.deliver_message(timeout=1)
+
+    try:
+        await sub_client2.deliver_message(timeout=1)
+        assert False, 'Should not have worked'
+    except asyncio.exceptions.TimeoutError:
+        pass
+
+    await pub_client.disconnect()
+    await sub_client1.disconnect()
+    await sub_client2.disconnect()
+
+    assert message is not None
+    assert message.topic == "public/subtopic/test"
+    assert message.data == b"data"
+    assert message.qos == QOS_0
+
+
+@pytest.mark.asyncio
 async def test_client_publish_dup(broker, event_loop):
     conn_reader, conn_writer = await asyncio.open_connection(
         "127.0.0.1", 1883, loop=event_loop
