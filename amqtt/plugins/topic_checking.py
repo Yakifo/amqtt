@@ -70,7 +70,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
             action = kwargs.get("action", None)
 
             # hbmqtt and older amqtt do not support publish filtering
-            if (action == "publish") and ("publish-acl" not in self.topic_config):
+            if action == "publish" and "publish-acl" not in self.topic_config:
                 # maintain backward compatibility, assume permitted
                 return True
 
