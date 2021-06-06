@@ -66,11 +66,24 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
         if filter_result:
             session = kwargs.get("session", None)
             req_topic = kwargs.get("topic", None)
+            action = kwargs.get("action", None)
+
+            # hbmqtt and older amqtt do not support publish filtering
+            if (action == "publish") and ("publish-acl" not in self.topic_config):
+                # maintain backward compatibility, assume permitted
+                return True
+
             if req_topic:
                 username = session.username
                 if username is None:
                     username = "anonymous"
-                allowed_topics = self.topic_config["acl"].get(username, None)
+
+                if action == "publish":
+                    acl = self.topic_config["publish-acl"]
+                elif action == "subscribe":
+                    acl = self.topic_config["acl"]
+
+                allowed_topics = acl.get(username, None)
                 if allowed_topics:
                     for allowed_topic in allowed_topics:
                         if self.topic_ac(req_topic, allowed_topic):
