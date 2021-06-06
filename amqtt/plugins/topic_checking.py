@@ -94,3 +94,5 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
                     return False
             else:
                 return False
+        else:
+            return False
