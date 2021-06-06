@@ -775,7 +775,7 @@ class Broker:
                         # [MQTT-4.7.1-3] + wildcard character must occupy entire level
                         return 0x80
             # Check if the client is authorised to connect to the topic
-            permitted = await self.topic_filtering(session, topic=a_filter)
+            permitted = await self.topic_filtering(session, topic=a_filter, action='subscribe')
             if not permitted:
                 return 0x80
             qos = subscription[1]
