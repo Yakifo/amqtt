@@ -67,6 +67,23 @@ async def test_base_empty_config():
 
 
 @pytest.mark.asyncio
+async def test_base_disabled_config():
+    """
+    Check BaseTopicPlugin returns true if disabled. (it doesn't actually check)
+    """
+    context = BaseContext()
+    context.logger = DummyLogger()
+    context.config = {"topic-check": {"enabled": False}}
+
+    plugin = BaseTopicPlugin(context)
+    authorised = plugin.topic_filtering()
+    assert authorised is True
+
+    # Should NOT have printed warnings
+    assert len(context.logger.messages) == 0
+
+
+@pytest.mark.asyncio
 async def test_base_enabled_config():
     """
     Check BaseTopicPlugin returns true if enabled.
@@ -109,6 +126,26 @@ async def test_taboo_empty_config():
         ("'auth' section not found in context configuration",),
         {},
     )
+
+
+@pytest.mark.asyncio
+async def test_taboo_not_taboo_topic():
+    """
+    Check TopicTabooPlugin returns true if checking disabled.
+    """
+    context = BaseContext()
+    context.logger = DummyLogger()
+    context.config = {"topic-check": {"enabled": False}}
+
+    session = Session()
+    session.username = "anybody"
+
+    plugin = TopicTabooPlugin(context)
+    authorised = await plugin.topic_filtering(session=session, topic="not/prohibited")
+    assert authorised is True
+
+    # Should NOT have printed warnings
+    assert len(context.logger.messages) == 0
 
 
 @pytest.mark.asyncio
@@ -272,6 +309,25 @@ async def test_taclp_empty_config():
         ("'auth' section not found in context configuration",),
         {},
     )
+
+
+@pytest.mark.asyncio
+async def test_taclp_true_disabled():
+    """
+    Check TopicAccessControlListPlugin returns true if topic checking is disabled.
+    """
+    context = BaseContext()
+    context.logger = DummyLogger()
+    context.config = {"topic-check": {"enabled": False}}
+
+    session = Session()
+    session.username = "user"
+
+    plugin = TopicAccessControlListPlugin(context)
+    authorised = await plugin.topic_filtering(
+        action="publish", session=session, topic="a/topic"
+    )
+    assert authorised is True
 
 
 @pytest.mark.asyncio
