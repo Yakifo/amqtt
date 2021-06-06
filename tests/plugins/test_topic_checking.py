@@ -212,18 +212,14 @@ def test_topic_ac_not_match_longer_acl():
     """
     Test TopicAccessControlListPlugin.topic_ac returns false if topics do not match and ACL topic is longer.
     """
-    assert (
-        TopicAccessControlListPlugin.topic_ac("topic", "topic/is/longer") is False
-    )
+    assert TopicAccessControlListPlugin.topic_ac("topic", "topic/is/longer") is False
 
 
 def test_topic_ac_not_match_longer_rq():
     """
     Test TopicAccessControlListPlugin.topic_ac returns false if topics do not match and RQ topic is longer.
     """
-    assert (
-        TopicAccessControlListPlugin.topic_ac("topic/is/longer", "topic") is False
-    )
+    assert TopicAccessControlListPlugin.topic_ac("topic/is/longer", "topic") is False
 
 
 def test_topic_ac_match_exact():
@@ -290,17 +286,15 @@ async def test_taclp_true_no_pub_acl():
     """
     context = BaseContext()
     context.logger = DummyLogger()
-    context.config = {
-            'topic-check': {
-                'enabled': True
-            }
-    }
+    context.config = {"topic-check": {"enabled": True}}
 
     session = Session()
     session.username = "user"
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering(action='publish', session=session, topic='a/topic')
+    authorised = await plugin.topic_filtering(
+        action="publish", session=session, topic="a/topic"
+    )
     assert authorised is True
 
 
@@ -312,22 +306,19 @@ async def test_taclp_false_sub_no_topic():
     context = BaseContext()
     context.logger = DummyLogger()
     context.config = {
-            'topic-check': {
-                'enabled': True,
-                'acl': {
-                    'anotheruser': [
-                        'allowed/topic',
-                        'another/allowed/topic/#'
-                    ]
-                }
-            }
+        "topic-check": {
+            "enabled": True,
+            "acl": {"anotheruser": ["allowed/topic", "another/allowed/topic/#"]},
+        }
     }
 
     session = Session()
     session.username = "user"
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering(action='subscribe', session=session, topic='')
+    authorised = await plugin.topic_filtering(
+        action="subscribe", session=session, topic=""
+    )
     assert authorised is False
 
 
@@ -339,22 +330,19 @@ async def test_taclp_false_sub_unknown_user():
     context = BaseContext()
     context.logger = DummyLogger()
     context.config = {
-            'topic-check': {
-                'enabled': True,
-                'acl': {
-                    'anotheruser': [
-                        'allowed/topic',
-                        'another/allowed/topic/#'
-                    ]
-                }
-            }
+        "topic-check": {
+            "enabled": True,
+            "acl": {"anotheruser": ["allowed/topic", "another/allowed/topic/#"]},
+        }
     }
 
     session = Session()
     session.username = "user"
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering(action='subscribe', session=session, topic='allowed/topic')
+    authorised = await plugin.topic_filtering(
+        action="subscribe", session=session, topic="allowed/topic"
+    )
     assert authorised is False
 
 
@@ -366,22 +354,19 @@ async def test_taclp_false_sub_no_permission():
     context = BaseContext()
     context.logger = DummyLogger()
     context.config = {
-            'topic-check': {
-                'enabled': True,
-                'acl': {
-                    'user': [
-                        'allowed/topic',
-                        'another/allowed/topic/#'
-                    ]
-                }
-            }
+        "topic-check": {
+            "enabled": True,
+            "acl": {"user": ["allowed/topic", "another/allowed/topic/#"]},
+        }
     }
 
     session = Session()
     session.username = "user"
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering(action='subscribe', session=session, topic='forbidden/topic')
+    authorised = await plugin.topic_filtering(
+        action="subscribe", session=session, topic="forbidden/topic"
+    )
     assert authorised is False
 
 
@@ -393,22 +378,19 @@ async def test_taclp_true_sub_permission():
     context = BaseContext()
     context.logger = DummyLogger()
     context.config = {
-            'topic-check': {
-                'enabled': True,
-                'acl': {
-                    'user': [
-                        'allowed/topic',
-                        'another/allowed/topic/#'
-                    ]
-                }
-            }
+        "topic-check": {
+            "enabled": True,
+            "acl": {"user": ["allowed/topic", "another/allowed/topic/#"]},
+        }
     }
 
     session = Session()
     session.username = "user"
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering(action='subscribe', session=session, topic='allowed/topic')
+    authorised = await plugin.topic_filtering(
+        action="subscribe", session=session, topic="allowed/topic"
+    )
     assert authorised is True
 
 
@@ -420,22 +402,19 @@ async def test_taclp_true_pub_permission():
     context = BaseContext()
     context.logger = DummyLogger()
     context.config = {
-            'topic-check': {
-                'enabled': True,
-                'publish-acl': {
-                    'user': [
-                        'allowed/topic',
-                        'another/allowed/topic/#'
-                    ]
-                }
-            }
+        "topic-check": {
+            "enabled": True,
+            "publish-acl": {"user": ["allowed/topic", "another/allowed/topic/#"]},
+        }
     }
 
     session = Session()
     session.username = "user"
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering(action='publish', session=session, topic='allowed/topic')
+    authorised = await plugin.topic_filtering(
+        action="publish", session=session, topic="allowed/topic"
+    )
     assert authorised is True
 
 
@@ -447,20 +426,17 @@ async def test_taclp_true_anon_sub_permission():
     context = BaseContext()
     context.logger = DummyLogger()
     context.config = {
-            'topic-check': {
-                'enabled': True,
-                'acl': {
-                    'anonymous': [
-                        'allowed/topic',
-                        'another/allowed/topic/#'
-                    ]
-                }
-            }
+        "topic-check": {
+            "enabled": True,
+            "acl": {"anonymous": ["allowed/topic", "another/allowed/topic/#"]},
+        }
     }
 
     session = Session()
     session.username = None
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering(action='subscribe', session=session, topic='allowed/topic')
+    authorised = await plugin.topic_filtering(
+        action="subscribe", session=session, topic="allowed/topic"
+    )
     assert authorised is True
