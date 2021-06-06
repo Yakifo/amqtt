@@ -703,7 +703,7 @@ class Broker:
         # If all plugins returned True, authentication is success
         return auth_result
 
-    async def topic_filtering(self, session: Session, topic):
+    async def topic_filtering(self, session: Session, topic, action: str):
         """
         This method call the topic_filtering method on registered plugins to check that the subscription is allowed.
         User is considered allowed if all plugins called return True.
@@ -713,7 +713,8 @@ class Broker:
          - None if topic filtering can't be achieved (then plugin result is then ignored)
         :param session:
         :param listener:
-        :param topic: Topic in which the client wants to subscribe
+        :param topic: Topic in which the client wants to subscribe / publish
+        :param action: What is being done with the topic?  subscribe or publish
         :return:
         """
         topic_plugins = None
@@ -724,6 +725,7 @@ class Broker:
             "topic_filtering",
             session=session,
             topic=topic,
+            action=action,
             filter_plugins=topic_plugins,
         )
         topic_result = True
