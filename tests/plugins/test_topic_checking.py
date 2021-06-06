@@ -5,7 +5,11 @@
 import pytest
 
 from amqtt.plugins.manager import BaseContext
-from amqtt.plugins.topic_checking import BaseTopicPlugin, TopicTabooPlugin, TopicAccessControlListPlugin
+from amqtt.plugins.topic_checking import (
+    BaseTopicPlugin,
+    TopicTabooPlugin,
+    TopicAccessControlListPlugin,
+)
 from amqtt.session import Session
 
 
@@ -36,12 +40,12 @@ async def test_base_no_config():
     # Should have printed a couple of warnings
     assert len(context.logger.messages) == 2
     assert context.logger.messages[0] == (
-            ("'topic-check' section not found in context configuration",),
-            {}
+        ("'topic-check' section not found in context configuration",),
+        {},
     )
     assert context.logger.messages[1] == (
-            ("'auth' section not found in context configuration",),
-            {}
+        ("'auth' section not found in context configuration",),
+        {},
     )
 
 
@@ -52,9 +56,7 @@ async def test_base_empty_config():
     """
     context = BaseContext()
     context.logger = DummyLogger()
-    context.config = {
-            'topic-check': {}
-    }
+    context.config = {"topic-check": {}}
 
     plugin = BaseTopicPlugin(context)
     authorised = plugin.topic_filtering()
@@ -63,8 +65,8 @@ async def test_base_empty_config():
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 1
     assert context.logger.messages[0] == (
-            ("'auth' section not found in context configuration",),
-            {}
+        ("'auth' section not found in context configuration",),
+        {},
     )
 
 
@@ -75,11 +77,7 @@ async def test_base_enabled_config():
     """
     context = BaseContext()
     context.logger = DummyLogger()
-    context.config = {
-            'topic-check': {
-                'enabled': True
-            }
-    }
+    context.config = {"topic-check": {"enabled": True}}
 
     plugin = BaseTopicPlugin(context)
     authorised = plugin.topic_filtering()
@@ -90,6 +88,7 @@ async def test_base_enabled_config():
 
 
 # Taboo plug-in
+
 
 @pytest.mark.asyncio
 async def test_taboo_empty_config():
@@ -107,13 +106,14 @@ async def test_taboo_empty_config():
     # Should have printed a couple of warnings
     assert len(context.logger.messages) == 2
     assert context.logger.messages[0] == (
-            ("'topic-check' section not found in context configuration",),
-            {}
+        ("'topic-check' section not found in context configuration",),
+        {},
     )
     assert context.logger.messages[1] == (
-            ("'auth' section not found in context configuration",),
-            {}
+        ("'auth' section not found in context configuration",),
+        {},
     )
+
 
 @pytest.mark.asyncio
 async def test_taboo_not_taboo_topic():
@@ -122,24 +122,18 @@ async def test_taboo_not_taboo_topic():
     """
     context = BaseContext()
     context.logger = DummyLogger()
-    context.config = {
-            'topic-check': {
-                'enabled': True
-            }
-    }
+    context.config = {"topic-check": {"enabled": True}}
 
     session = Session()
-    session.username = 'anybody'
+    session.username = "anybody"
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(
-            session=session,
-            topic='not/prohibited'
-    )
+    authorised = await plugin.topic_filtering(session=session, topic="not/prohibited")
     assert authorised is True
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
+
 
 @pytest.mark.asyncio
 async def test_taboo_anon_taboo_topic():
@@ -148,24 +142,18 @@ async def test_taboo_anon_taboo_topic():
     """
     context = BaseContext()
     context.logger = DummyLogger()
-    context.config = {
-            'topic-check': {
-                'enabled': True
-            }
-    }
+    context.config = {"topic-check": {"enabled": True}}
 
     session = Session()
-    session.username = ''
+    session.username = ""
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(
-            session=session,
-            topic='prohibited'
-    )
+    authorised = await plugin.topic_filtering(session=session, topic="prohibited")
     assert authorised is False
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
+
 
 @pytest.mark.asyncio
 async def test_taboo_notadmin_taboo_topic():
@@ -174,24 +162,18 @@ async def test_taboo_notadmin_taboo_topic():
     """
     context = BaseContext()
     context.logger = DummyLogger()
-    context.config = {
-            'topic-check': {
-                'enabled': True
-            }
-    }
+    context.config = {"topic-check": {"enabled": True}}
 
     session = Session()
-    session.username = 'notadmin'
+    session.username = "notadmin"
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(
-            session=session,
-            topic='prohibited'
-    )
+    authorised = await plugin.topic_filtering(session=session, topic="prohibited")
     assert authorised is False
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
+
 
 @pytest.mark.asyncio
 async def test_taboo_admin_taboo_topic():
@@ -200,20 +182,13 @@ async def test_taboo_admin_taboo_topic():
     """
     context = BaseContext()
     context.logger = DummyLogger()
-    context.config = {
-            'topic-check': {
-                'enabled': True
-            }
-    }
+    context.config = {"topic-check": {"enabled": True}}
 
     session = Session()
-    session.username = 'admin'
+    session.username = "admin"
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(
-            session=session,
-            topic='prohibited'
-    )
+    authorised = await plugin.topic_filtering(session=session, topic="prohibited")
     assert authorised is True
 
     # Should NOT have printed warnings
