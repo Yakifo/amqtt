@@ -113,8 +113,7 @@ async def test_taboo_empty_config():
     context.config = {}
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering()
-    assert authorised is False
+    assert (await plugin.topic_filtering()) is False
 
     # Should have printed a couple of warnings
     assert len(context.logger.messages) == 2
@@ -141,8 +140,9 @@ async def test_taboo_not_taboo_topic():
     session.username = "anybody"
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(session=session, topic="not/prohibited")
-    assert authorised is True
+    assert (
+        await plugin.topic_filtering(session=session, topic="not/prohibited")
+    ) is True
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
@@ -161,8 +161,9 @@ async def test_taboo_not_taboo_topic():
     session.username = "anybody"
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(session=session, topic="not/prohibited")
-    assert authorised is True
+    assert (
+        await plugin.topic_filtering(session=session, topic="not/prohibited")
+    ) is True
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
@@ -181,8 +182,7 @@ async def test_taboo_anon_taboo_topic():
     session.username = ""
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(session=session, topic="prohibited")
-    assert authorised is False
+    assert (await plugin.topic_filtering(session=session, topic="prohibited")) is False
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
@@ -201,8 +201,7 @@ async def test_taboo_notadmin_taboo_topic():
     session.username = "notadmin"
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(session=session, topic="prohibited")
-    assert authorised is False
+    assert (await plugin.topic_filtering(session=session, topic="prohibited")) is False
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
@@ -221,8 +220,7 @@ async def test_taboo_admin_taboo_topic():
     session.username = "admin"
 
     plugin = TopicTabooPlugin(context)
-    authorised = await plugin.topic_filtering(session=session, topic="prohibited")
-    assert authorised is True
+    assert (await plugin.topic_filtering(session=session, topic="prohibited")) is True
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
@@ -296,8 +294,7 @@ async def test_taclp_empty_config():
     context.config = {}
 
     plugin = TopicAccessControlListPlugin(context)
-    authorised = await plugin.topic_filtering()
-    assert authorised is False
+    assert (await plugin.topic_filtering()) is False
 
     # Should have printed a couple of warnings
     assert len(context.logger.messages) == 2
