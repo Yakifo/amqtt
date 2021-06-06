@@ -7,6 +7,7 @@ class BaseTopicPlugin:
             self.context.logger.warning(
                 "'topic-check' section not found in context configuration"
             )
+            self.topic_config = None
 
     def topic_filtering(self, *args, **kwargs):
         if not self.topic_config:
