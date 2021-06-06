@@ -193,3 +193,62 @@ async def test_taboo_admin_taboo_topic():
 
     # Should NOT have printed warnings
     assert len(context.logger.messages) == 0
+
+
+def test_topic_ac_not_match():
+    """
+    Test TopicAccessControlListPlugin.topic_ac returns false if topics do not match.
+    """
+    assert (
+        TopicAccessControlListPlugin.topic_ac("a/topic/to/match", "a/topic/to/notmatch")
+        is False
+    )
+
+
+def test_topic_ac_not_match_longer_acl():
+    """
+    Test TopicAccessControlListPlugin.topic_ac returns false if topics do not match and ACL topic is longer.
+    """
+    assert (
+        TopicAccessControlListPlugin.topic_ac("topic", "topic/is/longer") is False
+    )
+
+
+def test_topic_ac_not_match_longer_rq():
+    """
+    Test TopicAccessControlListPlugin.topic_ac returns false if topics do not match and RQ topic is longer.
+    """
+    assert (
+        TopicAccessControlListPlugin.topic_ac("topic/is/longer", "topic") is False
+    )
+
+
+def test_topic_ac_match_exact():
+    """
+    Test TopicAccessControlListPlugin.topic_ac returns true if topics match exactly.
+    """
+    assert TopicAccessControlListPlugin.topic_ac("exact/topic", "exact/topic") is True
+
+
+def test_topic_ac_match_hash():
+    """
+    Test TopicAccessControlListPlugin.topic_ac correctly handles '+' wildcard.
+    """
+    assert (
+        TopicAccessControlListPlugin.topic_ac(
+            "a/topic/anything/value", "a/topic/+/value"
+        )
+        is True
+    )
+
+
+def test_topic_ac_match_hash():
+    """
+    Test TopicAccessControlListPlugin.topic_ac correctly handles '#' wildcard.
+    """
+    assert (
+        TopicAccessControlListPlugin.topic_ac(
+            "topic/prefix/and/suffix", "topic/prefix/#"
+        )
+        is True
+    )
