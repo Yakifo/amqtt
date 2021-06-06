@@ -62,7 +62,7 @@ async def test_base_empty_config():
     authorised = plugin.topic_filtering()
     assert authorised is False
 
-    # Should NOT have printed warnings
+    # Should have printed just one warning
     assert len(context.logger.messages) == 1
     assert context.logger.messages[0] == (
         ("'auth' section not found in context configuration",),
