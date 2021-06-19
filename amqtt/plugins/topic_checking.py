@@ -1,3 +1,6 @@
+from ..broker import Action
+
+
 class BaseTopicPlugin:
     def __init__(self, context):
         self.context = context
@@ -70,7 +73,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
             action = kwargs.get("action", None)
 
             # hbmqtt and older amqtt do not support publish filtering
-            if action == "publish" and "publish-acl" not in self.topic_config:
+            if action == Action.publish and "publish-acl" not in self.topic_config:
                 # maintain backward compatibility, assume permitted
                 return True
 
@@ -79,9 +82,9 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
                 if username is None:
                     username = "anonymous"
 
-                if action == "publish":
+                if action == Action.publish:
                     acl = self.topic_config["publish-acl"]
-                elif action == "subscribe":
+                elif action == Action.subscribe:
                     acl = self.topic_config["acl"]
 
                 allowed_topics = acl.get(username, None)

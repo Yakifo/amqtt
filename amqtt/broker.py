@@ -9,6 +9,7 @@ import asyncio
 import re
 from asyncio import CancelledError
 from collections import deque
+from enum import Enum
 
 from functools import partial
 from transitions import Machine, MachineError
@@ -41,6 +42,11 @@ EVENT_BROKER_CLIENT_DISCONNECTED = "broker_client_disconnected"
 EVENT_BROKER_CLIENT_SUBSCRIBED = "broker_client_subscribed"
 EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
 EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
+
+
+class Action(Enum):
+    subscribe = 'subscribe'
+    publish = 'publish'
 
 
 class BrokerException(Exception):
@@ -714,7 +720,7 @@ class Broker:
         # If all plugins returned True, authentication is success
         return auth_result
 
-    async def topic_filtering(self, session: Session, topic, action: str):
+    async def topic_filtering(self, session: Session, topic, action: Action):
         """
         This method call the topic_filtering method on registered plugins to check that the subscription is allowed.
         User is considered allowed if all plugins called return True.
