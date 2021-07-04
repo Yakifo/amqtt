@@ -5,6 +5,8 @@ import pytest
 
 import amqtt.broker
 
+pytest_plugins = ["pytest_logdog"]
+
 test_config = {
     "listeners": {
         "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
