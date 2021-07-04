@@ -5,6 +5,7 @@ from amqtt.plugins.topic_checking import (
     BaseTopicPlugin,
     TopicTabooPlugin,
     TopicAccessControlListPlugin,
+    Action,
 )
 from amqtt.session import Session
 
@@ -322,7 +323,7 @@ async def test_taclp_true_disabled():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="publish", session=session, topic="a/topic"
+        action=Action.publish, session=session, topic="a/topic"
     )
     assert authorised is True
 
@@ -342,7 +343,7 @@ async def test_taclp_true_no_pub_acl():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="publish", session=session, topic="a/topic"
+        action=Action.publish, session=session, topic="a/topic"
     )
     assert authorised is True
 
@@ -366,7 +367,7 @@ async def test_taclp_false_sub_no_topic():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="subscribe", session=session, topic=""
+        action=Action.subscribe, session=session, topic=""
     )
     assert authorised is False
 
@@ -390,7 +391,7 @@ async def test_taclp_false_sub_unknown_user():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="subscribe", session=session, topic="allowed/topic"
+        action=Action.subscribe, session=session, topic="allowed/topic"
     )
     assert authorised is False
 
@@ -414,7 +415,7 @@ async def test_taclp_false_sub_no_permission():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="subscribe", session=session, topic="forbidden/topic"
+        action=Action.subscribe, session=session, topic="forbidden/topic"
     )
     assert authorised is False
 
@@ -438,7 +439,7 @@ async def test_taclp_true_sub_permission():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="subscribe", session=session, topic="allowed/topic"
+        action=Action.subscribe, session=session, topic="allowed/topic"
     )
     assert authorised is True
 
@@ -462,7 +463,7 @@ async def test_taclp_true_pub_permission():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="publish", session=session, topic="allowed/topic"
+        action=Action.publish, session=session, topic="allowed/topic"
     )
     assert authorised is True
 
@@ -486,6 +487,6 @@ async def test_taclp_true_anon_sub_permission():
 
     plugin = TopicAccessControlListPlugin(context)
     authorised = await plugin.topic_filtering(
-        action="subscribe", session=session, topic="allowed/topic"
+        action=Action.subscribe, session=session, topic="allowed/topic"
     )
     assert authorised is True
