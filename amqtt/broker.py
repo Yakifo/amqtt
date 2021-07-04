@@ -629,7 +629,7 @@ class Broker:
 
                     # See if the user is allowed to publish to this topic.
                     permitted = await self.topic_filtering(
-                            client_session, topic=app_message.topic, action='publish'
+                            client_session, topic=app_message.topic, action=Action.publish
                     )
                     if not permitted:
                         self.logger.info(
@@ -792,7 +792,7 @@ class Broker:
                         # [MQTT-4.7.1-3] + wildcard character must occupy entire level
                         return 0x80
             # Check if the client is authorised to connect to the topic
-            permitted = await self.topic_filtering(session, topic=a_filter, action='subscribe')
+            permitted = await self.topic_filtering(session, topic=a_filter, action=Action.subscribe)
             if not permitted:
                 return 0x80
             qos = subscription[1]
