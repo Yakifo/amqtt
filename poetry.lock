@@ -430,6 +430,17 @@ pytest = ">=4.6"
 testing = ["fields", "hunter", "process-tests (==2.0.2)", "six", "pytest-xdist", "virtualenv"]
 
 [[package]]
+name = "pytest-logdog"
+version = "0.1.0"
+description = "Pytest plugin to test logging"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+pytest = ">=6.2.0"
+
+[[package]]
 name = "pyyaml"
 version = "5.4.1"
 description = "YAML parser and emitter for Python"
@@ -565,7 +576,7 @@ ci = ["coveralls"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "8eea41d1ef5f01f58a973a749a766740aa529fc0b94a8fcf71c6e91babdd6613"
+content-hash = "2030ca9b6173701a0b94bd85c8c7b26f30ea9f7ad5be320a2b97c51c847afb62"
 
 [metadata.files]
 appdirs = [
@@ -799,6 +810,10 @@ pytest-asyncio = [
 pytest-cov = [
     {file = "pytest-cov-2.11.1.tar.gz", hash = "sha256:359952d9d39b9f822d9d29324483e7ba04a3a17dd7d05aa6beb7ea01e359e5f7"},
     {file = "pytest_cov-2.11.1-py2.py3-none-any.whl", hash = "sha256:bdb9fdb0b85a7cc825269a4c56b48ccaa5c7e365054b6038772c32ddcdc969da"},
+]
+pytest-logdog = [
+    {file = "pytest-logdog-0.1.0.tar.gz", hash = "sha256:b84aca02b6b609bda8bfcd6d0207a428b146cd706d14c7095a3ba79429ab534b"},
+    {file = "pytest_logdog-0.1.0-py3-none-any.whl", hash = "sha256:4d5a4c46442ca7da73b1cf6c9ebea144958a0a6258ba19ad7bf877dec22400e8"},
 ]
 pyyaml = [
     {file = "PyYAML-5.4.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:3b2b1824fe7112845700f815ff6a489360226a5609b96ec2190a45e62a9fc922"},

@@ -42,6 +42,7 @@ pylint = "^2.7.2"
 black = "^20.8b1"
 flake8 = "^3.9.0"
 hypothesis = "^6.10.0"
+pytest-logdog = "^0.1.0"
 
 
 [tool.poetry.scripts]
