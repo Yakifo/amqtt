@@ -21,7 +21,7 @@ async def test_base_no_config(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {}
 
         plugin = BaseTopicPlugin(context)
@@ -29,13 +29,19 @@ async def test_base_no_config(logdog):
         assert authorised is False
 
         # Should have printed a couple of warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 2
         assert log_records[0].levelno == logging.WARN
-        assert log_records[0].message == "'topic-check' section not found in context configuration"
+        assert (
+            log_records[0].message
+            == "'topic-check' section not found in context configuration"
+        )
 
         assert log_records[1].levelno == logging.WARN
-        assert log_records[1].message == "'auth' section not found in context configuration"
+        assert (
+            log_records[1].message
+            == "'auth' section not found in context configuration"
+        )
         assert pile.is_empty()
 
 
@@ -46,7 +52,7 @@ async def test_base_empty_config(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {}}
 
         plugin = BaseTopicPlugin(context)
@@ -54,10 +60,13 @@ async def test_base_empty_config(logdog):
         assert authorised is False
 
         # Should have printed just one warning
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 1
         assert log_records[0].levelno == logging.WARN
-        assert log_records[0].message == "'auth' section not found in context configuration"
+        assert (
+            log_records[0].message
+            == "'auth' section not found in context configuration"
+        )
 
 
 @pytest.mark.asyncio
@@ -67,7 +76,7 @@ async def test_base_disabled_config(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": False}}
 
         plugin = BaseTopicPlugin(context)
@@ -75,7 +84,7 @@ async def test_base_disabled_config(logdog):
         assert authorised is True
 
         # Should NOT have printed warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 0
 
 
@@ -86,7 +95,7 @@ async def test_base_enabled_config(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": True}}
 
         plugin = BaseTopicPlugin(context)
@@ -94,7 +103,7 @@ async def test_base_enabled_config(logdog):
         assert authorised is True
 
         # Should NOT have printed warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 0
 
 
@@ -108,19 +117,25 @@ async def test_taboo_empty_config(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {}
 
         plugin = TopicTabooPlugin(context)
         assert (await plugin.topic_filtering()) is False
 
         # Should have printed a couple of warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 2
         assert log_records[0].levelno == logging.WARN
-        assert log_records[0].message == "'topic-check' section not found in context configuration"
+        assert (
+            log_records[0].message
+            == "'topic-check' section not found in context configuration"
+        )
         assert log_records[1].levelno == logging.WARN
-        assert log_records[1].message == "'auth' section not found in context configuration"
+        assert (
+            log_records[1].message
+            == "'auth' section not found in context configuration"
+        )
 
 
 @pytest.mark.asyncio
@@ -130,7 +145,7 @@ async def test_taboo_not_taboo_topic(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": False}}
 
         session = Session()
@@ -142,7 +157,7 @@ async def test_taboo_not_taboo_topic(logdog):
         ) is True
 
         # Should NOT have printed warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 0
 
 
@@ -153,7 +168,7 @@ async def test_taboo_not_taboo_topic(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": True}}
 
         session = Session()
@@ -165,7 +180,7 @@ async def test_taboo_not_taboo_topic(logdog):
         ) is True
 
         # Should NOT have printed warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 0
 
 
@@ -176,17 +191,19 @@ async def test_taboo_anon_taboo_topic(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": True}}
 
         session = Session()
         session.username = ""
 
         plugin = TopicTabooPlugin(context)
-        assert (await plugin.topic_filtering(session=session, topic="prohibited")) is False
+        assert (
+            await plugin.topic_filtering(session=session, topic="prohibited")
+        ) is False
 
         # Should NOT have printed warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 0
 
 
@@ -197,17 +214,19 @@ async def test_taboo_notadmin_taboo_topic(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": True}}
 
         session = Session()
         session.username = "notadmin"
 
         plugin = TopicTabooPlugin(context)
-        assert (await plugin.topic_filtering(session=session, topic="prohibited")) is False
+        assert (
+            await plugin.topic_filtering(session=session, topic="prohibited")
+        ) is False
 
         # Should NOT have printed warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 0
 
 
@@ -218,17 +237,19 @@ async def test_taboo_admin_taboo_topic(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": True}}
 
         session = Session()
         session.username = "admin"
 
         plugin = TopicTabooPlugin(context)
-        assert (await plugin.topic_filtering(session=session, topic="prohibited")) is True
+        assert (
+            await plugin.topic_filtering(session=session, topic="prohibited")
+        ) is True
 
         # Should NOT have printed warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 0
 
 
@@ -297,17 +318,23 @@ async def test_taclp_empty_config(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {}
 
         plugin = TopicAccessControlListPlugin(context)
         assert (await plugin.topic_filtering()) is False
 
         # Should have printed a couple of warnings
-        log_records = list(pile.drain(name='testlog'))
+        log_records = list(pile.drain(name="testlog"))
         assert len(log_records) == 2
-        assert log_records[0].message == "'topic-check' section not found in context configuration"
-        assert log_records[1].message == "'auth' section not found in context configuration"
+        assert (
+            log_records[0].message
+            == "'topic-check' section not found in context configuration"
+        )
+        assert (
+            log_records[1].message
+            == "'auth' section not found in context configuration"
+        )
 
 
 @pytest.mark.asyncio
@@ -317,7 +344,7 @@ async def test_taclp_true_disabled(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": False}}
 
         session = Session()
@@ -338,7 +365,7 @@ async def test_taclp_true_no_pub_acl(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {"enabled": True}}
 
         session = Session()
@@ -358,7 +385,7 @@ async def test_taclp_false_sub_no_topic(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {
             "topic-check": {
                 "enabled": True,
@@ -383,7 +410,7 @@ async def test_taclp_false_sub_unknown_user(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {
             "topic-check": {
                 "enabled": True,
@@ -408,7 +435,7 @@ async def test_taclp_false_sub_no_permission(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {
             "topic-check": {
                 "enabled": True,
@@ -433,7 +460,7 @@ async def test_taclp_true_sub_permission(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {
             "topic-check": {
                 "enabled": True,
@@ -458,7 +485,7 @@ async def test_taclp_true_pub_permission(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {
             "topic-check": {
                 "enabled": True,
@@ -483,7 +510,7 @@ async def test_taclp_true_anon_sub_permission(logdog):
     """
     with logdog() as pile:
         context = BaseContext()
-        context.logger = logging.getLogger('testlog')
+        context.logger = logging.getLogger("testlog")
         context.config = {
             "topic-check": {
                 "enabled": True,
