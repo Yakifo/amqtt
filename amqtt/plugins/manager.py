@@ -194,12 +194,12 @@ class PluginManager:
 
     @staticmethod
     async def _call_coro(plugin, coro_name, *args, **kwargs):
-        try:
-            coro = getattr(plugin.object, coro_name, None)(*args, **kwargs)
-            return await coro
-        except TypeError:
+        if not hasattr(plugin.object, coro_name):
             # Plugin doesn't implement coro_name
             return None
+
+        coro = getattr(plugin.object, coro_name)(*args, **kwargs)
+        return await coro
 
     async def map_plugin_coro(self, coro_name, *args, **kwargs):
         """
