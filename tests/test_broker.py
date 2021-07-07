@@ -272,7 +272,7 @@ async def test_client_publish(broker, mock_plugin_manager):
 @pytest.mark.asyncio
 async def test_client_publish_acl_permitted(acl_broker):
     sub_client = MQTTClient()
-    ret = await sub_client.connect("mqtt://user2:test@127.0.0.1:1884/")
+    ret = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
     assert ret == 0
 
     ret = await sub_client.subscribe(
@@ -281,7 +281,7 @@ async def test_client_publish_acl_permitted(acl_broker):
     assert ret == [QOS_0]
 
     pub_client = MQTTClient()
-    ret = await pub_client.connect("mqtt://user1:test@127.0.0.1:1884/")
+    ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret == 0
 
     ret_message = await pub_client.publish("public/subtopic/test", b"data", QOS_0)
@@ -299,7 +299,7 @@ async def test_client_publish_acl_permitted(acl_broker):
 @pytest.mark.asyncio
 async def test_client_publish_acl_forbidden(acl_broker):
     sub_client = MQTTClient()
-    ret = await sub_client.connect("mqtt://user2:test@127.0.0.1:1884/")
+    ret = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
     assert ret == 0
 
     ret = await sub_client.subscribe(
@@ -308,7 +308,7 @@ async def test_client_publish_acl_forbidden(acl_broker):
     assert ret == [QOS_0]
 
     pub_client = MQTTClient()
-    ret = await pub_client.connect("mqtt://user1:test@127.0.0.1:1884/")
+    ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret == 0
 
     ret_message = await pub_client.publish("public/forbidden/test", b"data", QOS_0)
@@ -326,11 +326,11 @@ async def test_client_publish_acl_forbidden(acl_broker):
 @pytest.mark.asyncio
 async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     sub_client1 = MQTTClient()
-    ret = await sub_client1.connect("mqtt://user2:test@127.0.0.1:1884/")
+    ret = await sub_client1.connect("mqtt://user2:user2password@127.0.0.1:1884/")
     assert ret == 0
 
     sub_client2 = MQTTClient()
-    ret = await sub_client2.connect("mqtt://user3:test@127.0.0.1:1884/")
+    ret = await sub_client2.connect("mqtt://user3:user3password@127.0.0.1:1884/")
     assert ret == 0
 
     ret = await sub_client1.subscribe(
@@ -344,7 +344,7 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     assert ret == [0x80]
 
     pub_client = MQTTClient()
-    ret = await pub_client.connect("mqtt://user1:test@127.0.0.1:1884/")
+    ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret == 0
 
     ret_message = await pub_client.publish("public/subtopic/test", b"data", QOS_0)
