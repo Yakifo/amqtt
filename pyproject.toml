@@ -43,12 +43,7 @@ flake8 = "^3.9.0"
 hypothesis = "^6.10.0"
 pytest-logdog = "^0.1.0"
 
-
 [tool.poetry.scripts]
-hbmqtt = 'amqtt.scripts.broker_script:main'
-hbmqtt_pub = 'amqtt.scripts.pub_script:main'
-hbmqtt_sub = 'amqtt.scripts.sub_script:main'
-
 amqtt = 'amqtt.scripts.broker_script:main'
 amqtt_pub = 'amqtt.scripts.pub_script:main'
 amqtt_sub = 'amqtt.scripts.sub_script:main'
