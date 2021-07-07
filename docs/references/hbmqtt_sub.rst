@@ -1,34 +1,34 @@
-hbmqtt_sub
+amqtt_sub
 ==========
 
-``hbmqtt_sub`` is a command line MQTT client that subscribes to some topics and output data received from messages published.
+``amqtt_sub`` is a command line MQTT client that subscribes to some topics and output data received from messages published.
 
 Usage
 -----
 
-``hbmqtt_sub`` usage : ::
+``amqtt_sub`` usage : ::
 
-  hbmqtt_sub --version
-  hbmqtt_sub (-h | --help)
-  hbmqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d]
+  amqtt_sub --version
+  amqtt_sub (-h | --help)
+  amqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d]
              [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA]
              [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ]
              [--extra-headers HEADER]
 
-Note that for simplicity, ``hbmqtt_sub`` uses mostly the same argument syntax as `mosquitto_sub`_.
+Note that for simplicity, ``amqtt_sub`` uses mostly the same argument syntax as `mosquitto_sub`_.
 
 Options
 -------
 
---version           HBMQTT version information
--h, --help          Display ``hbmqtt_sub`` usage help
+--version           amqtt version information
+-h, --help          Display ``amqtt_sub`` usage help
 -c                  Set the YAML configuration file to read and pass to the client runtime.
 -d                  Enable debugging informations.
 --ca-file           Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-path           Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-data           Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --clean-session     If given, set the CONNECT clean session flag to True.
--i                  The id to use for this client. If not given, defaults to ``hbmqtt_sub/`` appended with the process id and the hostname of the client.
+-i                  The id to use for this client. If not given, defaults to ``amqtt_sub/`` appended with the process id and the hostname of the client.
 -k                  Set the CONNECT keep alive timeout.
 -n                  Number of messages to read before ending. Read forever if not given.
 -q, --qos           Specify the quality of service to use for receiving messages. This QoS is sent in the subscribe request.
@@ -47,7 +47,7 @@ Options
 Configuration
 -------------
 
-If ``-c`` argument is given, ``hbmqtt_sub`` will read specific MQTT settings for the given configuration file. This file must be a valid `YAML`_ file which may contains the following configuration elements :
+If ``-c`` argument is given, ``amqtt_sub`` will read specific MQTT settings for the given configuration file. This file must be a valid `YAML`_ file which may contains the following configuration elements :
 
 * ``keep_alive`` : Keep-alive timeout sent to the broker. Defaults to ``10`` seconds.
 * ``ping_delay`` : Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to ``0`` will disable to 0 and may lead to broker disconnection.
@@ -69,17 +69,17 @@ Examples below are adapted from `mosquitto_sub`_ documentation.
 Subscribe with QoS 0 to all messages published under $SYS/:
 ::
 
-    hbmqtt_sub --url mqtt://localhost -t '$SYS/#' -q 0
+    amqtt_sub --url mqtt://localhost -t '$SYS/#' -q 0
 
 
 Subscribe to 10 messages with QoS 2 from /#:
 ::
 
-    hbmqtt_sub --url mqtt://localhost -t /# -q 2 -n 10
+    amqtt_sub --url mqtt://localhost -t /# -q 2 -n 10
 
 .. _mosquitto_sub : http://mosquitto.org/man/mosquitto_sub-1.html
 
 Subscribe with QoS 0 to all messages published under $SYS/: over mqtt encapsulated in a websocket connection and additional headers:
 ::
 
-    hbmqtt_sub --url wss://localhost -t '$SYS/#' -q 0 --extra-headers '{"Authorization": "Bearer <token>"}'
+    amqtt_sub --url wss://localhost -t '$SYS/#' -q 0 --extra-headers '{"Authorization": "Bearer <token>"}'

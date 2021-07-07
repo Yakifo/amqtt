@@ -1,39 +1,39 @@
-hbmqtt_pub
+amqtt_pub
 ==========
 
-``hbmqtt_pub`` is a MQTT client that publishes simple messages on a topic from the command line.
+``amqtt_pub`` is a MQTT client that publishes simple messages on a topic from the command line.
 
 Usage
 -----
 
-``hbmqtt_pub`` usage : ::
+``amqtt_pub`` usage : ::
 
-  hbmqtt_pub --version
-  hbmqtt_pub (-h | --help)
-  hbmqtt_pub --url BROKER_URL -t TOPIC (-f FILE | -l | -m MESSAGE | -n | -s) [-c CONFIG_FILE] [-i CLIENT_ID] [-d]
+  amqtt_pub --version
+  amqtt_pub (-h | --help)
+  amqtt_pub --url BROKER_URL -t TOPIC (-f FILE | -l | -m MESSAGE | -n | -s) [-c CONFIG_FILE] [-i CLIENT_ID] [-d]
              [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session]
              [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA]
              [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ]
              [--extra-headers HEADER]
 
-Note that for simplicity, ``hbmqtt_pub`` uses mostly the same argument syntax as `mosquitto_pub`_.
+Note that for simplicity, ``amqtt_pub`` uses mostly the same argument syntax as `mosquitto_pub`_.
 
 .. _mosquitto_pub: http://mosquitto.org/man/mosquitto_pub-1.html
 
 Options
 -------
 
---version           HBMQTT version information
--h, --help          Display ``hbmqtt_pub`` usage help
+--version           amqtt version information
+-h, --help          Display ``amqtt_pub`` usage help
 -c                  Set the YAML configuration file to read and pass to the client runtime.
 -d                  Enable debugging informations.
 --ca-file           Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-path           Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-data           Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --clean-session     If given, set the CONNECT clean session flag to True.
--f                  Send the contents of a file as the message. The file is read line by line, and ``hbmqtt_pub`` will publish a message for each line read.
--i                  The id to use for this client. If not given, defaults to ``hbmqtt_pub/`` appended with the process id and the hostname of the client.
--l                  Send messages read from stdin. ``hbmqtt_pub`` will publish a message for each line read. Blank lines won't be sent.
+-f                  Send the contents of a file as the message. The file is read line by line, and ``amqtt_pub`` will publish a message for each line read.
+-i                  The id to use for this client. If not given, defaults to ``amqtt_pub/`` appended with the process id and the hostname of the client.
+-l                  Send messages read from stdin. ``amqtt_pub`` will publish a message for each line read. Blank lines won't be sent.
 -k                  Set the CONNECT keep alive timeout.
 -m                  Send a single message from the command line.
 -n                  Send a null (zero length) message.
@@ -54,7 +54,7 @@ Options
 Configuration
 -------------
 
-If ``-c`` argument is given, ``hbmqtt_pub`` will read specific MQTT settings for the given configuration file. This file must be a valid `YAML`_ file which may contains the following configuration elements :
+If ``-c`` argument is given, ``amqtt_pub`` will read specific MQTT settings for the given configuration file. This file must be a valid `YAML`_ file which may contains the following configuration elements :
 
 * ``keep_alive`` : Keep-alive timeout sent to the broker. Defaults to ``10`` seconds.
 * ``ping_delay`` : Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to ``0`` will disable to 0 and may lead to broker disconnection.
@@ -76,29 +76,29 @@ Examples below are adapted from `mosquitto_pub`_ documentation.
 Publish temperature information to localhost with QoS 1:
 ::
 
-    hbmqtt_pub --url mqtt://localhost -t sensors/temperature -m 32 -q 1
+    amqtt_pub --url mqtt://localhost -t sensors/temperature -m 32 -q 1
 
 Publish timestamp and temperature information to a remote host on a non-standard port and QoS 0:
 ::
 
-    hbmqtt_pub --url mqtt://192.168.1.1:1885 -t sensors/temperature -m "1266193804 32"
+    amqtt_pub --url mqtt://192.168.1.1:1885 -t sensors/temperature -m "1266193804 32"
 
 Publish light switch status. Message is set to retained because there may be a long period of time between light switch events:
 ::
 
-    hbmqtt_pub --url mqtt://localhost -r -t switches/kitchen_lights/status -m "on"
+    amqtt_pub --url mqtt://localhost -r -t switches/kitchen_lights/status -m "on"
 
 Send the contents of a file in two ways:
 ::
 
-    hbmqtt_pub --url mqtt://localhost -t my/topic -f ./data
+    amqtt_pub --url mqtt://localhost -t my/topic -f ./data
 
-    hbmqtt_pub --url mqtt://localhost -t my/topic -s < ./data
+    amqtt_pub --url mqtt://localhost -t my/topic -s < ./data
 
 Publish temperature information to localhost with QoS 1 over mqtt encapsulated in a websocket connection and additional headers:
 ::
 
-    hbmqtt_pub --url wss://localhost -t sensors/temperature -m 32 -q 1 --extra-headers '{"Authorization": "Bearer <token>"}'
+    amqtt_pub --url wss://localhost -t sensors/temperature -m 32 -q 1 --extra-headers '{"Authorization": "Bearer <token>"}'
 
 
 .. _mosquitto_pub : http://mosquitto.org/man/mosquitto_pub-1.html
