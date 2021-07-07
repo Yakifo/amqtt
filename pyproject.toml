@@ -16,7 +16,6 @@ classifiers = [
 ]
 packages = [
     { include = "amqtt" },
-    { include = "hbmqtt" },
 ]
 
 [tool.poetry.dependencies]
