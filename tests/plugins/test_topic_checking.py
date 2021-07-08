@@ -38,10 +38,7 @@ async def test_base_no_config(logdog):
     )
 
     assert log_records[1].levelno == logging.WARN
-    assert (
-        log_records[1].message
-        == "'auth' section not found in context configuration"
-    )
+    assert log_records[1].message == "'auth' section not found in context configuration"
     assert pile.is_empty()
 
 
@@ -63,10 +60,7 @@ async def test_base_empty_config(logdog):
     log_records = list(pile.drain(name="testlog"))
     assert len(log_records) == 1
     assert log_records[0].levelno == logging.WARN
-    assert (
-        log_records[0].message
-        == "'auth' section not found in context configuration"
-    )
+    assert log_records[0].message == "'auth' section not found in context configuration"
 
 
 @pytest.mark.asyncio
@@ -132,10 +126,7 @@ async def test_taboo_empty_config(logdog):
         == "'topic-check' section not found in context configuration"
     )
     assert log_records[1].levelno == logging.WARN
-    assert (
-        log_records[1].message
-        == "'auth' section not found in context configuration"
-    )
+    assert log_records[1].message == "'auth' section not found in context configuration"
 
 
 @pytest.mark.asyncio
@@ -331,10 +322,7 @@ async def test_taclp_empty_config(logdog):
         log_records[0].message
         == "'topic-check' section not found in context configuration"
     )
-    assert (
-        log_records[1].message
-        == "'auth' section not found in context configuration"
-    )
+    assert log_records[1].message == "'auth' section not found in context configuration"
 
 
 @pytest.mark.asyncio

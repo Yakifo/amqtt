@@ -45,8 +45,8 @@ EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
 
 
 class Action(Enum):
-    subscribe = 'subscribe'
-    publish = 'publish'
+    subscribe = "subscribe"
+    publish = "publish"
 
 
 class BrokerException(Exception):
@@ -629,12 +629,13 @@ class Broker:
 
                     # See if the user is allowed to publish to this topic.
                     permitted = await self.topic_filtering(
-                            client_session, topic=app_message.topic, action=Action.publish
+                        client_session, topic=app_message.topic, action=Action.publish
                     )
                     if not permitted:
                         self.logger.info(
-                                "%s forbidden TOPIC %s sent in PUBLISH message.",
-                                client_session.client_id, app_message.topic
+                            "%s forbidden TOPIC %s sent in PUBLISH message.",
+                            client_session.client_id,
+                            app_message.topic,
                         )
                     else:
                         await self.plugins_manager.fire_event(
@@ -792,7 +793,9 @@ class Broker:
                         # [MQTT-4.7.1-3] + wildcard character must occupy entire level
                         return 0x80
             # Check if the client is authorised to connect to the topic
-            permitted = await self.topic_filtering(session, topic=a_filter, action=Action.subscribe)
+            permitted = await self.topic_filtering(
+                session, topic=a_filter, action=Action.subscribe
+            )
             if not permitted:
                 return 0x80
             qos = subscription[1]
