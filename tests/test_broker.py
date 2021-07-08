@@ -282,7 +282,7 @@ async def test_client_publish_acl_permitted(acl_broker):
     ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret == 0
 
-    ret_message = await pub_client.publish("public/subtopic/test", b"data", QOS_0)
+    await pub_client.publish("public/subtopic/test", b"data", QOS_0)
 
     message = await sub_client.deliver_message(timeout=1)
     await pub_client.disconnect()
@@ -307,7 +307,7 @@ async def test_client_publish_acl_forbidden(acl_broker):
     ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret == 0
 
-    ret_message = await pub_client.publish("public/forbidden/test", b"data", QOS_0)
+    await pub_client.publish("public/forbidden/test", b"data", QOS_0)
 
     try:
         await sub_client.deliver_message(timeout=1)
@@ -339,7 +339,7 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret == 0
 
-    ret_message = await pub_client.publish("public/subtopic/test", b"data", QOS_0)
+    await pub_client.publish("public/subtopic/test", b"data", QOS_0)
 
     message = await sub_client1.deliver_message(timeout=1)
 
