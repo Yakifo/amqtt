@@ -312,7 +312,7 @@ async def test_client_publish_acl_forbidden(acl_broker):
     try:
         await sub_client.deliver_message(timeout=1)
         assert False, "Should not have worked"
-    except asyncio.exceptions.TimeoutError:
+    except asyncio.TimeoutError:
         pass
 
     await pub_client.disconnect()
@@ -346,7 +346,7 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     try:
         await sub_client2.deliver_message(timeout=1)
         assert False, "Should not have worked"
-    except asyncio.exceptions.TimeoutError:
+    except asyncio.TimeoutError:
         pass
 
     await pub_client.disconnect()
