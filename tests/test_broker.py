@@ -275,9 +275,7 @@ async def test_client_publish_acl_permitted(acl_broker):
     ret = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
     assert ret == 0
 
-    ret = await sub_client.subscribe(
-        [("public/subtopic/test", QOS_0)]
-    )
+    ret = await sub_client.subscribe([("public/subtopic/test", QOS_0)])
     assert ret == [QOS_0]
 
     pub_client = MQTTClient()
@@ -302,9 +300,7 @@ async def test_client_publish_acl_forbidden(acl_broker):
     ret = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
     assert ret == 0
 
-    ret = await sub_client.subscribe(
-        [("public/forbidden/test", QOS_0)]
-    )
+    ret = await sub_client.subscribe([("public/forbidden/test", QOS_0)])
     assert ret == [QOS_0]
 
     pub_client = MQTTClient()
@@ -315,7 +311,7 @@ async def test_client_publish_acl_forbidden(acl_broker):
 
     try:
         await sub_client.deliver_message(timeout=1)
-        assert False, 'Should not have worked'
+        assert False, "Should not have worked"
     except asyncio.exceptions.TimeoutError:
         pass
 
@@ -333,14 +329,10 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     ret = await sub_client2.connect("mqtt://user3:user3password@127.0.0.1:1884/")
     assert ret == 0
 
-    ret = await sub_client1.subscribe(
-        [("public/subtopic/test", QOS_0)]
-    )
+    ret = await sub_client1.subscribe([("public/subtopic/test", QOS_0)])
     assert ret == [QOS_0]
 
-    ret = await sub_client2.subscribe(
-        [("public/subtopic/test", QOS_0)]
-    )
+    ret = await sub_client2.subscribe([("public/subtopic/test", QOS_0)])
     assert ret == [0x80]
 
     pub_client = MQTTClient()
@@ -353,7 +345,7 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
 
     try:
         await sub_client2.deliver_message(timeout=1)
-        assert False, 'Should not have worked'
+        assert False, "Should not have worked"
     except asyncio.exceptions.TimeoutError:
         pass
 
