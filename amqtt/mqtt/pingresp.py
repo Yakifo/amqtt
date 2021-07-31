@@ -2,7 +2,7 @@
 #
 # See the file license.txt for copying permission.
 from amqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, PINGRESP
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 
 
 class PingRespPacket(MQTTPacket):
@@ -14,7 +14,7 @@ class PingRespPacket(MQTTPacket):
             header = MQTTFixedHeader(PINGRESP, 0x00)
         else:
             if fixed.packet_type is not PINGRESP:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for PingRespPacket init"
                     % fixed.packet_type
                 )

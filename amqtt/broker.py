@@ -15,7 +15,7 @@ from functools import partial
 from transitions import Machine, MachineError
 from amqtt.session import Session
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
-from amqtt.errors import HBMQTTException, MQTTException
+from amqtt.errors import AMQTTException, MQTTException
 from amqtt.utils import format_client_message, gen_client_id
 from amqtt.adapters import (
     StreamReaderAdapter,
@@ -422,7 +422,7 @@ class Broker:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(
                 reader, writer, self.plugins_manager, loop=self._loop
             )
-        except HBMQTTException as exc:
+        except AMQTTException as exc:
             self.logger.warning(
                 "[MQTT-3.1.0-1] %s: Can't read first packet an CONNECT: %s"
                 % (format_client_message(address=remote_address, port=remote_port), exc)

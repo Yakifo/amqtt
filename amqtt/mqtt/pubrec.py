@@ -7,7 +7,7 @@ from amqtt.mqtt.packet import (
     PUBREC,
     PacketIdVariableHeader,
 )
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 
 
 class PubrecPacket(MQTTPacket):
@@ -31,7 +31,7 @@ class PubrecPacket(MQTTPacket):
             header = MQTTFixedHeader(PUBREC, 0x00)
         else:
             if fixed.packet_type is not PUBREC:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for PubrecPacket init"
                     % fixed.packet_type
                 )

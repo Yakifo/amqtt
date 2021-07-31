@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 from amqtt.mqtt.packet import (
     CONNECT,
     CONNACK,
@@ -57,4 +57,4 @@ def packet_class(fixed_header: MQTTFixedHeader):
         cls = packet_dict[fixed_header.packet_type]
         return cls
     except KeyError:
-        raise HBMQTTException("Unexpected packet Type '%s'" % fixed_header.packet_type)
+        raise AMQTTException("Unexpected packet Type '%s'" % fixed_header.packet_type)

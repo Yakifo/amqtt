@@ -7,7 +7,7 @@ from amqtt.mqtt.packet import (
     PUBACK,
     PacketIdVariableHeader,
 )
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 
 
 class PubackPacket(MQTTPacket):
@@ -31,7 +31,7 @@ class PubackPacket(MQTTPacket):
             header = MQTTFixedHeader(PUBACK, 0x00)
         else:
             if fixed.packet_type is not PUBACK:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for PubackPacket init"
                     % fixed.packet_type
                 )

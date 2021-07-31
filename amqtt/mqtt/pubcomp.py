@@ -7,7 +7,7 @@ from amqtt.mqtt.packet import (
     PUBCOMP,
     PacketIdVariableHeader,
 )
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 
 
 class PubcompPacket(MQTTPacket):
@@ -31,7 +31,7 @@ class PubcompPacket(MQTTPacket):
             header = MQTTFixedHeader(PUBCOMP, 0x00)
         else:
             if fixed.packet_type is not PUBCOMP:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for PubcompPacket init"
                     % fixed.packet_type
                 )

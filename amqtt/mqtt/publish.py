@@ -10,7 +10,7 @@ from amqtt.mqtt.packet import (
     MQTTVariableHeader,
     MQTTPayload,
 )
-from amqtt.errors import HBMQTTException, MQTTException
+from amqtt.errors import AMQTTException, MQTTException
 from amqtt.codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
 
 
@@ -103,7 +103,7 @@ class PublishPacket(MQTTPacket):
             header = MQTTFixedHeader(PUBLISH, 0x00)
         else:
             if fixed.packet_type is not PUBLISH:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for PublishPacket init"
                     % fixed.packet_type
                 )

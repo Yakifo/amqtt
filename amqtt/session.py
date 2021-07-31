@@ -6,7 +6,7 @@ from transitions import Machine
 from asyncio import Queue
 from collections import OrderedDict
 from amqtt.mqtt.publish import PublishPacket
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 
 OUTGOING = 0
 INCOMING = 1
@@ -172,7 +172,7 @@ class Session:
         ):
             self._packet_id += 1
             if self._packet_id > 65535:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "More than 65525 messages pending. No free packet ID"
                 )
 
