@@ -1,8 +1,8 @@
 Changelog
 ---------
 
-0.10.0 - [unreleased]
----------------------
+0.10.0 - 2021-07-31
+-------------------
 
  * first release under new package name: amqtt
  * reworked unit tests
