@@ -1,5 +1,5 @@
 fail_fast: false
-files: ^(tests|hbmqtt|samples)/
+files: ^(tests|samples)/
 repos:
 - repo: local
   hooks:
