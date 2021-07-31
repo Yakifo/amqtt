@@ -1,7 +1,7 @@
 MQTTClient API
 ==============
 
-The :class:`~hbmqtt.client.MQTTClient` class implements the client part of MQTT protocol. It can be used to publish and/or subscribe MQTT message on a broker accessible on the network through TCP or websocket protocol, both secured or unsecured.
+The :class:`~amqtt.client.MQTTClient` class implements the client part of MQTT protocol. It can be used to publish and/or subscribe MQTT message on a broker accessible on the network through TCP or websocket protocol, both secured or unsecured.
 
 
 Usage examples
@@ -17,8 +17,8 @@ The example below shows how to write a simple MQTT client which subscribes a top
     import logging
     import asyncio
 
-    from hbmqtt.client import MQTTClient, ClientException
-    from hbmqtt.mqtt.constants import QOS_1, QOS_2
+    from amqtt.client import MQTTClient, ClientException
+    from amqtt.mqtt.constants import QOS_1, QOS_2
     
     logger = logging.getLogger(__name__)
 
@@ -47,15 +47,15 @@ The example below shows how to write a simple MQTT client which subscribes a top
         asyncio.get_event_loop().run_until_complete(uptime_coro())
 
 When executed, this script gets the default event loop and asks it to run the ``uptime_coro`` until it completes.
-``uptime_coro`` starts by initializing a :class:`~hbmqtt.client.MQTTClient` instance.
-The coroutine then call :meth:`~hbmqtt.client.MQTTClient.connect` to connect to the broker, here ``test.mosquitto.org``.
+``uptime_coro`` starts by initializing a :class:`~amqtt.client.MQTTClient` instance.
+The coroutine then call :meth:`~amqtt.client.MQTTClient.connect` to connect to the broker, here ``test.mosquitto.org``.
 Once connected, the coroutine subscribes to some topics, and then wait for 100 messages. Each message received is simply written to output.
 Finally, the coroutine unsubscribes from topics and disconnects from the broker.
 
 Publisher
 .........
 
-The example below uses the :class:`~hbmqtt.client.MQTTClient` class to implement a publisher.
+The example below uses the :class:`~amqtt.client.MQTTClient` class to implement a publisher.
 This test publish 3 messages asynchronously to the broker on a test topic.
 For the purposes of the test, each message is published with a different Quality Of Service.
 This example also shows to method for publishing message asynchronously.
@@ -65,8 +65,8 @@ This example also shows to method for publishing message asynchronously.
     import logging
     import asyncio
 
-    from hbmqtt.client import MQTTClient
-    from hbmqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+    from amqtt.client import MQTTClient
+    from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
     logger = logging.getLogger(__name__)
     
@@ -111,24 +111,24 @@ The difference appears the looking at the sequence of MQTT messages sent.
 ``test_coro()`` achieves:
 ::
 
-    hbmqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.843901, fixed=MQTTFixedHeader(length=28, flags=0x0), variable=PublishVariableHeader(topic=a/b, packet_id=None), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_0'"))
-    hbmqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.844152, fixed=MQTTFixedHeader(length=30, flags=0x2), variable=PublishVariableHeader(topic=a/b, packet_id=1), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_1'"))
-    hbmqtt/YDYY;NNRpYQSy3?o <-in-- PubackPacket(ts=2015-11-11 21:54:48.979665, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=1), payload=None)
-    hbmqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.980886, fixed=MQTTFixedHeader(length=30, flags=0x4), variable=PublishVariableHeader(topic=a/b, packet_id=2), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_2'"))
-    hbmqtt/YDYY;NNRpYQSy3?o <-in-- PubrecPacket(ts=2015-11-11 21:54:49.029691, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
-    hbmqtt/YDYY;NNRpYQSy3?o -out-> PubrelPacket(ts=2015-11-11 21:54:49.030823, fixed=MQTTFixedHeader(length=2, flags=0x2), variable=PacketIdVariableHeader(packet_id=2), payload=None)
-    hbmqtt/YDYY;NNRpYQSy3?o <-in-- PubcompPacket(ts=2015-11-11 21:54:49.092514, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
+    amqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.843901, fixed=MQTTFixedHeader(length=28, flags=0x0), variable=PublishVariableHeader(topic=a/b, packet_id=None), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_0'"))
+    amqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.844152, fixed=MQTTFixedHeader(length=30, flags=0x2), variable=PublishVariableHeader(topic=a/b, packet_id=1), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_1'"))
+    amqtt/YDYY;NNRpYQSy3?o <-in-- PubackPacket(ts=2015-11-11 21:54:48.979665, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=1), payload=None)
+    amqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.980886, fixed=MQTTFixedHeader(length=30, flags=0x4), variable=PublishVariableHeader(topic=a/b, packet_id=2), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_2'"))
+    amqtt/YDYY;NNRpYQSy3?o <-in-- PubrecPacket(ts=2015-11-11 21:54:49.029691, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
+    amqtt/YDYY;NNRpYQSy3?o -out-> PubrelPacket(ts=2015-11-11 21:54:49.030823, fixed=MQTTFixedHeader(length=2, flags=0x2), variable=PacketIdVariableHeader(packet_id=2), payload=None)
+    amqtt/YDYY;NNRpYQSy3?o <-in-- PubcompPacket(ts=2015-11-11 21:54:49.092514, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
 
 while ``test_coro2()`` runs:
 ::
 
-    hbmqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466123, fixed=MQTTFixedHeader(length=28, flags=0x0), variable=PublishVariableHeader(topic=a/b, packet_id=None), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_0'"))
-    hbmqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466432, fixed=MQTTFixedHeader(length=30, flags=0x2), variable=PublishVariableHeader(topic=a/b, packet_id=1), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_1'"))
-    hbmqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466695, fixed=MQTTFixedHeader(length=30, flags=0x4), variable=PublishVariableHeader(topic=a/b, packet_id=2), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_2'"))
-    hbmqtt/LYRf52W[56SOjW04 <-in-- PubackPacket(ts=2015-11-11 21:54:48.613062, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=1), payload=None)
-    hbmqtt/LYRf52W[56SOjW04 <-in-- PubrecPacket(ts=2015-11-11 21:54:48.661073, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
-    hbmqtt/LYRf52W[56SOjW04 -out-> PubrelPacket(ts=2015-11-11 21:54:48.661925, fixed=MQTTFixedHeader(length=2, flags=0x2), variable=PacketIdVariableHeader(packet_id=2), payload=None)
-    hbmqtt/LYRf52W[56SOjW04 <-in-- PubcompPacket(ts=2015-11-11 21:54:48.713107, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
+    amqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466123, fixed=MQTTFixedHeader(length=28, flags=0x0), variable=PublishVariableHeader(topic=a/b, packet_id=None), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_0'"))
+    amqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466432, fixed=MQTTFixedHeader(length=30, flags=0x2), variable=PublishVariableHeader(topic=a/b, packet_id=1), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_1'"))
+    amqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466695, fixed=MQTTFixedHeader(length=30, flags=0x4), variable=PublishVariableHeader(topic=a/b, packet_id=2), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_2'"))
+    amqtt/LYRf52W[56SOjW04 <-in-- PubackPacket(ts=2015-11-11 21:54:48.613062, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=1), payload=None)
+    amqtt/LYRf52W[56SOjW04 <-in-- PubrecPacket(ts=2015-11-11 21:54:48.661073, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
+    amqtt/LYRf52W[56SOjW04 -out-> PubrelPacket(ts=2015-11-11 21:54:48.661925, fixed=MQTTFixedHeader(length=2, flags=0x2), variable=PacketIdVariableHeader(packet_id=2), payload=None)
+    amqtt/LYRf52W[56SOjW04 <-in-- PubcompPacket(ts=2015-11-11 21:54:48.713107, fixed=MQTTFixedHeader(length=2, flags=0x0), variable=PacketIdVariableHeader(packet_id=2), payload=None)
 
 Both coroutines have the same results except that ``test_coro2()`` manages messages flow in parallel which may be more efficient.
 
@@ -138,7 +138,7 @@ Reference
 MQTTClient API
 ..............
 
-.. automodule:: hbmqtt.client
+.. automodule:: amqtt.client
 
     .. autoclass:: MQTTClient
 
@@ -154,12 +154,12 @@ MQTTClient API
 MQTTClient configuration
 ........................
 
-The :class:`~hbmqtt.client.MQTTClient` ``__init__`` method accepts a ``config`` parameter which allow to setup some behaviour and defaults settings. This argument must be a Python dict object which may contain the following entries:
+The :class:`~amqtt.client.MQTTClient` ``__init__`` method accepts a ``config`` parameter which allow to setup some behaviour and defaults settings. This argument must be a Python dict object which may contain the following entries:
 
-* ``keep_alive``: keep alive (in seconds) to send when connecting to the broker (defaults to ``10`` seconds). :class:`~hbmqtt.client.MQTTClient` will *auto-ping* the broker if not message is sent within the keep-alive interval. This avoids disconnection from the broker.
+* ``keep_alive``: keep alive (in seconds) to send when connecting to the broker (defaults to ``10`` seconds). :class:`~amqtt.client.MQTTClient` will *auto-ping* the broker if not message is sent within the keep-alive interval. This avoids disconnection from the broker.
 * ``ping_delay``: *auto-ping* delay before keep-alive times out (defaults to ``1`` seconds).
-* ``default_qos``: Default QoS (``0``) used by :meth:`~hbmqtt.client.MQTTClient.publish` if ``qos`` argument is not given.
-* ``default_retain``: Default retain (``False``) used by :meth:`~hbmqtt.client.MQTTClient.publish` if ``qos`` argument is not given.,
+* ``default_qos``: Default QoS (``0``) used by :meth:`~amqtt.client.MQTTClient.publish` if ``qos`` argument is not given.
+* ``default_retain``: Default retain (``False``) used by :meth:`~amqtt.client.MQTTClient.publish` if ``qos`` argument is not given.,
 * ``auto_reconnect``: enable or disable auto-reconnect feature (defaults to ``True``).
 * ``reconnect_max_interval``: maximum interval (in seconds) to wait before two connection retries (defaults to ``10``).
 * ``reconnect_retries``: maximum number of connect retries (defaults to ``2``). Negative value will cause client to reconnect infinietly.
@@ -186,4 +186,4 @@ With this setting any message published will set with QOS_0 and retain flag unse
 * messages sent to ``/test`` topic : they will be sent with QOS_1
 * messages sent to ``/some_topic`` topic : they will be sent with QOS_2 and retain flag set
 
-In any case, the ``qos`` and ``retain`` argument values passed to method :meth:`~hbmqtt.client.MQTTClient.publish` will override these settings.
+In any case, the ``qos`` and ``retain`` argument values passed to method :meth:`~amqtt.client.MQTTClient.publish` will override these settings.
