@@ -1,7 +1,7 @@
 Broker API reference
 ====================
 
-The :class:`~hbmqtt.broker.Broker` class provides a complete MQTT 3.1.1 broker implementation. This class allows Python developers to embed a MQTT broker in their own applications.
+The :class:`~amqtt.broker.Broker` class provides a complete MQTT 3.1.1 broker implementation. This class allows Python developers to embed a MQTT broker in their own applications.
 
 Usage example
 -------------
@@ -13,7 +13,7 @@ The following example shows how to start a broker using the default configuratio
     import logging
     import asyncio
     import os
-    from hbmqtt.broker import Broker
+    from amqtt.broker import Broker
 
 
     async def broker_coro():
@@ -28,7 +28,7 @@ The following example shows how to start a broker using the default configuratio
         asyncio.get_event_loop().run_forever()
 
 When executed, this script gets the default event loop and asks it to run the ``broker_coro`` until it completes.
-``broker_coro`` creates :class:`~hbmqtt.broker.Broker` instance and then :meth:`~hbmqtt.broker.Broker.start` the broker for serving.
+``broker_coro`` creates :class:`~amqtt.broker.Broker` instance and then :meth:`~amqtt.broker.Broker.start` the broker for serving.
 Once completed, the loop is ran forever, making this script never stop ...
 
 Reference
@@ -37,7 +37,7 @@ Reference
 Broker API
 ..........
 
-.. automodule:: hbmqtt.broker
+.. automodule:: amqtt.broker
 
     .. autoclass:: Broker
 
@@ -47,7 +47,7 @@ Broker API
 Broker configuration
 ....................
 
-The :class:`~hbmqtt.broker.Broker` ``__init__`` method accepts a ``config`` parameter which allow to setup some behaviour and defaults settings. This argument must be a Python dict object. For convinience, it is presented below as a YAML file [1]_.
+The :class:`~amqtt.broker.Broker` ``__init__`` method accepts a ``config`` parameter which allow to setup some behaviour and defaults settings. This argument must be a Python dict object. For convinience, it is presented below as a YAML file [1]_.
 
 .. code-block:: python
 
@@ -86,7 +86,7 @@ The :class:`~hbmqtt.broker.Broker` ``__init__`` method accepts a ``config`` para
             anonymous: []  # List of topics on which an anonymous client can publish and subscribe
 
 
-The ``listeners`` section allows to define network listeners which must be started by the :class:`~hbmqtt.broker.Broker`. Several listeners can be setup. ``default`` subsection defines common attributes for all listeners. Each listener can have the following settings:
+The ``listeners`` section allows to define network listeners which must be started by the :class:`~amqtt.broker.Broker`. Several listeners can be setup. ``default`` subsection defines common attributes for all listeners. Each listener can have the following settings:
 
 * ``bind``: IP address and port binding.
 * ``max-connections``: Set maximum number of active connection for the listener. ``0`` means no limit.
@@ -97,8 +97,8 @@ The ``listeners`` section allows to define network listeners which must be start
 The ``auth`` section setup authentication behaviour:
 
 * ``plugins``: defines the list of activated plugins. Note the plugins must be defined in the ``amqtt.broker.plugins`` `entry point <https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins>`_.
-* ``allow-anonymous`` : used by the internal :class:`hbmqtt.plugins.authentication.AnonymousAuthPlugin` plugin. This parameter enables (``on``) or disable anonymous connection, ie. connection without username.
-* ``password-file`` : used by the internal :class:`hbmqtt.plugins.authentication.FileAuthPlugin` plugin. This parameter gives to path of the password file to load for authenticating users.
+* ``allow-anonymous`` : used by the internal :class:`amqtt.plugins.authentication.AnonymousAuthPlugin` plugin. This parameter enables (``on``) or disable anonymous connection, ie. connection without username.
+* ``password-file`` : used by the internal :class:`amqtt.plugins.authentication.FileAuthPlugin` plugin. This parameter gives to path of the password file to load for authenticating users.
 
 The ``topic-check`` section setup access control policies for publishing and subscribing to topics:
 

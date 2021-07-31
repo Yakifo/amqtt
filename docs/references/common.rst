@@ -1,7 +1,7 @@
 Common API
 ==========
 
-This document describes ``HBMQTT`` common API both used by :doc:`mqttclient` and :doc:`broker`.
+This document describes ``aMQTT`` common API both used by :doc:`mqttclient` and :doc:`broker`.
 
 Reference
 ---------
@@ -9,7 +9,7 @@ Reference
 ApplicationMessage
 ..................
 
-.. automodule:: hbmqtt.session
+.. automodule:: amqtt.session
 
     .. autoclass:: ApplicationMessage
         :members:
