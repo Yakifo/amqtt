@@ -9,7 +9,7 @@ from amqtt.mqtt.packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
-from amqtt.errors import HBMQTTException, NoDataException
+from amqtt.errors import AMQTTException, NoDataException
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
 
@@ -71,7 +71,7 @@ class SubackPacket(MQTTPacket):
             header = MQTTFixedHeader(SUBACK, 0x00)
         else:
             if fixed.packet_type is not SUBACK:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for SubackPacket init"
                     % fixed.packet_type
                 )

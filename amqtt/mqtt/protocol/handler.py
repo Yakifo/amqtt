@@ -52,7 +52,7 @@ from amqtt.session import (
 )
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.plugins.manager import PluginManager
-from amqtt.errors import HBMQTTException, MQTTException, NoDataException
+from amqtt.errors import AMQTTException, MQTTException, NoDataException
 
 
 EVENT_MQTT_PACKET_SENT = "mqtt_packet_sent"
@@ -204,7 +204,7 @@ class ProtocolHandler:
         if qos in (QOS_1, QOS_2):
             packet_id = self.session.next_packet_id
             if packet_id in self.session.inflight_out:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "A message with the same packet ID '%d' is already in flight"
                     % packet_id
                 )
@@ -236,7 +236,7 @@ class ProtocolHandler:
         elif app_message.qos == QOS_2:
             await self._handle_qos2_message_flow(app_message)
         else:
-            raise HBMQTTException("Unexcepted QOS value '%d" % str(app_message.qos))
+            raise AMQTTException("Unexcepted QOS value '%d" % str(app_message.qos))
 
     async def _handle_qos0_message_flow(self, app_message):
         """
@@ -276,7 +276,7 @@ class ProtocolHandler:
         """
         assert app_message.qos == QOS_1
         if app_message.puback_packet:
-            raise HBMQTTException(
+            raise AMQTTException(
                 "Message '%d' has already been acknowledged" % app_message.packet_id
             )
         if app_message.direction == OUTGOING:
@@ -322,7 +322,7 @@ class ProtocolHandler:
         assert app_message.qos == QOS_2
         if app_message.direction == OUTGOING:
             if app_message.pubrel_packet and app_message.pubcomp_packet:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Message '%d' has already been acknowledged" % app_message.packet_id
                 )
             if not app_message.pubrel_packet:
@@ -330,7 +330,7 @@ class ProtocolHandler:
                 if app_message.publish_packet is not None:
                     # This is a retry flow, no need to store just check the message exists in session
                     if app_message.packet_id not in self.session.inflight_out:
-                        raise HBMQTTException(
+                        raise AMQTTException(
                             "Unknown inflight message '%d' in session"
                             % app_message.packet_id
                         )
@@ -350,7 +350,7 @@ class ProtocolHandler:
                         % app_message.packet_id
                     )
                     self.logger.warning(message)
-                    raise HBMQTTException(message)
+                    raise AMQTTException(message)
                 waiter = asyncio.Future(loop=self._loop)
                 self._pubrec_waiters[app_message.packet_id] = waiter
                 await waiter

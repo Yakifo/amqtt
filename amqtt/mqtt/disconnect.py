@@ -2,7 +2,7 @@
 #
 # See the file license.txt for copying permission.
 from amqtt.mqtt.packet import MQTTPacket, MQTTFixedHeader, DISCONNECT
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 
 
 class DisconnectPacket(MQTTPacket):
@@ -14,7 +14,7 @@ class DisconnectPacket(MQTTPacket):
             header = MQTTFixedHeader(DISCONNECT, 0x00)
         else:
             if fixed.packet_type is not DISCONNECT:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for DisconnectPacket init"
                     % fixed.packet_type
                 )

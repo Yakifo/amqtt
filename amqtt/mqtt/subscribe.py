@@ -11,7 +11,7 @@ from amqtt.mqtt.packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
-from amqtt.errors import HBMQTTException, NoDataException
+from amqtt.errors import AMQTTException, NoDataException
 from amqtt.codecs import (
     bytes_to_int,
     decode_string,
@@ -77,7 +77,7 @@ class SubscribePacket(MQTTPacket):
             header = MQTTFixedHeader(SUBSCRIBE, 0x02)  # [MQTT-3.8.1-1]
         else:
             if fixed.packet_type is not SUBSCRIBE:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for SubscribePacket init"
                     % fixed.packet_type
                 )

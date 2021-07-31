@@ -18,7 +18,7 @@ from amqtt.mqtt.packet import (
     MQTTVariableHeader,
     MQTTPayload,
 )
-from amqtt.errors import HBMQTTException, NoDataException
+from amqtt.errors import AMQTTException, NoDataException
 from amqtt.adapters import ReaderAdapter
 from amqtt.utils import gen_client_id
 
@@ -390,7 +390,7 @@ class ConnectPacket(MQTTPacket):
             header = MQTTFixedHeader(CONNECT, 0x00)
         else:
             if fixed.packet_type is not CONNECT:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for ConnectPacket init"
                     % fixed.packet_type
                 )

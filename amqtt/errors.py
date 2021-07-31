@@ -3,9 +3,9 @@
 # See the file license.txt for copying permission.
 
 
-class HBMQTTException(Exception):
+class AMQTTException(Exception):
     """
-    HBMQTT base exception
+    aMQTT base exception
     """
 
     pass

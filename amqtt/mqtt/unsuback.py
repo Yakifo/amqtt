@@ -7,7 +7,7 @@ from amqtt.mqtt.packet import (
     UNSUBACK,
     PacketIdVariableHeader,
 )
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 
 
 class UnsubackPacket(MQTTPacket):
@@ -24,7 +24,7 @@ class UnsubackPacket(MQTTPacket):
             header = MQTTFixedHeader(UNSUBACK, 0x00)
         else:
             if fixed.packet_type is not UNSUBACK:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for UnsubackPacket init"
                     % fixed.packet_type
                 )

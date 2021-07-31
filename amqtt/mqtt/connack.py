@@ -3,7 +3,7 @@
 # See the file license.txt for copying permission.
 from amqtt.mqtt.packet import CONNACK, MQTTPacket, MQTTFixedHeader, MQTTVariableHeader
 from amqtt.codecs import read_or_raise, bytes_to_int
-from amqtt.errors import HBMQTTException
+from amqtt.errors import AMQTTException
 from amqtt.adapters import ReaderAdapter
 
 CONNECTION_ACCEPTED = 0x00
@@ -78,7 +78,7 @@ class ConnackPacket(MQTTPacket):
             header = MQTTFixedHeader(CONNACK, 0x00)
         else:
             if fixed.packet_type is not CONNACK:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for ConnackPacket init"
                     % fixed.packet_type
                 )

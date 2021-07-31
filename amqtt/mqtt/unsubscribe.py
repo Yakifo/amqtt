@@ -11,7 +11,7 @@ from amqtt.mqtt.packet import (
     MQTTPayload,
     MQTTVariableHeader,
 )
-from amqtt.errors import HBMQTTException, NoDataException
+from amqtt.errors import AMQTTException, NoDataException
 from amqtt.codecs import decode_string, encode_string
 
 
@@ -65,7 +65,7 @@ class UnsubscribePacket(MQTTPacket):
             header = MQTTFixedHeader(UNSUBSCRIBE, 0x02)  # [MQTT-3.10.1-1]
         else:
             if fixed.packet_type is not UNSUBSCRIBE:
-                raise HBMQTTException(
+                raise AMQTTException(
                     "Invalid fixed packet type %s for UnsubscribePacket init"
                     % fixed.packet_type
                 )
