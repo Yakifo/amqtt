@@ -5,9 +5,9 @@
 aMQTT - MQTT 3.1.1 broker
 
 Usage:
-    hbmqtt --version
-    hbmqtt (-h | --help)
-    hbmqtt [-c <config_file> ] [-d]
+    amqtt --version
+    amqtt (-h | --help)
+    amqtt [-c <config_file> ] [-d]
 
 Options:
     -h --help           Show this screen.
@@ -21,10 +21,10 @@ import logging
 import asyncio
 import os
 
-import hbmqtt
-from hbmqtt.broker import Broker
+import amqtt
+from amqtt.broker import Broker
 from docopt import docopt
-from hbmqtt.utils import read_yaml_config
+from amqtt.utils import read_yaml_config
 
 
 default_config = {
@@ -53,7 +53,7 @@ def main(*args, **kwargs):
         logger.fatal("Error: Python 3.7+ is required")
         sys.exit(-1)
 
-    arguments = docopt(__doc__, version=hbmqtt.__version__)
+    arguments = docopt(__doc__, version=amqtt.__version__)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     if arguments["-d"]:
