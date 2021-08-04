@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.10.0 - 2021-07-31
+0.10.0 - 2021-08-04
 -------------------
 
  * first release under new package name: amqtt
@@ -13,6 +13,7 @@ Changelog
  * Move scripts module into hbmqtt module, from https://github.com/beerfactory/hbmqtt/pull/167
  * Download mosquitto certificate on the fly
  * importing `hbmqtt` is deprecated, use `amqtt`
+ * Security fix: If an attacker could produce a KeyError inside an authentication plugin, the authentication was accepted instead of rejected
 
 0.9.5
 .....
