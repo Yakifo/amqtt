@@ -77,7 +77,7 @@ class Server:
 
         self.max_connections = max_connections
         if self.max_connections > 0:
-            self.semaphore = asyncio.Semaphore(self.max_connections, loop=self._loop)
+            self.semaphore = asyncio.Semaphore(self.max_connections)
         else:
             self.semaphore = None
 
@@ -186,7 +186,7 @@ class Broker:
         self._sessions = dict()
         self._subscriptions = dict()
         self._retained_messages = dict()
-        self._broadcast_queue = asyncio.Queue(loop=self._loop)
+        self._broadcast_queue = asyncio.Queue()
 
         self._broadcast_task = None
 
@@ -316,7 +316,6 @@ class Broker:
                         port,
                         reuse_address=True,
                         ssl=sc,
-                        loop=self._loop,
                     )
                     self._servers[listener_name] = Server(
                         listener_name, instance, max_connections, self._loop
@@ -345,8 +344,7 @@ class Broker:
 
             # Start broadcast loop
             self._broadcast_task = asyncio.ensure_future(
-                self._broadcast_loop(), loop=self._loop
-            )
+                self._broadcast_loop())
 
             self.logger.debug("Broker started")
         except Exception as e:
@@ -420,8 +418,7 @@ class Broker:
         # Wait for first packet and expect a CONNECT
         try:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(
-                reader, writer, self.plugins_manager, loop=self._loop
-            )
+                reader, writer, self.plugins_manager)
         except AMQTTException as exc:
             self.logger.warning(
                 "[MQTT-3.1.0-1] %s: Can't read first packet an CONNECT: %s"
@@ -483,7 +480,7 @@ class Broker:
                     % client_session.client_id
                 )
                 # Wait a bit may be client is reconnecting too fast
-                await asyncio.sleep(1, loop=self._loop)
+                await asyncio.sleep(1)
         await handler.mqtt_connack_authorize(authenticated)
 
         await self.plugins_manager.fire_event(
@@ -500,17 +497,13 @@ class Broker:
 
         # Init and start loop for handling client messages (publish, subscribe/unsubscribe, disconnect)
         disconnect_waiter = asyncio.ensure_future(
-            handler.wait_disconnect(), loop=self._loop
-        )
+            handler.wait_disconnect())
         subscribe_waiter = asyncio.ensure_future(
-            handler.get_next_pending_subscription(), loop=self._loop
-        )
+            handler.get_next_pending_subscription())
         unsubscribe_waiter = asyncio.ensure_future(
-            handler.get_next_pending_unsubscription(), loop=self._loop
-        )
+            handler.get_next_pending_unsubscription())
         wait_deliver = asyncio.ensure_future(
-            handler.mqtt_deliver_next_message(), loop=self._loop
-        )
+            handler.mqtt_deliver_next_message())
         connected = True
         while connected:
             try:
@@ -522,7 +515,6 @@ class Broker:
                         wait_deliver,
                     ],
                     return_when=asyncio.FIRST_COMPLETED,
-                    loop=self._loop,
                 )
                 if disconnect_waiter in done:
                     result = disconnect_waiter.result()
@@ -577,8 +569,7 @@ class Broker:
                         unsubscription["packet_id"]
                     )
                     unsubscribe_waiter = asyncio.Task(
-                        handler.get_next_pending_unsubscription(), loop=self._loop
-                    )
+                        handler.get_next_pending_unsubscription())
                 if subscribe_waiter in done:
                     self.logger.debug(
                         "%s handling subscription" % client_session.client_id
@@ -605,8 +596,7 @@ class Broker:
                                 subscription, client_session
                             )
                     subscribe_waiter = asyncio.Task(
-                        handler.get_next_pending_subscription(), loop=self._loop
-                    )
+                        handler.get_next_pending_subscription())
                     self.logger.debug(repr(self._subscriptions))
                 if wait_deliver in done:
                     if self.logger.isEnabledFor(logging.DEBUG):
@@ -654,8 +644,7 @@ class Broker:
                                 app_message.qos,
                             )
                     wait_deliver = asyncio.Task(
-                        handler.mqtt_deliver_next_message(), loop=self._loop
-                    )
+                        handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")
                 break
@@ -919,7 +908,6 @@ class Broker:
                                         qos,
                                         retain=False,
                                     ),
-                                    loop=self._loop,
                                 )
                                 running_tasks.append(task)
                             else:
@@ -949,7 +937,7 @@ class Broker:
         except CancelledError:
             # Wait until current broadcasting tasks end
             if running_tasks:
-                await asyncio.wait(running_tasks, loop=self._loop)
+                await asyncio.wait(running_tasks)
             raise  # reraise per CancelledError semantics
 
     async def _broadcast_message(self, session, topic, data, force_qos=None):
@@ -975,11 +963,10 @@ class Broker:
                     handler.mqtt_publish(
                         retained.topic, retained.data, retained.qos, True
                     ),
-                    loop=self._loop,
                 )
             )
         if publish_tasks:
-            await asyncio.wait(publish_tasks, loop=self._loop)
+            await asyncio.wait(publish_tasks)
 
     async def publish_retained_messages_for_subscription(self, subscription, session):
         self.logger.debug(
@@ -998,11 +985,10 @@ class Broker:
                         handler.mqtt_publish(
                             retained.topic, retained.data, subscription[1], True
                         ),
-                        loop=self._loop,
                     )
                 )
         if publish_tasks:
-            await asyncio.wait(publish_tasks, loop=self._loop)
+            await asyncio.wait(publish_tasks)
         self.logger.debug(
             "End broadcasting messages retained due to subscription on '%s' from %s"
             % (subscription[0], format_client_message(session=session))
