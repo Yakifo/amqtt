@@ -87,14 +87,14 @@ class ProtocolHandler:
         self._reader_task = None
         self._keepalive_task = None
         self._reader_ready = None
-        self._reader_stopped = asyncio.Event(loop=self._loop)
+        self._reader_stopped = asyncio.Event()
 
         self._puback_waiters = dict()
         self._pubrec_waiters = dict()
         self._pubrel_waiters = dict()
         self._pubcomp_waiters = dict()
 
-        self._write_lock = asyncio.Lock(loop=self._loop)
+        self._write_lock = asyncio.Lock()
 
     def _init_session(self, session: Session):
         assert session
@@ -126,9 +126,9 @@ class ProtocolHandler:
     async def start(self):
         if not self._is_attached():
             raise ProtocolHandlerException("Handler is not attached to a stream")
-        self._reader_ready = asyncio.Event(loop=self._loop)
-        self._reader_task = asyncio.Task(self._reader_loop(), loop=self._loop)
-        await asyncio.wait([self._reader_ready.wait()], loop=self._loop)
+        self._reader_ready = asyncio.Event()
+        self._reader_task = asyncio.Task(self._reader_loop())
+        await asyncio.wait([self._reader_ready.wait()])
         if self.keepalive_timeout:
             self._keepalive_task = self._loop.call_later(
                 self.keepalive_timeout, self.handle_write_timeout
@@ -146,7 +146,7 @@ class ProtocolHandler:
         self.logger.debug("waiting for tasks to be stopped")
         if not self._reader_task.done():
             self._reader_task.cancel()
-            await asyncio.wait([self._reader_stopped.wait()], loop=self._loop)
+            await asyncio.wait([self._reader_stopped.wait()])
         self.logger.debug("closing writer")
         try:
             await self.writer.close()
@@ -178,11 +178,10 @@ class ProtocolHandler:
         ):
             tasks.append(
                 asyncio.wait_for(
-                    self._handle_message_flow(message), 10, loop=self._loop
-                )
+                    self._handle_message_flow(message), 10)
             )
         if tasks:
-            done, pending = await asyncio.wait(tasks, loop=self._loop)
+            done, pending = await asyncio.wait(tasks)
             self.logger.debug("%d messages redelivered" % len(done))
             self.logger.debug(
                 "%d messages not redelivered due to timeout" % len(pending)
@@ -215,8 +214,7 @@ class ProtocolHandler:
         # Handle message flow
         if ack_timeout is not None and ack_timeout > 0:
             await asyncio.wait_for(
-                self._handle_message_flow(message), ack_timeout, loop=self._loop
-            )
+                self._handle_message_flow(message), ack_timeout)
         else:
             await self._handle_message_flow(message)
 
@@ -293,7 +291,7 @@ class ProtocolHandler:
             app_message.publish_packet = publish_packet
 
             # Wait for puback
-            waiter = asyncio.Future(loop=self._loop)
+            waiter = asyncio.Future()
             self._puback_waiters[app_message.packet_id] = waiter
             await waiter
             del self._puback_waiters[app_message.packet_id]
@@ -351,7 +349,7 @@ class ProtocolHandler:
                     )
                     self.logger.warning(message)
                     raise AMQTTException(message)
-                waiter = asyncio.Future(loop=self._loop)
+                waiter = asyncio.Future()
                 self._pubrec_waiters[app_message.packet_id] = waiter
                 await waiter
                 del self._pubrec_waiters[app_message.packet_id]
@@ -361,7 +359,7 @@ class ProtocolHandler:
                 app_message.pubrel_packet = PubrelPacket.build(app_message.packet_id)
                 await self._send_packet(app_message.pubrel_packet)
                 # Wait for PUBCOMP
-                waiter = asyncio.Future(loop=self._loop)
+                waiter = asyncio.Future()
                 self._pubcomp_waiters[app_message.packet_id] = waiter
                 await waiter
                 del self._pubcomp_waiters[app_message.packet_id]
@@ -387,7 +385,7 @@ class ProtocolHandler:
                 self.logger.warning(message)
                 self._pubrel_waiters[app_message.packet_id].cancel()
             try:
-                waiter = asyncio.Future(loop=self._loop)
+                waiter = asyncio.Future()
                 self._pubrel_waiters[app_message.packet_id] = waiter
                 await waiter
                 del self._pubrel_waiters[app_message.packet_id]
@@ -419,7 +417,6 @@ class ProtocolHandler:
                 fixed_header = await asyncio.wait_for(
                     MQTTFixedHeader.from_stream(self.reader),
                     keepalive_timeout,
-                    loop=self._loop,
                 )
                 if fixed_header:
                     if (
@@ -444,56 +441,43 @@ class ProtocolHandler:
                         task = None
                         if packet.fixed_header.packet_type == CONNACK:
                             task = asyncio.ensure_future(
-                                self.handle_connack(packet), loop=self._loop
-                            )
+                                self.handle_connack(packet))
                         elif packet.fixed_header.packet_type == SUBSCRIBE:
                             task = asyncio.ensure_future(
-                                self.handle_subscribe(packet), loop=self._loop
-                            )
+                                self.handle_subscribe(packet))
                         elif packet.fixed_header.packet_type == UNSUBSCRIBE:
                             task = asyncio.ensure_future(
-                                self.handle_unsubscribe(packet), loop=self._loop
-                            )
+                                self.handle_unsubscribe(packet))
                         elif packet.fixed_header.packet_type == SUBACK:
                             task = asyncio.ensure_future(
-                                self.handle_suback(packet), loop=self._loop
-                            )
+                                self.handle_suback(packet))
                         elif packet.fixed_header.packet_type == UNSUBACK:
                             task = asyncio.ensure_future(
-                                self.handle_unsuback(packet), loop=self._loop
-                            )
+                                self.handle_unsuback(packet))
                         elif packet.fixed_header.packet_type == PUBACK:
                             task = asyncio.ensure_future(
-                                self.handle_puback(packet), loop=self._loop
-                            )
+                                self.handle_puback(packet))
                         elif packet.fixed_header.packet_type == PUBREC:
                             task = asyncio.ensure_future(
-                                self.handle_pubrec(packet), loop=self._loop
-                            )
+                                self.handle_pubrec(packet))
                         elif packet.fixed_header.packet_type == PUBREL:
                             task = asyncio.ensure_future(
-                                self.handle_pubrel(packet), loop=self._loop
-                            )
+                                self.handle_pubrel(packet))
                         elif packet.fixed_header.packet_type == PUBCOMP:
                             task = asyncio.ensure_future(
-                                self.handle_pubcomp(packet), loop=self._loop
-                            )
+                                self.handle_pubcomp(packet))
                         elif packet.fixed_header.packet_type == PINGREQ:
                             task = asyncio.ensure_future(
-                                self.handle_pingreq(packet), loop=self._loop
-                            )
+                                self.handle_pingreq(packet))
                         elif packet.fixed_header.packet_type == PINGRESP:
                             task = asyncio.ensure_future(
-                                self.handle_pingresp(packet), loop=self._loop
-                            )
+                                self.handle_pingresp(packet))
                         elif packet.fixed_header.packet_type == PUBLISH:
                             task = asyncio.ensure_future(
-                                self.handle_publish(packet), loop=self._loop
-                            )
+                                self.handle_publish(packet))
                         elif packet.fixed_header.packet_type == DISCONNECT:
                             task = asyncio.ensure_future(
-                                self.handle_disconnect(packet), loop=self._loop
-                            )
+                                self.handle_disconnect(packet))
                         elif packet.fixed_header.packet_type == CONNECT:
                             self.handle_connect(packet)
                         else:
