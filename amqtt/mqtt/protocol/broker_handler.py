@@ -32,13 +32,13 @@ class BrokerProtocolHandler(ProtocolHandler):
     ):
         super().__init__(plugins_manager, session, loop)
         self._disconnect_waiter = None
-        self._pending_subscriptions = Queue(loop=self._loop)
-        self._pending_unsubscriptions = Queue(loop=self._loop)
+        self._pending_subscriptions = Queue()
+        self._pending_unsubscriptions = Queue()
 
     async def start(self):
         await super().start()
         if self._disconnect_waiter is None:
-            self._disconnect_waiter = futures.Future(loop=self._loop)
+            self._disconnect_waiter = futures.Future()
 
     async def stop(self):
         await super().stop()

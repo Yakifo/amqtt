@@ -23,7 +23,7 @@ class ClientProtocolHandler(ProtocolHandler):
     ):
         super().__init__(plugins_manager, session, loop=loop)
         self._ping_task = None
-        self._pingresp_queue = asyncio.Queue(loop=self._loop)
+        self._pingresp_queue = asyncio.Queue()
         self._subscriptions_waiter = dict()
         self._unsubscriptions_waiter = dict()
         self._disconnect_waiter = None
@@ -31,7 +31,7 @@ class ClientProtocolHandler(ProtocolHandler):
     async def start(self):
         await super().start()
         if self._disconnect_waiter is None:
-            self._disconnect_waiter = futures.Future(loop=self._loop)
+            self._disconnect_waiter = futures.Future()
 
     async def stop(self):
         await super().stop()
@@ -105,7 +105,7 @@ class ClientProtocolHandler(ProtocolHandler):
         await self._send_packet(subscribe)
 
         # Wait for SUBACK is received
-        waiter = futures.Future(loop=self._loop)
+        waiter = futures.Future()
         self._subscriptions_waiter[subscribe.variable_header.packet_id] = waiter
         return_codes = await waiter
 
@@ -131,7 +131,7 @@ class ClientProtocolHandler(ProtocolHandler):
         """
         unsubscribe = UnsubscribePacket.build(topics, packet_id)
         await self._send_packet(unsubscribe)
-        waiter = futures.Future(loop=self._loop)
+        waiter = futures.Future()
         self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id] = waiter
         await waiter
         del self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id]

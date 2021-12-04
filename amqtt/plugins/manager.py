@@ -109,7 +109,7 @@ class PluginManager:
         return self._plugins
 
     def _schedule_coro(self, coro):
-        return asyncio.ensure_future(coro, loop=self._loop)
+        return asyncio.ensure_future(coro)
 
     async def fire_event(self, event_name, wait=False, *args, **kwargs):
         """
@@ -149,7 +149,7 @@ class PluginManager:
         self._fired_events.extend(tasks)
         if wait:
             if tasks:
-                await asyncio.wait(tasks, loop=self._loop)
+                await asyncio.wait(tasks)
         self.logger.debug("Plugins len(_fired_events)=%d" % (len(self._fired_events)))
 
     async def map(self, coro, *args, **kwargs):
@@ -182,7 +182,7 @@ class PluginManager:
                             % (coro, plugin.name)
                         )
         if tasks:
-            ret_list = await asyncio.gather(*tasks, loop=self._loop)
+            ret_list = await asyncio.gather(*tasks)
             # Create result map plugin=>ret
             ret_dict = {k: v for k, v in zip(plugins_list, ret_list)}
         else:

@@ -139,10 +139,10 @@ class Session:
         self.inflight_in = OrderedDict()
 
         # Stores messages retained for this session
-        self.retained_messages = Queue(loop=self._loop)
+        self.retained_messages = Queue()
 
         # Stores PUBLISH messages ID received in order and ready for application process
-        self.delivered_message_queue = Queue(loop=self._loop)
+        self.delivered_message_queue = Queue()
 
     def _init_states(self):
         self.transitions = Machine(states=Session.states, initial="new")
