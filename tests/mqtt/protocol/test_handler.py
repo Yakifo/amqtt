@@ -39,16 +39,14 @@ class ProtocolHandlerTest(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
-        self.plugin_manager = PluginManager(
-            "amqtt.test.plugins", context=None, loop=self.loop
-        )
+        self.plugin_manager = PluginManager("amqtt.test.plugins", context=None)
 
     def tearDown(self):
         self.loop.close()
 
     def test_init_handler(self):
         Session()
-        handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+        handler = ProtocolHandler(self.plugin_manager)
         self.assertIsNone(handler.session)
         self.assertIs(handler._loop, self.loop)
         self.check_empty_waiters(handler)
@@ -70,7 +68,7 @@ class ProtocolHandlerTest(unittest.TestCase):
             except Exception as ae:
                 future.set_exception(ae)
 
-        future = asyncio.Future(loop=self.loop)
+        future = asyncio.Future()
         coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
@@ -92,11 +90,9 @@ class ProtocolHandlerTest(unittest.TestCase):
         async def test_coro():
             try:
                 s = Session()
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                handler = ProtocolHandler(self.plugin_manager)
                 handler.attach(s, reader_adapted, writer_adapted)
                 await self.start_handler(handler, s)
                 message = await handler.mqtt_publish(
@@ -113,8 +109,8 @@ class ProtocolHandlerTest(unittest.TestCase):
             except Exception as ae:
                 future.set_exception(ae)
 
-        future = asyncio.Future(loop=self.loop)
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        future = asyncio.Future()
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
@@ -138,11 +134,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         async def test_coro():
             try:
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                self.handler = ProtocolHandler(self.plugin_manager)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_publish(
@@ -162,9 +156,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
         self.session = Session()
-        future = asyncio.Future(loop=self.loop)
+        future = asyncio.Future()
 
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
@@ -193,11 +187,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         async def test_coro():
             try:
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                self.handler = ProtocolHandler(self.plugin_manager)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_publish(
@@ -217,9 +209,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
         self.session = Session()
-        future = asyncio.Future(loop=self.loop)
+        future = asyncio.Future()
 
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
@@ -236,11 +228,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         async def test_coro():
             try:
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                self.handler = ProtocolHandler(self.plugin_manager)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_deliver_next_message()
@@ -257,8 +247,8 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
         self.session = Session()
-        future = asyncio.Future(loop=self.loop)
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        future = asyncio.Future()
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
@@ -282,11 +272,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         async def test_coro():
             try:
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                self.handler = ProtocolHandler(self.plugin_manager)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_deliver_next_message()
@@ -303,9 +291,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
         self.session = Session()
-        future = asyncio.Future(loop=self.loop)
-        self.event = asyncio.Event(loop=self.loop)
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        future = asyncio.Future()
+        self.event = asyncio.Event()
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
@@ -334,11 +322,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         async def test_coro():
             try:
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                self.handler = ProtocolHandler(self.plugin_manager)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_deliver_next_message()
@@ -355,8 +341,8 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         self.handler = None
         self.session = Session()
-        future = asyncio.Future(loop=self.loop)
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        future = asyncio.Future()
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
@@ -402,11 +388,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         async def test_coro():
             try:
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                self.handler = ProtocolHandler(self.plugin_manager)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.handler.start()
                 await self.stop_handler(self.handler, self.session)
@@ -422,9 +406,9 @@ class ProtocolHandlerTest(unittest.TestCase):
             "/topic", b"test_data", rand_packet_id(), False, QOS_1, False
         )
         self.session.inflight_out[1] = message
-        future = asyncio.Future(loop=self.loop)
+        future = asyncio.Future()
 
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
@@ -453,11 +437,9 @@ class ProtocolHandlerTest(unittest.TestCase):
 
         async def test_coro():
             try:
-                reader, writer = await asyncio.open_connection(
-                    "127.0.0.1", 8888, loop=self.loop
-                )
+                reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
-                self.handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
+                self.handler = ProtocolHandler(self.plugin_manager)
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.handler.start()
                 await self.stop_handler(self.handler, self.session)
@@ -473,9 +455,9 @@ class ProtocolHandlerTest(unittest.TestCase):
             "/topic", b"test_data", rand_packet_id(), False, QOS_2, False
         )
         self.session.inflight_out[1] = message
-        future = asyncio.Future(loop=self.loop)
+        future = asyncio.Future()
 
-        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888, loop=self.loop)
+        coro = asyncio.start_server(server_mock, "127.0.0.1", 8888)
         server = self.loop.run_until_complete(coro)
         self.loop.run_until_complete(test_coro())
         server.close()
