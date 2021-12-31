@@ -343,8 +343,7 @@ class Broker:
             await self.plugins_manager.fire_event(EVENT_BROKER_POST_START)
 
             # Start broadcast loop
-            self._broadcast_task = asyncio.ensure_future(
-                self._broadcast_loop())
+            self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
 
             self.logger.debug("Broker started")
         except Exception as e:
@@ -418,7 +417,8 @@ class Broker:
         # Wait for first packet and expect a CONNECT
         try:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(
-                reader, writer, self.plugins_manager)
+                reader, writer, self.plugins_manager
+            )
         except AMQTTException as exc:
             self.logger.warning(
                 "[MQTT-3.1.0-1] %s: Can't read first packet an CONNECT: %s"
@@ -496,14 +496,14 @@ class Broker:
         await self.publish_session_retained_messages(client_session)
 
         # Init and start loop for handling client messages (publish, subscribe/unsubscribe, disconnect)
-        disconnect_waiter = asyncio.ensure_future(
-            handler.wait_disconnect())
+        disconnect_waiter = asyncio.ensure_future(handler.wait_disconnect())
         subscribe_waiter = asyncio.ensure_future(
-            handler.get_next_pending_subscription())
+            handler.get_next_pending_subscription()
+        )
         unsubscribe_waiter = asyncio.ensure_future(
-            handler.get_next_pending_unsubscription())
-        wait_deliver = asyncio.ensure_future(
-            handler.mqtt_deliver_next_message())
+            handler.get_next_pending_unsubscription()
+        )
+        wait_deliver = asyncio.ensure_future(handler.mqtt_deliver_next_message())
         connected = True
         while connected:
             try:
@@ -569,7 +569,8 @@ class Broker:
                         unsubscription["packet_id"]
                     )
                     unsubscribe_waiter = asyncio.Task(
-                        handler.get_next_pending_unsubscription())
+                        handler.get_next_pending_unsubscription()
+                    )
                 if subscribe_waiter in done:
                     self.logger.debug(
                         "%s handling subscription" % client_session.client_id
@@ -596,7 +597,8 @@ class Broker:
                                 subscription, client_session
                             )
                     subscribe_waiter = asyncio.Task(
-                        handler.get_next_pending_subscription())
+                        handler.get_next_pending_subscription()
+                    )
                     self.logger.debug(repr(self._subscriptions))
                 if wait_deliver in done:
                     if self.logger.isEnabledFor(logging.DEBUG):
@@ -643,8 +645,7 @@ class Broker:
                                 app_message.data,
                                 app_message.qos,
                             )
-                    wait_deliver = asyncio.Task(
-                        handler.mqtt_deliver_next_message())
+                    wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")
                 break

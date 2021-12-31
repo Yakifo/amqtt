@@ -123,8 +123,7 @@ class MQTTClient:
         # Init plugins manager
         context = ClientContext()
         context.config = self.config
-        self.plugins_manager = PluginManager(
-            "amqtt.client.plugins", context)
+        self.plugins_manager = PluginManager("amqtt.client.plugins", context)
         self.client_tasks = deque()
 
     async def connect(
@@ -251,8 +250,7 @@ class MQTTClient:
 
     async def _do_connect(self):
         return_code = await self._connect_coro()
-        self._disconnect_task = asyncio.ensure_future(
-            self.handle_connection_close())
+        self._disconnect_task = asyncio.ensure_future(self.handle_connection_close())
         return return_code
 
     @mqtt_connected
@@ -365,8 +363,7 @@ class MQTTClient:
         :return: instance of :class:`amqtt.session.ApplicationMessage` containing received message information flow.
         :raises: :class:`asyncio.TimeoutError` if timeout occurs before a message is delivered
         """
-        deliver_task = asyncio.ensure_future(
-            self._handler.mqtt_deliver_next_message())
+        deliver_task = asyncio.ensure_future(self._handler.mqtt_deliver_next_message())
         self.client_tasks.append(deliver_task)
         self.logger.debug("Waiting message delivery")
         done, pending = await asyncio.wait(
@@ -442,9 +439,7 @@ class MQTTClient:
             # Open connection
             if scheme in ("mqtt", "mqtts"):
                 conn_reader, conn_writer = await asyncio.open_connection(
-                    self.session.remote_address,
-                    self.session.remote_port,
-                    **kwargs
+                    self.session.remote_address, self.session.remote_port, **kwargs
                 )
                 reader = StreamReaderAdapter(conn_reader)
                 writer = StreamWriterAdapter(conn_writer)
