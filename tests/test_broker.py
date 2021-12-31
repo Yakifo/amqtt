@@ -94,10 +94,8 @@ async def test_client_connect(broker, mock_plugin_manager):
 
 
 @pytest.mark.asyncio
-async def test_client_connect_will_flag(broker, event_loop):
-    conn_reader, conn_writer = await asyncio.open_connection(
-        "127.0.0.1", 1883, loop=event_loop
-    )
+async def test_client_connect_will_flag(broker):
+    conn_reader, conn_writer = await asyncio.open_connection("127.0.0.1", 1883)
     reader = StreamReaderAdapter(conn_reader)
     writer = StreamWriterAdapter(conn_writer)
 
@@ -360,10 +358,8 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
 
 
 @pytest.mark.asyncio
-async def test_client_publish_dup(broker, event_loop):
-    conn_reader, conn_writer = await asyncio.open_connection(
-        "127.0.0.1", 1883, loop=event_loop
-    )
+async def test_client_publish_dup(broker):
+    conn_reader, conn_writer = await asyncio.open_connection("127.0.0.1", 1883)
     reader = StreamReaderAdapter(conn_reader)
     writer = StreamWriterAdapter(conn_writer)
 
@@ -380,7 +376,7 @@ async def test_client_publish_dup(broker, event_loop):
 
     publish_1 = PublishPacket.build("/test", b"data", 1, False, QOS_2, False)
     await publish_1.to_stream(writer)
-    asyncio.ensure_future(PubrecPacket.from_stream(reader), loop=event_loop)
+    asyncio.ensure_future(PubrecPacket.from_stream(reader))
 
     await asyncio.sleep(2)
 
