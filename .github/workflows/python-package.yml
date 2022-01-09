@@ -27,17 +27,17 @@ jobs:
     - name: Install dependencies
       run: |
         curl -sSL https://install.python-poetry.org | python -
-        $HOME/.poetry/bin/poetry install --extras ci
+        $HOME/.local/bin/poetry install --extras ci
     - name: Lint with flake8 and black
       run: |
-        $HOME/.poetry/bin/poetry run flake8 tests/ amqtt/ --count --statistics --show-source --ignore=E501,W503,W605,E722
-        $HOME/.poetry/bin/poetry run  black . --check
+        $HOME/.local/bin/poetry run flake8 tests/ amqtt/ --count --statistics --show-source --ignore=E501,W503,W605,E722
+        $HOME/.local/bin/poetry run  black . --check
     - name: Test with pytest
       run: |
-        $HOME/.poetry/bin/poetry run  pytest --cov amqtt --cov tests --cov-report=term --cov-report=xml
+        $HOME/.local/bin/poetry run  pytest --cov amqtt --cov tests --cov-report=term --cov-report=xml
 
     - name: Upload coverage data to coveralls.io
       run: |
-        $HOME/.poetry/bin/poetry run coveralls --service=github
+        $HOME/.local/bin/poetry run coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
