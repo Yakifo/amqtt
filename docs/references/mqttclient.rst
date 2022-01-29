@@ -176,14 +176,14 @@ Default QoS and default retain can also be overriden by adding a ``topics`` with
         'reconnect_max_interval': 5,
         'reconnect_retries': 10,
         'topics': {
-            '/test': { 'qos': 1 },
-            '/some_topic': { 'qos': 2, 'retain': True }
+            'test': { 'qos': 1 },
+            'some_topic': { 'qos': 2, 'retain': True }
         }
     }
 
 With this setting any message published will set with QOS_0 and retain flag unset except for :
 
-* messages sent to ``/test`` topic : they will be sent with QOS_1
-* messages sent to ``/some_topic`` topic : they will be sent with QOS_2 and retain flag set
+* messages sent to ``test`` topic : they will be sent with QOS_1
+* messages sent to ``some_topic`` topic : they will be sent with QOS_2 and retain flag set
 
 In any case, the ``qos`` and ``retain`` argument values passed to method :meth:`~amqtt.client.MQTTClient.publish` will override these settings.

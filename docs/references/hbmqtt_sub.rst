@@ -75,7 +75,7 @@ Subscribe with QoS 0 to all messages published under $SYS/:
 Subscribe to 10 messages with QoS 2 from /#:
 ::
 
-    amqtt_sub --url mqtt://localhost -t /# -q 2 -n 10
+    amqtt_sub --url mqtt://localhost -t # -q 2 -n 10
 
 .. _mosquitto_sub : http://mosquitto.org/man/mosquitto_sub-1.html
 
