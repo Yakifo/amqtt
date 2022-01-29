@@ -21,10 +21,10 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.7"
 transitions = "^0.8.0"
-websockets = ">=9.0"
+websockets = ">=9.0,<11.0"
 passlib = "^1.7.0"
 docopt = "^0.6.0"
-PyYAML = "^5.4.0"
+PyYAML = ">=5.4.0,<7.0"
 coveralls = {version = "^3.0.1", optional = true}
 
 
@@ -72,4 +72,3 @@ amqtt_sub = 'amqtt.scripts.sub_script:main'
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
