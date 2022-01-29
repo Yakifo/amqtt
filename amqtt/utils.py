@@ -40,11 +40,7 @@ def read_yaml_config(config_file: str) -> dict:
     config = None
     try:
         with open(config_file) as stream:
-            config = (
-                yaml.full_load(stream)
-                if hasattr(yaml, "full_load")
-                else yaml.load(stream)
-            )
+            config = yaml.full_load(stream)
     except yaml.YAMLError as exc:
         logger.error("Invalid config_file %s: %r", config_file, exc)
     return config
