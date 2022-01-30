@@ -19,6 +19,7 @@ class EventLoggerPlugin:
     def __getattr__(self, name):
         if name.startswith("on_"):
             return partial(self.log_event, event_name=name)
+        raise AttributeError
 
 
 class PacketLoggerPlugin:
