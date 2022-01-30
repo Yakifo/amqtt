@@ -725,10 +725,16 @@ class Broker:
         :param action: What is being done with the topic?  subscribe or publish
         :return:
         """
+        topic_result = True
         topic_plugins = None
         topic_config = self.config.get("topic-check", None)
-        if topic_config and topic_config.get("enabled", False):
-            topic_plugins = topic_config.get("plugins", None)
+        # if enabled is not specified, all plugins will be used for topic filtering (backward compatibility)
+        if topic_config and "enabled" in topic_config:
+            if topic_config.get("enabled", False):
+                topic_plugins = topic_config.get("plugins", None)
+            else:
+                return topic_result
+
         returns = await self.plugins_manager.map_plugin_coro(
             "topic_filtering",
             session=session,
@@ -736,7 +742,6 @@ class Broker:
             action=action,
             filter_plugins=topic_plugins,
         )
-        topic_result = True
         if returns:
             for plugin in returns:
                 res = returns[plugin]
