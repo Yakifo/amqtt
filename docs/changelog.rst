@@ -1,6 +1,13 @@
 Changelog
 ---------
 
+0.11.0 unreleased
+-----------------
+ * removed hbmqtt compatibility, importing amqtt is now mandatory
+ * removed loop parameter from all functions
+ * Python 3.10 compatibility
+
+
 0.10.0 - 2021-08-04
 -------------------
 
