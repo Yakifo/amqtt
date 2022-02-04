@@ -6,7 +6,7 @@ Changelog
  * removed hbmqtt compatibility, importing amqtt is now mandatory
  * removed loop parameter from all functions
  * Python 3.10 compatibility
-
+ * Fixed a major bug in plugin api, see https://github.com/Yakifo/amqtt/pull/92
 
 0.10.0 - 2021-08-04
 -------------------
