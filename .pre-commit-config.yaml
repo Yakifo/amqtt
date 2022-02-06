@@ -7,7 +7,6 @@ repos:
     name: flake8
     entry: flake8
     language: system
-    args: ["--ignore=E501,W503,W605,E722"]
     types: [python]
 
   - id: black
