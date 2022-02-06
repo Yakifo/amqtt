@@ -47,7 +47,7 @@ def test_plugins_correct_has_attr():
             continue
 
         name = file.replace("/", ".")
-        name = name[name.find(module.__name__): -3].removesuffix(".__init__")
+        name = name[name.find(module.__name__) : -3].removesuffix(".__init__")
 
         __import__(name)
 
