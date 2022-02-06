@@ -40,6 +40,14 @@ def _verify_module(module, plugin_module_name):
         _verify_module(obj, plugin_module_name)
 
 
+def removesuffix(self: str, suffix: str) -> str:
+    # compatibility for pre 3.9
+    if suffix and self.endswith(suffix):
+        return self[: -len(suffix)]
+    else:
+        return self[:]
+
+
 def test_plugins_correct_has_attr():
     module = amqtt.plugins
     for file in glob(join(dirname(module.__file__), "**/*.py"), recursive=True):
@@ -47,7 +55,8 @@ def test_plugins_correct_has_attr():
             continue
 
         name = file.replace("/", ".")
-        name = name[name.find(module.__name__) : -3].removesuffix(".__init__")
+        name = name[name.find(module.__name__) : -3]
+        name = removesuffix(name, ".__init__")
 
         __import__(name)
 
