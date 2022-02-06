@@ -1,0 +1,7 @@
+[flake8]
+# disable checks already covered by other tools
+ignore = 
+  E, # style checked by black
+  W, # style checked by black
+  F722, # types checked by mypy
+  F722  # types checked by mypy
