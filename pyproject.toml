@@ -26,6 +26,7 @@ passlib = "^1.7.0"
 docopt = "^0.6.0"
 PyYAML = ">=5.4.0,<7.0"
 coveralls = {version = "^3.0.1", optional = true}
+psutil = "^5.9.0"
 
 
 [tool.poetry.extras]

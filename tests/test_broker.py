@@ -4,6 +4,8 @@
 import asyncio
 import logging
 from unittest.mock import call, MagicMock
+import socket
+import psutil
 
 import pytest
 
@@ -91,6 +93,42 @@ async def test_client_connect(broker, mock_plugin_manager):
         ],
         any_order=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_connect_tcp(broker):
+    process = psutil.Process()
+    connections_number = 10
+    sockets = [
+        socket.create_connection(("127.0.0.1", 1883)) for _ in range(connections_number)
+    ]
+    connections = process.connections()
+    await asyncio.sleep(0.1)
+
+    # max number of connections is 10
+    assert broker._servers["default"].conn_count == connections_number
+    # Extra connection for the listening Broker
+    assert len(connections) == connections_number + 1
+    for conn in connections:
+        assert conn.status == "ESTABLISHED" or conn.status == "LISTEN"
+
+    # close all connections
+    for s in sockets:
+        s.close()
+    connections = process.connections()
+    for conn in connections:
+        assert conn.status == "CLOSE_WAIT" or conn.status == "LISTEN"
+    await asyncio.sleep(0.1)
+    assert broker._servers["default"].conn_count == 0
+
+    # Add one more connection
+    s = socket.create_connection(("127.0.0.1", 1883))
+    open_connections = []
+    for conn in process.connections():
+        if conn.status == "ESTABLISHED":
+            open_connections.append(conn)
+    assert len(open_connections) == 1
+    assert broker._servers["default"].conn_count == 1
 
 
 @pytest.mark.asyncio
