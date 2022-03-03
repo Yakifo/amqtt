@@ -163,8 +163,6 @@ class BrokerProtocolHandler(ProtocolHandler):
             )  # [MQTT-3.2.2-4] session_parent=0
         elif not connect.username_flag and connect.password_flag:
             connack = ConnackPacket.build(0, BAD_USERNAME_PASSWORD)  # [MQTT-3.1.2-22]
-        elif connect.username_flag and not connect.password_flag:
-            connack = ConnackPacket.build(0, BAD_USERNAME_PASSWORD)  # [MQTT-3.1.2-22]
         elif connect.username_flag and connect.username is None:
             error_msg = "Invalid username from %s" % (
                 format_client_message(address=remote_address, port=remote_port)
