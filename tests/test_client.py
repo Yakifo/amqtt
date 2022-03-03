@@ -112,6 +112,17 @@ async def test_connect_ws_secure():
 
 
 @pytest.mark.asyncio
+async def test_connect_username_without_password():
+    broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
+    await broker.start()
+    client = MQTTClient()
+    await client.connect("mqtt://alice@127.0.0.1/")
+    assert client.session is not None
+    await client.disconnect()
+    await broker.shutdown()
+
+
+@pytest.mark.asyncio
 async def test_ping():
     broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
     await broker.start()
