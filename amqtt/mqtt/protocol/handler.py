@@ -150,8 +150,8 @@ class ProtocolHandler:
         self.logger.debug("closing writer")
         try:
             await self.writer.close()
-        except Exception as e:
-            self.logger.debug("Handler writer close failed: %s" % e)
+        except Exception:
+            self.logger.debug("Handler writer close failed", exc_info=True)
 
     def _stop_waiters(self):
         self.logger.debug("Stopping %d puback waiters" % len(self._puback_waiters))
@@ -523,8 +523,8 @@ class ProtocolHandler:
             await self.handle_connection_closed()
         except asyncio.CancelledError:
             raise
-        except Exception as e:
-            self.logger.warning("Unhandled exception: %s" % e)
+        except Exception:
+            self.logger.warning("Unhandled exception", exc_info=True)
             raise
 
     async def mqtt_deliver_next_message(self):

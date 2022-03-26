@@ -236,7 +236,7 @@ class MQTTClient:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                self.logger.warning("Reconnection attempt failed: %r" % e)
+                self.logger.warning("Reconnection attempt failed", exc_info=True)
                 if reconnect_retries >= 0 and nb_attempt > reconnect_retries:
                     self.logger.error(
                         "Maximum number of connection attempts reached. Reconnection aborted"
@@ -487,7 +487,7 @@ class MQTTClient:
                 "connection failed: invalid websocket handshake", ihs
             )
         except (ProtocolHandlerException, ConnectionError, OSError) as e:
-            self.logger.warning("MQTT connection failed: %r" % e)
+            self.logger.warning("MQTT connection failed", exc_info=True)
             self.session.transitions.disconnect()
             raise ConnectException(e)
 

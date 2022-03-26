@@ -88,8 +88,8 @@ class ClientProtocolHandler(ProtocolHandler):
             if not self._ping_task:
                 self.logger.debug("Scheduling Ping")
                 self._ping_task = asyncio.ensure_future(self.mqtt_ping())
-        except Exception as e:
-            self.logger.debug("Exception ignored in ping task: %r" % e)
+        except Exception:
+            self.logger.debug("Exception ignored in ping task", exc_info=True)
 
     def handle_read_timeout(self):
         pass
