@@ -24,9 +24,9 @@ poetry install --no-dev
 
 Usage:
 ```
-poetry run hbmqtt
-poetry run hbmqtt_pub
-poetry run hbmqtt_sub
+poetry run amqtt
+poetry run amqtt_pub
+poetry run amqtt_sub
 ```
 
 Or you can enter the virtual enviroment via:
