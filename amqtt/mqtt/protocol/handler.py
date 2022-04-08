@@ -176,7 +176,11 @@ class ProtocolHandler:
         for message in itertools.chain(
             self.session.inflight_in.values(), self.session.inflight_out.values()
         ):
-            tasks.append(asyncio.wait_for(self._handle_message_flow(message), 10))
+            tasks.append(
+                asyncio.create_task(
+                    asyncio.wait_for(self._handle_message_flow(message), 10)
+                )
+            )
         if tasks:
             done, pending = await asyncio.wait(tasks)
             self.logger.debug("%d messages redelivered" % len(done))
