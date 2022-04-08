@@ -1,5 +1,4 @@
 fail_fast: false
-files: ^(tests|samples)/
 repos:
 - repo: local
   hooks:
