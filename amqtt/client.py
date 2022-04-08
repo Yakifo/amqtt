@@ -72,7 +72,10 @@ def mqtt_connected(func):
         if not self._connected_state.is_set():
             base_logger.warning("Client not connected, waiting for it")
             _, pending = await asyncio.wait(
-                [self._connected_state.wait(), self._no_more_connections.wait()],
+                [
+                    asyncio.create_task(self._connected_state.wait()),
+                    asyncio.create_task(self._no_more_connections.wait()),
+                ],
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for t in pending:
