@@ -26,11 +26,11 @@ class ClientProtocolHandler(ProtocolHandler):
         self._pingresp_queue = asyncio.Queue()
         self._subscriptions_waiter = dict()
         self._unsubscriptions_waiter = dict()
-        self._disconnect_waiter = None
+        self._disconnect_waiter = futures.Future()
 
     async def start(self):
         await super().start()
-        if self._disconnect_waiter is None:
+        if self._disconnect_waiter.cancelled():
             self._disconnect_waiter = futures.Future()
 
     async def stop(self):
@@ -41,7 +41,6 @@ class ClientProtocolHandler(ProtocolHandler):
 
         if not self._disconnect_waiter.done():
             self._disconnect_waiter.cancel()
-        self._disconnect_waiter = None
 
     def _build_connect_packet(self):
         vh = ConnectVariableHeader()
