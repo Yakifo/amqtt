@@ -95,11 +95,10 @@ class MQTTClient:
 
     :param client_id: MQTT client ID to use when connecting to the broker. If none, it will generated randomly by :func:`amqtt.utils.gen_client_id`
     :param config: Client configuration
-    :param loop: asynio loop to use
     :return: class instance
     """
 
-    def __init__(self, client_id=None, config=None, loop=None):
+    def __init__(self, client_id=None, config=None):
         self.logger = logging.getLogger(__name__)
         self.config = copy.deepcopy(_defaults)
         if config is not None:
@@ -112,10 +111,6 @@ class MQTTClient:
             self.client_id = gen_client_id()
             self.logger.debug("Using generated client ID : %s" % self.client_id)
 
-        if loop is not None:
-            self._loop = loop
-        else:
-            self._loop = asyncio.get_event_loop()
         self.session = None
         self._handler = None
         self._disconnect_task = None
@@ -450,7 +445,6 @@ class MQTTClient:
                 websocket = await websockets.connect(
                     self.session.broker_uri,
                     subprotocols=["mqtt"],
-                    loop=self._loop,
                     extra_headers=self.extra_headers,
                     **kwargs
                 )

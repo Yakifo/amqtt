@@ -65,15 +65,11 @@ class RetainedApplicationMessage:
 
 
 class Server:
-    def __init__(self, listener_name, server_instance, max_connections=-1, loop=None):
+    def __init__(self, listener_name, server_instance, max_connections=-1):
         self.logger = logging.getLogger(__name__)
         self.instance = server_instance
         self.conn_count = 0
         self.listener_name = listener_name
-        if loop is not None:
-            self._loop = loop
-        else:
-            self._loop = asyncio.get_event_loop()
 
         self.max_connections = max_connections
         if self.max_connections > 0:
@@ -318,7 +314,7 @@ class Broker:
                         ssl=sc,
                     )
                     self._servers[listener_name] = Server(
-                        listener_name, instance, max_connections, self._loop
+                        listener_name, instance, max_connections
                     )
                 elif listener["type"] == "ws":
                     cb_partial = partial(self.ws_connected, listener_name=listener_name)
@@ -327,11 +323,10 @@ class Broker:
                         address,
                         port,
                         ssl=sc,
-                        loop=self._loop,
                         subprotocols=["mqtt"],
                     )
                     self._servers[listener_name] = Server(
-                        listener_name, instance, max_connections, self._loop
+                        listener_name, instance, max_connections
                     )
 
                 self.logger.info(

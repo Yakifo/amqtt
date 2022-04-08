@@ -191,7 +191,7 @@ class BrokerProtocolHandler(ProtocolHandler):
             await writer.close()
             raise MQTTException(error_msg)
 
-        incoming_session = Session(loop)
+        incoming_session = Session()
         incoming_session.client_id = connect.client_id
         incoming_session.clean_session = connect.clean_session_flag
         incoming_session.will_flag = connect.will_flag

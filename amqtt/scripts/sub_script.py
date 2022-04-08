@@ -159,7 +159,7 @@ def main(*args, **kwargs):
         config["will"]["qos"] = int(arguments["--will-qos"])
         config["will"]["retain"] = arguments["--will-retain"]
 
-    client = MQTTClient(client_id=client_id, config=config, loop=loop)
+    client = MQTTClient(client_id=client_id, config=config)
     loop.run_until_complete(do_sub(client, arguments))
     loop.close()
 
