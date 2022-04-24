@@ -1,10 +1,16 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from transitions import Machine
 from asyncio import Queue
-from collections import OrderedDict
+from typing import Optional, OrderedDict, Union
+
+from transitions import Machine  # type: ignore
+
 from amqtt.mqtt.publish import PublishPacket
+from amqtt.mqtt.puback import PubackPacket
+from amqtt.mqtt.pubrec import PubrecPacket
+from amqtt.mqtt.pubrel import PubrelPacket
+from amqtt.mqtt.pubcomp import PubcompPacket
 from amqtt.errors import AMQTTException
 
 OUTGOING = 0
@@ -30,7 +36,18 @@ class ApplicationMessage:
         "pubcomp_packet",
     )
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    packet_id: int
+    topic: str
+    qos: int
+    data: bytes
+    retain: bool
+    publish_packet: Optional[PublishPacket]
+    puback_packet: Optional[PubackPacket]
+    pubrec_packet: Optional[PubrecPacket]
+    pubrel_packet: Optional[PubrelPacket]
+    pubcomp_packet: Optional[PubcompPacket]
+
+    def __init__(self, packet_id: int, topic: str, qos: int, data: bytes, retain: bool):
         self.packet_id = packet_id
         """ Publish message `packet identifier <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718025>`_"""
 
@@ -46,22 +63,22 @@ class ApplicationMessage:
         self.retain = retain
         """ Publish message retain flag"""
 
-        self.publish_packet = None
+        self.publish_packet: Optional[PublishPacket] = None
         """ :class:`amqtt.mqtt.publish.PublishPacket` instance corresponding to the `PUBLISH <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718037>`_ packet in the messages flow. ``None`` if the PUBLISH packet has not already been received or sent."""
 
-        self.puback_packet = None
+        self.puback_packet: Optional[PubackPacket] = None
         """ :class:`amqtt.mqtt.puback.PubackPacket` instance corresponding to the `PUBACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043>`_ packet in the messages flow. ``None`` if QoS != QOS_1 or if the PUBACK packet has not already been received or sent."""
 
-        self.pubrec_packet = None
+        self.pubrec_packet: Optional[PubrecPacket] = None
         """ :class:`amqtt.mqtt.puback.PubrecPacket` instance corresponding to the `PUBREC <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREC packet has not already been received or sent."""
 
-        self.pubrel_packet = None
+        self.pubrel_packet: Optional[PubrelPacket] = None
         """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBREL <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREL packet has not already been received or sent."""
 
-        self.pubcomp_packet = None
+        self.pubcomp_packet: Optional[PubcompPacket] = None
         """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBCOMP <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBCOMP packet has not already been received or sent."""
 
-    def build_publish_packet(self, dup=False):
+    def build_publish_packet(self, dup: bool = False) -> PublishPacket:
         """
             Build :class:`amqtt.mqtt.publish.PublishPacket` from attributes
 
@@ -84,7 +101,9 @@ class IncomingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    direction: int
+
+    def __init__(self, packet_id: int, topic: str, qos, data, retain):
         super().__init__(packet_id, topic, qos, data, retain)
         self.direction = INCOMING
 
@@ -97,13 +116,40 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    direction: int
+
+    def __init__(self, packet_id: int, topic, qos, data, retain):
         super().__init__(packet_id, topic, qos, data, retain)
         self.direction = OUTGOING
 
 
 class Session:
     states = ["new", "connected", "disconnected"]
+
+    remote_address: Optional[str] = None
+    remote_port: Optional[int] = None
+    client_id: Optional[str] = None
+    clean_session: Optional[bool] = None
+    will_flag: bool = False
+    will_message: Union[bytes, bytearray, None] = None
+    will_qos: Optional[int] = None
+    will_retain: Optional[bool] = None
+    will_topic: Optional[str] = None
+    keep_alive: int = 0
+    publish_retry_delay: int = 0
+    broker_uri: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    cafile: Optional[str] = None
+    capath: Optional[str] = None
+    cadata = None
+    _packet_id: int = 0
+    parent: int = 0
+
+    inflight_out: OrderedDict[int, ApplicationMessage]
+    inflight_in: OrderedDict[int, ApplicationMessage]
+    retained_messages: Queue[ApplicationMessage]
+    delivered_message_queue: Queue[ApplicationMessage]
 
     def __init__(self):
         self._init_states()
@@ -158,7 +204,7 @@ class Session:
         )
 
     @property
-    def next_packet_id(self):
+    def next_packet_id(self) -> int:
         self._packet_id += 1
         if self._packet_id > 65535:
             self._packet_id = 1
@@ -174,15 +220,15 @@ class Session:
         return self._packet_id
 
     @property
-    def inflight_in_count(self):
+    def inflight_in_count(self) -> int:
         return len(self.inflight_in)
 
     @property
-    def inflight_out_count(self):
+    def inflight_out_count(self) -> int:
         return len(self.inflight_out)
 
     @property
-    def retained_messages_count(self):
+    def retained_messages_count(self) -> int:
         return self.retained_messages.qsize()
 
     def __repr__(self):

@@ -2,7 +2,8 @@
 #
 # See the file license.txt for copying permission.
 import asyncio
-from asyncio import futures
+from asyncio import futures, AbstractEventLoop
+from typing import List, Tuple
 from amqtt.mqtt.protocol.handler import ProtocolHandler, EVENT_MQTT_PACKET_RECEIVED
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.pingreq import PingReqPacket
@@ -18,8 +19,17 @@ from amqtt.plugins.manager import PluginManager
 
 
 class ClientProtocolHandler(ProtocolHandler):
+
+    _pingresp_queue: asyncio.Queue
+    _subscriptions_waiter: dict
+    _unsubscriptions_waiter: dict
+    _disconnect_waiter: futures.Future
+
     def __init__(
-        self, plugins_manager: PluginManager, session: Session = None, loop=None
+        self,
+        plugins_manager: PluginManager,
+        session: Session = None,
+        loop: AbstractEventLoop = None,
     ):
         super().__init__(plugins_manager, session, loop=loop)
         self._ping_task = None
@@ -42,7 +52,7 @@ class ClientProtocolHandler(ProtocolHandler):
         if not self._disconnect_waiter.done():
             self._disconnect_waiter.cancel()
 
-    def _build_connect_packet(self):
+    def _build_connect_packet(self) -> ConnectPacket:
         vh = ConnectVariableHeader()
         payload = ConnectPayload()
 
@@ -73,7 +83,7 @@ class ClientProtocolHandler(ProtocolHandler):
         packet = ConnectPacket(vh=vh, payload=payload)
         return packet
 
-    async def mqtt_connect(self):
+    async def mqtt_connect(self) -> int:
         connect_packet = self._build_connect_packet()
         await self._send_packet(connect_packet)
         connack = await ConnackPacket.from_stream(self.reader)
@@ -93,9 +103,11 @@ class ClientProtocolHandler(ProtocolHandler):
     def handle_read_timeout(self):
         pass
 
-    async def mqtt_subscribe(self, topics, packet_id):
+    async def mqtt_subscribe(
+        self, topics: List[Tuple[str, int]], packet_id: int
+    ) -> List[int]:
         """
-        :param topics: array of topics [{'filter':'/a/b', 'qos': 0x00}, ...]
+        :param topics: array of topics [('$SYS/broker/uptime', QOS_1), ('$SYS/broker/load/#', QOS_2),]
         :return:
         """
 
@@ -104,7 +116,7 @@ class ClientProtocolHandler(ProtocolHandler):
         await self._send_packet(subscribe)
 
         # Wait for SUBACK is received
-        waiter = futures.Future()
+        waiter: futures.Future = futures.Future()
         self._subscriptions_waiter[subscribe.variable_header.packet_id] = waiter
         return_codes = await waiter
 
@@ -122,7 +134,7 @@ class ClientProtocolHandler(ProtocolHandler):
                 % packet_id
             )
 
-    async def mqtt_unsubscribe(self, topics, packet_id):
+    async def mqtt_unsubscribe(self, topics: List[str], packet_id: int):
         """
 
         :param topics: array of topics ['/a/b', ...]
@@ -130,7 +142,7 @@ class ClientProtocolHandler(ProtocolHandler):
         """
         unsubscribe = UnsubscribePacket.build(topics, packet_id)
         await self._send_packet(unsubscribe)
-        waiter = futures.Future()
+        waiter: futures.Future = futures.Future()
         self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id] = waiter
         await waiter
         del self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id]

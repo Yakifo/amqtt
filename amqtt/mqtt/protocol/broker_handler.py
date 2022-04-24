@@ -1,7 +1,12 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from asyncio import futures, Queue
+# Required for type hints in classes that self reference for python < v3.10
+from __future__ import annotations
+from asyncio import futures, Queue, AbstractEventLoop
+from typing import Tuple, Optional, TypedDict, List
+
+from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.protocol.handler import ProtocolHandler
 from amqtt.mqtt.connack import (
     CONNECTION_ACCEPTED,
@@ -26,9 +31,28 @@ from amqtt.errors import MQTTException
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
 
+# introduced in Python3.7
+class Subscription(TypedDict):
+    packet_id: int
+    topics: List[Tuple[str, int]]
+
+
+class UnSubscription(TypedDict):
+    packet_id: int
+    topics: List[str]
+
+
 class BrokerProtocolHandler(ProtocolHandler):
+
+    _pending_subscriptions: Queue[Subscription]
+    _pending_unsubscriptions: Queue[UnSubscription]
+    disconnect_waiter: Optional[futures.Future]
+
     def __init__(
-        self, plugins_manager: PluginManager, session: Session = None, loop=None
+        self,
+        plugins_manager: PluginManager,
+        session: Optional[Session] = None,
+        loop: Optional[AbstractEventLoop] = None,
     ):
         super().__init__(plugins_manager, session, loop)
         self._disconnect_waiter = None
@@ -45,7 +69,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
             self._disconnect_waiter.set_result(None)
 
-    async def wait_disconnect(self):
+    async def wait_disconnect(self) -> futures.Future:
         return await self._disconnect_waiter
 
     def handle_write_timeout(self):
@@ -55,7 +79,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
             self._disconnect_waiter.set_result(None)
 
-    async def handle_disconnect(self, disconnect):
+    async def handle_disconnect(self, disconnect: DisconnectPacket):
         self.logger.debug("Client disconnecting")
         if self._disconnect_waiter and not self._disconnect_waiter.done():
             self.logger.debug("Setting waiter result to %r" % disconnect)
@@ -78,25 +102,25 @@ class BrokerProtocolHandler(ProtocolHandler):
         await self._send_packet(PingRespPacket.build())
 
     async def handle_subscribe(self, subscribe: SubscribePacket):
-        subscription = {
+        subscription: Subscription = {
             "packet_id": subscribe.variable_header.packet_id,
             "topics": subscribe.payload.topics,
         }
         await self._pending_subscriptions.put(subscription)
 
-    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):
-        unsubscription = {
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket) -> None:
+        unsubscription: UnSubscription = {
             "packet_id": unsubscribe.variable_header.packet_id,
             "topics": unsubscribe.payload.topics,
         }
         await self._pending_unsubscriptions.put(unsubscription)
 
-    async def get_next_pending_subscription(self):
-        subscription = await self._pending_subscriptions.get()
+    async def get_next_pending_subscription(self) -> Subscription:
+        subscription: Subscription = await self._pending_subscriptions.get()
         return subscription
 
-    async def get_next_pending_unsubscription(self):
-        unsubscription = await self._pending_unsubscriptions.get()
+    async def get_next_pending_unsubscription(self) -> UnSubscription:
+        unsubscription: UnSubscription = await self._pending_unsubscriptions.get()
         return unsubscription
 
     async def mqtt_acknowledge_subscription(self, packet_id, return_codes):
@@ -116,8 +140,12 @@ class BrokerProtocolHandler(ProtocolHandler):
 
     @classmethod
     async def init_from_connect(
-        cls, reader: ReaderAdapter, writer: WriterAdapter, plugins_manager, loop=None
-    ):
+        cls,
+        reader: ReaderAdapter,
+        writer: WriterAdapter,
+        plugins_manager,
+        loop: AbstractEventLoop = None,
+    ) -> Tuple[BrokerProtocolHandler, Session]:
         """
 
         :param reader:

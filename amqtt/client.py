@@ -8,6 +8,7 @@ import ssl
 import copy
 from urllib.parse import urlparse, urlunparse
 from functools import wraps
+from typing import List, Tuple
 
 from amqtt.session import Session
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
@@ -310,7 +311,7 @@ class MQTTClient:
         )
 
     @mqtt_connected
-    async def subscribe(self, topics):
+    async def subscribe(self, topics: List[Tuple[str, int]]):
         """
         Subscribe to some topics.
 
@@ -332,7 +333,7 @@ class MQTTClient:
         return await self._handler.mqtt_subscribe(topics, self.session.next_packet_id)
 
     @mqtt_connected
-    async def unsubscribe(self, topics):
+    async def unsubscribe(self, topics: List[str]):
         """
         Unsubscribe from some topics.
 
@@ -349,7 +350,7 @@ class MQTTClient:
         """
         await self._handler.mqtt_unsubscribe(topics, self.session.next_packet_id)
 
-    async def deliver_message(self, timeout=None):
+    async def deliver_message(self, timeout: int = None) -> None:
         """
         Deliver next received message.
 

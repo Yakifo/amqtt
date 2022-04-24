@@ -3,18 +3,19 @@ import datetime
 import os
 import subprocess
 import warnings
+from typing import Optional
 
 import amqtt
 
 
-def get_version():
+def get_version() -> str:
     warnings.warn(
         "amqtt.version.get_version() is deprecated, use amqtt.__version__ instead"
     )
     return amqtt.__version__
 
 
-def get_git_changeset():
+def get_git_changeset() -> Optional[str]:
     """Returns a numeric identifier of the latest git changeset.
     The result is the UTC timestamp of the changeset in YYYYMMDDHHMMSS format.
     This value isn't guaranteed to be unique, but collisions are very unlikely,
@@ -29,9 +30,9 @@ def get_git_changeset():
         cwd=repo_dir,
         universal_newlines=True,
     )
-    timestamp = git_log.communicate()[0]
     try:
-        timestamp = datetime.datetime.utcfromtimestamp(int(timestamp))
+        raw_unix_ts = git_log.communicate()[0]
+        timestamp = datetime.datetime.utcfromtimestamp(int(raw_unix_ts))
+        return timestamp.strftime("%Y%m%d%H%M%S")
     except ValueError:
         return None
-    return timestamp.strftime("%Y%m%d%H%M%S")

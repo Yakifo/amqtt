@@ -1,6 +1,9 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+# Required for type hints in classes that self reference for python < v3.10
+from __future__ import annotations
+from typing import List, Optional, Tuple
 import asyncio
 
 from amqtt.mqtt.packet import (
@@ -25,13 +28,16 @@ class SubscribePayload(MQTTPayload):
 
     __slots__ = ("topics",)
 
-    def __init__(self, topics=None):
+    # (topic_str, qos)
+    topics: List[Tuple[str, int]]
+
+    def __init__(self, topics: Optional[List[Tuple[str, int]]] = None):
         super().__init__()
         self.topics = topics or []
 
     def to_bytes(
         self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
-    ):
+    ) -> bytes:
         out = b""
         for topic in self.topics:
             out += encode_string(topic[0])
@@ -44,7 +50,7 @@ class SubscribePayload(MQTTPayload):
         reader: asyncio.StreamReader,
         fixed_header: MQTTFixedHeader,
         variable_header: MQTTVariableHeader,
-    ):
+    ) -> SubscribePayload:
         topics = []
         payload_length = fixed_header.remaining_length - variable_header.bytes_length
         read_bytes = 0
@@ -67,11 +73,14 @@ class SubscribePacket(MQTTPacket):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = SubscribePayload
 
+    variable_header: Optional[PacketIdVariableHeader]
+    payload: Optional[SubscribePayload]
+
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: PacketIdVariableHeader = None,
-        payload=None,
+        fixed: Optional[MQTTFixedHeader] = None,
+        variable_header: Optional[PacketIdVariableHeader] = None,
+        payload: Optional[SubscribePayload] = None,
     ):
         if fixed is None:
             header = MQTTFixedHeader(SUBSCRIBE, 0x02)  # [MQTT-3.8.1-1]
@@ -88,7 +97,7 @@ class SubscribePacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, topics, packet_id):
+    def build(cls, topics: list, packet_id: int) -> SubscribePacket:
         v_header = PacketIdVariableHeader(packet_id)
         payload = SubscribePayload(topics)
         return SubscribePacket(variable_header=v_header, payload=payload)

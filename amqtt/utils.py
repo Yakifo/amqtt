@@ -3,14 +3,13 @@
 # See the file license.txt for copying permission.
 
 from __future__ import annotations
-
+from typing import Any, TYPE_CHECKING
 import logging
 import random
 
 import yaml
-import typing
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ def gen_client_id() -> str:
     return gen_id
 
 
-def read_yaml_config(config_file: str) -> dict:
+def read_yaml_config(config_file: str) -> Any:
     config = None
     try:
         with open(config_file) as stream:

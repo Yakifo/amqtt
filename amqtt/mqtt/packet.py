@@ -1,7 +1,9 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
 import asyncio
+from typing import Optional
 
 from amqtt.codecs import (
     bytes_to_hex_str,
@@ -14,35 +16,39 @@ from amqtt.adapters import ReaderAdapter, WriterAdapter
 from datetime import datetime
 from struct import unpack
 
-
-RESERVED_0 = 0x00
-CONNECT = 0x01
-CONNACK = 0x02
-PUBLISH = 0x03
-PUBACK = 0x04
-PUBREC = 0x05
-PUBREL = 0x06
-PUBCOMP = 0x07
-SUBSCRIBE = 0x08
-SUBACK = 0x09
-UNSUBSCRIBE = 0x0A
-UNSUBACK = 0x0B
-PINGREQ = 0x0C
-PINGRESP = 0x0D
-DISCONNECT = 0x0E
-RESERVED_15 = 0x0F
+# Used as packet_type
+RESERVED_0: int = 0x00
+CONNECT: int = 0x01
+CONNACK: int = 0x02
+PUBLISH: int = 0x03
+PUBACK: int = 0x04
+PUBREC: int = 0x05
+PUBREL: int = 0x06
+PUBCOMP: int = 0x07
+SUBSCRIBE: int = 0x08
+SUBACK: int = 0x09
+UNSUBSCRIBE: int = 0x0A
+UNSUBACK: int = 0x0B
+PINGREQ: int = 0x0C
+PINGRESP: int = 0x0D
+DISCONNECT: int = 0x0E
+RESERVED_15: int = 0x0F
 
 
 class MQTTFixedHeader:
 
     __slots__ = ("packet_type", "remaining_length", "flags")
 
-    def __init__(self, packet_type, flags=0, length=0):
+    package_type: int
+    remaining_length: int
+    flags: int
+
+    def __init__(self, packet_type: int, flags: int = 0, length: int = 0):
         self.packet_type = packet_type
         self.remaining_length = length
         self.flags = flags
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytearray:
         def encode_remaining_length(length: int):
             encoded = bytearray()
             while True:
@@ -74,11 +80,11 @@ class MQTTFixedHeader:
         writer.write(self.to_bytes())
 
     @property
-    def bytes_length(self):
+    def bytes_length(self) -> int:
         return len(self.to_bytes())
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter):
+    async def from_stream(cls, reader: ReaderAdapter) -> Optional[MQTTFixedHeader]:
         """
         Read and decode MQTT message fixed header from stream
         :return: FixedHeader instance
@@ -133,20 +139,18 @@ class MQTTVariableHeader:
         writer.write(self.to_bytes())
         await writer.drain()
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self) -> bytearray:
         """
         Serialize header data to a byte array conforming to MQTT protocol
         :return: serialized data
         """
 
     @property
-    def bytes_length(self):
+    def bytes_length(self) -> int:
         return len(self.to_bytes())
 
     @classmethod
-    async def from_stream(
-        cls, reader: asyncio.StreamReader, fixed_header: MQTTFixedHeader
-    ):
+    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):
         pass
 
 
@@ -154,11 +158,13 @@ class PacketIdVariableHeader(MQTTVariableHeader):
 
     __slots__ = ("packet_id",)
 
-    def __init__(self, packet_id):
+    packet_id: int
+
+    def __init__(self, packet_id: int):
         super().__init__()
         self.packet_id = packet_id
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytearray:
         out = b""
         out += int_to_bytes(self.packet_id, 2)
         return out
@@ -188,7 +194,7 @@ class MQTTPayload:
     @classmethod
     async def from_stream(
         cls,
-        reader: asyncio.StreamReader,
+        reader: ReaderAdapter,
         fixed_header: MQTTFixedHeader,
         variable_header: MQTTVariableHeader,
     ):
@@ -199,6 +205,11 @@ class MQTTPacket:
 
     __slots__ = ("fixed_header", "variable_header", "payload", "protocol_ts")
 
+    fixed_header: MQTTFixedHeader
+    variable_header: Optional[MQTTVariableHeader]
+    payload: Optional[MQTTPayload]
+    protocol_ts: Optional[datetime]
+
     FIXED_HEADER = MQTTFixedHeader
     VARIABLE_HEADER = None
     PAYLOAD = None
@@ -206,8 +217,8 @@ class MQTTPacket:
     def __init__(
         self,
         fixed: MQTTFixedHeader,
-        variable_header: MQTTVariableHeader = None,
-        payload: MQTTPayload = None,
+        variable_header: Optional[MQTTVariableHeader] = None,
+        payload: Optional[MQTTPayload] = None,
     ):
         self.fixed_header = fixed
         self.variable_header = variable_header
@@ -268,7 +279,7 @@ class MQTTPacket:
         return instance
 
     @property
-    def bytes_length(self):
+    def bytes_length(self) -> int:
         return len(self.to_bytes())
 
     def __repr__(self):

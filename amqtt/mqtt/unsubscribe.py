@@ -1,6 +1,9 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+# Required for type hints in classes that self reference for python < v3.10
+from __future__ import annotations
+from typing import List, Optional
 import asyncio
 
 from amqtt.mqtt.packet import (
@@ -19,13 +22,16 @@ class UnubscribePayload(MQTTPayload):
 
     __slots__ = ("topics",)
 
-    def __init__(self, topics=None):
+    # [subscription_string]
+    topics: List[str]
+
+    def __init__(self, topics: Optional[List[str]] = None):
         super().__init__()
         self.topics = topics or []
 
     def to_bytes(
         self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
-    ):
+    ) -> bytes:
         out = b""
         for topic in self.topics:
             out += encode_string(topic)
@@ -37,7 +43,7 @@ class UnubscribePayload(MQTTPayload):
         reader: asyncio.StreamReader,
         fixed_header: MQTTFixedHeader,
         variable_header: MQTTVariableHeader,
-    ):
+    ) -> UnubscribePayload:
         topics = []
         payload_length = fixed_header.remaining_length - variable_header.bytes_length
         read_bytes = 0
@@ -76,7 +82,7 @@ class UnsubscribePacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, topics, packet_id):
+    def build(cls, topics, packet_id) -> UnsubscribePacket:
         v_header = PacketIdVariableHeader(packet_id)
         payload = UnubscribePayload(topics)
         return UnsubscribePacket(variable_header=v_header, payload=payload)

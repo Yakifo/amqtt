@@ -1,6 +1,9 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
+from typing import Optional
+
 from amqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
@@ -14,10 +17,13 @@ class UnsubackPacket(MQTTPacket):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
+    variable_header: Optional[PacketIdVariableHeader]
+    payload: None
+
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: PacketIdVariableHeader = None,
+        fixed: Optional[MQTTFixedHeader] = None,
+        variable_header: Optional[PacketIdVariableHeader] = None,
         payload=None,
     ):
         if fixed is None:
@@ -35,6 +41,6 @@ class UnsubackPacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, packet_id):
+    def build(cls, packet_id) -> UnsubackPacket:
         variable_header = PacketIdVariableHeader(packet_id)
         return cls(variable_header=variable_header)
