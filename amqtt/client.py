@@ -244,7 +244,7 @@ class MQTTClient:
                         "Maximum number of connection attempts reached. Reconnection aborted"
                     )
                     raise ConnectException("Too many connection attempts failed") from e
-                exp = 2 ** nb_attempt
+                exp = 2**nb_attempt
                 delay = exp if exp < reconnect_max_interval else reconnect_max_interval
                 self.logger.debug("Waiting %d second before next attempt" % delay)
                 await asyncio.sleep(delay, loop=self._loop)

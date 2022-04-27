@@ -29,10 +29,12 @@ def _verify_module(module, plugin_module_name):
             continue
 
         obj = clazz(_TestContext())
-        with pytest.raises(AttributeError, match=f"'{name}' object has no attribute '{_INVALID_METHOD}'"):
+        with pytest.raises(
+            AttributeError,
+            match=f"'{name}' object has no attribute '{_INVALID_METHOD}'",
+        ):
             getattr(obj, _INVALID_METHOD)
         assert hasattr(obj, _INVALID_METHOD) is False
-
 
     for name, obj in inspect.getmembers(module, inspect.ismodule):
         _verify_module(obj, plugin_module_name)
