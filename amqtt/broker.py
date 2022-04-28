@@ -15,7 +15,7 @@ from functools import partial
 from transitions import Machine, MachineError
 from amqtt.session import Session
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
-from amqtt.errors import AMQTTException, MQTTException
+from amqtt.errors import AMQTTException, MQTTException, NoDataException
 from amqtt.utils import format_client_message, gen_client_id
 from amqtt.adapters import (
     StreamReaderAdapter,
@@ -416,6 +416,7 @@ class Broker:
             )
             # await writer.close()
             self.logger.debug("Connection closed")
+            server.release_connection()
             return
         except MQTTException as me:
             self.logger.error(
@@ -423,7 +424,15 @@ class Broker:
                 % (format_client_message(address=remote_address, port=remote_port), me)
             )
             await writer.close()
+            server.release_connection()
             self.logger.debug("Connection closed")
+            return
+        except NoDataException as ne:
+            self.logger.error(
+                "No data from %s : %s"
+                % (format_client_message(address=remote_address, port=remote_port), ne)
+            )
+            server.release_connection()
             return
 
         if client_session.clean_session:

@@ -130,6 +130,7 @@ async def test_connect_tcp(broker):
         if conn.status == "ESTABLISHED":
             open_connections.append(conn)
     assert len(open_connections) == 1
+    await asyncio.sleep(0.1)
     assert broker._servers["default"].conn_count == 1
 
 
