@@ -1,6 +1,11 @@
 Changelog
 ---------
 
+
+0.10.1 - 2022-04-29
+-------------------
+ * Fixed a major bug in plugin api, see https://github.com/Yakifo/amqtt/pull/92
+
 0.10.0 - 2021-08-04
 -------------------
 
