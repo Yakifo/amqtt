@@ -46,7 +46,7 @@ It was forked from `HBMQTT`_ after it was deprecated by the original author.
 Features
 --------
 
-HBMQTT implements the full set of `MQTT 3.1.1`_ protocol specifications and provides the following features:
+aMQTT implements the full set of `MQTT 3.1.1`_ protocol specifications and provides the following features:
 
 - Support QoS 0, QoS 1 and QoS 2 messages flow
 - Client auto-reconnection on network lost
@@ -63,8 +63,14 @@ Project Status and Roadmap
 The current focus is to build setup the project infrastructure for the new fork.
 From there the goal is to fix outstanding known issues and clean up the code.
 
-- `0.10.x` will keep using the `hbmqtt` module name and aims to be a drop-in replacement to `hbmqtt`
-- `0.11.x` will use `amqtt` as module name
++----------+---------------------------+----------------------------+--------------+
+| Version  | hbmqtt compatibility      | Supported Python Versions  | PyPi Release |
++----------+---------------------------+----------------------------+--------------+
+| 0.10.x   | YES - Drop-in Replacement | 3.7 - 3.9                  | 0.10.1       |
++----------+---------------------------+----------------------------+--------------+
+| 0.11.x   | NO - Module renamed       | 3.7 - 3.10                 | No release   |
+|          | and small API differences |                            | yet          |
++----------+---------------------------+----------------------------+--------------+
 
 
 Getting started
