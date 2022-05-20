@@ -8,9 +8,9 @@ import ssl
 import copy
 from urllib.parse import urlparse, urlunparse
 from functools import wraps
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from amqtt.session import Session
+from amqtt.session import ApplicationMessage, Session
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
 from amqtt.adapters import (
@@ -350,7 +350,7 @@ class MQTTClient:
         """
         await self._handler.mqtt_unsubscribe(topics, self.session.next_packet_id)
 
-    async def deliver_message(self, timeout: int = None) -> None:
+    async def deliver_message(self, timeout: Optional[int] = None) -> ApplicationMessage:
         """
         Deliver next received message.
 
