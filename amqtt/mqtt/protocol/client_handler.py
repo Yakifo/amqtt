@@ -163,7 +163,7 @@ class ClientProtocolHandler(ProtocolHandler):
 
     async def handle_connection_closed(self):
         self.logger.debug("Broker closed connection")
-        if not self._disconnect_waiter.done():
+        if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
             self._disconnect_waiter.set_result(None)
 
     async def wait_disconnect(self):
