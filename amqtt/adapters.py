@@ -6,6 +6,7 @@ import io
 from websockets import WebSocketCommonProtocol
 from websockets import ConnectionClosed
 from asyncio import StreamReader, StreamWriter
+from typing import Tuple, Any
 import logging
 
 
@@ -23,11 +24,13 @@ class ReaderAdapter:
         return all read bytes. If the EOF was received and the internal buffer is
         empty, return an empty bytes object. :return: packet read as bytes data
         """
+        raise NotImplementedError()
 
     def feed_eof(self):
         """
         Acknowledge EOF
         """
+        raise NotImplementedError()
 
 
 class WriterAdapter:
@@ -38,25 +41,29 @@ class WriterAdapter:
     the protocol used
     """
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """
         write some data to the protocol layer
         """
+        raise NotImplementedError()
 
-    async def drain(self):
+    async def drain(self) -> None:
         """
         Let the write buffer of the underlying transport a chance to be flushed.
         """
+        raise NotImplementedError()
 
-    def get_peer_info(self):
+    def get_peer_info(self) -> Tuple[Any, Any]:
         """
         Return peer socket info (remote address and remote port as tuple
         """
+        raise NotImplementedError()
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Close the protocol connection
         """
+        raise NotImplementedError()
 
 
 class WebSocketsReader(ReaderAdapter):
@@ -103,7 +110,7 @@ class WebSocketsWriter(WriterAdapter):
         self._protocol = protocol
         self._stream = io.BytesIO(b"")
 
-    def write(self, data):
+    def write(self, data: bytes):
         """
         write some data to the protocol layer
         """
@@ -161,7 +168,7 @@ class StreamWriterAdapter(WriterAdapter):
         self._writer = writer
         self.is_closed = False  # StreamWriter has no test for closed...we use our own
 
-    def write(self, data):
+    def write(self, data: bytes):
         if not self.is_closed:
             self._writer.write(data)
 
@@ -208,7 +215,7 @@ class BufferWriter(WriterAdapter):
     def __init__(self, buffer=b""):
         self._stream = io.BytesIO(buffer)
 
-    def write(self, data):
+    def write(self, data: bytes):
         """
         write some data to the protocol layer
         """

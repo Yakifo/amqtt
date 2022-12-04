@@ -1,24 +1,33 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+# Required for type hints in classes that self reference for python < v3.10
+from __future__ import annotations
+from typing import Optional
+
 from amqtt.mqtt.packet import CONNACK, MQTTPacket, MQTTFixedHeader, MQTTVariableHeader
 from amqtt.codecs import read_or_raise, bytes_to_int
 from amqtt.errors import AMQTTException
 from amqtt.adapters import ReaderAdapter
 
-CONNECTION_ACCEPTED = 0x00
-UNACCEPTABLE_PROTOCOL_VERSION = 0x01
-IDENTIFIER_REJECTED = 0x02
-SERVER_UNAVAILABLE = 0x03
-BAD_USERNAME_PASSWORD = 0x04
-NOT_AUTHORIZED = 0x05
+CONNECTION_ACCEPTED: int = 0x00
+UNACCEPTABLE_PROTOCOL_VERSION: int = 0x01
+IDENTIFIER_REJECTED: int = 0x02
+SERVER_UNAVAILABLE: int = 0x03
+BAD_USERNAME_PASSWORD: int = 0x04
+NOT_AUTHORIZED: int = 0x05
 
 
 class ConnackVariableHeader(MQTTVariableHeader):
 
     __slots__ = ("session_parent", "return_code")
 
-    def __init__(self, session_parent=None, return_code=None):
+    session_parent: Optional[int]
+    return_code: Optional[int]
+
+    def __init__(
+        self, session_parent: Optional[int] = None, return_code: Optional[int] = None
+    ) -> None:
         super().__init__()
         self.session_parent = session_parent
         self.return_code = return_code
@@ -53,25 +62,25 @@ class ConnackPacket(MQTTPacket):
     PAYLOAD = None
 
     @property
-    def return_code(self):
+    def return_code(self) -> int:
         return self.variable_header.return_code
 
     @return_code.setter
-    def return_code(self, return_code):
+    def return_code(self, return_code: int):
         self.variable_header.return_code = return_code
 
     @property
-    def session_parent(self):
+    def session_parent(self) -> int:
         return self.variable_header.session_parent
 
     @session_parent.setter
-    def session_parent(self, session_parent):
+    def session_parent(self, session_parent: int):
         self.variable_header.session_parent = session_parent
 
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: ConnackVariableHeader = None,
+        fixed: Optional[MQTTFixedHeader] = None,
+        variable_header: Optional[ConnackVariableHeader] = None,
         payload=None,
     ):
         if fixed is None:
@@ -88,7 +97,9 @@ class ConnackPacket(MQTTPacket):
         self.payload = None
 
     @classmethod
-    def build(cls, session_parent=None, return_code=None):
+    def build(
+        cls, session_parent: int = None, return_code: int = None
+    ) -> ConnackPacket:
         v_header = ConnackVariableHeader(session_parent, return_code)
         packet = ConnackPacket(variable_header=v_header)
         return packet

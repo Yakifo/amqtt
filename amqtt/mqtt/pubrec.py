@@ -1,6 +1,9 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from __future__ import annotations
+from typing import Optional
+
 from amqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
@@ -14,8 +17,11 @@ class PubrecPacket(MQTTPacket):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
+    variable_header: Optional[PacketIdVariableHeader]
+    payload: None
+
     @property
-    def packet_id(self):
+    def packet_id(self) -> int:
         return self.variable_header.packet_id
 
     @packet_id.setter
@@ -25,7 +31,7 @@ class PubrecPacket(MQTTPacket):
     def __init__(
         self,
         fixed: MQTTFixedHeader = None,
-        variable_header: PacketIdVariableHeader = None,
+        variable_header: Optional[PacketIdVariableHeader] = None,
     ):
         if fixed is None:
             header = MQTTFixedHeader(PUBREC, 0x00)
@@ -41,7 +47,7 @@ class PubrecPacket(MQTTPacket):
         self.payload = None
 
     @classmethod
-    def build(cls, packet_id: int):
+    def build(cls, packet_id: int) -> PubrecPacket:
         v_header = PacketIdVariableHeader(packet_id)
         packet = PubrecPacket(variable_header=v_header)
         return packet

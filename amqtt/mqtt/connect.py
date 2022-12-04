@@ -1,6 +1,9 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+# Required for type hints in classes that self reference for python < v3.10
+from __future__ import annotations
+from typing import Optional
 
 from amqtt.codecs import (
     bytes_to_int,
@@ -27,16 +30,25 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     __slots__ = ("proto_name", "proto_level", "flags", "keep_alive")
 
-    USERNAME_FLAG = 0x80
-    PASSWORD_FLAG = 0x40
-    WILL_RETAIN_FLAG = 0x20
-    WILL_FLAG = 0x04
-    WILL_QOS_MASK = 0x18
-    CLEAN_SESSION_FLAG = 0x02
-    RESERVED_FLAG = 0x01
+    proto_name: str
+    proto_level: int
+    flags: int
+    keep_alive: int
+
+    USERNAME_FLAG: int = 0x80
+    PASSWORD_FLAG: int = 0x40
+    WILL_RETAIN_FLAG: int = 0x20
+    WILL_FLAG: int = 0x04
+    WILL_QOS_MASK: int = 0x18
+    CLEAN_SESSION_FLAG: int = 0x02
+    RESERVED_FLAG: int = 0x01
 
     def __init__(
-        self, connect_flags=0x00, keep_alive=0, proto_name="MQTT", proto_level=0x04
+        self,
+        connect_flags: int = 0x00,
+        keep_alive: int = 0,
+        proto_name: str = "MQTT",
+        proto_level: int = 0x04,
     ):
         super().__init__()
         self.proto_name = proto_name
@@ -115,7 +127,9 @@ class ConnectVariableHeader(MQTTVariableHeader):
         self.flags |= val << 3
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):
+    async def from_stream(
+        cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader
+    ) -> ConnectVariableHeader:
         #  protocol name
         protocol_name = await decode_string(reader)
 
@@ -133,7 +147,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
         return cls(flags, keep_alive, protocol_name, protocol_level)
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytearray:
         out = bytearray()
 
         # Protocol name
@@ -161,11 +175,11 @@ class ConnectPayload(MQTTPayload):
 
     def __init__(
         self,
-        client_id=None,
-        will_topic=None,
-        will_message=None,
-        username=None,
-        password=None,
+        client_id: Optional[str] = None,
+        will_topic: str = None,
+        will_message: Optional[bytes] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
     ):
         super().__init__()
         self.client_id_is_random = False
@@ -175,7 +189,7 @@ class ConnectPayload(MQTTPayload):
         self.username = username
         self.password = password
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "ConnectVariableHeader(client_id={}, will_topic={}, will_message={}, username={}, password={})".format(
             self.client_id,
             self.will_topic,
@@ -190,7 +204,7 @@ class ConnectPayload(MQTTPayload):
         reader: ReaderAdapter,
         fixed_header: MQTTFixedHeader,
         variable_header: ConnectVariableHeader,
-    ):
+    ) -> ConnectPayload:
         payload = cls()
         #  Client identifier
         try:
@@ -230,7 +244,7 @@ class ConnectPayload(MQTTPayload):
 
     def to_bytes(
         self, fixed_header: MQTTFixedHeader, variable_header: ConnectVariableHeader
-    ):
+    ) -> bytearray:
         out = bytearray()
         # Client identifier
         out.extend(encode_string(self.client_id))
@@ -253,7 +267,7 @@ class ConnectPacket(MQTTPacket):
     PAYLOAD = ConnectPayload
 
     @property
-    def proto_name(self):
+    def proto_name(self) -> str:
         return self.variable_header.proto_name
 
     @proto_name.setter
@@ -261,55 +275,55 @@ class ConnectPacket(MQTTPacket):
         self.variable_header.proto_name = name
 
     @property
-    def proto_level(self):
+    def proto_level(self) -> int:
         return self.variable_header.proto_level
 
     @proto_level.setter
-    def proto_level(self, level):
+    def proto_level(self, level: int):
         self.variable_header.proto_level = level
 
     @property
-    def username_flag(self):
+    def username_flag(self) -> bool:
         return self.variable_header.username_flag
 
     @username_flag.setter
-    def username_flag(self, flag):
+    def username_flag(self, flag: bool):
         self.variable_header.username_flag = flag
 
     @property
-    def password_flag(self):
+    def password_flag(self) -> bool:
         return self.variable_header.password_flag
 
     @password_flag.setter
-    def password_flag(self, flag):
+    def password_flag(self, flag: bool):
         self.variable_header.password_flag = flag
 
     @property
-    def clean_session_flag(self):
+    def clean_session_flag(self) -> bool:
         return self.variable_header.clean_session_flag
 
     @clean_session_flag.setter
-    def clean_session_flag(self, flag):
+    def clean_session_flag(self, flag: bool):
         self.variable_header.clean_session_flag = flag
 
     @property
-    def will_retain_flag(self):
+    def will_retain_flag(self) -> bool:
         return self.variable_header.will_retain_flag
 
     @will_retain_flag.setter
-    def will_retain_flag(self, flag):
+    def will_retain_flag(self, flag: bool):
         self.variable_header.will_retain_flag = flag
 
     @property
-    def will_qos(self):
+    def will_qos(self) -> int:
         return self.variable_header.will_qos
 
     @will_qos.setter
-    def will_qos(self, flag):
-        self.variable_header.will_qos = flag
+    def will_qos(self, will_qos: int):
+        self.variable_header.will_qos = will_qos
 
     @property
-    def will_flag(self):
+    def will_flag(self) -> bool:
         return self.variable_header.will_flag
 
     @will_flag.setter
@@ -325,11 +339,11 @@ class ConnectPacket(MQTTPacket):
         self.variable_header.reserved_flag = flag
 
     @property
-    def client_id(self):
+    def client_id(self) -> str:
         return self.payload.client_id
 
     @client_id.setter
-    def client_id(self, client_id):
+    def client_id(self, client_id: str):
         self.payload.client_id = client_id
 
     @property
@@ -341,43 +355,43 @@ class ConnectPacket(MQTTPacket):
         self.payload.client_id_is_random = client_id_is_random
 
     @property
-    def will_topic(self):
+    def will_topic(self) -> str:
         return self.payload.will_topic
 
     @will_topic.setter
-    def will_topic(self, will_topic):
+    def will_topic(self, will_topic: str) -> None:
         self.payload.will_topic = will_topic
 
     @property
-    def will_message(self):
+    def will_message(self) -> bytes:
         return self.payload.will_message
 
     @will_message.setter
-    def will_message(self, will_message):
+    def will_message(self, will_message: bytes):
         self.payload.will_message = will_message
 
     @property
-    def username(self):
+    def username(self) -> str:
         return self.payload.username
 
     @username.setter
-    def username(self, username):
+    def username(self, username: str):
         self.payload.username = username
 
     @property
-    def password(self):
+    def password(self) -> str:
         return self.payload.password
 
     @password.setter
-    def password(self, password):
+    def password(self, password: str):
         self.payload.password = password
 
     @property
-    def keep_alive(self):
+    def keep_alive(self) -> int:
         return self.variable_header.keep_alive
 
     @keep_alive.setter
-    def keep_alive(self, keep_alive):
+    def keep_alive(self, keep_alive: int):
         self.variable_header.keep_alive = keep_alive
 
     def __init__(

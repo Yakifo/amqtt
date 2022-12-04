@@ -4,25 +4,31 @@
 
 __all__ = ["get_plugin_manager", "BaseContext", "PluginManager"]
 
+from asyncio.events import AbstractEventLoop
 import pkg_resources
 import logging
 import asyncio
 import copy
+from typing import Dict, List, Optional
 
 from collections import namedtuple
 
 
 Plugin = namedtuple("Plugin", ["name", "ep", "object"])
 
-plugins_manager = dict()
+plugins_manager: Dict[str, "PluginManager"] = dict()
 
 
-def get_plugin_manager(namespace):
+def get_plugin_manager(namespace: str) -> Optional["PluginManager"]:
     global plugins_manager
     return plugins_manager.get(namespace, None)
 
 
 class BaseContext:
+
+    loop: Optional[AbstractEventLoop]
+    logger: Optional[logging.Logger]
+
     def __init__(self):
         self.loop = None
         self.logger = None
@@ -35,7 +41,15 @@ class PluginManager:
     run plugin call asynchronously in an event queue
     """
 
-    def __init__(self, namespace, context, loop=None):
+    loop: AbstractEventLoop
+    logger: logging.Logger
+    context: Optional[BaseContext]
+    _plugins: List[Optional[Plugin]]
+    _fired_events: List[asyncio.Task]
+
+    def __init__(
+        self, namespace: str, context: BaseContext, loop: AbstractEventLoop = None
+    ):
         global plugins_manager
         if loop is not None:
             self._loop = loop
@@ -54,17 +68,17 @@ class PluginManager:
         plugins_manager[namespace] = self
 
     @property
-    def app_context(self):
+    def app_context(self) -> Optional[BaseContext]:
         return self.context
 
-    def _load_plugins(self, namespace):
+    def _load_plugins(self, namespace: str):
         self.logger.debug("Loading plugins for namespace %s" % namespace)
         for ep in pkg_resources.iter_entry_points(group=namespace):
             plugin = self._load_plugin(ep)
             self._plugins.append(plugin)
             self.logger.debug(" Plugin %s ready" % ep.name)
 
-    def _load_plugin(self, ep: pkg_resources.EntryPoint):
+    def _load_plugin(self, ep: pkg_resources.EntryPoint) -> Optional[Plugin]:
         try:
             self.logger.debug(" Loading plugin %s" % ep)
             plugin = ep.load(require=True)
@@ -78,7 +92,9 @@ class PluginManager:
         except pkg_resources.UnknownExtra as ue:
             self.logger.warning(f"Plugin {ep!r} dependencies resolution failed: {ue}")
 
-    def get_plugin(self, name):
+        return None
+
+    def get_plugin(self, name: str) -> Optional[Plugin]:
         """
         Get a plugin by its name from the plugins loaded for the current namespace
         :param name:
@@ -89,7 +105,7 @@ class PluginManager:
                 return p
         return None
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Free PluginManager resources and cancel pending event methods
         This method call a close() coroutine for each plugin, allowing plugins to close
@@ -101,17 +117,22 @@ class PluginManager:
             task.cancel()
 
     @property
-    def plugins(self):
+    def plugins(self) -> List[Optional[Plugin]]:
         """
         Get the loaded plugins list
         :return:
         """
         return self._plugins
 
-    def _schedule_coro(self, coro):
+    def _schedule_coro(self, coro) -> asyncio.Task:
+        # Changed to create tasks since aMQTT is v3.7+
+        # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
+        # return asyncio.create_task(coro)
         return asyncio.ensure_future(coro)
 
-    async def fire_event(self, event_name, wait=False, *args, **kwargs):
+    async def fire_event(
+        self, event_name: str, wait: bool = False, *args, **kwargs
+    ) -> None:
         """
         Fire an event to plugins.
         PluginManager schedule async calls for each plugin on method called "on_" + event_name
@@ -152,7 +173,7 @@ class PluginManager:
                 await asyncio.wait(tasks)
         self.logger.debug("Plugins len(_fired_events)=%d" % (len(self._fired_events)))
 
-    async def map(self, coro, *args, **kwargs):
+    async def map(self, coro, *args, **kwargs) -> dict:
         """
         Schedule a given coroutine call for each plugin.
         The coro called get the Plugin instance as first argument of its method call
@@ -190,7 +211,7 @@ class PluginManager:
         return ret_dict
 
     @staticmethod
-    async def _call_coro(plugin, coro_name, *args, **kwargs):
+    async def _call_coro(plugin: Plugin, coro_name: str, *args, **kwargs):
         if not hasattr(plugin.object, coro_name):
             # Plugin doesn't implement coro_name
             return None
@@ -198,7 +219,7 @@ class PluginManager:
         coro = getattr(plugin.object, coro_name)(*args, **kwargs)
         return await coro
 
-    async def map_plugin_coro(self, coro_name, *args, **kwargs):
+    async def map_plugin_coro(self, coro_name: str, *args, **kwargs):
         """
         Call a plugin declared by plugin by its name
         :param coro_name:

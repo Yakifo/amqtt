@@ -1,6 +1,8 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+# Required for type hints in classes that self reference for python < v3.10
+from __future__ import annotations
 from amqtt.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
@@ -15,7 +17,7 @@ class PubackPacket(MQTTPacket):
     PAYLOAD = None
 
     @property
-    def packet_id(self):
+    def packet_id(self) -> int:
         return self.variable_header.packet_id
 
     @packet_id.setter
@@ -41,7 +43,7 @@ class PubackPacket(MQTTPacket):
         self.payload = None
 
     @classmethod
-    def build(cls, packet_id: int):
+    def build(cls, packet_id: int) -> PubackPacket:
         v_header = PacketIdVariableHeader(packet_id)
         packet = PubackPacket(variable_header=v_header)
         return packet
