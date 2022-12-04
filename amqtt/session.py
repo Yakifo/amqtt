@@ -159,16 +159,15 @@ class Session:
 
     @property
     def next_packet_id(self):
-        self._packet_id += 1
-        if self._packet_id > 65535:
-            self._packet_id = 1
+        self._packet_id = (self._packet_id % 65535) + 1
+        limit = self._packet_id
         while (
             self._packet_id in self.inflight_in or self._packet_id in self.inflight_out
         ):
-            self._packet_id += 1
-            if self._packet_id > 65535:
+            self._packet_id = (self._packet_id % 65535) + 1
+            if self._packet_id == limit:
                 raise AMQTTException(
-                    "More than 65525 messages pending. No free packet ID"
+                    "More than 65535 messages pending. No free packet ID"
                 )
 
         return self._packet_id
