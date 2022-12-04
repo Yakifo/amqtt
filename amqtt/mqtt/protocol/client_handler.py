@@ -106,17 +106,18 @@ class ClientProtocolHandler(ProtocolHandler):
         # Wait for SUBACK is received
         waiter = futures.Future()
         self._subscriptions_waiter[subscribe.variable_header.packet_id] = waiter
-        return_codes = await waiter
-
-        del self._subscriptions_waiter[subscribe.variable_header.packet_id]
+        try:
+            return_codes = await waiter
+        finally:
+            del self._subscriptions_waiter[subscribe.variable_header.packet_id]
         return return_codes
 
     async def handle_suback(self, suback: SubackPacket):
         packet_id = suback.variable_header.packet_id
-        try:
-            waiter = self._subscriptions_waiter.get(packet_id)
+        waiter = self._subscriptions_waiter.get(packet_id)
+        if waiter is not None:
             waiter.set_result(suback.payload.return_codes)
-        except KeyError:
+        else:
             self.logger.warning(
                 "Received SUBACK for unknown pending subscription with Id: %s"
                 % packet_id
@@ -132,15 +133,17 @@ class ClientProtocolHandler(ProtocolHandler):
         await self._send_packet(unsubscribe)
         waiter = futures.Future()
         self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id] = waiter
-        await waiter
-        del self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id]
+        try:
+            await waiter
+        finally:
+            del self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id]
 
     async def handle_unsuback(self, unsuback: UnsubackPacket):
         packet_id = unsuback.variable_header.packet_id
-        try:
-            waiter = self._unsubscriptions_waiter.get(packet_id)
+        waiter = self._unsubscriptions_waiter.get(packet_id)
+        if waiter is not None:
             waiter.set_result(None)
-        except KeyError:
+        else:
             self.logger.warning(
                 "Received UNSUBACK for unknown pending subscription with Id: %s"
                 % packet_id
@@ -152,10 +155,12 @@ class ClientProtocolHandler(ProtocolHandler):
 
     async def mqtt_ping(self):
         ping_packet = PingReqPacket()
-        await self._send_packet(ping_packet)
-        resp = await self._pingresp_queue.get()
-        if self._ping_task:
-            self._ping_task = None
+        try:
+            await self._send_packet(ping_packet)
+            resp = await self._pingresp_queue.get()
+        finally:
+            if self._ping_task:
+                self._ping_task = None
         return resp
 
     async def handle_pingresp(self, pingresp: PingRespPacket):

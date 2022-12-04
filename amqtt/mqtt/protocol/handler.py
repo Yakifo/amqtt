@@ -293,12 +293,13 @@ class ProtocolHandler:
             # Wait for puback
             waiter = asyncio.Future()
             self._puback_waiters[app_message.packet_id] = waiter
-            await waiter
-            del self._puback_waiters[app_message.packet_id]
-            app_message.puback_packet = waiter.result()
-
-            # Discard inflight message
-            del self.session.inflight_out[app_message.packet_id]
+            try:
+                await waiter
+                app_message.puback_packet = waiter.result()
+            finally:
+                self._puback_waiters.pop(app_message.packet_id, None)
+                # Discard inflight message
+                self.session.inflight_out.pop(app_message.packet_id, None)
         elif app_message.direction == INCOMING:
             # Initiate delivery
             self.logger.debug("Add message to delivery")
@@ -351,9 +352,12 @@ class ProtocolHandler:
                     raise AMQTTException(message)
                 waiter = asyncio.Future()
                 self._pubrec_waiters[app_message.packet_id] = waiter
-                await waiter
-                del self._pubrec_waiters[app_message.packet_id]
-                app_message.pubrec_packet = waiter.result()
+                try:
+                    await waiter
+                    app_message.pubrec_packet = waiter.result()
+                finally:
+                    self._pubrec_waiters.pop(app_message.packet_id, None)
+                    self.session.inflight_out.pop(app_message.packet_id, None)
             if not app_message.pubcomp_packet:
                 # Send pubrel
                 app_message.pubrel_packet = PubrelPacket.build(app_message.packet_id)
@@ -361,11 +365,12 @@ class ProtocolHandler:
                 # Wait for PUBCOMP
                 waiter = asyncio.Future()
                 self._pubcomp_waiters[app_message.packet_id] = waiter
-                await waiter
-                del self._pubcomp_waiters[app_message.packet_id]
-                app_message.pubcomp_packet = waiter.result()
-            # Discard inflight message
-            del self.session.inflight_out[app_message.packet_id]
+                try:
+                    await waiter
+                    app_message.pubcomp_packet = waiter.result()
+                finally:
+                    self._pubcomp_waiters.pop(app_message.packet_id, None)
+                    self.session.inflight_out.pop(app_message.packet_id, None)
         elif app_message.direction == INCOMING:
             self.session.inflight_in[app_message.packet_id] = app_message
             # Send pubrec
