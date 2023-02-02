@@ -880,8 +880,11 @@ class Broker:
         running_tasks = deque()
         try:
             while True:
+                self.logger.debug("Running broadcast loop")
+                print("Number of running tasks", len(running_tasks))
                 while running_tasks and running_tasks[0].done():
                     task = running_tasks.popleft()
+                    print("Task is done", task)
                     try:
                         task.result()  # make asyncio happy and collect results
                     except Exception:
@@ -947,15 +950,20 @@ class Broker:
                                         f"target_session.retained_messages={target_session.retained_messages.qsize()}"
                                     )
         except CancelledError:
+            self.logger.debug("CANCELLATION ERROR")
             # Wait until current broadcasting tasks end
             if running_tasks:
+                self.logger.debug("Waiting for running tasks to finish")
                 await asyncio.wait(running_tasks)
+                self.logger.debug("Finished running task")
             raise  # reraise per CancelledError semantics
 
     async def _broadcast_message(self, session, topic, data, force_qos=None):
         broadcast = {"session": session, "topic": topic, "data": data}
         if force_qos:
             broadcast["qos"] = force_qos
+        self.logger.debug("Adding message to broadcasting queue")
+
         await self._broadcast_queue.put(broadcast)
 
     async def publish_session_retained_messages(self, session):
