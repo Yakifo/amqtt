@@ -909,7 +909,8 @@ class Broker:
     async def _run_broadcast(self, running_tasks: deque):
         broadcast = await self._broadcast_queue.get()
 
-        self.logger.debug("broadcasting %r", broadcast)
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug("broadcasting %r", broadcast)
 
         for k_filter in self._subscriptions:
             if broadcast["topic"].startswith("$") and (
@@ -934,14 +935,16 @@ class Broker:
                     await self._retain_broadcast_message(broadcast, qos, target_session)
                     continue
 
-                self.logger.debug(
-                    "broadcasting application message from %s on topic '%s' to %s"
-                    % (
-                        format_client_message(session=broadcast["session"]),
-                        broadcast["topic"],
-                        format_client_message(session=target_session),
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(
+                        "broadcasting application message from %s on topic '%s' to %s"
+                        % (
+                            format_client_message(session=broadcast["session"]),
+                            broadcast["topic"],
+                            format_client_message(session=target_session),
+                        )
                     )
-                )
+
                 handler = self._get_handler(target_session)
                 task = asyncio.ensure_future(
                     handler.mqtt_publish(
@@ -954,12 +957,14 @@ class Broker:
                 running_tasks.append(task)
 
     async def _retain_broadcast_message(self, broadcast, qos, target_session):
-        self.logger.debug(
-            "retaining application message from %s on topic '%s' to client '%s'",
-            format_client_message(session=broadcast["session"]),
-            broadcast["topic"],
-            format_client_message(session=target_session),
-        )
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                "retaining application message from %s on topic '%s' to client '%s'",
+                format_client_message(session=broadcast["session"]),
+                broadcast["topic"],
+                format_client_message(session=target_session),
+            )
+
         retained_message = RetainedApplicationMessage(
             broadcast["session"],
             broadcast["topic"],
@@ -967,10 +972,12 @@ class Broker:
             qos,
         )
         await target_session.retained_messages.put(retained_message)
-        self.logger.debug(
-            "target_session.retained_messages=%s",
-            target_session.retained_messages.qsize(),
-        )
+
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                "target_session.retained_messages=%s",
+                target_session.retained_messages.qsize(),
+            )
 
     async def _shutdown_broadcast_loop(self):
         if self._broadcast_task:
