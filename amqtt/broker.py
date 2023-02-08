@@ -884,7 +884,7 @@ class Broker:
                             "Task failed and will be skipped: %s", task
                         )
                     except CancelledError:
-                        self.logger.warning("Task has been cancelled: %s", task)
+                        self.logger.info("Task has been cancelled: %s", task)
 
                 run_broadcast_task = self._run_broadcast(running_tasks)
 
