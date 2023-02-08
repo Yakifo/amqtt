@@ -879,12 +879,12 @@ class Broker:
                     task = running_tasks.popleft()
                     try:
                         task.result()  # make asyncio happy and collect results
+                    except CancelledError:
+                        self.logger.info("Task has been cancelled: %s", task)
                     except Exception:
                         self.logger.exception(
                             "Task failed and will be skipped: %s", task
                         )
-                    except CancelledError:
-                        self.logger.info("Task has been cancelled: %s", task)
 
                 run_broadcast_task = self._run_broadcast(running_tasks)
 
