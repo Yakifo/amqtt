@@ -66,11 +66,17 @@ From there the goal is to fix outstanding known issues and clean up the code.
 +----------+---------------------------+----------------------------+--------------+
 | Version  | hbmqtt compatibility      | Supported Python Versions  | PyPi Release |
 +----------+---------------------------+----------------------------+--------------+
-| 0.10.x   | YES - Drop-in Replacement | 3.7 - 3.9                  | 0.10.1       |
+| 0.10.x   | YES - Drop-in Replacement | 3.7*                       | 0.10.1       |
 +----------+---------------------------+----------------------------+--------------+
-| 0.11.x   | NO - Module renamed       | 3.7 - 3.10                 | No release   |
+| 0.11.x   | NO - Module renamed       | 3.8 - 3.10                 | No release   |
 |          | and small API differences |                            | yet          |
 +----------+---------------------------+----------------------------+--------------+
+
+
+* Due to a change in Python 3.8 where the semantics of asyncio.CancelledError was changed
+    to be a subclass of BaseException instead of Exception, old versions of hbmqtt and aMQTT
+    will break, see https://github.com/Yakifo/amqtt/issues/133.
+    Therefore only 3.7 is mentioned as supported version for 0.10.x.
 
 
 Getting started
