@@ -3,6 +3,7 @@
 # See the file license.txt for copying permission.
 import asyncio
 import logging
+import sys
 from unittest.mock import call, MagicMock, patch
 
 import pytest
@@ -647,7 +648,11 @@ async def test_broker_broadcast_cancellation(broker):
         await _client_publish(topic, data, qos)
         await asyncio.sleep(0.01)
 
-        mocked_mqtt_publish.assert_awaited()
+        # `assert_awaited` does not exist in Python before `3.8`
+        if sys.version_info >= (3, 8):
+            mocked_mqtt_publish.assert_awaited()
+        else:
+            mocked_mqtt_publish.assert_called()
 
     # Ensure broadcast loop is still functional and can deliver the message
     await _client_publish(topic, data, qos)
