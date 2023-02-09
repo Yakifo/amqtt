@@ -68,7 +68,7 @@ From there the goal is to fix outstanding known issues and clean up the code.
 +----------+---------------------------+----------------------------+--------------+
 | 0.10.x   | YES - Drop-in Replacement | 3.7*                       | 0.10.1       |
 +----------+---------------------------+----------------------------+--------------+
-| 0.11.x   | NO - Module renamed       | 3.8 - 3.10                 | No release   |
+| 0.11.x   | NO - Module renamed       | 3.7 - 3.10                 | No release   |
 |          | and small API differences |                            | yet          |
 +----------+---------------------------+----------------------------+--------------+
 
