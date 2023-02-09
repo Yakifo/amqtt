@@ -5,7 +5,7 @@ Changelog
 -----------------
  * removed hbmqtt compatibility, importing amqtt is now mandatory
  * removed loop parameter from all functions
- * Python 3.8 to 3.10 compatibility
+ * Python 3.7 to 3.10 compatibility
  * Fixed a major bug in plugin api, see https://github.com/Yakifo/amqtt/pull/92
  * Fixed a major bug due to CancelledError semantics changed in Python 3.8, see https://github.com/Yakifo/amqtt/pull/134
 
