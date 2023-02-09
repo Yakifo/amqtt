@@ -886,7 +886,7 @@ class Broker:
                             "Task failed and will be skipped: %s", task
                         )
 
-                run_broadcast_task = self._run_broadcast(running_tasks)
+                run_broadcast_task = asyncio.Task(self._run_broadcast(running_tasks))
 
                 completed, _ = await asyncio.wait(
                     [run_broadcast_task, self._broadcast_shutdown_waiter],
@@ -896,6 +896,7 @@ class Broker:
                 # Shutdown has been triggered by the broker
                 # So stop the loop execution
                 if self._broadcast_shutdown_waiter in completed:
+                    run_broadcast_task.cancel()
                     break
 
         except BaseException:
