@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "amqtt"
-version = "0.10.0"
+version = "0.11.0-beta1"
 description = "MQTT client/broker using Python asyncio"
 authors = ["aMQTT Contributers"]
 license = "MIT"
