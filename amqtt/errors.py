@@ -13,7 +13,7 @@ class AMQTTException(Exception):
 
 class MQTTException(Exception):
     """
-    Base class for all errors refering to MQTT specifications
+    Base class for all errors referring to MQTT specifications
     """
 
     pass
