@@ -353,8 +353,7 @@ class ProtocolHandler:
                 waiter = asyncio.Future()
                 self._pubrec_waiters[app_message.packet_id] = waiter
                 try:
-                    await waiter
-                    app_message.pubrec_packet = waiter.result()
+                    app_message.pubrec_packet = await waiter
                 finally:
                     self._pubrec_waiters.pop(app_message.packet_id, None)
                     self.session.inflight_out.pop(app_message.packet_id, None)
