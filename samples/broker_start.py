@@ -11,13 +11,8 @@ config = {
             "type": "tcp",
             "bind": "0.0.0.0:1883",
         },
-        "ws-mqtt": {
-            "bind": "127.0.0.1:8080",
-            "type": "ws",
-            "max_connections": 10,
-        },
     },
-    "sys_interval": 10,
+    "sys_interval": 6000,
     "auth": {
         "allow-anonymous": True,
         "password-file": os.path.join(
@@ -25,7 +20,15 @@ config = {
         ),
         "plugins": ["auth_file", "auth_anonymous"],
     },
-    "topic-check": {"enabled": False},
+    "topic-check": {
+        "enabled": True,
+        "plugins": ["topic_acl"] ,
+        "acl": {
+            "test": ["a/#"],
+            "testpub1": ["a/b"],
+            "anonymous":["#"]
+            },
+    },
 }
 
 broker = Broker(config)
@@ -40,6 +43,7 @@ async def test_coro():
 if __name__ == "__main__":
     formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
     # formatter = "%(asctime)s :: %(levelname)s :: %(message)s"
-    logging.basicConfig(level=logging.INFO, format=formatter)
+    #logging.basicConfig(level=logging.INFO, format=formatter)
+    logging.basicConfig(level=logging.DEBUG, format=formatter)
     asyncio.get_event_loop().run_until_complete(test_coro())
     asyncio.get_event_loop().run_forever()
