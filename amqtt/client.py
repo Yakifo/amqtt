@@ -505,7 +505,7 @@ class MQTTClient:
         self._connected_state.clear()
 
         # stop an clean handler
-        # await self._handler.stop()
+        await self._handler.stop()
         self._handler.detach()
         self.session.transitions.disconnect()
 
