@@ -6,6 +6,9 @@ from amqtt.client import MQTTClient, ClientException
 from amqtt.mqtt.constants import QOS_1
 import mysql.connector 
 from mysql.connector import errorcode
+from datetime import date
+import datetime
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +45,41 @@ def startBroker():
     yield from broker.start()
 
 
+def pushDataTodatabase(cli_id, topic, mesg, recevied_at):
+
+    mydb = mysql.connector.connect(
+                host="127.0.0.1",
+                user="root",
+                password=""
+            )
+
+    mycursor = mydb.cursor()
+
+    mycursor.execute("USE {}".format("deneme"))
+
+    print("*************date", recevied_at, str(recevied_at))
+
+    ts = time.time()
+
+    str_time = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
+    print("**********************", str_time)
+
+    sql_query = "INSERT INTO `incomingmessages`(`client_id`, `topic`, `message`, `received_date`) VALUES (%s, %s, %s, %s)"
+    val = (cli_id, topic, mesg, str_time)
+
+    print("Trying to push data to table \"incomingmessages\"")
+    try:
+        mycursor.execute(sql_query, val)
+        mydb.commit()
+
+    except mysql.connector.Error as err:
+
+        #if-else unique to some errors can be added
+
+        print("Failed pushing data: {}".format(err))
+
+
 @asyncio.coroutine
 def connectToDatabaseAndAddTable():
     print("in connectToDatabaseAndAddTable")
@@ -69,7 +107,7 @@ def connectToDatabaseAndAddTable():
             TABLES = {}
             TABLES['incomingmessages'] = (
                 "CREATE TABLE `incomingmessages` ("
-                "  `client_id` int(20) NOT NULL,"
+                "  `client_id` varchar(20) NOT NULL,"
                 "  `topic` varchar(50) NOT NULL,"
                 "  `message` varchar(100) NOT NULL,"
                 "  `received_date` date NOT NULL,"
@@ -79,13 +117,27 @@ def connectToDatabaseAndAddTable():
             for table_name in TABLES:
                 table_description = TABLES[table_name]
                 
+                print("Tryeing to create table {}: ".format(table_name), end='')
                 try:
-                    print("Creating table {}: ".format(table_name), end='')
                     mycursor.execute(table_description)
 
                 except mysql.connector.Error as err:
                     if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                        print("already exists.")
+                        print("table already exists.")
+
+
+
+                        #calling push data for demo purposes
+
+                        today = date.today()
+                        print("will call push data")
+                        try:
+                            pushDataTodatabase("dummy2", "topic/subtopic", "dummy message", today)
+                            pushDataTodatabase("dummy3", "topic/subtopic", "dummy message", today)
+                            pushDataTodatabase("dummy4", "topic/subtopic", "dummy message", today)
+                        except Exception as exc:
+                            print("exception trhown when pushing dummy data to database")
+                            print(exc.args)
                     else:
                         print(err.msg)
                 else:
@@ -94,38 +146,6 @@ def connectToDatabaseAndAddTable():
         else:
             print("Failed creating database: {}".format(err))
             exit(1)
-
-
-@asyncio.coroutine
-def pushDataTodatabase(cli_id, topic, mesg, recevied_at):
-
-    mydb = mysql.connector.connect(
-                host="127.0.0.1",
-                user="root",
-                password=""
-            )
-
-    mycursor = mydb.cursor()
-
-    mycursor.execute("USE {}".format("deneme"))
-
-    sql_query = ""
-
-    try:
-        print("Pushing data to table \"incomingmessages\"")
-        mycursor.execute(sql_query)
-
-    except mysql.connector.Error as err:
-
-        #if-else unique to some errors can be added
-
-        print("Failed pushing data: {}".format(err))
-    else:
-        print("pushed to table succesfully")
-
-
-
-
 
 @asyncio.coroutine
 def brokerGetMessage(): #for getting message from publisher
