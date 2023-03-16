@@ -5,6 +5,7 @@ from amqtt.broker import Broker
 from amqtt.client import MQTTClient, ClientException
 from amqtt.mqtt.constants import QOS_1
 import mysql.connector 
+from mysql.connector import errorcode
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +37,65 @@ config = {
 
 broker = Broker(config)  
 
-
 @asyncio.coroutine
 def startBroker():
     yield from broker.start()
+
+
+@asyncio.coroutine
+def connectToDatabaseAndAddTable():
+    print("in connectToDatabaseAndAddTable")
+
+    mydb = mysql.connector.connect(
+                host="127.0.0.1",
+                user="root",
+                password=""
+            )
+
+    mycursor = mydb.cursor()
+
+    try:
+        mycursor.execute("create database deneme")
+    except mysql.connector.Error as err:
+
+        if err.errno == errorcode.ER_DB_CREATE_EXISTS:
+            print("database already exists.")
+
+            try:
+                mycursor.execute("USE {}".format("deneme"))
+            except Exception as e:
+                print(e.args)
+
+            TABLES = {}
+            TABLES['incomingmessages'] = (
+                "CREATE TABLE `incomingmessages` ("
+                "  `client_id` int(20) NOT NULL,"
+                "  `topic` varchar(50) NOT NULL,"
+                "  `message` varchar(100) NOT NULL,"
+                "  `received_date` date NOT NULL,"
+                "  PRIMARY KEY (`client_id`,`received_date`)"
+                ") ENGINE=InnoDB")
+            
+            for table_name in TABLES:
+                table_description = TABLES[table_name]
+                
+                try:
+                    print("Creating table {}: ".format(table_name), end='')
+                    mycursor.execute(table_description)
+
+                except mysql.connector.Error as err:
+                    if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
+                        print("already exists.")
+                    else:
+                        print(err.msg)
+                else:
+                    print("OK")
+
+        else:
+            print("Failed creating database: {}".format(err))
+            exit(1)
+
+
 
 @asyncio.coroutine
 def brokerGetMessage(): #for getting message from publisher
@@ -60,10 +116,12 @@ def brokerGetMessage(): #for getting message from publisher
                 password=""
             )
             mycursor = mydb.cursor()
-            sql = '''insert into mqttpy (message) values (%s)'''
-            val = str(packet.payload.data.decode('utf-8'))
-            mycursor.execute("create database deneme")
-            print("database created")
+            #sql = '''insert into mqttpy (message) values (%s)'''
+            #val = str(packet.payload.data.decode('utf-8'))
+            
+            #mycursor.execute("create database deneme")
+            #print("database created")
+            
             #mydb.commit()
             #print(mydb.rowcount, 'Data saved!')
     except ClientException as ce:
@@ -75,5 +133,6 @@ if __name__ == "__main__":   #it means when this broker_start.py executed, it wi
     #logging.basicConfig(level=logging.INFO, format=formatter)
     logging.basicConfig(level=logging.INFO, format=formatter)
     asyncio.get_event_loop().run_until_complete(startBroker())
+    asyncio.get_event_loop().run_until_complete(connectToDatabaseAndAddTable())
     asyncio.get_event_loop().run_until_complete(brokerGetMessage())
     asyncio.get_event_loop().run_forever()
