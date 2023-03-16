@@ -96,6 +96,36 @@ def connectToDatabaseAndAddTable():
             exit(1)
 
 
+@asyncio.coroutine
+def pushDataTodatabase(cli_id, topic, mesg, recevied_at):
+
+    mydb = mysql.connector.connect(
+                host="127.0.0.1",
+                user="root",
+                password=""
+            )
+
+    mycursor = mydb.cursor()
+
+    mycursor.execute("USE {}".format("deneme"))
+
+    sql_query = ""
+
+    try:
+        print("Pushing data to table \"incomingmessages\"")
+        mycursor.execute(sql_query)
+
+    except mysql.connector.Error as err:
+
+        #if-else unique to some errors can be added
+
+        print("Failed pushing data: {}".format(err))
+    else:
+        print("pushed to table succesfully")
+
+
+
+
 
 @asyncio.coroutine
 def brokerGetMessage(): #for getting message from publisher
@@ -108,7 +138,9 @@ def brokerGetMessage(): #for getting message from publisher
     try:
         for i in range(1,100):
             message = yield from C.deliver_message()
+
             packet = message.publish_packet
+            print(packet, "packet var")
             print(packet.payload.data.decode('utf-8'))
             mydb = mysql.connector.connect(
                 host="127.0.0.1",
@@ -124,6 +156,8 @@ def brokerGetMessage(): #for getting message from publisher
             
             #mydb.commit()
             #print(mydb.rowcount, 'Data saved!')
+
+            #add a way to access the client id
     except ClientException as ce:
         logger.error("Client exception : %s" % ce)
 
