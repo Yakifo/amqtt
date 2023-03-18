@@ -42,15 +42,15 @@ class MQTTFixedHeader:
         self.remaining_length = length
         self.flags = flags
 
-    def to_bytes(self):
+    def to_bytes(self):      #Burcu: Send edilecek fixed headerı oluşturuyor
         def encode_remaining_length(length: int):
             encoded = bytearray()
             while True:
-                length_byte = length % 0x80
-                length //= 0x80
+                length_byte = length % 0x80  #Burcu:  0x80 = 128  Length'i 128'e bölerek ilk 7 biti alıyor. 0-127 arası bir sayı elde ediyor
+                length //= 0x80              #Burcu: floor division yaparak bir sonraki byte'larda olacak sayıyı elde ediyor
                 if length > 0:
-                    length_byte |= 0x80
-                encoded.append(length_byte)
+                    length_byte |= 0x80      #Burcu: length 0'dan büyükse bir sonraki byte da var demek bu yüzden bunu belirtmek için 7.biti 1 yapıyor
+                encoded.append(length_byte) 
                 if length <= 0:
                     break
             return encoded
@@ -58,27 +58,28 @@ class MQTTFixedHeader:
         out = bytearray()
         packet_type = 0
         try:
-            packet_type = (self.packet_type << 4) | self.flags
-            out.append(packet_type)
+            packet_type = (self.packet_type << 4) | self.flags      #Burcu: packet_type ile 4 bit olduğu için sola shift edip sona 4 bit olan flagı ekliyor.
+            out.append(packet_type) 
         except OverflowError:
             raise CodecException(
                 "packet_type encoding exceed 1 byte length: value=%d", packet_type
             )
 
         encoded_length = encode_remaining_length(self.remaining_length)
-        out.extend(encoded_length)
+        out.extend(encoded_length) 
+        #Burcu: out byte array'inin 1.byte'dan remaining length geliyor. Remaining length en fazla 4 byte olabilir
 
         return out
 
     async def to_stream(self, writer: WriterAdapter):
-        writer.write(self.to_bytes())
+        writer.write(self.to_bytes()) #Burcu: out byte array'ini protocol layer'a write ediyor
 
     @property
     def bytes_length(self):
-        return len(self.to_bytes())
+        return len(self.to_bytes())  #Burcu: out byte array'inin length'i
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter):
+    async def from_stream(cls, reader: ReaderAdapter): #Burcu: Received edilen fixed headerın bilgilerini öğreniyor
         """
         Read and decode MQTT message fixed header from stream
         :return: FixedHeader instance
@@ -96,11 +97,11 @@ class MQTTFixedHeader:
                 encoded_byte = await reader.read(1)
                 int_byte = unpack("!B", encoded_byte)
                 buffer.append(int_byte[0])
-                value += (int_byte[0] & 0x7F) * multiplier
-                if (int_byte[0] & 0x80) == 0:
+                value += (int_byte[0] & 0x7F) * multiplier  #Burcu: 0x7F ile and yaparak 7.biti sıfırlıyor. 
+                if (int_byte[0] & 0x80) == 0: #Burcu: 7.bit sıfır mı diye kontrol ediyor
                     break
                 else:
-                    multiplier *= 128
+                    multiplier *= 128 
                     if multiplier > 128 * 128 * 128:
                         raise MQTTException(
                             "Invalid remaining length bytes:%s, packet_type=%d"
@@ -111,8 +112,8 @@ class MQTTFixedHeader:
         try:
             byte1 = await read_or_raise(reader, 1)
             int1 = unpack("!B", byte1)
-            msg_type = (int1[0] & 0xF0) >> 4
-            flags = int1[0] & 0x0F
+            msg_type = (int1[0] & 0xF0) >> 4 #Burcu: Son dört biti sıfırlayıp ilk dört bite shift ediyor 
+            flags = int1[0] & 0x0F  #Burcu: İlk dört biti sıfırlıyor
             remain_length = await decode_remaining_length()
 
             return cls(msg_type, flags, remain_length)
@@ -219,7 +220,7 @@ class MQTTPacket:
         await writer.drain()
         self.protocol_ts = datetime.now()
 
-    def to_bytes(self) -> bytes:
+    def to_bytes(self) -> bytes:   #Burcu: gönderilecek paketin tamamının yapısını oluşturup return ediyor
         if self.variable_header:
             variable_header_bytes = self.variable_header.to_bytes()
         else:
@@ -241,7 +242,7 @@ class MQTTPacket:
     @classmethod
     async def from_stream(
         cls, reader: ReaderAdapter, fixed_header=None, variable_header=None
-    ):
+    ):      #Burcu: receive edilen paketin tamamının yapısını öğreniyor
         if fixed_header is None:
             fixed_header = await cls.FIXED_HEADER.from_stream(reader)
         if cls.VARIABLE_HEADER:
@@ -269,7 +270,7 @@ class MQTTPacket:
 
     @property
     def bytes_length(self):
-        return len(self.to_bytes())
+        return len(self.to_bytes())  
 
     def __repr__(self):
         return type(

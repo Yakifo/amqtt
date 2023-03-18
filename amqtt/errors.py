@@ -30,6 +30,8 @@ class CodecException(Exception):
 class NoDataException(Exception):
     """
     Exceptions thrown by packet encode/decode functions
+    
+    Burcu: NoDataException is raised if read gives no data
     """
 
     pass
