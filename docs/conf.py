@@ -23,17 +23,26 @@ import os
 # If your documentation needs a minimal Sphinx version, state it here.
 # needs_sphinx = '1.0'
 
+# Burcu- note for sphinx: Sphinx is a documentation generator or a tool that translates a set of plain 
+#       text source files into various output formats, automatically producing cross-references, indices, etc. 
+#       That is, if you have a directory containing a bunch of reStructuredText or Markdown documents, 
+#       Sphinx can generate a series of HTML files, a PDF file (via LaTeX), man pages and much more.
+
+
+# Burcu - documentation for sphinx: https://developer.ibm.com/articles/os-sphinx-documentation/
+#                                   https://www.sphinx-doc.org/en/master/index.html
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.doctest",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.todo",
-    "sphinx.ext.coverage",
-    "sphinx.ext.ifconfig",
-    "sphinx.ext.viewcode",
+    "sphinx.ext.autodoc",           #Burcu: Include documentation from docstrings
+    "sphinx.ext.doctest",           #Burcu: Test snippets in the documentation
+    "sphinx.ext.intersphinx",       #Burcu: Link to other projects’ documentation
+    "sphinx.ext.todo",              #Burcu: Support for todo items
+    "sphinx.ext.coverage",          #Burcu: Collect doc coverage stats
+    "sphinx.ext.ifconfig",          #Burcu: Include content based on configuration
+    "sphinx.ext.viewcode",          #Burcu: Add links to highlighted source code
 ]
 
 # Add any paths that contain templates here, relative to this directory.
