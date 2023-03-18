@@ -104,7 +104,7 @@ This example also shows to method for publishing message asynchronously.
         asyncio.get_event_loop().run_until_complete(test_coro())
         asyncio.get_event_loop().run_until_complete(test_coro2())
 
-As usual, the script runs the publish code through the async loop. ``test_coro()`` and ``test_coro()`` are ran in sequence.
+As usual, the script runs the publish code through the async loop. ``test_coro()`` and ``test_coro2()`` are ran in sequence.
 Both do the same job. ``test_coro()`` publish 3 messages in sequence. ``test_coro2()`` publishes the same message asynchronously.
 The difference appears the looking at the sequence of MQTT messages sent.
 
