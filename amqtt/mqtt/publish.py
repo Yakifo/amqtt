@@ -32,6 +32,7 @@ class PublishVariableHeader(MQTTVariableHeader):
             self.topic_name, self.packet_id
         )
 
+
     def to_bytes(self):
         out = bytearray()
         out.extend(encode_string(self.topic_name))
@@ -89,9 +90,9 @@ class PublishPacket(MQTTPacket):
     VARIABLE_HEADER = PublishVariableHeader
     PAYLOAD = PublishPayload
 
-    DUP_FLAG = 0x08
-    RETAIN_FLAG = 0x01
-    QOS_FLAG = 0x06
+    DUP_FLAG = 0x08     #Burcu: Dub flag sağdan 3.bitte bulunuyor
+    RETAIN_FLAG = 0x01  #Burcu: Retain flag 0.bitte bulunuyor
+    QOS_FLAG = 0x06     #Burcu: QOS, 1 ve 2.bitlerde bulunuyor.
 
     def __init__(
         self,
@@ -132,18 +133,22 @@ class PublishPacket(MQTTPacket):
 
     @property
     def dup_flag(self) -> bool:
+        #Burcu: receive edilen paketin fixed header'ındaki dub flag değerini öğreniyor
         return self._get_header_flag(self.DUP_FLAG)
 
     @dup_flag.setter
-    def dup_flag(self, val: bool):
+    def dup_flag(self, val: bool):               
+        #Burcu: val True iken dub flag'i 1 yapıyor. val False iken dub Flag'i sıfırlıyor
         self._set_header_flag(val, self.DUP_FLAG)
 
     @property
     def retain_flag(self) -> bool:
+        #Burcu: receive edilen paketin fixed header'ındaki retain flag değerini öğreniyor
         return self._get_header_flag(self.RETAIN_FLAG)
 
     @retain_flag.setter
     def retain_flag(self, val: bool):
+        #Burcu: val True iken retain flag'i 1 yapıyor. val False iken retain Flag'i sıfırlıyor
         self._set_header_flag(val, self.RETAIN_FLAG)
 
     @property
@@ -152,8 +157,8 @@ class PublishPacket(MQTTPacket):
 
     @qos.setter
     def qos(self, val: int):
-        self.fixed_header.flags &= 0xF9
-        self.fixed_header.flags |= val << 1
+        self.fixed_header.flags &= 0xF9   #Burcu: 1. ve 2.bitleri sıfırlıyor
+        self.fixed_header.flags |= val << 1   #Burcu: val'u 1 bit sola shift edip OR ile headerdaki qos flagını set ediyor
 
     @property
     def packet_id(self):
