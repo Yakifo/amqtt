@@ -8,3 +8,5 @@ encapsulate gerekmeyen packetler için de dummy bytelar yazılabilir striplenece
 https://scapy.readthedocs.io/en/latest/introduction.html -can be used for encapsulation?
 https://www.techtarget.com/searchnetworking/tip/Intro-to-encapsulation-and-decapsulation-in-networking#:~:text=What%20is%20encapsulation%3F,referred%20to%20as%20the%20payload.
 -some definitions, might be used later on
+
+https://github.com/reverseame/chiton -this repo can be used for encapsulation maybe
