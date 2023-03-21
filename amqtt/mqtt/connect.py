@@ -115,7 +115,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
         self.flags |= val << 3
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):
+    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):    ###can be added here
         #  protocol name
         protocol_name = await decode_string(reader)
 

@@ -72,7 +72,7 @@ def _get_extra_headers(arguments):
         return {}
 
 
-def _get_message(arguments):
+def _get_message(arguments): ####### might be needed
     if arguments["-n"]:
         yield b""
     if arguments["-m"]:

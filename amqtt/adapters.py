@@ -9,7 +9,7 @@ from asyncio import StreamReader, StreamWriter
 import logging
 
 
-class ReaderAdapter:
+class ReaderAdapter: ####### might be needed later on
     """
     Base class for all network protocol reader adapter.
 
