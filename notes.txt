@@ -1,0 +1,10 @@
+daha sonrasında encapsulation gerekecek, encapsulate edeceğimiz kısımı kullanılmayan bir flag kodunu encapsulatei açmak için setleyebiliriz
+daha sonra bir pakette encapsulate olup olmadığını anlamak için bu flag kodu var mı diye konrtol edilebilir
+eğer yoksa normal paket gibi davranılabilir
+
+diğer bir seçenek her şeyi encapsulate etmek
+encapsulate gerekmeyen packetler için de dummy bytelar yazılabilir striplenecek kısıma
+
+https://scapy.readthedocs.io/en/latest/introduction.html -can be used for encapsulation?
+https://www.techtarget.com/searchnetworking/tip/Intro-to-encapsulation-and-decapsulation-in-networking#:~:text=What%20is%20encapsulation%3F,referred%20to%20as%20the%20payload.
+-some definitions, might be used later on
