@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\USER\Documents\spring_2023\ens492\github-forks\amqt-broker\myenv"
+VIRTUAL_ENV="C:\Users\USER\Documents\spring_2023\ens492\github-forks\amqt-broker\amqt-broker\bilgesuenv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
@@ -54,7 +54,7 @@ fi
 
 if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT:-}" ] ; then
     _OLD_VIRTUAL_PS1="${PS1:-}"
-    PS1="(myenv) ${PS1:-}"
+    PS1="(bilgesuenv) ${PS1:-}"
     export PS1
 fi
 
