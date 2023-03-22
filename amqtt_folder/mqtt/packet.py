@@ -1,0 +1,280 @@
+# Copyright (c) 2015 Nicolas JOUANIN
+#
+# See the file license.txt for copying permission.
+import asyncio
+
+from amqtt.codecs import (
+    bytes_to_hex_str,
+    decode_packet_id,
+    int_to_bytes,
+    read_or_raise,
+)
+from amqtt.errors import CodecException, MQTTException, NoDataException
+from amqtt.adapters import ReaderAdapter, WriterAdapter
+from datetime import datetime
+from struct import unpack
+
+
+RESERVED_0 = 0x00
+CONNECT = 0x01
+CONNACK = 0x02
+PUBLISH = 0x03
+PUBACK = 0x04
+PUBREC = 0x05
+PUBREL = 0x06
+PUBCOMP = 0x07
+SUBSCRIBE = 0x08
+SUBACK = 0x09
+UNSUBSCRIBE = 0x0A
+UNSUBACK = 0x0B
+PINGREQ = 0x0C
+PINGRESP = 0x0D
+DISCONNECT = 0x0E
+RESERVED_15 = 0x0F
+
+
+class MQTTFixedHeader:
+
+    __slots__ = ("packet_type", "remaining_length", "flags")
+
+    def __init__(self, packet_type, flags=0, length=0):
+        self.packet_type = packet_type
+        self.remaining_length = length
+        self.flags = flags
+
+    def to_bytes(self):      #Burcu: Send edilecek fixed headerı oluşturuyor
+        def encode_remaining_length(length: int):
+            encoded = bytearray()
+            while True:
+                length_byte = length % 0x80  #Burcu:  0x80 = 128  Length'i 128'e bölerek ilk 7 biti alıyor. 0-127 arası bir sayı elde ediyor
+                length //= 0x80              #Burcu: floor division yaparak bir sonraki byte'larda olacak sayıyı elde ediyor
+                if length > 0:
+                    length_byte |= 0x80      #Burcu: length 0'dan büyükse bir sonraki byte da var demek bu yüzden bunu belirtmek için 7.biti 1 yapıyor
+                encoded.append(length_byte) 
+                if length <= 0:
+                    break
+            return encoded
+
+        out = bytearray()
+        packet_type = 0
+        try:
+            packet_type = (self.packet_type << 4) | self.flags      #Burcu: packet_type ile 4 bit olduğu için sola shift edip sona 4 bit olan flagı ekliyor.
+            out.append(packet_type) 
+        except OverflowError:
+            raise CodecException(
+                "packet_type encoding exceed 1 byte length: value=%d", packet_type
+            )
+
+        encoded_length = encode_remaining_length(self.remaining_length)
+        out.extend(encoded_length) 
+        #Burcu: out byte array'inin 1.byte'dan remaining length geliyor. Remaining length en fazla 4 byte olabilir
+
+        return out
+
+    async def to_stream(self, writer: WriterAdapter):
+        writer.write(self.to_bytes()) #Burcu: out byte array'ini protocol layer'a write ediyor
+
+    @property
+    def bytes_length(self):
+        return len(self.to_bytes())  #Burcu: out byte array'inin length'i
+
+    @classmethod
+    async def from_stream(cls, reader: ReaderAdapter): #Burcu: Received edilen fixed headerın bilgilerini öğreniyor
+        """
+        Read and decode MQTT message fixed header from stream
+        :return: FixedHeader instance
+        """
+
+        async def decode_remaining_length():
+            """
+            Decode message length according to MQTT specifications
+            :return:
+            """
+            multiplier = 1
+            value = 0
+            buffer = bytearray()
+            while True:
+                encoded_byte = await reader.read(1)
+                int_byte = unpack("!B", encoded_byte)
+                buffer.append(int_byte[0])
+                value += (int_byte[0] & 0x7F) * multiplier  #Burcu: 0x7F ile and yaparak 7.biti sıfırlıyor. 
+                if (int_byte[0] & 0x80) == 0: #Burcu: 7.bit sıfır mı diye kontrol ediyor
+                    break
+                else:
+                    multiplier *= 128 
+                    if multiplier > 128 * 128 * 128:
+                        raise MQTTException(
+                            "Invalid remaining length bytes:%s, packet_type=%d"
+                            % (bytes_to_hex_str(buffer), msg_type)
+                        )
+            return value
+
+        try:
+            byte1 = await read_or_raise(reader, 1)
+            int1 = unpack("!B", byte1)
+            msg_type = (int1[0] & 0xF0) >> 4 #Burcu: Son dört biti sıfırlayıp ilk dört bite shift ediyor 
+            flags = int1[0] & 0x0F  #Burcu: İlk dört biti sıfırlıyor
+            remain_length = await decode_remaining_length()
+
+            return cls(msg_type, flags, remain_length)
+        except NoDataException:
+            return None
+
+    def __repr__(self):
+        return type(self).__name__ + "(length={}, flags={})".format(
+            self.remaining_length, hex(self.flags)
+        )
+
+
+class MQTTVariableHeader:
+    def __init__(self):
+        pass
+
+    async def to_stream(self, writer: asyncio.StreamWriter):
+        writer.write(self.to_bytes())
+        await writer.drain()
+
+    def to_bytes(self) -> bytes:
+        """
+        Serialize header data to a byte array conforming to MQTT protocol
+        :return: serialized data
+        """
+
+    @property
+    def bytes_length(self):
+        return len(self.to_bytes())
+
+    @classmethod
+    async def from_stream(
+        cls, reader: asyncio.StreamReader, fixed_header: MQTTFixedHeader
+    ):
+        pass
+
+
+class PacketIdVariableHeader(MQTTVariableHeader):
+
+    __slots__ = ("packet_id",)
+
+    def __init__(self, packet_id):
+        super().__init__()
+        self.packet_id = packet_id
+
+    def to_bytes(self):
+        out = b""
+        out += int_to_bytes(self.packet_id, 2)
+        return out
+
+    @classmethod
+    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):
+        packet_id = await decode_packet_id(reader)
+        return cls(packet_id)
+
+    def __repr__(self):
+        return type(self).__name__ + f"(packet_id={self.packet_id})"
+
+
+class MQTTPayload:
+    def __init__(self):
+        pass
+
+    async def to_stream(self, writer: asyncio.StreamWriter):
+        writer.write(self.to_bytes())
+        await writer.drain()
+
+    def to_bytes(
+        self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
+    ):
+        pass
+
+    @classmethod
+    async def from_stream(
+        cls,
+        reader: asyncio.StreamReader,
+        fixed_header: MQTTFixedHeader,
+        variable_header: MQTTVariableHeader,
+    ):
+        pass
+
+
+class MQTTPacket:
+
+    __slots__ = ("fixed_header", "variable_header", "payload", "protocol_ts")
+
+    FIXED_HEADER = MQTTFixedHeader
+    VARIABLE_HEADER = None
+    PAYLOAD = None
+
+    def __init__(
+        self,
+        fixed: MQTTFixedHeader,
+        variable_header: MQTTVariableHeader = None,
+        payload: MQTTPayload = None,
+    ):
+        self.fixed_header = fixed
+        self.variable_header = variable_header
+        self.payload = payload
+        self.protocol_ts = None
+
+    async def to_stream(self, writer: asyncio.StreamWriter):
+        writer.write(self.to_bytes())
+        await writer.drain()
+        self.protocol_ts = datetime.now()
+
+    def to_bytes(self) -> bytes:   #Burcu: gönderilecek paketin tamamının yapısını oluşturup return ediyor
+        if self.variable_header:
+            variable_header_bytes = self.variable_header.to_bytes()
+        else:
+            variable_header_bytes = b""
+        if self.payload:
+            payload_bytes = self.payload.to_bytes(
+                self.fixed_header, self.variable_header
+            )
+        else:
+            payload_bytes = b""
+
+        self.fixed_header.remaining_length = len(variable_header_bytes) + len(
+            payload_bytes
+        )
+        fixed_header_bytes = self.fixed_header.to_bytes()
+
+        return fixed_header_bytes + variable_header_bytes + payload_bytes
+
+    @classmethod
+    async def from_stream(
+        cls, reader: ReaderAdapter, fixed_header=None, variable_header=None
+    ):      #Burcu: receive edilen paketin tamamının yapısını öğreniyor
+        if fixed_header is None:
+            fixed_header = await cls.FIXED_HEADER.from_stream(reader)
+        if cls.VARIABLE_HEADER:
+            if variable_header is None:
+                variable_header = await cls.VARIABLE_HEADER.from_stream(
+                    reader, fixed_header
+                )
+        else:
+            variable_header = None
+        if cls.PAYLOAD:
+            payload = await cls.PAYLOAD.from_stream(
+                reader, fixed_header, variable_header
+            )
+        else:
+            payload = None
+
+        if fixed_header and not variable_header and not payload:
+            instance = cls(fixed_header)
+        elif fixed_header and not payload:
+            instance = cls(fixed_header, variable_header)
+        else:
+            instance = cls(fixed_header, variable_header, payload)
+        instance.protocol_ts = datetime.now()
+        return instance
+
+    @property
+    def bytes_length(self):
+        return len(self.to_bytes())  
+
+    def __repr__(self):
+        return type(
+            self
+        ).__name__ + "(ts={!s}, fixed={!r}, variable={!r}, payload={!r})".format(
+            self.protocol_ts, self.fixed_header, self.variable_header, self.payload
+        )
