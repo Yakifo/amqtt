@@ -10,3 +10,13 @@ https://www.techtarget.com/searchnetworking/tip/Intro-to-encapsulation-and-decap
 -some definitions, might be used later on
 
 https://github.com/reverseame/chiton -this repo can be used for encapsulation maybe
+
+
+https://gchq.github.io/CyberChef/#recipe=Parse_X.509_certificate('PEM') -parse x509 certificate, we can use to double check if the certificates are in ocrrect form
+
+a class can be created
+client_id_unique, received_certificate, key_pairs, .......
+
+https://www.w3schools.com/python/python_classes.asp
+
+before sending to the database, we can look for some sql files to be parsed and to be inserted into the newly created table
