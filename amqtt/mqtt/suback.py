@@ -35,7 +35,8 @@ class SubackPayload(MQTTPayload):
     ):
         out = b""
         for return_code in self.return_codes:
-            out += int_to_bytes(return_code, 1)
+            out += int_to_bytes(return_code, 1)  
+            #Burcu: subscribe edilen her topic için return code'u out'a ekliyor
         return out
 
     @classmethod
@@ -49,9 +50,9 @@ class SubackPayload(MQTTPayload):
         bytes_to_read = fixed_header.remaining_length - variable_header.bytes_length
         for i in range(0, bytes_to_read):
             try:
-                return_code_byte = await read_or_raise(reader, 1)
-                return_code = bytes_to_int(return_code_byte)
-                return_codes.append(return_code)
+                return_code_byte = await read_or_raise(reader, 1) #Burcu: 1 byte okuyor
+                return_code = bytes_to_int(return_code_byte)  # Burcu: return code'u integer'a dönüştürüyor
+                return_codes.append(return_code) #Burcu:return code'u array'e ekliyor
             except NoDataException:
                 break
         return cls(return_codes)

@@ -34,8 +34,8 @@ class SubscribePayload(MQTTPayload):
     ):
         out = b""
         for topic in self.topics:
-            out += encode_string(topic[0])
-            out += int_to_bytes(topic[1], 1)
+            out += encode_string(topic[0])   #Burcu: başında 2 byte length information koyarak encode ediyor.
+            out += int_to_bytes(topic[1], 1) #Burcu: Sonuna o topic QOS'ını ekliyor
         return out
 
     @classmethod
@@ -50,11 +50,12 @@ class SubscribePayload(MQTTPayload):
         read_bytes = 0
         while read_bytes < payload_length:
             try:
-                topic = await decode_string(reader)
-                qos_byte = await read_or_raise(reader, 1)
+                topic = await decode_string(reader)  #Burcu: Subscribe edilen topicleri decode ediyor
+                qos_byte = await read_or_raise(reader, 1)   #Burcu: topic'in QoS levelini öğrenmek için 1 byte read ediyor.
                 qos = bytes_to_int(qos_byte)
-                topics.append((topic, qos))
-                read_bytes += 2 + len(topic.encode("utf-8")) + 1
+                topics.append((topic, qos)) #Burcu: topics arrayına tuple olarak ekliyor
+                read_bytes += 2 + len(topic.encode("utf-8")) + 1 
+                #Burcu: read_bytes length'i: 2 byte length information + topic names + 1 byte for QoS level 
             except NoDataException:
                 break
         return cls(topics)
