@@ -4,6 +4,7 @@
 import asyncio
 from struct import pack, unpack
 from amqtt.errors import NoDataException
+import random
 
 
 def bytes_to_hex_str(data):
@@ -138,3 +139,9 @@ def int_to_bytes_str(value: int) -> bytes:
     :return: bytes array
     """
     return str(value).encode("utf-8")
+
+
+def generate_nonce() -> str:
+    """Generate pseudorandom number."""
+    
+    return str(random.randint(0, 100000000))
