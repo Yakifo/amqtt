@@ -17,7 +17,9 @@ def cert_gen(
     #openssl x509 -inform pem -in selfsigned.crt -noout -text
     # create a key pair
     k = crypto.PKey()
+    print(k.bits)
     k.generate_key(crypto.TYPE_RSA, 4096)
+    print()
     # create a self-signed cert
 
 

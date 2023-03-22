@@ -1,31 +1,40 @@
 import socket
-import sys
-import selectors
-import types
+import amqtt.codecs as codecs
+
+HOST = "127.0.0.1"  # The server's hostname or IP address
+PORT = 65431  # The port used by the server
+
+CONNECT_FLAG = 16
+
+#print(b"Hello, world")
+#print(codecs.int_to_bytes(16, 1))
 
 
-#multiconn client
 
-HOST = "127.0.0.1"
-PORT = 1234 #random port
+'''bytesarray = bytearray(codecs.int_to_bytes(16, 1))
 
-sel = selectors.DefaultSelector()
-messages = [b"Message 1 from client.", b"Message 2 from client."]
+bytesarray.append(1)
+bytesarray.append(1)
 
-def start_connections(host, port, num_conns):
-    server_addr = (host, port)
-    for i in range(0, num_conns):
-        connid = i + 1
-        print(f"Starting connection {connid} to {server_addr}")
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setblocking(False)
-        sock.connect_ex(server_addr)
-        events = selectors.EVENT_READ | selectors.EVENT_WRITE
-        data = types.SimpleNamespace(
-            connid=connid,
-            msg_total=sum(len(m) for m in messages),
-            recv_total=0,
-            messages=messages.copy(),
-            outb=b"",
-        )
-        sel.register(sock, events, data=data)
+print(bytesarray)
+print(codecs.bytes_to_hex_str(bytesarray))'''
+
+
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((HOST, PORT))
+    print(b"Hello, world")
+    s.sendall(b"Hello, world")
+    s.sendall(b"Hello, world denemeeeeeee")
+    s.sendall(b"Hello, world 2")
+    data = s.recv(1024)
+
+print(f"Received {data!r}")
+
+def send_connect():
+    bytes_to_send = bytearray()
+
+    bytes_to_send.extend(codecs.int_to_bytes(CONNECT_FLAG))
+
+
+

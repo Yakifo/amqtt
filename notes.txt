@@ -20,3 +20,14 @@ client_id_unique, received_certificate, key_pairs, .......
 https://www.w3schools.com/python/python_classes.asp
 
 before sending to the database, we can look for some sql files to be parsed and to be inserted into the newly created table
+
+
+conenction bitince clientın olduğu row komple gidecek
+
+client_id subscriptions tablosu lazım
+
+
+
+broker.py 2333: brker starts to listen for connections
+
+broker.py 459 log added

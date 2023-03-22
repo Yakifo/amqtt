@@ -230,7 +230,7 @@ class Broker:
             trigger="start", source="stopped", dest="starting"
         )
 
-    async def start(self) -> None:
+    async def start(self) -> None: ############################################################################################
         """
         Start the broker to serve with the given configuration
 
@@ -400,7 +400,7 @@ class Broker:
 
         remote_address, remote_port = writer.get_peer_info()
         self.logger.info(
-            "Connection from %s:%d on listener '%s'"
+            "Connection from xxxxxxxxxxx %s:%d on listener '%s'"
             % (remote_address, remote_port, listener_name)
         )
 
@@ -444,7 +444,7 @@ class Broker:
             client_session.parent = 0
         else:
             # Get session from cache
-            if client_session.client_id in self._sessions:
+            if client_session.client_id in self._sessions:          ##############################################################
                 self.logger.debug(
                     "Found old session %s"
                     % repr(self._sessions[client_session.client_id])
@@ -453,6 +453,13 @@ class Broker:
                 client_session.parent = 1
             else:
                 client_session.parent = 0
+
+
+        #newly added
+        self.logger.debug("###########################################################HERE")
+        self.logger.debug("*******received or generated client id: " +  str(client_session.client_id) + "******")
+
+
         if client_session.keep_alive > 0:
             client_session.keep_alive += self.config["timeout-disconnect-delay"]
         self.logger.debug("Keep-alive timeout=%d" % client_session.keep_alive)
