@@ -8,10 +8,10 @@ import itertools
 import asyncio
 from asyncio import InvalidStateError
 
-from amqtt.mqtt import packet_class
-from amqtt.mqtt.connack import ConnackPacket
-from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.packet import (
+from amqtt_folder.mqtt import packet_class
+from amqtt_folder.mqtt.connack import ConnackPacket
+from amqtt_folder.mqtt.connect import ConnectPacket
+from amqtt_folder.mqtt.packet import (
     RESERVED_0,
     CONNECT,
     CONNACK,
@@ -30,29 +30,29 @@ from amqtt.mqtt.packet import (
     RESERVED_15,
     MQTTFixedHeader,
 )
-from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.pingreq import PingReqPacket
-from amqtt.mqtt.publish import PublishPacket
-from amqtt.mqtt.pubrel import PubrelPacket
-from amqtt.mqtt.puback import PubackPacket
-from amqtt.mqtt.pubrec import PubrecPacket
-from amqtt.mqtt.pubcomp import PubcompPacket
-from amqtt.mqtt.suback import SubackPacket
-from amqtt.mqtt.subscribe import SubscribePacket
-from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.mqtt.unsuback import UnsubackPacket
-from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.session import (
+from amqtt_folder.mqtt.pingresp import PingRespPacket
+from amqtt_folder.mqtt.pingreq import PingReqPacket
+from amqtt_folder.mqtt.publish import PublishPacket
+from amqtt_folder.mqtt.pubrel import PubrelPacket
+from amqtt_folder.mqtt.puback import PubackPacket
+from amqtt_folder.mqtt.pubrec import PubrecPacket
+from amqtt_folder.mqtt.pubcomp import PubcompPacket
+from amqtt_folder.mqtt.suback import SubackPacket
+from amqtt_folder.mqtt.subscribe import SubscribePacket
+from amqtt_folder.mqtt.unsubscribe import UnsubscribePacket
+from amqtt_folder.mqtt.unsuback import UnsubackPacket
+from amqtt_folder.mqtt.disconnect import DisconnectPacket
+from amqtt_folder.adapters import ReaderAdapter, WriterAdapter
+from amqtt_folder.session import (
     Session,
     OutgoingApplicationMessage,
     IncomingApplicationMessage,
     INCOMING,
     OUTGOING,
 )
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.plugins.manager import PluginManager
-from amqtt.errors import AMQTTException, MQTTException, NoDataException
+from amqtt_folder.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt_folder.plugins.manager import PluginManager
+from amqtt_folder.errors import AMQTTException, MQTTException, NoDataException
 
 
 EVENT_MQTT_PACKET_SENT = "mqtt_packet_sent"

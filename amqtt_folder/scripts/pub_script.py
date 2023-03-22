@@ -2,12 +2,12 @@
 #
 # See the file license.txt for copying permission.
 """
-amqtt_sub - MQTT 3.1.1 publisher
+amqtt_pub - MQTT 3.1.1 publisher
 
 Usage:
-    amqtt_sub --version
-    amqtt_sub (-h | --help)
-    amqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
+    amqtt_pub --version
+    amqtt_pub (-h | --help)
+    amqtt_pub --url BROKER_URL -t TOPIC (-f FILE | -l | -m MESSAGE | -n | -s) [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER] [-r]
 
 Options:
     -h --help           Show this screen.
@@ -15,9 +15,12 @@ Options:
     --url BROKER_URL    Broker connection URL (musr conform to MQTT URI scheme (see https://github.com/mqtt/mqtt.github.io/wiki/URI-Scheme>)
     -c CONFIG_FILE      Broker configuration file (YAML format)
     -i CLIENT_ID        Id to use as client ID.
-    -n COUNT            Number of messages to read before ending.
-    -q | --qos QOS      Quality of service desired to receive messages, from 0, 1 and 2. Defaults to 0.
-    -t TOPIC...         Topic filter to subcribe
+    -q | --qos QOS      Quality of service to use for the message, from 0, 1 and 2. Defaults to 0.
+    -r                  Set retain flag on connect
+    -t TOPIC            Message topic
+    -m MESSAGE          Message data to send
+    -f FILE             Read file by line and publish message for each line
+    -s                  Read from stdin and publish message for each line
     -k KEEP_ALIVE       Keep alive timeout in second
     --clean-session     Clean session on connect (defaults to False)
     --ca-file CAFILE]   CA file
@@ -37,12 +40,11 @@ import asyncio
 import os
 import json
 
-import amqtt
-from amqtt.client import MQTTClient, ConnectException
-from amqtt.errors import MQTTException
+import amqtt_folder
+from amqtt_folder.client import MQTTClient, ConnectException
 from docopt import docopt
-from amqtt.mqtt.constants import QOS_0
-from amqtt.utils import read_yaml_config
+from amqtt_folder.utils import read_yaml_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +55,14 @@ def _gen_client_id():
 
     pid = os.getpid()
     hostname = socket.gethostname()
-    return "amqtt_sub/%d-%s" % (pid, hostname)
+    return "amqtt_pub/%d-%s" % (pid, hostname)
 
 
 def _get_qos(arguments):
     try:
         return int(arguments["--qos"][0])
     except:
-        return QOS_0
+        return None
 
 
 def _get_extra_headers(arguments):
@@ -70,9 +72,39 @@ def _get_extra_headers(arguments):
         return {}
 
 
-async def do_sub(client, arguments):
+def _get_message(arguments): ####### might be needed
+    if arguments["-n"]:
+        yield b""
+    if arguments["-m"]:
+        yield arguments["-m"].encode(encoding="utf-8")
+    if arguments["-f"]:
+        try:
+            with open(arguments["-f"]) as f:
+                for line in f:
+                    yield line.encode(encoding="utf-8")
+        except:
+            logger.error("Failed to read file '%s'" % arguments["-f"])
+    if arguments["-l"]:
+        import sys
+
+        for line in sys.stdin:
+            if line:
+                yield line.encode(encoding="utf-8")
+    if arguments["-s"]:
+        import sys
+
+        message = bytearray()
+        for line in sys.stdin:
+            message.extend(line.encode(encoding="utf-8"))
+        yield message
+
+
+async def do_pub(client, arguments):
+    running_tasks = []
 
     try:
+        logger.info("%s Connecting to broker" % client.client_id)
+
         await client.connect(
             uri=arguments["--url"],
             cleansession=arguments["--clean-session"],
@@ -82,28 +114,19 @@ async def do_sub(client, arguments):
             extra_headers=_get_extra_headers(arguments),
         )
         qos = _get_qos(arguments)
-        filters = []
-        for topic in arguments["-t"]:
-            filters.append((topic, qos))
-        await client.subscribe(filters)
-        if arguments["-n"]:
-            max_count = int(arguments["-n"])
-        else:
-            max_count = None
-        count = 0
-        while True:
-            if max_count and count >= max_count:
-                break
-            try:
-                message = await client.deliver_message()
-                count += 1
-                sys.stdout.buffer.write(message.publish_packet.data)
-                sys.stdout.write("\n")
-            except MQTTException:
-                logger.debug("Error reading packet")
+        topic = arguments["-t"]
+        retain = arguments["-r"]
+        for message in _get_message(arguments):
+            logger.info("%s Publishing to '%s'" % (client.client_id, topic))
+            task = asyncio.ensure_future(client.publish(topic, message, qos, retain))
+            running_tasks.append(task)
+        if running_tasks:
+            await asyncio.wait(running_tasks)
         await client.disconnect()
+        logger.info("%s Disconnected from broker" % client.client_id)
     except KeyboardInterrupt:
         await client.disconnect()
+        logger.info("%s Disconnected from broker" % client.client_id)
     except ConnectException as ce:
         logger.fatal("connection to '%s' failed: %r" % (arguments["--url"], ce))
     except asyncio.CancelledError:
@@ -111,11 +134,12 @@ async def do_sub(client, arguments):
 
 
 def main(*args, **kwargs):
-    if sys.version_info[:2] < (3, 6):
-        logger.fatal("Error: Python 3.6+ is required")
+    if sys.version_info[:2] < (3, 7):
+        logger.fatal("Error: Python 3.7+ is required")
         sys.exit(-1)
 
-    arguments = docopt(__doc__, version=amqtt.__version__)
+    arguments = docopt(__doc__, version=amqtt_folder.__version__)
+    # print(arguments)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     if arguments["-d"]:
@@ -124,16 +148,10 @@ def main(*args, **kwargs):
         level = logging.INFO
     logging.basicConfig(level=level, format=formatter)
 
-    config = None
     if arguments["-c"]:
         config = read_yaml_config(arguments["-c"])
     else:
         config = read_yaml_config(
-            os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
-            )
-        )
-        logger.debug(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
             )
@@ -160,7 +178,7 @@ def main(*args, **kwargs):
         config["will"]["retain"] = arguments["--will-retain"]
 
     client = MQTTClient(client_id=client_id, config=config)
-    loop.run_until_complete(do_sub(client, arguments))
+    loop.run_until_complete(do_pub(client, arguments))
     loop.close()
 
 

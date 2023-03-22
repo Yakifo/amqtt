@@ -10,9 +10,9 @@ import shutil
 
 import pytest
 
-from amqtt.client import MQTTClient, ConnectException
-from amqtt.broker import Broker
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt_folder.client import MQTTClient, ConnectException
+from amqtt_folder.broker import Broker
+from amqtt_folder.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 formatter = (
     "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

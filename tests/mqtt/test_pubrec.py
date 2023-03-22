@@ -4,8 +4,8 @@
 import asyncio
 import unittest
 
-from amqtt.mqtt.pubrec import PubrecPacket, PacketIdVariableHeader
-from amqtt.adapters import BufferReader
+from amqtt_folder.mqtt.pubrec import PubrecPacket, PacketIdVariableHeader
+from amqtt_folder.adapters import BufferReader
 
 
 class PubrecPacketTest(unittest.TestCase):

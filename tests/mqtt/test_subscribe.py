@@ -4,10 +4,10 @@
 import asyncio
 import unittest
 
-from amqtt.mqtt.subscribe import SubscribePacket, SubscribePayload
-from amqtt.mqtt.packet import PacketIdVariableHeader
-from amqtt.mqtt.constants import QOS_1, QOS_2
-from amqtt.adapters import BufferReader
+from amqtt_folder.mqtt.subscribe import SubscribePacket, SubscribePayload
+from amqtt_folder.mqtt.packet import PacketIdVariableHeader
+from amqtt_folder.mqtt.constants import QOS_1, QOS_2
+from amqtt_folder.adapters import BufferReader
 
 
 class SubscribePacketTest(unittest.TestCase):

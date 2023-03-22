@@ -5,20 +5,20 @@ import unittest
 import asyncio
 import logging
 import random
-from amqtt.plugins.manager import PluginManager
-from amqtt.session import (
+from amqtt_folder.plugins.manager import PluginManager
+from amqtt_folder.session import (
     Session,
     OutgoingApplicationMessage,
     IncomingApplicationMessage,
 )
-from amqtt.mqtt.protocol.handler import ProtocolHandler
-from amqtt.adapters import StreamWriterAdapter, StreamReaderAdapter
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.publish import PublishPacket
-from amqtt.mqtt.puback import PubackPacket
-from amqtt.mqtt.pubrec import PubrecPacket
-from amqtt.mqtt.pubrel import PubrelPacket
-from amqtt.mqtt.pubcomp import PubcompPacket
+from amqtt_folder.mqtt.protocol.handler import ProtocolHandler
+from amqtt_folder.adapters import StreamWriterAdapter, StreamReaderAdapter
+from amqtt_folder.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt_folder.mqtt.publish import PublishPacket
+from amqtt_folder.mqtt.puback import PubackPacket
+from amqtt_folder.mqtt.pubrec import PubrecPacket
+from amqtt_folder.mqtt.pubrel import PubrelPacket
+from amqtt_folder.mqtt.pubcomp import PubcompPacket
 
 formatter = (
     "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

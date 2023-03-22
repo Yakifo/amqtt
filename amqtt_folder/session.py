@@ -4,8 +4,8 @@
 from transitions import Machine
 from asyncio import Queue
 from collections import OrderedDict
-from amqtt.mqtt.publish import PublishPacket
-from amqtt.errors import AMQTTException
+from amqtt_folder.mqtt.publish import PublishPacket
+from amqtt_folder.errors import AMQTTException
 
 OUTGOING = 0
 INCOMING = 1

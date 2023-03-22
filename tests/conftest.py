@@ -3,7 +3,7 @@ import os.path
 
 import pytest
 
-import amqtt.broker
+import amqtt_folder.broker
 
 pytest_plugins = ["pytest_logdog"]
 
@@ -52,7 +52,7 @@ async def broker(mock_plugin_manager):
     # just making sure the mock is in place before we start our broker
     assert mock_plugin_manager is not None
 
-    broker = amqtt.broker.Broker(test_config, plugin_namespace="amqtt.test.plugins")
+    broker = amqtt_folder.broker.Broker(test_config, plugin_namespace="amqtt.test.plugins")
     await broker.start()
     assert broker.transitions.is_started()
     assert broker._sessions == {}
@@ -66,7 +66,7 @@ async def broker(mock_plugin_manager):
 
 @pytest.fixture(scope="function")
 async def acl_broker():
-    broker = amqtt.broker.Broker(
+    broker = amqtt_folder.broker.Broker(
         test_config_acl, plugin_namespace="amqtt.broker.plugins"
     )
     await broker.start()

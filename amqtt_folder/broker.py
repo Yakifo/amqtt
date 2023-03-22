@@ -13,11 +13,11 @@ from enum import Enum
 
 from functools import partial
 from transitions import Machine, MachineError
-from amqtt.session import Session
-from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
-from amqtt.errors import AMQTTException, MQTTException, NoDataException
-from amqtt.utils import format_client_message, gen_client_id
-from amqtt.adapters import (
+from amqtt_folder.session import Session
+from amqtt_folder.mqtt.protocol.broker_handler import BrokerProtocolHandler
+from amqtt_folder.errors import AMQTTException, MQTTException, NoDataException
+from amqtt_folder.utils import format_client_message, gen_client_id
+from amqtt_folder.adapters import (
     StreamReaderAdapter,
     StreamWriterAdapter,
     ReaderAdapter,

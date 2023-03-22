@@ -7,8 +7,8 @@ import logging
 import os
 import asyncio
 import sqlite3
-from amqtt.plugins.manager import BaseContext
-from amqtt.plugins.persistence import SQLitePlugin
+from amqtt_folder.plugins.manager import BaseContext
+from amqtt_folder.plugins.persistence import SQLitePlugin
 
 formatter = (
     "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

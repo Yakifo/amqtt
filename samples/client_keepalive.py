@@ -1,7 +1,7 @@
 import logging
 import asyncio
 
-from amqtt.client import MQTTClient
+from amqtt_folder.client import MQTTClient
 
 
 #

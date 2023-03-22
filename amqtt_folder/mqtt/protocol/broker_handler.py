@@ -2,8 +2,8 @@
 #
 # See the file license.txt for copying permission.
 from asyncio import futures, Queue
-from amqtt.mqtt.protocol.handler import ProtocolHandler
-from amqtt.mqtt.connack import (
+from amqtt_folder.mqtt.protocol.handler import ProtocolHandler
+from amqtt_folder.mqtt.connack import (
     CONNECTION_ACCEPTED,
     UNACCEPTABLE_PROTOCOL_VERSION,
     IDENTIFIER_REJECTED,
@@ -11,18 +11,18 @@ from amqtt.mqtt.connack import (
     NOT_AUTHORIZED,
     ConnackPacket,
 )
-from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.pingreq import PingReqPacket
-from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.subscribe import SubscribePacket
-from amqtt.mqtt.suback import SubackPacket
-from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.mqtt.unsuback import UnsubackPacket
-from amqtt.utils import format_client_message
-from amqtt.session import Session
-from amqtt.plugins.manager import PluginManager
-from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.errors import MQTTException
+from amqtt_folder.mqtt.connect import ConnectPacket
+from amqtt_folder.mqtt.pingreq import PingReqPacket
+from amqtt_folder.mqtt.pingresp import PingRespPacket
+from amqtt_folder.mqtt.subscribe import SubscribePacket
+from amqtt_folder.mqtt.suback import SubackPacket
+from amqtt_folder.mqtt.unsubscribe import UnsubscribePacket
+from amqtt_folder.mqtt.unsuback import UnsubackPacket
+from amqtt_folder.utils import format_client_message
+from amqtt_folder.session import Session
+from amqtt_folder.plugins.manager import PluginManager
+from amqtt_folder.adapters import ReaderAdapter, WriterAdapter
+from amqtt_folder.errors import MQTTException
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
 

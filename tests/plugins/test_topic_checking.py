@@ -1,14 +1,14 @@
 import pytest
 import logging
 
-from amqtt.plugins.manager import BaseContext
-from amqtt.plugins.topic_checking import (
+from amqtt_folder.plugins.manager import BaseContext
+from amqtt_folder.plugins.topic_checking import (
     BaseTopicPlugin,
     TopicTabooPlugin,
     TopicAccessControlListPlugin,
     Action,
 )
-from amqtt.session import Session
+from amqtt_folder.session import Session
 
 
 # Base plug-in object

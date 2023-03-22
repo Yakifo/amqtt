@@ -11,7 +11,7 @@ import yaml
 import typing
 
 if typing.TYPE_CHECKING:
-    from amqtt.session import Session
+    from amqtt_folder.session import Session
 
 logger = logging.getLogger(__name__)
 

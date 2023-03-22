@@ -1,13 +1,13 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from amqtt.mqtt.packet import (
+from amqtt_folder.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     PUBACK,
     PacketIdVariableHeader,
 )
-from amqtt.errors import AMQTTException
+from amqtt_folder.errors import AMQTTException
 
 
 class PubackPacket(MQTTPacket):

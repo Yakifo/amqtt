@@ -21,10 +21,10 @@ import logging
 import asyncio
 import os
 
-import amqtt
-from amqtt.broker import Broker
+import amqtt_folder
+from amqtt_folder.broker import Broker
 from docopt import docopt
-from amqtt.utils import read_yaml_config
+from amqtt_folder.utils import read_yaml_config
 
 
 default_config = {
@@ -53,7 +53,7 @@ def main(*args, **kwargs):
         logger.fatal("Error: Python 3.7+ is required")
         sys.exit(-1)
 
-    arguments = docopt(__doc__, version=amqtt.__version__)
+    arguments = docopt(__doc__, version=amqtt_folder.__version__)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     if arguments["-d"]:

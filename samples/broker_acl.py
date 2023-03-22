@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import os
-from amqtt.broker import Broker
+from amqtt_folder.broker import Broker
 
 logger = logging.getLogger(__name__)
 

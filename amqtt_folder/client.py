@@ -9,18 +9,18 @@ import copy
 from urllib.parse import urlparse, urlunparse
 from functools import wraps
 
-from amqtt.session import Session
-from amqtt.mqtt.connack import CONNECTION_ACCEPTED
-from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
-from amqtt.adapters import (
+from amqtt_folder.session import Session
+from amqtt_folder.mqtt.connack import CONNECTION_ACCEPTED
+from amqtt_folder.mqtt.protocol.client_handler import ClientProtocolHandler
+from amqtt_folder.adapters import (
     StreamReaderAdapter,
     StreamWriterAdapter,
     WebSocketsReader,
     WebSocketsWriter,
 )
-from amqtt.plugins.manager import PluginManager, BaseContext
-from amqtt.mqtt.protocol.handler import ProtocolHandlerException
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt_folder.plugins.manager import PluginManager, BaseContext
+from amqtt_folder.mqtt.protocol.handler import ProtocolHandlerException
+from amqtt_folder.mqtt.constants import QOS_0, QOS_1, QOS_2
 import websockets
 from websockets import InvalidURI
 from websockets import InvalidHandshake
@@ -106,7 +106,7 @@ class MQTTClient:
         if client_id is not None:
             self.client_id = client_id
         else:
-            from amqtt.utils import gen_client_id
+            from amqtt_folder.utils import gen_client_id
 
             self.client_id = gen_client_id()
             self.logger.debug("Using generated client ID : %s" % self.client_id)

@@ -2,8 +2,8 @@ import yaml
 from hypothesis import given, strategies as st
 from hypothesis import provisional
 
-from amqtt.session import Session
-from amqtt import utils
+from amqtt_folder.session import Session
+from amqtt_folder import utils
 
 
 @given(st.text())

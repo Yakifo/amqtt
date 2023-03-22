@@ -3,18 +3,18 @@
 # See the file license.txt for copying permission.
 import asyncio
 from asyncio import futures
-from amqtt.mqtt.protocol.handler import ProtocolHandler, EVENT_MQTT_PACKET_RECEIVED
-from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.mqtt.pingreq import PingReqPacket
-from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.subscribe import SubscribePacket
-from amqtt.mqtt.suback import SubackPacket
-from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.mqtt.unsuback import UnsubackPacket
-from amqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload, ConnectPacket
-from amqtt.mqtt.connack import ConnackPacket
-from amqtt.session import Session
-from amqtt.plugins.manager import PluginManager
+from amqtt_folder.mqtt.protocol.handler import ProtocolHandler, EVENT_MQTT_PACKET_RECEIVED
+from amqtt_folder.mqtt.disconnect import DisconnectPacket
+from amqtt_folder.mqtt.pingreq import PingReqPacket
+from amqtt_folder.mqtt.pingresp import PingRespPacket
+from amqtt_folder.mqtt.subscribe import SubscribePacket
+from amqtt_folder.mqtt.suback import SubackPacket
+from amqtt_folder.mqtt.unsubscribe import UnsubscribePacket
+from amqtt_folder.mqtt.unsuback import UnsubackPacket
+from amqtt_folder.mqtt.connect import ConnectVariableHeader, ConnectPayload, ConnectPacket
+from amqtt_folder.mqtt.connack import ConnackPacket
+from amqtt_folder.session import Session
+from amqtt_folder.plugins.manager import PluginManager
 
 
 class ClientProtocolHandler(ProtocolHandler):

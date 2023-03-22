@@ -2,7 +2,7 @@
 #
 # See the file license.txt for copying permission.
 
-from amqtt.codecs import (
+from amqtt_folder.codecs import (
     bytes_to_int,
     decode_data_with_length,
     decode_string,
@@ -11,16 +11,16 @@ from amqtt.codecs import (
     int_to_bytes,
     read_or_raise,
 )
-from amqtt.mqtt.packet import (
+from amqtt_folder.mqtt.packet import (
     MQTTPacket,
     MQTTFixedHeader,
     CONNECT,
     MQTTVariableHeader,
     MQTTPayload,
 )
-from amqtt.errors import AMQTTException, NoDataException
-from amqtt.adapters import ReaderAdapter
-from amqtt.utils import gen_client_id
+from amqtt_folder.errors import AMQTTException, NoDataException
+from amqtt_folder.adapters import ReaderAdapter
+from amqtt_folder.utils import gen_client_id
 
 
 class ConnectVariableHeader(MQTTVariableHeader):
@@ -68,9 +68,9 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @username_flag.setter
     def username_flag(self, val: bool):
-        self._set_flag(val, self.USERNAME_'FLAG)
-        #Burcu: val true ise username flag biti olan 7.biti OR'luyor (set ediyor)
-        #Burcu: val False ise ~mask= 0111 1111 ve bu mask'ı ANDleyerek Username flag bitini sıfırlıyor 
+        self._set_flag(val, self.USERNAME_FLAG)
+    #Burcu: val true ise username flag biti olan 7.biti OR'luyor (set ediyor)
+    #Burcu: val False ise ~mask= 0111 1111 ve bu mask'ı ANDleyerek Username flag bitini sıfırlıyor 
  
     @property
     def password_flag(self) -> bool:

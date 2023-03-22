@@ -3,7 +3,7 @@
 # See the file license.txt for copying permission.
 import asyncio
 from struct import pack, unpack
-from amqtt.errors import NoDataException
+from amqtt_folder.errors import NoDataException
 
 
 def bytes_to_hex_str(data):

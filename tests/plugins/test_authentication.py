@@ -6,9 +6,9 @@ import unittest
 import logging
 import os
 import asyncio
-from amqtt.plugins.manager import BaseContext
-from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
-from amqtt.session import Session
+from amqtt_folder.plugins.manager import BaseContext
+from amqtt_folder.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
+from amqtt_folder.session import Session
 
 formatter = (
     "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

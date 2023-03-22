@@ -5,7 +5,7 @@ import unittest
 import logging
 import asyncio
 
-from amqtt.plugins.manager import PluginManager
+from amqtt_folder.plugins.manager import PluginManager
 
 formatter = (
     "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
