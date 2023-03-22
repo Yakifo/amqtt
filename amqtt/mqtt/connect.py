@@ -27,13 +27,13 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     __slots__ = ("proto_name", "proto_level", "flags", "keep_alive")
 
-    USERNAME_FLAG = 0x80
-    PASSWORD_FLAG = 0x40
-    WILL_RETAIN_FLAG = 0x20
-    WILL_FLAG = 0x04
-    WILL_QOS_MASK = 0x18
-    CLEAN_SESSION_FLAG = 0x02
-    RESERVED_FLAG = 0x01
+    USERNAME_FLAG = 0x80  #Burcu: 7.bit
+    PASSWORD_FLAG = 0x40   #Burcu: 6.bit
+    WILL_RETAIN_FLAG = 0x20   #Burcu: 5.bit
+    WILL_FLAG = 0x04            #Burcu: 2.bit
+    WILL_QOS_MASK = 0x18          #Burcu: 3 ve 4.bitler 0001 1000
+    CLEAN_SESSION_FLAG = 0x02     #Burcu: 1.bit
+    RESERVED_FLAG = 0x01           #Burcu: 0.bit
 
     def __init__(
         self, connect_flags=0x00, keep_alive=0, proto_name="MQTT", proto_level=0x04
@@ -51,7 +51,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     def _set_flag(self, val, mask):
         if val:
-            self.flags |= mask
+            self.flags |= mask 
         else:
             self.flags &= ~mask
 
@@ -64,11 +64,14 @@ class ConnectVariableHeader(MQTTVariableHeader):
     @property
     def username_flag(self) -> bool:
         return self._get_flag(self.USERNAME_FLAG)
+        #Burcu: mask = 1000 0000. 
 
     @username_flag.setter
     def username_flag(self, val: bool):
-        self._set_flag(val, self.USERNAME_FLAG)
-
+        self._set_flag(val, self.USERNAME_'FLAG)
+        #Burcu: val true ise username flag biti olan 7.biti OR'luyor (set ediyor)
+        #Burcu: val False ise ~mask= 0111 1111 ve bu mask'ı ANDleyerek Username flag bitini sıfırlıyor 
+ 
     @property
     def password_flag(self) -> bool:
         return self._get_flag(self.PASSWORD_FLAG)
@@ -108,11 +111,15 @@ class ConnectVariableHeader(MQTTVariableHeader):
     @property
     def will_qos(self):
         return (self.flags & 0x18) >> 3
+        #Burcu: 0x18 = 0001 1000. Sadece 3.ve 4.bitlerin değeri olduğu gibi kalıyor, diğerleri 0 oluyor.
+        #Burcu: sonra 3 defa right shift yaparak QoS değerini 0 ve 1. bit olarak return ediyor
 
     @will_qos.setter
     def will_qos(self, val: int):
-        self.flags &= 0xE7  # Reset QOS flags
-        self.flags |= val << 3
+        self.flags &= 0xE7  # Reset QOS flags    
+        #Burcu: E7 = 1110 0111
+        self.flags |= val << 3 
+        #Burcu: 3., 4.bitler 0 ve val ile ORlayarak değeri set ediyor
 
     @classmethod
     async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):    ###can be added here
@@ -202,7 +209,8 @@ class ConnectPayload(MQTTPayload):
             # A Server MAY allow a Client to supply a ClientId that has a length of zero bytes
             # [MQTT-3.1.3-6]
             payload.client_id = gen_client_id()
-            # indicator to trow exception in case CLEAN_SESSION_FLAG is set to False
+            # indicator to throw exception in case CLEAN_SESSION_FLAG is set to False
+            #Burcu: client ID belirtilmediyse ve CLEAN_SESSION_FLAG = False ise exception throw edecek 
             payload.client_id_is_random = True
 
         # Read will topic, username and password

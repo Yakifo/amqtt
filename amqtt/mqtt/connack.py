@@ -25,9 +25,9 @@ class ConnackVariableHeader(MQTTVariableHeader):
 
     @classmethod
     async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):
-        data = await read_or_raise(reader, 2)
-        session_parent = data[0] & 0x01
-        return_code = bytes_to_int(data[1])
+        data = await read_or_raise(reader, 2) #Burcu: 2 byte olan CONNACK'yı okuyor
+        session_parent = data[0] & 0x01 #Burcu: 0.bit session present değeri. Session present değerini öğreniyor
+        return_code = bytes_to_int(data[1])  #Burcu: 2 byte'ta return codelar var. 
         return cls(session_parent, return_code)
 
     def to_bytes(self):
