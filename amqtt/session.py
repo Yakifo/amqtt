@@ -61,7 +61,7 @@ class ApplicationMessage:
         self.pubcomp_packet = None
         """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBCOMP <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBCOMP packet has not already been received or sent."""
 
-    def build_publish_packet(self, dup=False):
+    def build_publish_packet(self, dup=False): #########might be used later
         """
             Build :class:`amqtt.mqtt.publish.PublishPacket` from attributes
 

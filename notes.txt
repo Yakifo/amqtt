@@ -1,0 +1,22 @@
+daha sonrasında encapsulation gerekecek, encapsulate edeceğimiz kısımı kullanılmayan bir flag kodunu encapsulatei açmak için setleyebiliriz
+daha sonra bir pakette encapsulate olup olmadığını anlamak için bu flag kodu var mı diye konrtol edilebilir
+eğer yoksa normal paket gibi davranılabilir
+
+diğer bir seçenek her şeyi encapsulate etmek
+encapsulate gerekmeyen packetler için de dummy bytelar yazılabilir striplenecek kısıma
+
+https://scapy.readthedocs.io/en/latest/introduction.html -can be used for encapsulation?
+https://www.techtarget.com/searchnetworking/tip/Intro-to-encapsulation-and-decapsulation-in-networking#:~:text=What%20is%20encapsulation%3F,referred%20to%20as%20the%20payload.
+-some definitions, might be used later on
+
+https://github.com/reverseame/chiton -this repo can be used for encapsulation maybe
+
+
+https://gchq.github.io/CyberChef/#recipe=Parse_X.509_certificate('PEM') -parse x509 certificate, we can use to double check if the certificates are in ocrrect form
+
+a class can be created
+client_id_unique, received_certificate, key_pairs, .......
+
+https://www.w3schools.com/python/python_classes.asp
+
+before sending to the database, we can look for some sql files to be parsed and to be inserted into the newly created table

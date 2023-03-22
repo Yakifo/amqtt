@@ -77,7 +77,7 @@ class Server:
         else:
             self.semaphore = None
 
-    async def acquire_connection(self):
+    async def acquire_connection(self): #look up what is semaphore
         if self.semaphore:
             await self.semaphore.acquire()
         self.conn_count += 1
