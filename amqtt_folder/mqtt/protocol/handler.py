@@ -410,7 +410,7 @@ class ProtocolHandler:
         if keepalive_timeout <= 0:
             keepalive_timeout = None
         while True:
-            try:
+            try:                                                        #####################################################################
                 self._reader_ready.set()
                 while running_tasks and running_tasks[0].done():
                     running_tasks.popleft()
