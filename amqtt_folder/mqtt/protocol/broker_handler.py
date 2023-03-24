@@ -213,6 +213,12 @@ class BrokerProtocolHandler(ProtocolHandler):
                           incoming_session.session_info.client_spec_pub_key, incoming_session.session_info.client_spec_priv_key, 
                           incoming_session.session_info.session_key)
         
+        #update row deneme, session key will be updated for testing purposes, in this state the session key should be NULL in the normal case
+        #print("*****Will call updateRowFromDatabase in broker_handler.py line:217*****")
+        #updateRowFromDatabase(incoming_session.session_info.client_id, incoming_session.session_info.key_establishment_state,
+        #                      incoming_session.session_info.client_spec_pub_key, incoming_session.session_info.client_spec_priv_key,
+        #                      "sessinKeyNotCreatedYet")
+        
 
         if connect.keep_alive > 0:
             incoming_session.keep_alive = connect.keep_alive
