@@ -109,8 +109,46 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
         #self.logger.debug("\nrow pushed into the database with given parameters")
 
 
+def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool:
+
+    success = False
+
+    mydb = mysql.connector.connect(
+        host="127.0.0.1",
+        user="root",
+        password=""
+    ) 
+    mycursor = mydb.cursor()
+
+    try:
+        mycursor.execute("USE {}".format("brokerside"))
+    except Exception as e:
+        print("\n", e.args)
+        #self.logger.debug("\n", e.args)
+
+    sql_query = "UPDATE `clientsessions` SET `edf_state` = %s, `pub_key` = %s, `priv_key` = %s, `session_key` = %s WHERE `client_id` = %s;"
+    values = (edf_state, pub_key, priv_key, session_key, client_id)
+
+    #self.logger.debug("\nTrying to push data to table")
+    print("\nTrying to update data to table")
+    try:
+        mycursor.execute(sql_query, values)
+        mydb.commit()
+        success = True
+
+    except mysql.connector.Error as err:
+
+        #if-else unique to some errors can be added
+
+        print("\nFailed pushing data: {}".format(err))
+        #self.logger.debug("\nFailed pushing data: {}".format(err))
+
+    finally:
+        return success
+
 
 #examples
+
 '''
 obj = ClientConnection()
 

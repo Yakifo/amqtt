@@ -25,6 +25,8 @@ from amqtt_folder.adapters import ReaderAdapter, WriterAdapter
 from amqtt_folder.errors import MQTTException
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
+from amqtt_folder.clientconnection import pushRowToDatabase, updateRowFromDatabase
+
 
 class BrokerProtocolHandler(ProtocolHandler):
     def __init__(
@@ -201,6 +203,16 @@ class BrokerProtocolHandler(ProtocolHandler):
         incoming_session.will_message = connect.will_message
         incoming_session.username = connect.username
         incoming_session.password = connect.password
+
+        #modification --> client info added, ke state is currently equal to 0, other fields are none right now.
+        incoming_session.session_info.client_id = connect.client_id
+
+        #call push to database from clientconnection.py to create the record of this session with the related key pairs, session states and created session keys
+        pushRowToDatabase(incoming_session.session_info.client_id, incoming_session.session_info.key_establishment_state, 
+                          incoming_session.session_info.client_spec_pub_key, incoming_session.session_info.client_spec_priv_key, 
+                          incoming_session.session_info.session_key)
+        #havent been tested yet
+
         if connect.keep_alive > 0:
             incoming_session.keep_alive = connect.keep_alive
         else:
