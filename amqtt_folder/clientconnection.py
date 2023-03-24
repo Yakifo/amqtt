@@ -37,7 +37,7 @@ class ClientConnection: #session-based class, containig information about the cu
         return str(self.client_id)
     
 
-def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str):
+def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str): #create database and create table can be removed and run seperately
 
     mydb = mysql.connector.connect(
         host="127.0.0.1",
@@ -47,45 +47,10 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
     mycursor = mydb.cursor()
 
     try:
-        mycursor.execute("CREATE DATABASE brokerside")
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_DB_CREATE_EXISTS:
-            #self.logger.debug("\nDatabase already exists.")
-            print("\nDatabase already exists.")
-        else:
-            #self.logger.debug("\nCreate DB error ", err)
-            print("\nCreate DB error ", err)
-
-
-    try:
         mycursor.execute("USE {}".format("brokerside"))
     except Exception as e:
         print("\n", e.args)
         #self.logger.debug("\n", e.args)
-        
-    clientsessions = (
-        "CREATE TABLE `clientsessions` ("
-        "  `client_id` varchar(32) NOT NULL,"
-        "  `edf_state` int NOT NULL,"
-        "  `pub_key` varchar(2048) NULL,"
-        "  `priv_key` varchar(2048) NULL,"
-        "  `session_key` varchar(2048) NULL,"
-        "  PRIMARY KEY (`client_id`)"
-    ") ENGINE=InnoDB")
-                
-        
-    #self.logger.debug("\nTrying to create table {}: ".format(clientsessions), end='')
-    print("\nTrying to create table {}: ".format(clientsessions), end='')
-    try:
-        mycursor.execute(clientsessions)
-
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-            print("\nTable already exists.")
-            #self.logger.debug("\nTable already exists.")
-        else:
-            print("\nCreate table error ", err)
-            #self.logger.debug("\nCreate table error ", err)
 
 
     sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`) VALUES (%s, %s, %s, %s, %s)"
