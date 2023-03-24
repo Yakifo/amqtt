@@ -6,7 +6,7 @@ from asyncio import Queue
 from collections import OrderedDict
 from amqtt_folder.mqtt.publish import PublishPacket
 from amqtt_folder.errors import AMQTTException
-from clientconnection import ClientConnection
+from amqtt_folder.clientconnection import ClientConnection
 
 
 OUTGOING = 0

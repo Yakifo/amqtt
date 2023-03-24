@@ -208,10 +208,11 @@ class BrokerProtocolHandler(ProtocolHandler):
         incoming_session.session_info.client_id = connect.client_id
 
         #call push to database from clientconnection.py to create the record of this session with the related key pairs, session states and created session keys
+        print("*****Will call pushRowToDatabase in broker_handler.py line:211*****")
         pushRowToDatabase(incoming_session.session_info.client_id, incoming_session.session_info.key_establishment_state, 
                           incoming_session.session_info.client_spec_pub_key, incoming_session.session_info.client_spec_priv_key, 
                           incoming_session.session_info.session_key)
-        #havent been tested yet
+        
 
         if connect.keep_alive > 0:
             incoming_session.keep_alive = connect.keep_alive

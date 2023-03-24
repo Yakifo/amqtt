@@ -54,5 +54,5 @@ def createDatabaseAndDatabaseTables():
 
 
 #run this py to create the database and added tables 
-#currently there existst one table in this part but more table create statements can be added if needed
+#currently there exists one table in this part but more table create statements can be added if needed
 createDatabaseAndDatabaseTables()

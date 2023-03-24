@@ -57,7 +57,7 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
     val = (client_id, edf_state, pub_key, priv_key, session_key)
 
     #self.logger.debug("\nTrying to push data to table")
-    print("\nTrying to push data to table")
+    #print("\nTrying to push data to table")
     try:
         mycursor.execute(sql_query, val)
         mydb.commit()
@@ -68,10 +68,6 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
 
         print("\nFailed pushing data: {}".format(err))
         #self.logger.debug("\nFailed pushing data: {}".format(err))
-
-    else:
-        print("\nrow pushed into the database with given parameters")
-        #self.logger.debug("\nrow pushed into the database with given parameters")
 
 
 def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool:
@@ -88,6 +84,7 @@ def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key
     try:
         mycursor.execute("USE {}".format("brokerside"))
     except Exception as e:
+        
         print("\n", e.args)
         #self.logger.debug("\n", e.args)
 
@@ -95,7 +92,7 @@ def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key
     values = (edf_state, pub_key, priv_key, session_key, client_id)
 
     #self.logger.debug("\nTrying to push data to table")
-    print("\nTrying to update data to table")
+    #print("\nTrying to update data to table")
     try:
         mycursor.execute(sql_query, values)
         mydb.commit()
@@ -126,8 +123,7 @@ obj.session_key ="dummySesionKey"
 print(obj)
 print(obj.client_id)
 print(obj.session_key)
-
-
-pushRowToDatabase(obj.client_id, obj.key_establishment_state, obj.client_spec_pub_key, obj.client_spec_priv_key, obj.session_key)
 '''
 
+#pushRowToDatabase(obj.client_id, obj.key_establishment_state, obj.client_spec_pub_key, obj.client_spec_priv_key, obj.session_key)
+#updateRowFromDatabase(obj.client_id, obj.key_establishment_state, obj.client_spec_pub_key, obj.client_spec_priv_key, "dummySessionKeyNewUpdate")
