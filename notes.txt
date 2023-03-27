@@ -31,3 +31,10 @@ client_id subscriptions tablosu lazım
 broker.py 2333: brker starts to listen for connections
 
 broker.py 459 log added
+
+mqtt protocol handler 192de publish ediyor
+
+
+clientconnection classı ve clientsessions tableı ile ilgili:
+eğer sessionlar bitince silinmeyecekse, active/not active şeklinde yeni bir column eklenbilir mysql tableına
+eğer silinecekse gerekli deletei yapacak fonsiyon eklenmeli, databsede gereksiz row bulunmaması için

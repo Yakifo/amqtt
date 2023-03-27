@@ -456,8 +456,8 @@ class Broker:
 
 
         #newly added
-        self.logger.debug("###########################################################HERE")
-        self.logger.debug("*******received or generated client id: " +  str(client_session.client_id) + "******")
+        self.logger.debug("######HERE")
+        #self.logger.debug("*******received or generated client id: " +  str(client_session.client_id) + "******")
 
 
         if client_session.keep_alive > 0:

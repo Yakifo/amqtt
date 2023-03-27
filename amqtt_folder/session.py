@@ -6,6 +6,8 @@ from asyncio import Queue
 from collections import OrderedDict
 from amqtt_folder.mqtt.publish import PublishPacket
 from amqtt_folder.errors import AMQTTException
+from amqtt_folder.clientconnection import ClientConnection
+
 
 OUTGOING = 0
 INCOMING = 1
@@ -126,6 +128,9 @@ class Session:
         self.cadata = None
         self._packet_id = 0
         self.parent = 0
+
+        #Newly added clientconnect obj, stores pub-priv kye pairs, key establishment state and client id
+        self.session_info = ClientConnection()
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
         self.inflight_out = OrderedDict()
