@@ -547,7 +547,7 @@ class Broker:
                                 "Client %s disconnected abnormally, sending will message"
                                 % format_client_message(client_session)
                             )
-                            await self._broadcast_message(
+                            await self._broadcast_message( ###################
                                 client_session,
                                 client_session.will_topic,
                                 client_session.will_message,
@@ -652,7 +652,7 @@ class Broker:
                             client_id=client_session.client_id,
                             message=app_message,
                         )
-                        await self._broadcast_message(
+                        await self._broadcast_message(   #clientlar publish etmek istediğinde
                             client_session, app_message.topic, app_message.data
                         )
                         if app_message.publish_packet.retain_flag:
@@ -962,6 +962,7 @@ class Broker:
                         )
                     )
 
+                ####################################################3burası bir client publish ettiğinde çağrılıyor
                 handler = self._get_handler(target_session)
                 task = asyncio.ensure_future(
                     handler.mqtt_publish(
@@ -971,7 +972,9 @@ class Broker:
                         retain=False,
                     ),
                 )
-                running_tasks.append(task)
+                running_tasks.append(task) 
+
+                self.logger.debug("******************************************************HERE in broker.py line: 976")
 
     async def _retain_broadcast_message(self, broadcast, qos, target_session):
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -1009,7 +1012,7 @@ class Broker:
                 "%d messages not broadcasted", self._broadcast_queue.qsize()
             )
 
-    async def _broadcast_message(self, session, topic, data, force_qos=None):
+    async def _broadcast_message(self, session, topic, data, force_qos=None):  #definition broadcast message
         broadcast = {"session": session, "topic": topic, "data": data}
         if force_qos:
             broadcast["qos"] = force_qos

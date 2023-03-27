@@ -37,7 +37,9 @@ class ClientConnection: #session-based class, containig information about the cu
         return str(self.client_id)
     
 
-def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str): #create database and create table can be removed and run seperately
+def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool: #create database and create table can be removed and run seperately
+
+    success = False
 
     mydb = mysql.connector.connect(
         host="127.0.0.1",
@@ -61,6 +63,7 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
     try:
         mycursor.execute(sql_query, val)
         mydb.commit()
+        success = True
 
     except mysql.connector.Error as err:
 
@@ -68,6 +71,10 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
 
         print("\nFailed pushing data: {}".format(err))
         #self.logger.debug("\nFailed pushing data: {}".format(err))
+
+
+    finally:
+        return success
 
 
 def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool:
