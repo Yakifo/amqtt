@@ -94,7 +94,8 @@ class ProtocolHandler:
         self._pubrel_waiters = dict()
         self._pubcomp_waiters = dict()
 
-        self._write_lock = asyncio.Lock()
+        self._write_lock = asyncio.Lock()  #burcu: lock tanımlıyor
+
 
     def _init_session(self, session: Session):
         assert session
@@ -127,8 +128,22 @@ class ProtocolHandler:
         if not self._is_attached():
             raise ProtocolHandlerException("Handler is not attached to a stream")
         self._reader_ready = asyncio.Event()
+        #Burcu: An asyncio event can be used to notify multiple asyncio tasks that some event has happened.
+        #Burcu:  An event manages an internal boolean flag that can be either set or not set.
+        #Burcu: The asyncio.Event provides similar functionality for use with coroutines, instead of threads or processes. Importantly, the asyncio.Event is not thread-safe, i.e. only coroutine-safe.
+        #Burcu: https://superfastpython.com/asyncio-event/
+        
+
+
+
+
         self._reader_task = asyncio.Task(self._reader_loop())
+        #burcu: A task is executed independently. This means it is scheduled in the asyncio event loop and will execute regardless of what else happens in the coroutine that created it. This is different from executing a coroutine directly, where the caller must wait for it to complete.
+
+
         await self._reader_ready.wait()
+        # burcu: Calling this function will block until the event is marked as set (e.g. another coroutine calling the set() function). If the event is already set, the wait() function will return immediately.
+        # burcu: An Event object manages an internal flag that can be set to true with the set() method and reset to false with the clear() method. The wait() method blocks until the flag is set to true. The flag is set to false initially.
         if self.keepalive_timeout:
             self._keepalive_task = self._loop.call_later(
                 self.keepalive_timeout, self.handle_write_timeout
@@ -404,6 +419,17 @@ class ProtocolHandler:
                 self.logger.debug("Message flow cancelled")
 
     async def _reader_loop(self):
+        # burcu: gelen dataları "while True" döngüsü içindeyken receive ediyor
+        # burcu : bazı exception lar icin  break ile "while True" döngüsünden çıkıyor
+        # burcu: _reader_ready eventini set ediyor, böylece tasklar wait ten çıkabiliyor
+        # burcu: sonra running tasks içinde done olanları running tasks queue sundan çıkarıyor
+        # burcu: reader dan fixed header okuyor. Eğer okuyabildi ise ve paket type valid ise,
+        # cls ye packet class  type ını veriyor  
+        # sonra "packet=await cls.from_stream()" ile reader dan packetin tamamını alıyor
+        # await self.plugins_manager.fire_event() ile EVENT_MQTT_PACKET_RECEIVED event ile ilgili taskı çalıştırıyor
+        # packet tipi ile ilgili handle_tipi taskını çalıştıryor ve bu task ı running tasks a ekilyor  
+        # while True döngüsünden break ile çıkınca, tüm running tasks ları cancel edip, reader_stop  event ini set ediyor ve sonralıyor 
+        # 
         self.logger.debug("%s Starting reader coro" % self.session.client_id)
         running_tasks = collections.deque()
         keepalive_timeout = self.session.keep_alive
@@ -506,6 +532,7 @@ class ProtocolHandler:
                     % (type(self).__name__, e)
                 )
                 break
+            
         while running_tasks:
             running_tasks.popleft().cancel()
         await self.handle_connection_closed()

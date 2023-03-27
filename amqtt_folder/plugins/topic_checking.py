@@ -16,7 +16,7 @@ class BaseTopicPlugin:
         if not self.topic_config:
             # auth config section not found
             self.context.logger.warning(
-                "'auth' section not found in context configuration"
+                "'topic-check' section not found in context configuration"
             )
             return False
         return True
@@ -46,10 +46,11 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
 
     @staticmethod
     def topic_ac(topic_requested, topic_allowed):
-        req_split = topic_requested.split("/")
-        allowed_split = topic_allowed.split("/")
+        #Burcu: Örnek = topic_allowed = a/# . topic_requested = a/b/c  -> ret = True
+        req_split = topic_requested.split("/")    #Burcu: req_split = ["a", "b", "c"]
+        allowed_split = topic_allowed.split("/")  #Burcu: req_split = ["a", "#"]
         ret = True
-        for i in range(max(len(req_split), len(allowed_split))):
+        for i in range(max(len(req_split), len(allowed_split))): #Burcu: range(3)
             try:
                 a_aux = req_split[i]
                 b_aux = allowed_split[i]
@@ -68,17 +69,17 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
     async def topic_filtering(self, *args, **kwargs):
         filter_result = super().topic_filtering(*args, **kwargs)
         if not filter_result:
-            return False
+            return False     #Burcu: ğer config dosyasında topic_check tanımı yoksa False return ediyor = izin yok
 
         # hbmqtt and older amqtt do not support publish filtering
         action = kwargs.get("action", None)
         if action == Action.publish and "publish-acl" not in self.topic_config:
             # maintain backward compatibility, assume permitted
-            return True
+            return True          #Burcu: Eğer action publish ise ve configin topic_check'inde publish-acl yoksa, izin olmadan her user published edebilir.
 
         req_topic = kwargs.get("topic", None)
         if not req_topic:
-            return False
+            return False      #Burcu: Topic adı boşsa False
 
         session = kwargs.get("session", None)
         username = session.username
@@ -86,16 +87,16 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
             username = "anonymous"
 
         if action == Action.publish:
-            acl = self.topic_config["publish-acl"]
+            acl = self.topic_config["publish-acl"]   
         elif action == Action.subscribe:
             acl = self.topic_config["acl"]
 
-        allowed_topics = acl.get(username, None)
+        allowed_topics = acl.get(username, None)   #Burcu: Acl tanımlarındaki username kısmında session'ın usernameini içeren topicleri get ediyor.
         if not allowed_topics:
             return False
 
-        for allowed_topic in allowed_topics:
-            if self.topic_ac(req_topic, allowed_topic):
+        for allowed_topic in allowed_topics:   
+            if self.topic_ac(req_topic, allowed_topic):   #Burcu: publish ya da subscribe için request edilen topic'in allowed topics içinde olup olmadığını kontrol ediyor
                 return True
 
         return False
