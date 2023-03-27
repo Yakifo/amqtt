@@ -38,9 +38,9 @@ class PluginManager:
     def __init__(self, namespace, context, loop=None):
         global plugins_manager
         if loop is not None:
-            self._loop = loop
+            self._loop = loop  #Burcu: loop parametresi verildiyse 
         else:
-            self._loop = asyncio.get_event_loop()
+            self._loop = asyncio.get_event_loop()  #Burcu: When called from a coroutine or a callback, this function will always return the running event loop.
 
         self.logger = logging.getLogger(namespace)
         if context is None:
@@ -123,11 +123,20 @@ class PluginManager:
         :param kwargs:
         :param wait: indicates if fire_event should wait for plugin calls completion (True), or not
         :return:
+
+
+        Burcu: event_name = connect olduğunda on_connect metodu name'ini oluşturuyor ve plugins listesinde
+        event method name'i on_connect olan method bulunca onunla ilgili bir task yaratip ensure future ile çaliştiriyor ve sonra
+        tasks listesine ekliyor.
+        Sonra yaratilan task bitince onu fired events listesinden silebilmek için done callback fonskiyonunu tanimliyor. 
+        Sonra yaratilan tasklari fired_events listesine ekliyor. Eğer parametre olarak wait = True verildiyse tüm tasklari 
+        bekliyor
         """
+       
         tasks = []
         event_method_name = "on_" + event_name
         for plugin in self._plugins:
-            event_method = getattr(plugin.object, event_method_name, None)
+            event_method = getattr(plugin.object, event_method_name, None)  #Burcu: getattr = get attribute 
             if event_method:
                 try:
                     task = self._schedule_coro(event_method(*args, **kwargs))
@@ -163,6 +172,12 @@ class PluginManager:
         :param args: arguments to pass to coro
         :param kwargs: arguments to pass to coro
         :return: dict containing return from coro call for each plugin
+
+
+        Burcu: plugin filtresine uyan tüm pluginler için coro instance oluşturuyor ve oluşturabilmişse tasks listesinde ekliyor.
+        İlgili plugin'i de plugins_list'e ekliyor. 
+        Daha sonra gather fonskiyonu ile tasks listesindeki her bir task'in return code'unu ret_list'te sakliyor. 
+        Plugings_list ve ret_listi kullanarak dictionary oluşturuyor
         """
         p_list = kwargs.pop("filter_plugins", None)
         if p_list is None:
@@ -183,6 +198,7 @@ class PluginManager:
                         )
         if tasks:
             ret_list = await asyncio.gather(*tasks)
+            #Burcu: Gather function run awaitable objects in the tasks sequence concurrently. If all awaitables are completed successfully, the result of gather is an aggregate list of returned values. The order of result values corresponds to the order of awaitables in tasks.
             # Create result map plugin=>ret
             ret_dict = {k: v for k, v in zip(plugins_list, ret_list)}
         else:
