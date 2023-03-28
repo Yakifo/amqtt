@@ -216,6 +216,10 @@ class ProtocolHandler:
         is not completed before ack_timeout second
         :return: ApplicationMessage used during inflight operations
         """
+
+        self.logger.debug("*****************here, handler.py in mqtt_publish line:220")
+
+
         if qos in (QOS_1, QOS_2):
             packet_id = self.session.next_packet_id
             if packet_id in self.session.inflight_out:
@@ -242,6 +246,10 @@ class ProtocolHandler:
         :param app_message: PublishMessage to handle
         :return: nothing.
         """
+
+
+        self.logger.debug("***************here, _handle_message_flow in handler.py line 251")
+
         if app_message.qos == QOS_0:
             await self._handle_qos0_message_flow(app_message)
         elif app_message.qos == QOS_1:
@@ -259,6 +267,9 @@ class ProtocolHandler:
         :param app_message:
         :return:
         """
+
+        self.logger.debug("******************** here, _handle_qos0_message_flow in handler.py line 271")
+
         assert app_message.qos == QOS_0
         if app_message.direction == OUTGOING:
             packet = app_message.build_publish_packet()
@@ -562,6 +573,9 @@ class ProtocolHandler:
             raise
 
     async def mqtt_deliver_next_message(self):
+
+        self.logger.debug("************************* here, mqtt_deliver_next_message in handler.py, line:577")
+
         if not self._is_attached():
             return None
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -575,7 +589,7 @@ class ProtocolHandler:
             message = None
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Delivering message %s" % message)
-        return message
+        return message ##########################################################
 
     def handle_write_timeout(self):
         self.logger.debug("%s write timeout unhandled" % self.session.client_id)

@@ -533,6 +533,9 @@ class Broker:
                     ],
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+
+                self.logger.debug("******************* here, line 537, in client_connect, done pending set with asyncio wait")
+
                 if disconnect_waiter in done:
                     result = disconnect_waiter.result()
                     self.logger.debug(
@@ -623,6 +626,8 @@ class Broker:
                             "%s handling message delivery" % client_session.client_id
                         )
                     app_message = wait_deliver.result()
+
+                    self.logger.debug("******************* here, in client_connect, app_message set to result of wait_deliver, line 627")
                     if not app_message.topic:
                         self.logger.warning(
                             "[MQTT-4.7.3-1] - %s invalid TOPIC sent in PUBLISH message, closing connection"
@@ -653,7 +658,7 @@ class Broker:
                             message=app_message,
                         )
                         await self._broadcast_message(   #clientlar publish etmek istediğinde
-                            client_session, app_message.topic, app_message.data
+                            client_session, app_message.topic, app_message.data  ##şimdilik burası update edilecek
                         )
                         if app_message.publish_packet.retain_flag:
                             self.retain_message(
@@ -662,6 +667,8 @@ class Broker:
                                 app_message.data,
                                 app_message.qos,
                             )
+
+                    self.logger.debug("********************* here, in client_connected, will set wait_deliver, line:666")
                     wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")
