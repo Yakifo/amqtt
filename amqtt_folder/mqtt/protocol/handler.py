@@ -429,6 +429,26 @@ class ProtocolHandler:
             except asyncio.CancelledError:
                 self.logger.debug("Message flow cancelled")
 
+    #new function
+    async def _publish_cert_to_client(self):
+
+        #create publish packet
+
+        #create certificate
+
+        packet_created = None
+
+        return packet_created
+    
+    #new function
+    async def _check_such_client_exists(self, given_topic_name) -> bool:
+        exists = False
+        #look to the databse for active clients, if such active client exists, publish certificate
+
+        new_var = given_topic_name #dummy operation, will be removed
+
+        return exists
+
     async def _reader_loop(self):
         # burcu: gelen dataları "while True" döngüsü içindeyken receive ediyor
         # burcu : bazı exception lar icin  break ile "while True" döngüsünden çıkıyor
@@ -504,7 +524,24 @@ class ProtocolHandler:
                         elif packet.fixed_header.packet_type == PINGRESP:
                             task = asyncio.ensure_future(self.handle_pingresp(packet))
                         elif packet.fixed_header.packet_type == PUBLISH:
-                            task = asyncio.ensure_future(self.handle_publish(packet))
+                            #task = asyncio.ensure_future(self.handle_publish(packet))
+                            
+
+                            #modificaiton start
+                            returned = await self._check_such_client_exists(packet.topic_name)
+                            if returned:
+                                #publish certificate
+                                packet_to_publish = await self._publish_cert_to_client()
+                                task = asyncio.ensure_future(self.handle_publish(packet_to_publish))
+
+                            else:
+                                task = asyncio.ensure_future(self.handle_publish(packet)) #work as before
+
+                            #if client is publishing to its own topic, then publish the certificate
+                            #if normal publish, normally publish the message
+                            #modification end
+
+
                         elif packet.fixed_header.packet_type == DISCONNECT:
                             task = asyncio.ensure_future(self.handle_disconnect(packet))
                         elif packet.fixed_header.packet_type == CONNECT:
