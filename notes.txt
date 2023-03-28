@@ -41,6 +41,5 @@ eğer silinecekse gerekli deletei yapacak fonsiyon eklenmeli, databsede gereksiz
 
 
 
-
-databsee active/not active gelmeli
 databasee aynı client yeni bir session açıyorsa eskisini silme gelmeli çünkü primary key şuan client_id
+silme nereye eklenecek, client disconnect olduğunda session siliniyor olmalı
