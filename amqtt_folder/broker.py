@@ -577,11 +577,13 @@ class Broker:
                     await self._stop_handler(handler)
 
                     #disconnecting, setting session=inactive
+                    #bilgesu: database active state change
                     self.logger.debug("%s\'s session will be set as inactive in the database now.", client_session.client_id)
                     updateRowFromDatabase(client_session.session_info.client_id, client_session.session_info.key_establishment_state, 
                                         client_session.session_info.client_spec_pub_key,
                                         client_session.session_info.client_spec_priv_key, 
                                         client_session.session_info.session_key, 0) #is_active=false
+                    #bilgesu: modification end
 
                     client_session.transitions.disconnect()
                     await self.plugins_manager.fire_event(
@@ -1121,9 +1123,13 @@ class Broker:
         self.logger.debug(
             "deleting existing session %s" % repr(self._sessions[client_id])
         )
+
         #show the session is inactive in the database when delete session is called
+        #bilgesu: call update row for inactive state
+        self.logger.debug("deleting session, call updateRow in broker")
         updateRowFromDatabase(session_info.client_id, session_info.key_establishment_state, session_info.client_spec_pub_key,
                 session_info.client_spec_priv_key, session_info.session_key, 0) #is_active=false
+        #bilgesu: modification end
         
         del self._sessions[client_id]
 
