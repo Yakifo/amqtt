@@ -11,6 +11,7 @@ from asyncio import InvalidStateError
 from amqtt_folder.mqtt import packet_class
 from amqtt_folder.mqtt.connack import ConnackPacket
 from amqtt_folder.mqtt.connect import ConnectPacket
+from amqtt_folder.mqtt.publish import PublishVariableHeader, PublishPayload, PublishPacket
 from amqtt_folder.mqtt.packet import (
     RESERVED_0,
     CONNECT,
@@ -216,6 +217,7 @@ class ProtocolHandler:
         is not completed before ack_timeout second
         :return: ApplicationMessage used during inflight operations
         """
+
         if qos in (QOS_1, QOS_2):
             packet_id = self.session.next_packet_id
             if packet_id in self.session.inflight_out:
@@ -242,6 +244,7 @@ class ProtocolHandler:
         :param app_message: PublishMessage to handle
         :return: nothing.
         """
+
         if app_message.qos == QOS_0:
             await self._handle_qos0_message_flow(app_message)
         elif app_message.qos == QOS_1:
@@ -259,6 +262,7 @@ class ProtocolHandler:
         :param app_message:
         :return:
         """
+
         assert app_message.qos == QOS_0
         if app_message.direction == OUTGOING:
             packet = app_message.build_publish_packet()
@@ -418,6 +422,28 @@ class ProtocolHandler:
             except asyncio.CancelledError:
                 self.logger.debug("Message flow cancelled")
 
+    #new function
+    async def _publish_cert_to_client(self): #currently not called, code should be checked later on
+
+        packet_created = None
+    
+        #create certificate
+
+        #create publish packet
+        packet_created = PublishPacket()
+        packet_created.build()
+
+        return packet_created
+    
+    #new function
+    async def _check_such_client_exists(self, given_topic_name) -> bool: #is it needed?
+        exists = False
+        #look to the databse for active clients, if such active client exists, publish certificate
+
+        new_var = given_topic_name #dummy operation, will be removed
+
+        return exists
+
     async def _reader_loop(self):
         # burcu: gelen dataları "while True" döngüsü içindeyken receive ediyor
         # burcu : bazı exception lar icin  break ile "while True" döngüsünden çıkıyor
@@ -562,6 +588,7 @@ class ProtocolHandler:
             raise
 
     async def mqtt_deliver_next_message(self):
+
         if not self._is_attached():
             return None
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -575,7 +602,7 @@ class ProtocolHandler:
             message = None
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Delivering message %s" % message)
-        return message
+        return message ##########################################################
 
     def handle_write_timeout(self):
         self.logger.debug("%s write timeout unhandled" % self.session.client_id)

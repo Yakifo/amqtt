@@ -37,7 +37,9 @@ class ClientConnection: #session-based class, containig information about the cu
         return str(self.client_id)
     
 
-def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str): #create database and create table can be removed and run seperately
+def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool: #create database and create table can be removed and run seperately
+
+    success = False
 
     mydb = mysql.connector.connect(
         host="127.0.0.1",
@@ -53,14 +55,15 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
         #self.logger.debug("\n", e.args)
 
 
-    sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`) VALUES (%s, %s, %s, %s, %s)"
-    val = (client_id, edf_state, pub_key, priv_key, session_key)
+    sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`, `is_active`) VALUES (%s, %s, %s, %s, %s, %s)"
+    val = (client_id, edf_state, pub_key, priv_key, session_key, 1) #1 means session is active
 
     #self.logger.debug("\nTrying to push data to table")
     #print("\nTrying to push data to table")
     try:
         mycursor.execute(sql_query, val)
         mydb.commit()
+        success = True
 
     except mysql.connector.Error as err:
 
@@ -70,7 +73,11 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
         #self.logger.debug("\nFailed pushing data: {}".format(err))
 
 
-def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool:
+    finally:
+        return success
+
+
+def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str, is_active: int) -> bool:
 
     success = False
 
@@ -88,8 +95,8 @@ def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key
         print("\n", e.args)
         #self.logger.debug("\n", e.args)
 
-    sql_query = "UPDATE `clientsessions` SET `edf_state` = %s, `pub_key` = %s, `priv_key` = %s, `session_key` = %s WHERE `client_id` = %s;"
-    values = (edf_state, pub_key, priv_key, session_key, client_id)
+    sql_query = "UPDATE `clientsessions` SET `edf_state` = %s, `pub_key` = %s, `priv_key` = %s, `session_key` = %s, `is_active` = %s WHERE `client_id` = %s;"
+    values = (edf_state, pub_key, priv_key, session_key, is_active, client_id)
 
     #self.logger.debug("\nTrying to push data to table")
     #print("\nTrying to update data to table")

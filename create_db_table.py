@@ -34,6 +34,7 @@ def createDatabaseAndDatabaseTables():
         "  `pub_key` varchar(2048) NULL,"
         "  `priv_key` varchar(2048) NULL,"
         "  `session_key` varchar(2048) NULL,"
+        "   `is_active` int NOT NULL,"
         "  PRIMARY KEY (`client_id`)"
     ") ENGINE=InnoDB")
                     

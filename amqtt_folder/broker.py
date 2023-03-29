@@ -27,6 +27,9 @@ from amqtt_folder.adapters import (
 )
 from .plugins.manager import PluginManager, BaseContext
 
+#new imports
+from amqtt_folder.clientconnection import ClientConnection
+from amqtt_folder.clientconnection import updateRowFromDatabase
 
 """START:29MART2023 - Burcu"""
 from amqtt_folder.codecs import (
@@ -411,7 +414,7 @@ class Broker:
 
         remote_address, remote_port = writer.get_peer_info()
         self.logger.info(
-            "Connection from xxxxxxxxxxx %s:%d on listener '%s'"
+            "(broker.py, line 403: Connection from %s:%d on listener '%s'"
             % (remote_address, remote_port, listener_name)
         )
 
@@ -446,12 +449,14 @@ class Broker:
             server.release_connection()
             return
 
-        if client_session.clean_session:
+        if client_session.clean_session:    #buraya bir deletion eklemesi gerekebilir
             # Delete existing session and create a new one
+
             if client_session.client_id is not None and client_session.client_id != "":
-                self.delete_session(client_session.client_id)
+                self.delete_session(client_session.client_id, client_session.session_info)
+
             else:
-                client_session.client_id = gen_client_id()
+                client_session.client_id = gen_client_id()    #bu yeni client mı oluyor eğer öyleyse databsee yeni row pushlanmalı
             client_session.parent = 0
         else:
             # Get session from cache
@@ -464,12 +469,6 @@ class Broker:
                 client_session.parent = 1
             else:
                 client_session.parent = 0
-
-
-        #newly added
-        self.logger.debug("######HERE")
-        #self.logger.debug("*******received or generated client id: " +  str(client_session.client_id) + "******")
-
 
         if client_session.keep_alive > 0:
             client_session.keep_alive += self.config["timeout-disconnect-delay"]
@@ -544,6 +543,7 @@ class Broker:
                     ],
                     return_when=asyncio.FIRST_COMPLETED,
                 )
+
                 if disconnect_waiter in done:
                     result = disconnect_waiter.result()
                     self.logger.debug(
@@ -558,7 +558,7 @@ class Broker:
                                 "Client %s disconnected abnormally, sending will message"
                                 % format_client_message(client_session)
                             )
-                            await self._broadcast_message(
+                            await self._broadcast_message( ###################
                                 client_session,
                                 client_session.will_topic,
                                 client_session.will_message,
@@ -572,9 +572,17 @@ class Broker:
                                     client_session.will_qos,
                                 )
                     self.logger.debug(
-                        "%s Disconnecting session" % client_session.client_id
+                        "%s Disconnecting session" % client_session.client_id  #######buraya active to inactive eklenebilir
                     )
                     await self._stop_handler(handler)
+
+                    #disconnecting, setting session=inactive
+                    self.logger.debug("%s\'s session will be set as inactive in the database now.", client_session.client_id)
+                    updateRowFromDatabase(client_session.session_info.client_id, client_session.session_info.key_establishment_state, 
+                                        client_session.session_info.client_spec_pub_key,
+                                        client_session.session_info.client_spec_priv_key, 
+                                        client_session.session_info.session_key, 0) #is_active=false
+
                     client_session.transitions.disconnect()
                     await self.plugins_manager.fire_event(
                         EVENT_BROKER_CLIENT_DISCONNECTED,
@@ -648,6 +656,7 @@ class Broker:
                             "%s handling message delivery" % client_session.client_id
                         )
                     app_message = wait_deliver.result()
+
                     if not app_message.topic:
                         self.logger.warning(
                             "[MQTT-4.7.3-1] - %s invalid TOPIC sent in PUBLISH message, closing connection"
@@ -677,8 +686,8 @@ class Broker:
                             client_id=client_session.client_id,
                             message=app_message,
                         )
-                        await self._broadcast_message(
-                            client_session, app_message.topic, app_message.data
+                        await self._broadcast_message(   #clientlar publish etmek istediğinde
+                            client_session, app_message.topic, app_message.data  ##şimdilik burası update edilecek
                         )
                         if app_message.publish_packet.retain_flag:
                             self.retain_message(
@@ -687,6 +696,7 @@ class Broker:
                                 app_message.data,
                                 app_message.qos,
                             )
+
                     wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")
@@ -987,6 +997,7 @@ class Broker:
                         )
                     )
 
+                ####################################################3burası bir client publish ettiğinde çağrılıyor
                 handler = self._get_handler(target_session)
                 task = asyncio.ensure_future(
                     handler.mqtt_publish(
@@ -996,7 +1007,8 @@ class Broker:
                         retain=False,
                     ),
                 )
-                running_tasks.append(task)
+                running_tasks.append(task) 
+
 
     async def _retain_broadcast_message(self, broadcast, qos, target_session):
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -1034,7 +1046,7 @@ class Broker:
                 "%d messages not broadcasted", self._broadcast_queue.qsize()
             )
 
-    async def _broadcast_message(self, session, topic, data, force_qos=None):
+    async def _broadcast_message(self, session, topic, data, force_qos=None):  #definition broadcast message
         broadcast = {"session": session, "topic": topic, "data": data}
         if force_qos:
             broadcast["qos"] = force_qos
@@ -1088,7 +1100,7 @@ class Broker:
             % (subscription[0], format_client_message(session=session))
         )
 
-    def delete_session(self, client_id: str) -> None:
+    def delete_session(self, client_id: str, session_info: ClientConnection) -> None:
         """
         Delete an existing session data, for example due to clean session set in CONNECT
         :param client_id:
@@ -1109,6 +1121,10 @@ class Broker:
         self.logger.debug(
             "deleting existing session %s" % repr(self._sessions[client_id])
         )
+        #show the session is inactive in the database when delete session is called
+        updateRowFromDatabase(session_info.client_id, session_info.key_establishment_state, session_info.client_spec_pub_key,
+                session_info.client_spec_priv_key, session_info.session_key, 0) #is_active=false
+        
         del self._sessions[client_id]
 
     def _get_handler(self, session):

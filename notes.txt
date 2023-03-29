@@ -21,10 +21,7 @@ https://www.w3schools.com/python/python_classes.asp
 
 before sending to the database, we can look for some sql files to be parsed and to be inserted into the newly created table
 
-
-conenction bitince clientın olduğu row komple gidecek
-
-client_id subscriptions tablosu lazım
+client_id subscriptions tablosu lazım ?????
 
 
 
@@ -36,5 +33,12 @@ mqtt protocol handler 192de publish ediyor
 
 
 clientconnection classı ve clientsessions tableı ile ilgili:
-eğer sessionlar bitince silinmeyecekse, active/not active şeklinde yeni bir column eklenbilir mysql tableına
 eğer silinecekse gerekli deletei yapacak fonsiyon eklenmeli, databsede gereksiz row bulunmaması için
+
+
+
+databasee aynı client yeni bir session açıyorsa eskisini silme gelmeli çünkü primary key şuan client_id -->tam bitmedi
+silme nereye eklenecek, client disconnect olduğunda session siliniyor olmalı
+
+
+key establishment bittikten sonra aöakalı subscriptionu silinmeli gereksiz yer kaplamamak için (client_id ve authenticationTopice olan subscriptionlar)
