@@ -422,27 +422,6 @@ class ProtocolHandler:
             except asyncio.CancelledError:
                 self.logger.debug("Message flow cancelled")
 
-    #new function
-    async def _publish_cert_to_client(self): #currently not called, code should be checked later on
-
-        packet_created = None
-    
-        #create certificate
-
-        #create publish packet
-        packet_created = PublishPacket()
-        packet_created.build()
-
-        return packet_created
-    
-    #new function
-    async def _check_such_client_exists(self, given_topic_name) -> bool: #is it needed?
-        exists = False
-        #look to the databse for active clients, if such active client exists, publish certificate
-
-        new_var = given_topic_name #dummy operation, will be removed
-
-        return exists
 
     async def _reader_loop(self):
         # burcu: gelen dataları "while True" döngüsü içindeyken receive ediyor

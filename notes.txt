@@ -42,3 +42,6 @@ silme nereye eklenecek, client disconnect olduğunda session siliniyor olmalı
 
 
 key establishment bittikten sonra aöakalı subscriptionu silinmeli gereksiz yer kaplamamak için (client_id ve authenticationTopice olan subscriptionlar)
+
+
+her durumunda silinecek
