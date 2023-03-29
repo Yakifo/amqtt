@@ -27,6 +27,9 @@ from amqtt_folder.adapters import (
 )
 from .plugins.manager import PluginManager, BaseContext
 
+#new imports
+from amqtt_folder.clientconnection import ClientConnection
+from amqtt_folder.clientconnection import updateRowFromDatabase
 
 _defaults = {
     "timeout-disconnect-delay": 2,
@@ -400,7 +403,7 @@ class Broker:
 
         remote_address, remote_port = writer.get_peer_info()
         self.logger.info(
-            "Connection from xxxxxxxxxxx %s:%d on listener '%s'"
+            "(broker.py, line 403: Connection from %s:%d on listener '%s'"
             % (remote_address, remote_port, listener_name)
         )
 
@@ -437,10 +440,17 @@ class Broker:
 
         if client_session.clean_session:    #buraya bir deletion eklemesi gerekebilir
             # Delete existing session and create a new one
+
+            #deleted sessions will become active=false for now. Later on, this can be changed as delete that row, etc.
+            updateRowFromDatabase(client_session.session_info.client_id, 
+                                  client_session.session_info.key_establishment_state, client_session.session_info.client_spec_pub_key,
+                                  client_session.session_info.client_spec_priv_key, client_session.session_info.session_key, 0) #is_active=false
+
             if client_session.client_id is not None and client_session.client_id != "":
                 self.delete_session(client_session.client_id)
+
             else:
-                client_session.client_id = gen_client_id()
+                client_session.client_id = gen_client_id()    #bu yeni client mı oluyor eğer öyleyse databsee yeni row pushlanmalı
             client_session.parent = 0
         else:
             # Get session from cache
@@ -453,12 +463,6 @@ class Broker:
                 client_session.parent = 1
             else:
                 client_session.parent = 0
-
-
-        #newly added
-        self.logger.debug("######HERE")
-        #self.logger.debug("*******received or generated client id: " +  str(client_session.client_id) + "******")
-
 
         if client_session.keep_alive > 0:
             client_session.keep_alive += self.config["timeout-disconnect-delay"]
