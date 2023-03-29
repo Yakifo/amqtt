@@ -27,9 +27,11 @@ from amqtt_folder.adapters import (
 )
 from .plugins.manager import PluginManager, BaseContext
 
+
 #new imports
 from amqtt_folder.clientconnection import ClientConnection
 from amqtt_folder.clientconnection import updateRowFromDatabase
+from diffiehellman import DiffieHellman
 
 """START:29MART2023 - Burcu"""
 from amqtt_folder.codecs import (
@@ -637,14 +639,23 @@ class Broker:
 
 
                             """ Burcu: START 29mart2023 te eklendi if topic = client_id publish message """    
-                            xtopic = subscription[0]  
+                            xtopic = subscription[0] 
+                             
                             if (subscription[0] == client_session.client_id) :
-                                clientID_sub_waiter = asyncio.ensure_future(handler.broker_cert_publish(subscription[0]))
-                                self.logger.debug("########DENEME %s", clientID_sub_waiter)
+                                
+                                await (handler.broker_df_publish(subscription[0], "none"))
+                                
                             
                                 xmsg="testxxx topic == clientid"
                             else:
                                 xmsg="testxxx topic != clientid"
+
+                           
+                            #client_df_waiter = asyncio.ensure_future(handler.broker_shared_generated( dh1_public, dh1))
+
+                           
+                                
+                                
                             #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
                             """ Burcu:  STOP 29mart2023 te eklendi STOP """
                             
@@ -698,7 +709,13 @@ class Broker:
                                 app_message.data,
                                 app_message.qos,
                             )
-
+                        """START Burcu 30Mart"""
+                     
+                        if (client_session.session_info.key_establishment_state == 4 and app_message.topic == "AuthenticationTopic"): 
+                                self.logger.debug(
+                            " app message  %s" , app_message.topic)
+                                await (handler.broker_df_publish(app_message.topic, app_message.data))
+                        """END Burcu 30Mart"""
                     wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")

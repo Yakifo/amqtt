@@ -31,16 +31,12 @@ from amqtt_folder.clientconnection import pushRowToDatabase, updateRowFromDataba
 """START:29MART2023 - Burcu"""
 from amqtt_folder.codecs import (
     encode_string,
-    bytes_to_hex_str
+    bytes_to_hex_str, 
+    decode_string
 )
 
 """STOP:29MART2023 - Burcu"""
-"""START 29 Mart"""
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import dh
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives.asymmetric import rsa
-"""END 29 Mart"""
+from diffiehellman import DiffieHellman
 class BrokerProtocolHandler(ProtocolHandler):
     def __init__(
         self, plugins_manager: PluginManager, session: Session = None, loop=None
@@ -102,38 +98,54 @@ class BrokerProtocolHandler(ProtocolHandler):
         await self._pending_subscriptions.put(subscription)
     
     """ Burcu: START 29mart2023 te eklendi """    
-    async def broker_cert_publish (self, topicname):
-
+    async def broker_df_publish (self, topicname, data):
+        self.logger.debug("#######102 topic name, %s", topicname )
         try:
-            parameters = dh.generate_parameters(generator=2, key_size=2048)
-            server_private_key = parameters.generate_private_key()
-            data = server_private_key.public_key()
-            data_hex = bytes_to_hex_str(data.public_bytes)
-
-
-
-            self.logger.debug("#######Inside broker_vert_publish: %s %s %s", data.key_size, data.public_numbers, data_hex )
-            try:
-                await self.mqtt_publish(topicname, data = encode_string(data_hex), qos=2, retain= False )
-            except Exception as e2:
-                self.logger.warning("XXXXXXXXXXXX %r ", e2.args)
-
+            dh1 = DiffieHellman(group=14, key_bits=540)
+            dh1_public = dh1.get_public_key()
+            dh1_public_hex = bytes_to_hex_str(dh1_public)
+            self.logger.debug("#######107 broker public key %s", dh1_public_hex)
         except Exception as e:
             self.logger.warning("YYYYYYYYYYY %r", e.args)
-        
-
-        
-        
-        if (self.session.session_info.key_establishment_state == 0):
-            self.logger.debug("#######STATE IS 0" )
+        if (topicname == self.session.client_id):
+            try:
+                await self.mqtt_publish(topicname, data = encode_string(dh1_public_hex), qos=2, retain= False )
+                self.session.session_info.key_establishment_state = 4
+                self.logger.debug("#######108 self.session.session_info.key_establishment_state, %s", self.session.session_info.key_establishment_state )
+            except Exception as e2:
+                self.logger.warning("XXXXXXXXXXXX %r ", e2.args)
+   
+            if (self.session.session_info.key_establishment_state == 0):
+                self.logger.debug("#######STATE IS 0" )
+                
+            else:
+                self.logger.debug("#######STATE IS NOT 0" )
+            #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
             
-        else:
-            self.logger.debug("#######STATE IS NOT 0" )
-        #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
-        self.logger.debug("#######Inside handle deneme in broker_handler.py" )
-        self.session.session_info.key_establishment_state = 3
-        self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
+            self.logger.debug("#######Inside handle deneme in broker_handler.py" )
+            self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
+        elif (topicname == "AuthenticationTopic"):
+            self.logger.debug("#######127 client public key %s", data)
+            dh1_shared = dh1.generate_shared_key(data)
+            self.logger.debug("#######129 shared key %s", dh1_shared)
 
+
+            
+
+        """
+
+    async def broker_shared_generated (self, dh1_public, dh1):
+
+        try:
+            dh1_shared = dh1.generate_shared_key(dh1_public)
+        except Exception as e:
+            self.logger.warning("YYYYYYYYYYY %r", e.args)   
+        
+        self.logger.debug("#######Inside broker_shared_generated in broker_handler.py" )
+        self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
+        self.logger.debug("#######dh1_shared %s", dh1_shared)
+"""
+   
     """ Burcu: START 29mart2023 te eklendi """    
 
     async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):
