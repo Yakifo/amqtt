@@ -11,6 +11,7 @@ from asyncio import InvalidStateError
 from amqtt_folder.mqtt import packet_class
 from amqtt_folder.mqtt.connack import ConnackPacket
 from amqtt_folder.mqtt.connect import ConnectPacket
+from amqtt_folder.mqtt.publish import PublishVariableHeader, PublishPayload, PublishPacket
 from amqtt_folder.mqtt.packet import (
     RESERVED_0,
     CONNECT,
@@ -422,18 +423,20 @@ class ProtocolHandler:
                 self.logger.debug("Message flow cancelled")
 
     #new function
-    async def _publish_cert_to_client(self):
-
-        #create publish packet
-
-        #create certificate
+    async def _publish_cert_to_client(self): #currently not called, code should be checked later on
 
         packet_created = None
+    
+        #create certificate
+
+        #create publish packet
+        packet_created = PublishPacket()
+        packet_created.build()
 
         return packet_created
     
     #new function
-    async def _check_such_client_exists(self, given_topic_name) -> bool:
+    async def _check_such_client_exists(self, given_topic_name) -> bool: #is it needed?
         exists = False
         #look to the databse for active clients, if such active client exists, publish certificate
 
@@ -516,24 +519,7 @@ class ProtocolHandler:
                         elif packet.fixed_header.packet_type == PINGRESP:
                             task = asyncio.ensure_future(self.handle_pingresp(packet))
                         elif packet.fixed_header.packet_type == PUBLISH:
-                            #task = asyncio.ensure_future(self.handle_publish(packet))
-                            
-
-                            #modificaiton start
-                            returned = await self._check_such_client_exists(packet.topic_name)
-                            if returned:
-                                #publish certificate
-                                packet_to_publish = await self._publish_cert_to_client()
-                                task = asyncio.ensure_future(self.handle_publish(packet_to_publish))
-
-                            else:
-                                task = asyncio.ensure_future(self.handle_publish(packet)) #work as before
-
-                            #if client is publishing to its own topic, then publish the certificate
-                            #if normal publish, normally publish the message
-                            #modification end
-
-
+                            task = asyncio.ensure_future(self.handle_publish(packet))
                         elif packet.fixed_header.packet_type == DISCONNECT:
                             task = asyncio.ensure_future(self.handle_disconnect(packet))
                         elif packet.fixed_header.packet_type == CONNECT:
