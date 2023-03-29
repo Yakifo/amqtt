@@ -441,13 +441,8 @@ class Broker:
         if client_session.clean_session:    #buraya bir deletion eklemesi gerekebilir
             # Delete existing session and create a new one
 
-            #deleted sessions will become active=false for now. Later on, this can be changed as delete that row, etc.
-            updateRowFromDatabase(client_session.session_info.client_id, 
-                                  client_session.session_info.key_establishment_state, client_session.session_info.client_spec_pub_key,
-                                  client_session.session_info.client_spec_priv_key, client_session.session_info.session_key, 0) #is_active=false
-
             if client_session.client_id is not None and client_session.client_id != "":
-                self.delete_session(client_session.client_id)
+                self.delete_session(client_session.client_id, client_session.session_info)
 
             else:
                 client_session.client_id = gen_client_id()    #bu yeni client mı oluyor eğer öyleyse databsee yeni row pushlanmalı
@@ -538,8 +533,6 @@ class Broker:
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
-                self.logger.debug("******************* here, line 537, in client_connect, done pending set with asyncio wait")
-
                 if disconnect_waiter in done:
                     result = disconnect_waiter.result()
                     self.logger.debug(
@@ -568,9 +561,17 @@ class Broker:
                                     client_session.will_qos,
                                 )
                     self.logger.debug(
-                        "%s Disconnecting session" % client_session.client_id
+                        "%s Disconnecting session" % client_session.client_id  #######buraya active to inactive eklenebilir
                     )
                     await self._stop_handler(handler)
+
+                    #disconnecting, setting session=inactive
+                    self.logger.debug("%s\'s session will be set as inactive in the database now.", client_session.client_id)
+                    updateRowFromDatabase(client_session.session_info.client_id, client_session.session_info.key_establishment_state, 
+                                        client_session.session_info.client_spec_pub_key,
+                                        client_session.session_info.client_spec_priv_key, 
+                                        client_session.session_info.session_key, 0) #is_active=false
+
                     client_session.transitions.disconnect()
                     await self.plugins_manager.fire_event(
                         EVENT_BROKER_CLIENT_DISCONNECTED,
@@ -631,7 +632,6 @@ class Broker:
                         )
                     app_message = wait_deliver.result()
 
-                    self.logger.debug("******************* here, in client_connect, app_message set to result of wait_deliver, line 627")
                     if not app_message.topic:
                         self.logger.warning(
                             "[MQTT-4.7.3-1] - %s invalid TOPIC sent in PUBLISH message, closing connection"
@@ -672,7 +672,6 @@ class Broker:
                                 app_message.qos,
                             )
 
-                    self.logger.debug("********************* here, in client_connected, will set wait_deliver, line:666")
                     wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")
@@ -985,7 +984,6 @@ class Broker:
                 )
                 running_tasks.append(task) 
 
-                self.logger.debug("******************************************************HERE in broker.py line: 976")
 
     async def _retain_broadcast_message(self, broadcast, qos, target_session):
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -1077,7 +1075,7 @@ class Broker:
             % (subscription[0], format_client_message(session=session))
         )
 
-    def delete_session(self, client_id: str) -> None:
+    def delete_session(self, client_id: str, session_info: ClientConnection) -> None:
         """
         Delete an existing session data, for example due to clean session set in CONNECT
         :param client_id:
@@ -1098,6 +1096,10 @@ class Broker:
         self.logger.debug(
             "deleting existing session %s" % repr(self._sessions[client_id])
         )
+        #show the session is inactive in the database when delete session is called
+        updateRowFromDatabase(session_info.client_id, session_info.key_establishment_state, session_info.client_spec_pub_key,
+                session_info.client_spec_priv_key, session_info.session_key, 0) #is_active=false
+        
         del self._sessions[client_id]
 
     def _get_handler(self, session):

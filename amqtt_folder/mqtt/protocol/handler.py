@@ -217,9 +217,6 @@ class ProtocolHandler:
         :return: ApplicationMessage used during inflight operations
         """
 
-        self.logger.debug("*****************here, handler.py in mqtt_publish line:220")
-
-
         if qos in (QOS_1, QOS_2):
             packet_id = self.session.next_packet_id
             if packet_id in self.session.inflight_out:
@@ -247,9 +244,6 @@ class ProtocolHandler:
         :return: nothing.
         """
 
-
-        self.logger.debug("***************here, _handle_message_flow in handler.py line 251")
-
         if app_message.qos == QOS_0:
             await self._handle_qos0_message_flow(app_message)
         elif app_message.qos == QOS_1:
@@ -267,8 +261,6 @@ class ProtocolHandler:
         :param app_message:
         :return:
         """
-
-        self.logger.debug("******************** here, _handle_qos0_message_flow in handler.py line 271")
 
         assert app_message.qos == QOS_0
         if app_message.direction == OUTGOING:
@@ -610,8 +602,6 @@ class ProtocolHandler:
             raise
 
     async def mqtt_deliver_next_message(self):
-
-        self.logger.debug("************************* here, mqtt_deliver_next_message in handler.py, line:577")
 
         if not self._is_attached():
             return None

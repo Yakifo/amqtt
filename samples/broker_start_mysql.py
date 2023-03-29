@@ -59,13 +59,11 @@ def pushDataTodatabase(cli_id, topic, mesg, recevied_at):
 
     mycursor.execute("USE {}".format("deneme"))
 
-    print("*************date", recevied_at, str(recevied_at))
 
     ts = time.time()
 
     str_time = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 
-    print("**********************", str_time)
 
     sql_query = "INSERT INTO `incomingmessages`(`client_id`, `topic`, `message`, `received_date`) VALUES (%s, %s, %s, %s)"
     val = (cli_id, topic, mesg, str_time)
@@ -84,8 +82,6 @@ def pushDataTodatabase(cli_id, topic, mesg, recevied_at):
 
 @asyncio.coroutine
 def connectToDatabaseAndAddTable():
-    print("in connectToDatabaseAndAddTable")
-
     mydb = mysql.connector.connect(
                 host="127.0.0.1",
                 user="root",
