@@ -15,6 +15,7 @@ from amqtt_folder.mqtt.connect import ConnectPacket
 from amqtt_folder.mqtt.pingreq import PingReqPacket
 from amqtt_folder.mqtt.pingresp import PingRespPacket
 from amqtt_folder.mqtt.subscribe import SubscribePacket
+from amqtt_folder.mqtt.publish import PublishPacket
 from amqtt_folder.mqtt.suback import SubackPacket
 from amqtt_folder.mqtt.unsubscribe import UnsubscribePacket
 from amqtt_folder.mqtt.unsuback import UnsubackPacket
@@ -26,6 +27,12 @@ from amqtt_folder.errors import MQTTException
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
 from amqtt_folder.clientconnection import pushRowToDatabase, updateRowFromDatabase
+
+"""START:29MART2023 - Burcu"""
+from amqtt_folder.codecs import (
+    encode_string,
+)
+"""STOP:29MART2023 - Burcu"""
 
 
 class BrokerProtocolHandler(ProtocolHandler):
@@ -78,13 +85,35 @@ class BrokerProtocolHandler(ProtocolHandler):
 
     async def handle_pingreq(self, pingreq: PingReqPacket):
         await self._send_packet(PingRespPacket.build())
-
+    
     async def handle_subscribe(self, subscribe: SubscribePacket):
+        self.logger.debug("#######session client ID %s", self.session.client_id)
         subscription = {
             "packet_id": subscribe.variable_header.packet_id,
             "topics": subscribe.payload.topics,
         }
+        self.logger.debug("#######Inside hande_subscribe in broker_handler.py" )
         await self._pending_subscriptions.put(subscription)
+    
+    """ Burcu: START 29mart2023 te eklendi """    
+    async def handle_deneme(self, topicname):
+        self.logger.debug("#######session client ID %s", self.session.client_id)
+        """  packet = {
+            "packet_id": publish.variable_header.packet_id,
+            "topics": publish.payload.topics,
+        }"""
+        data = "merhaba"
+        if (self.session.session_info.key_establishment_state == 2):
+            self.logger.debug("#######STATE IS 2" )
+            await self.mqtt_publish(topicname, data = encode_string(data), qos=2, retain= False )
+        else:
+            self.logger.debug("#######STATE IS NOT 2" )
+        #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
+        self.logger.debug("#######Inside handle deneme in broker_handler.py" )
+        self.session.session_info.key_establishment_state = 3
+        self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
+
+    """ Burcu: START 29mart2023 te eklendi """    
 
     async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket):
         unsubscription = {
@@ -206,6 +235,7 @@ class BrokerProtocolHandler(ProtocolHandler):
 
         #modification --> client info added, ke state is currently equal to 0, other fields are none right now.
         incoming_session.session_info.client_id = connect.client_id
+        incoming_session.session_info.key_establishment_state = 2 #Burcu-29Mart
 
         #call push to database from clientconnection.py to create the record of this session with the related key pairs, session states and created session keys
         print("*****Will call pushRowToDatabase in broker_handler.py line:211*****")

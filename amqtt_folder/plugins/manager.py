@@ -72,6 +72,7 @@ class PluginManager:
             plugin_context = copy.copy(self.app_context)
             plugin_context.logger = self.logger.getChild(ep.name)
             obj = plugin(plugin_context)
+            self.logger.debug(" ###Burcu: Loading plugin in _load_plugin %s" % ep.name)
             return Plugin(ep.name, ep, obj)
         except ImportError as ie:
             self.logger.warning(f"Plugin {ep!r} import failed: {ie}")
@@ -135,7 +136,9 @@ class PluginManager:
        
         tasks = []
         event_method_name = "on_" + event_name
+        self.logger.debug("###Burcu: Event method name%s" % event_method_name)
         for plugin in self._plugins:
+            self.logger.debug("###Burcu: Loading plugin in fire events%s" % plugin.name)
             event_method = getattr(plugin.object, event_method_name, None)  #Burcu: getattr = get attribute 
             if event_method:
                 try:

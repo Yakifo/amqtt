@@ -28,6 +28,13 @@ from amqtt_folder.adapters import (
 from .plugins.manager import PluginManager, BaseContext
 
 
+"""START:29MART2023 - Burcu"""
+from amqtt_folder.codecs import (
+    encode_string,
+)
+"""STOP:29MART2023 - Burcu"""
+
+
 _defaults = {
     "timeout-disconnect-delay": 2,
     "auth": {"allow-anonymous": True, "password-file": None},
@@ -74,6 +81,10 @@ class Server:
         self.max_connections = max_connections
         if self.max_connections > 0:
             self.semaphore = asyncio.Semaphore(self.max_connections)
+            #Burcu: A semaphore manages an internal counter which is decremented by each acquire() call 
+            #and incremented by each release() call. The counter can never go below zero; 
+            #when acquire() finds that it is zero, it blocks, waiting until some task calls release().
+            #max_connections = 100 ise 100 connectiondan fazlasi concurent olarak çalişamiyor
         else:
             self.semaphore = None
 
@@ -170,8 +181,8 @@ class Broker:
         self.config = _defaults
         if config is not None:
             self.config.update(config)
-        self._build_listeners_config(self.config)
-
+        self._build_listeners_config(self.config)  #Burcu: tüm listenerlarin configteki 
+        #tanimlar ile çalişmasini sağliyor
         if loop is not None:
             self._loop = loop
         else:
@@ -613,6 +624,20 @@ class Broker:
                             await self.publish_retained_messages_for_subscription(
                                 subscription, client_session
                             )
+
+
+                            """ Burcu: START 29mart2023 te eklendi if topic = client_id publish message """    
+                            xtopic = subscription[0]  
+                            if (subscription[0] == client_session.client_id) :
+                                deneme_waiter = asyncio.ensure_future(handler.handle_deneme(subscription[0]))
+                                self.logger.debug("########DENEME %s", deneme_waiter)
+                            
+                                xmsg="testxxx topic == clientid"
+                            else:
+                                xmsg="testxxx topic != clientid"
+                            #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
+                            """ Burcu:  STOP 29mart2023 te eklendi STOP """
+                            
                     subscribe_waiter = asyncio.Task(
                         handler.get_next_pending_subscription()
                     )

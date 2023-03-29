@@ -591,6 +591,7 @@ class ProtocolHandler:
 
     async def handle_subscribe(self, subscribe: SubscribePacket):
         self.logger.debug("%s SUBSCRIBE unhandled" % self.session.client_id)
+        self.logger.debug("#######Inside hande_subscribe in handler.py" )
 
     async def handle_unsubscribe(self, subscribe: UnsubscribePacket):
         self.logger.debug("%s UNSUBSCRIBE unhandled" % self.session.client_id)
