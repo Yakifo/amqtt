@@ -31,10 +31,16 @@ from amqtt_folder.clientconnection import pushRowToDatabase, updateRowFromDataba
 """START:29MART2023 - Burcu"""
 from amqtt_folder.codecs import (
     encode_string,
+    bytes_to_hex_str
 )
+
 """STOP:29MART2023 - Burcu"""
-
-
+"""START 29 Mart"""
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.asymmetric import rsa
+"""END 29 Mart"""
 class BrokerProtocolHandler(ProtocolHandler):
     def __init__(
         self, plugins_manager: PluginManager, session: Session = None, loop=None
@@ -87,7 +93,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         await self._send_packet(PingRespPacket.build())
     
     async def handle_subscribe(self, subscribe: SubscribePacket):
-        self.logger.debug("#######session client ID %s", self.session.client_id)
+        self.logger.debug("#######session client ID %s", self.session.client_id) #Burcu
         subscription = {
             "packet_id": subscribe.variable_header.packet_id,
             "topics": subscribe.payload.topics,
@@ -96,18 +102,33 @@ class BrokerProtocolHandler(ProtocolHandler):
         await self._pending_subscriptions.put(subscription)
     
     """ Burcu: START 29mart2023 te eklendi """    
-    async def handle_deneme(self, topicname):
-        self.logger.debug("#######session client ID %s", self.session.client_id)
-        """  packet = {
-            "packet_id": publish.variable_header.packet_id,
-            "topics": publish.payload.topics,
-        }"""
-        data = "merhaba"
-        if (self.session.session_info.key_establishment_state == 2):
-            self.logger.debug("#######STATE IS 2" )
-            await self.mqtt_publish(topicname, data = encode_string(data), qos=2, retain= False )
+    async def broker_cert_publish (self, topicname):
+
+        try:
+            parameters = dh.generate_parameters(generator=2, key_size=2048)
+            server_private_key = parameters.generate_private_key()
+            data = server_private_key.public_key()
+            data_hex = bytes_to_hex_str(data.public_bytes)
+
+
+
+            self.logger.debug("#######Inside broker_vert_publish: %s %s %s", data.key_size, data.public_numbers, data_hex )
+            try:
+                await self.mqtt_publish(topicname, data = encode_string(data_hex), qos=2, retain= False )
+            except Exception as e2:
+                self.logger.warning("XXXXXXXXXXXX %r ", e2.args)
+
+        except Exception as e:
+            self.logger.warning("YYYYYYYYYYY %r", e.args)
+        
+
+        
+        
+        if (self.session.session_info.key_establishment_state == 0):
+            self.logger.debug("#######STATE IS 0" )
+            
         else:
-            self.logger.debug("#######STATE IS NOT 2" )
+            self.logger.debug("#######STATE IS NOT 0" )
         #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
         self.logger.debug("#######Inside handle deneme in broker_handler.py" )
         self.session.session_info.key_establishment_state = 3
@@ -235,7 +256,7 @@ class BrokerProtocolHandler(ProtocolHandler):
 
         #modification --> client info added, ke state is currently equal to 0, other fields are none right now.
         incoming_session.session_info.client_id = connect.client_id
-        incoming_session.session_info.key_establishment_state = 2 #Burcu-29Mart
+         #Burcu-29Mart
 
         #call push to database from clientconnection.py to create the record of this session with the related key pairs, session states and created session keys
         pushRowToDatabase(incoming_session.session_info.client_id, incoming_session.session_info.key_establishment_state, 

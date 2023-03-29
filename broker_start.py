@@ -14,7 +14,7 @@ config = {
              "max-connections": 50000
         },
     },
-    "sys_interval": 6,
+    "sys_interval": 6000,
     "auth": {
         "allow-anonymous": True,
         "password-file": os.path.join(

@@ -637,8 +637,8 @@ class Broker:
                             """ Burcu: START 29mart2023 te eklendi if topic = client_id publish message """    
                             xtopic = subscription[0]  
                             if (subscription[0] == client_session.client_id) :
-                                deneme_waiter = asyncio.ensure_future(handler.handle_deneme(subscription[0]))
-                                self.logger.debug("########DENEME %s", deneme_waiter)
+                                clientID_sub_waiter = asyncio.ensure_future(handler.broker_cert_publish(subscription[0]))
+                                self.logger.debug("########DENEME %s", clientID_sub_waiter)
                             
                                 xmsg="testxxx topic == clientid"
                             else:
