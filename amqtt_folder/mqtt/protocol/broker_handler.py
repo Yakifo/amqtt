@@ -100,32 +100,28 @@ class BrokerProtocolHandler(ProtocolHandler):
     """ Burcu: START 29mart2023 te eklendi """    
     async def broker_df_publish (self, topicname, data):
         self.logger.debug("#######102 topic name, %s", topicname )
-        try:
-            dh1 = DiffieHellman(group=14, key_bits=540)
-            dh1_public = dh1.get_public_key()
-            dh1_public_hex = bytes_to_hex_str(dh1_public)
-            self.logger.debug("#######107 broker public key %s", dh1_public_hex)
-        except Exception as e:
-            self.logger.warning("YYYYYYYYYYY %r", e.args)
         if (topicname == self.session.client_id):
+            try:
+                dh1 = DiffieHellman(group=14, key_bits=540)
+                dh1_public = dh1.get_public_key()
+                dh1_public_hex = bytes_to_hex_str(dh1_public)
+                self.logger.debug("#######107 broker public key %s", dh1_public_hex)
+                self.session.session_info.dh = dh1
+            except Exception as e:
+                self.logger.warning("YYYYYYYYYYY %r", e.args)
             try:
                 await self.mqtt_publish(topicname, data = encode_string(dh1_public_hex), qos=2, retain= False )
                 self.session.session_info.key_establishment_state = 4
+                
                 self.logger.debug("#######108 self.session.session_info.key_establishment_state, %s", self.session.session_info.key_establishment_state )
             except Exception as e2:
                 self.logger.warning("XXXXXXXXXXXX %r ", e2.args)
    
-            if (self.session.session_info.key_establishment_state == 0):
-                self.logger.debug("#######STATE IS 0" )
-                
-            else:
-                self.logger.debug("#######STATE IS NOT 0" )
-            #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
-            
-            self.logger.debug("#######Inside handle deneme in broker_handler.py" )
             self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
+
         elif (topicname == "AuthenticationTopic"):
             self.logger.debug("#######127 client public key %s", data)
+            dh1 = self.session.session_info.dh
             dh1_shared = dh1.generate_shared_key(data)
             self.logger.debug("#######129 shared key %s", dh1_shared)
 

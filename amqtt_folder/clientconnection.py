@@ -1,6 +1,7 @@
 import mysql.connector 
 from mysql.connector import errorcode
 import logging
+from diffiehellman import DiffieHellman
 
 class ClientConnection: #session-based class, containig information about the current client session
 
@@ -14,6 +15,7 @@ class ClientConnection: #session-based class, containig information about the cu
         self.client_spec_pub_key: str = None
         self.session_key: str = None
         self.key_establishment_state: int = 0 #start from zero as default
+        self.dh: DiffieHellman(group=14, key_bits=540)
 
 
     @property
@@ -35,6 +37,12 @@ class ClientConnection: #session-based class, containig information about the cu
     @property
     def return_client_id(self):
         return str(self.client_id)
+    
+    @property
+    def return_dh(self):
+        return self.dh
+    
+    
     
 
 def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool: #create database and create table can be removed and run seperately
