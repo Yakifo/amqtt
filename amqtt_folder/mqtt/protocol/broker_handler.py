@@ -32,7 +32,7 @@ from amqtt_folder.clientconnection import pushRowToDatabase, updateRowFromDataba
 from amqtt_folder.codecs import (
     encode_string,
     bytes_to_hex_str, 
-    decode_string
+    decode_string, encode_data_with_length
 )
 
 """STOP:29MART2023 - Burcu"""
@@ -105,12 +105,12 @@ class BrokerProtocolHandler(ProtocolHandler):
                 dh1 = DiffieHellman(group=14, key_bits=540)
                 dh1_public = dh1.get_public_key()
                 dh1_public_hex = bytes_to_hex_str(dh1_public)
-                self.logger.debug("#######107 broker public key %s", dh1_public_hex)
+                self.logger.debug("#######107 broker public key %s", dh1_public)
                 self.session.session_info.dh = dh1
             except Exception as e:
                 self.logger.warning("YYYYYYYYYYY %r", e.args)
             try:
-                await self.mqtt_publish(topicname, data = encode_string(dh1_public_hex), qos=2, retain= False )
+                await self.mqtt_publish(topicname, data = encode_data_with_length(dh1_public), qos=2, retain= False )
                 self.session.session_info.key_establishment_state = 4
                 
                 self.logger.debug("#######108 self.session.session_info.key_establishment_state, %s", self.session.session_info.key_establishment_state )
