@@ -103,7 +103,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         self.logger.debug("#######102 topic name, %s", topicname )
         if (topicname == self.session.client_id):
             try:
-                dh1 = DiffieHellman(group=14, key_bits=540)
+                dh1 = DiffieHellman(group=14, key_bits=540)    #bilgesu: key size should be increased
                 dh1_public = dh1.get_public_key()
                 dh1_public_hex = bytes_to_hex_str(dh1_public)
                 self.logger.debug("#######107 broker public key %s", dh1_public)
@@ -117,7 +117,7 @@ class BrokerProtocolHandler(ProtocolHandler):
                 #bilgesu: modification start
                 is_successs = updateRowFromDatabase(self.session.session_info.client_id, self.session.session_info.key_establishment_state,
                                       self.session.session_info.client_spec_pub_key, self.session.session_info.client_spec_priv_key,
-                                      self.session.session_info.session_key, self.session.session_info.n1, self.session.session_info.n2, 
+                                      None, self.session.session_info.n1, self.session.session_info.n2, 
                                       self.session.session_info.n3)
                 if is_successs:
                     self.logger.debug("state update successfull")
@@ -135,7 +135,13 @@ class BrokerProtocolHandler(ProtocolHandler):
             self.logger.debug("#######127 client public key %s", data)
             dh1 = self.session.session_info.dh
             dh1_shared = dh1.generate_shared_key(data)
+
+            #bilgesu:modification start
+            self.session.session_info.session_key = dh1_shared
+            #bilgesu:modification end
+
             self.logger.debug("#######129 shared key %s", dh1_shared)
+            self.logger.debug("#######129 shared key type %s", type(dh1_shared))
 
 
             
@@ -280,8 +286,7 @@ class BrokerProtocolHandler(ProtocolHandler):
 
         #call push to database from clientconnection.py to create the record of this session with the related key pairs, session states and created session keys
         pushRowToDatabase(incoming_session.session_info.client_id, incoming_session.session_info.key_establishment_state, 
-                          incoming_session.session_info.client_spec_pub_key, incoming_session.session_info.client_spec_priv_key, 
-                          incoming_session.session_info.session_key)
+                          incoming_session.session_info.client_spec_pub_key, incoming_session.session_info.client_spec_priv_key)
 
         if connect.keep_alive > 0:
             incoming_session.keep_alive = connect.keep_alive
