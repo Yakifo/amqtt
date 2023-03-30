@@ -25,6 +25,7 @@ from amqtt_folder.plugins.manager import PluginManager
 from amqtt_folder.adapters import ReaderAdapter, WriterAdapter
 from amqtt_folder.errors import MQTTException
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
+from diffiehellman import DiffieHellman
 
 from amqtt_folder.clientconnection import pushRowToDatabase, updateRowFromDatabase
 
@@ -105,23 +106,34 @@ class BrokerProtocolHandler(ProtocolHandler):
     async def broker_cert_publish (self, topicname):
 
         try:
-            parameters = dh.generate_parameters(generator=2, key_size=2048)
-            server_private_key = parameters.generate_private_key()
-            data = server_private_key.public_key()
-            data_hex = bytes_to_hex_str(data.public_bytes)
+
+            dh1 = DiffieHellman(group=14, key_bits=2048)
+            dh1_public = dh1.get_public_key()
 
 
+            dh1_hex = bytes_to_hex_str(dh1.get_private_key())
+            dh1_public_hex = bytes_to_hex_str(dh1_public)
 
-            self.logger.debug("#######Inside broker_vert_publish: %s %s %s", data.key_size, data.public_numbers, data_hex )
+            self.session.session_info.client_spec_priv_key = encode_string(dh1_hex).decode("utf-8")
+            self.session.session_info.client_spec_pub_key = encode_string(dh1_public_hex).decode("utf-8")
+
+            '''
+            is_updated = updateRowFromDatabase(self.session.session_info.client_id, self.session.session_info.key_establishment_state, 
+                                  self.session.session_info.client_spec_pub_key, self.session.session_info.client_spec_priv_key,
+                                  self.session.session_info.session_key, 1, self.session.session_info.n1, self.session.session_info.n2, 
+                                  self.session.session_info.n3)
+            if not is_updated:
+                self.logger.debug("update issue")
+            '''
+            
             try:
-                await self.mqtt_publish(topicname, data = encode_string(data_hex), qos=2, retain= False )
+                await self.mqtt_publish(topicname, data = encode_string(dh1_public_hex), qos=2, retain= False )
             except Exception as e2:
-                self.logger.warning("XXXXXXXXXXXX %r ", e2.args)
+                self.logger.warning(" exception inner %r", e2.args)
+            
 
         except Exception as e:
-            self.logger.warning("YYYYYYYYYYY %r", e.args)
-        
-
+            self.logger.warning("exception outer %r", e.args)
         
         
         if (self.session.session_info.key_establishment_state == 0):

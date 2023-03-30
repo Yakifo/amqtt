@@ -578,11 +578,12 @@ class Broker:
 
                     #disconnecting, setting session=inactive
                     #bilgesu: database active state change
-                    self.logger.debug("%s\'s session will be set as inactive in the database now.", client_session.client_id)
-                    updateRowFromDatabase(client_session.session_info.client_id, client_session.session_info.key_establishment_state, 
+                    self.logger.debug("%s\'s session will be deleted in the database.", client_session.client_id)
+                    #call delete
+                    '''updateRowFromDatabase(client_session.session_info.client_id, client_session.session_info.key_establishment_state, 
                                         client_session.session_info.client_spec_pub_key,
                                         client_session.session_info.client_spec_priv_key, 
-                                        client_session.session_info.session_key, 0) #is_active=false
+                                        client_session.session_info.session_key, 0,) #is_active=false'''
                     #bilgesu: modification end
 
                     client_session.transitions.disconnect()
@@ -964,7 +965,7 @@ class Broker:
         broadcast = await self._broadcast_queue.get()
 
         if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug("broadcasting %r", broadcast)
+            self.logger.debug("broadcasting %r", broadcast["data"])
 
         for k_filter in self._subscriptions:
             if broadcast["topic"].startswith("$") and (
@@ -1126,9 +1127,10 @@ class Broker:
 
         #show the session is inactive in the database when delete session is called
         #bilgesu: call update row for inactive state
-        self.logger.debug("deleting session, call updateRow in broker")
-        updateRowFromDatabase(session_info.client_id, session_info.key_establishment_state, session_info.client_spec_pub_key,
-                session_info.client_spec_priv_key, session_info.session_key, 0) #is_active=false
+        self.logger.debug("deleting session, in broker")
+        #call delete
+        '''updateRowFromDatabase(session_info.client_id, session_info.key_establishment_state, session_info.client_spec_pub_key,
+                session_info.client_spec_priv_key, session_info.session_key, 0) #is_active=false'''
         #bilgesu: modification end
         
         del self._sessions[client_id]
