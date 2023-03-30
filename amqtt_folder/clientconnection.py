@@ -122,8 +122,44 @@ def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key
 
         #if-else unique to some errors can be added
 
-        print("\nFailed pushing data: {}".format(err))
+        print("\nFailed updating data: {}".format(err))
         #self.logger.debug("\nFailed pushing data: {}".format(err))
+
+    finally:
+        return success
+
+
+def deleteRowFromDatabase(client_id):
+    success = False
+
+    mydb = mysql.connector.connect(
+        host="127.0.0.1",
+        user="root",
+        password=""
+    ) 
+    mycursor = mydb.cursor()
+
+    try:
+        mycursor.execute("USE {}".format("brokerside"))
+    except Exception as e:
+        
+        print("\n", e.args)
+        #self.logger.debug("\n", e.args)
+
+
+    sql_query = "DELETE FROM `clientsessions` WHERE `client_id` = %s"
+    values = (client_id)
+
+    try:
+        mycursor.execute(sql_query, values)
+        mydb.commit()
+        success = True
+
+    except mysql.connector.Error as err:
+
+        #if-else unique to some errors can be added
+
+        print("\nFailed deletion: {}".format(err))
 
     finally:
         return success

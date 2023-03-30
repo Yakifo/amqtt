@@ -30,7 +30,7 @@ from .plugins.manager import PluginManager, BaseContext
 
 #new imports
 from amqtt_folder.clientconnection import ClientConnection
-from amqtt_folder.clientconnection import updateRowFromDatabase
+from amqtt_folder.clientconnection import updateRowFromDatabase, deleteRowFromDatabase
 from diffiehellman import DiffieHellman
 
 """START:29MART2023 - Burcu"""
@@ -581,11 +581,9 @@ class Broker:
                     #disconnecting, setting session=inactive
                     #bilgesu: database active state change
                     self.logger.debug("%s\'s session will be deleted in the database.", client_session.client_id)
+
                     #call delete
-                    '''updateRowFromDatabase(client_session.session_info.client_id, client_session.session_info.key_establishment_state, 
-                                        client_session.session_info.client_spec_pub_key,
-                                        client_session.session_info.client_spec_priv_key, 
-                                        client_session.session_info.session_key, 0,) #is_active=false'''
+                    deleteRowFromDatabase(client_session.client_id)
                     #bilgesu: modification end
 
                     client_session.transitions.disconnect()
@@ -1146,8 +1144,7 @@ class Broker:
         #bilgesu: call update row for inactive state
         self.logger.debug("deleting session, in broker")
         #call delete
-        '''updateRowFromDatabase(session_info.client_id, session_info.key_establishment_state, session_info.client_spec_pub_key,
-                session_info.client_spec_priv_key, session_info.session_key, 0) #is_active=false'''
+        deleteRowFromDatabase(client_id)
         #bilgesu: modification end
         
         del self._sessions[client_id]
