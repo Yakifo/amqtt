@@ -142,7 +142,7 @@ class BrokerProtocolHandler(ProtocolHandler):
 
             self.logger.debug("#######129 shared key %s", dh1_shared)
             self.logger.debug("#######129 shared key type %s", type(dh1_shared))
-            self.logger.debug("#######129 shared key size %s", dh1_shared.key)
+            self.logger.debug("#######129 shared key len %s", len(dh1_shared))
 
 
             
