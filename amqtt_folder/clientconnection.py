@@ -11,14 +11,14 @@ class ClientConnection: #session-based class, containig information about the cu
         self.logger = logging.getLogger(__name__)
 
         self.client_id: str = None
-        self.client_spec_priv_key: str = None
+        self.client_spec_priv_key: str = None #these can be turned into bytes or completely removed later on
         self.client_spec_pub_key: str = None
-        self.session_key: str = None
+        self.session_key: bytes = None
         self.key_establishment_state: int = 0 #start from zero as default
         self.n1: int = 0
         self.n2: int = 0
         self.n3: int = 0
-        self.dh: DiffieHellman(group=14, key_bits=540)
+        self.dh: DiffieHellman(group=14, key_bits=540) #bilgesu: key size hsoul be 2048
 
 
     @property
@@ -48,7 +48,7 @@ class ClientConnection: #session-based class, containig information about the cu
     
     
 
-def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str) -> bool: #create database and create table can be removed and run seperately
+def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str) -> bool: #create database and create table can be removed and run seperately
 
     success = False
 
@@ -67,7 +67,7 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
 
 
     sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`, `nonce_one`, `nonce_two`, `nonce_three`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-    val = (client_id, edf_state, pub_key, priv_key, session_key, 0, 0, 0)
+    val = (client_id, edf_state, pub_key, priv_key, None, None, None, None)
 
     #self.logger.debug("\nTrying to push data to table")
     #print("\nTrying to push data to table")
