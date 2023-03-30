@@ -18,7 +18,7 @@ class ClientConnection: #session-based class, containig information about the cu
         self.n1: int = 0
         self.n2: int = 0
         self.n3: int = 0
-        self.dh: DiffieHellman(group=14, key_bits=540) #bilgesu: key size hsoul be 2048
+        self.dh: DiffieHellman(group=14, key_bits=2048) #bilgesu: key size increased ton 2048
 
 
     @property

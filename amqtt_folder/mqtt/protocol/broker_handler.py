@@ -103,7 +103,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         self.logger.debug("#######102 topic name, %s", topicname )
         if (topicname == self.session.client_id):
             try:
-                dh1 = DiffieHellman(group=14, key_bits=540)    #bilgesu: key size should be increased
+                dh1 = DiffieHellman(group=14, key_bits=2048)    #bilgesu: key size increased to 2048
                 dh1_public = dh1.get_public_key()
                 dh1_public_hex = bytes_to_hex_str(dh1_public)
                 self.logger.debug("#######107 broker public key %s", dh1_public)
@@ -142,6 +142,7 @@ class BrokerProtocolHandler(ProtocolHandler):
 
             self.logger.debug("#######129 shared key %s", dh1_shared)
             self.logger.debug("#######129 shared key type %s", type(dh1_shared))
+            self.logger.debug("#######129 shared key size %s", dh1_shared.key)
 
 
             
