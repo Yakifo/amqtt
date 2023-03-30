@@ -97,6 +97,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         }
         self.logger.debug("#######Inside hande_subscribe in broker_handler.py" )
         await self._pending_subscriptions.put(subscription)
+   
     
     """ Burcu: START 29mart2023 te eklendi """    
     async def broker_df_publish (self, topicname, data):
@@ -144,22 +145,6 @@ class BrokerProtocolHandler(ProtocolHandler):
             self.logger.debug("#######129 shared key type %s", type(dh1_shared))
             self.logger.debug("#######129 shared key len %s", len(dh1_shared))
 
-
-            
-
-        """
-
-    async def broker_shared_generated (self, dh1_public, dh1):
-
-        try:
-            dh1_shared = dh1.generate_shared_key(dh1_public)
-        except Exception as e:
-            self.logger.warning("YYYYYYYYYYY %r", e.args)   
-        
-        self.logger.debug("#######Inside broker_shared_generated in broker_handler.py" )
-        self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
-        self.logger.debug("#######dh1_shared %s", dh1_shared)
-"""
    
     """ Burcu: START 29mart2023 te eklendi """    
 
