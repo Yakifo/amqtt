@@ -113,6 +113,17 @@ class BrokerProtocolHandler(ProtocolHandler):
             try:
                 await self.mqtt_publish(topicname, data = encode_data_with_length(dh1_public), qos=2, retain= False )
                 self.session.session_info.key_establishment_state = 4
+
+                #bilgesu: modification start
+                is_successs = updateRowFromDatabase(self.session.session_info.client_id, self.session.session_info.key_establishment_state,
+                                      self.session.session_info.client_spec_pub_key, self.session.session_info.client_spec_priv_key,
+                                      self.session.session_info.session_key, self.session.session_info.n1, self.session.session_info.n2, 
+                                      self.session.session_info.n3)
+                if is_successs:
+                    self.logger.debug("state update successfull")
+                else:
+                    self.logger.debug("state update issue")
+                #bilgesu: modification end
                 
                 self.logger.debug("#######108 self.session.session_info.key_establishment_state, %s", self.session.session_info.key_establishment_state )
             except Exception as e2:

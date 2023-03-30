@@ -66,8 +66,8 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
         #self.logger.debug("\n", e.args)
 
 
-    sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`, `is_active`, `nonce_one`, `nonce_two`, `nonce_three`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-    val = (client_id, edf_state, pub_key, priv_key, session_key, 1, None, None, None) #1 means session is active
+    sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`, `nonce_one`, `nonce_two`, `nonce_three`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    val = (client_id, edf_state, pub_key, priv_key, session_key, None, None, None) #1 means session is active
 
     #self.logger.debug("\nTrying to push data to table")
     #print("\nTrying to push data to table")
@@ -88,7 +88,7 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
         return success
 
 
-def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str, is_active: int, n1: int, n2: int, n3: int) -> bool:
+def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: str, session_key: str, n1: int, n2: int, n3: int) -> bool:
 
 
 
@@ -108,8 +108,8 @@ def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key
         print("\n", e.args)
         #self.logger.debug("\n", e.args)
 
-    sql_query = "UPDATE `clientsessions` SET `edf_state` = %s, `pub_key` = %s, `priv_key` = %s, `session_key` = %s, `is_active` = %s, `nonce_one` = %s, `nonce_two` = %s, `nonce_three` = %s, WHERE `client_id` = %s;"
-    values = (edf_state, pub_key, priv_key, session_key, is_active, n1, n2, n3, client_id)
+    sql_query = "UPDATE `clientsessions` SET `edf_state` = %s, `pub_key` = %s, `priv_key` = %s, `session_key` = %s, `nonce_one` = %s, `nonce_two` = %s, `nonce_three` = %s, WHERE `client_id` = %s;"
+    values = (edf_state, pub_key, priv_key, session_key, n1, n2, n3, client_id)
 
     #self.logger.debug("\nTrying to push data to table")
     #print("\nTrying to update data to table")
