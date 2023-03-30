@@ -147,8 +147,8 @@ def deleteRowFromDatabase(client_id):
         #self.logger.debug("\n", e.args)
 
 
-    sql_query = "DELETE FROM `clientsessions` WHERE `client_id` = %s"
-    values = (client_id)
+    sql_query = "DELETE FROM `clientsessions` WHERE `client_id` = %s;"
+    values = (client_id, )
 
     try:
         mycursor.execute(sql_query, values)
