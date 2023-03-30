@@ -10,7 +10,7 @@ import re
 from asyncio import CancelledError, futures
 from collections import deque
 from enum import Enum
-
+from os.path import exists, join
 from functools import partial
 from transitions import Machine, MachineError
 from amqtt_folder.session import Session
@@ -32,12 +32,14 @@ from .plugins.manager import PluginManager, BaseContext
 from amqtt_folder.clientconnection import ClientConnection
 from amqtt_folder.clientconnection import updateRowFromDatabase, deleteRowFromDatabase
 from diffiehellman import DiffieHellman
+from samples.cert_create_read.read_existing_cert_example import read_cert
+from OpenSSL import crypto, SSL
 
-"""START:29MART2023 - Burcu"""
+
 from amqtt_folder.codecs import (
     encode_string,
 )
-"""STOP:29MART2023 - Burcu"""
+
 
 
 _defaults = {
@@ -55,6 +57,68 @@ EVENT_BROKER_CLIENT_SUBSCRIBED = "broker_client_subscribed"
 EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
 EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
 
+from OpenSSL import crypto, SSL
+
+def cert_gen(
+    emailAddress="exampleemail@example.com",
+    commonName="commonName",
+    countryName="TR",
+    localityName="localityName",
+    stateOrProvinceName="stateOrProvinceName",
+    organizationName="organizationName",
+    organizationUnitName="organizationUnitName",
+    serialNumber=0,
+    validityStartInSeconds=0,
+    validityEndInSeconds=2*365*24*60*60,
+    KEY_FILE = "private_1.key",
+    CERT_FILE="selfsigned_example_1.crt") -> str:
+    #can look at generated file using openssl:
+    #openssl x509 -inform pem -in selfsigned.crt -noout -text
+    # create a key pair
+    
+    returnstr = "no exception"
+
+    try:
+        cert_dir="."
+        C_F = join(cert_dir, CERT_FILE)
+        K_F = join(cert_dir, KEY_FILE)
+        
+        if not exists(C_F) or not exists(K_F):
+            k = crypto.PKey()
+            print(k.bits)
+            k.generate_key(crypto.TYPE_RSA, 4096)
+            print()
+         # create a self-signed cert
+
+        try:
+            cert = crypto.X509()
+            cert.get_subject().C = countryName
+            cert.get_subject().ST = stateOrProvinceName
+            cert.get_subject().L = localityName
+            cert.get_subject().O = organizationName
+            cert.get_subject().OU = organizationUnitName
+            cert.get_subject().CN = commonName
+            cert.get_subject().emailAddress = emailAddress
+            cert.set_serial_number(serialNumber)
+            cert.gmtime_adj_notBefore(0)
+            cert.gmtime_adj_notAfter(validityEndInSeconds)
+            cert.set_issuer(cert.get_subject())
+            cert.set_pubkey(k)
+            cert.sign(k, 'sha512')
+
+
+
+            with open(CERT_FILE, "wt") as f:
+                f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert).decode("utf-8"))
+            with open(KEY_FILE, "wt") as f:
+                f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k).decode("utf-8"))
+
+        except:
+            returnstr = "inner exception"
+    except: 
+        returnstr = "outer exception"
+
+    
 
 class Action(Enum):
     subscribe = "subscribe"
@@ -246,6 +310,39 @@ class Broker:
             trigger="start", source="stopped", dest="starting"
         )
 
+    async def cert_create_or_read(self) -> None:
+        """Burcu: START 30Mart"""
+        cert_dir = "."
+        CERT_FILE = "amqtt_folder/selfsigned_example_1.crt"
+        C_F = join(cert_dir, CERT_FILE)
+        x509 = "None"
+        if exists(C_F):
+            x509 = read_cert("amqtt_folder/selfsigned_example_1.crt")
+        if (x509 == "None"):
+            try: 
+                try:
+                    cert_gen()
+                except:
+                    self.logger.debug("exception at cert_gen in broker.py") 
+                    self.logger.warning("exception at cert_gen in broker.py") 
+                
+                x509 = read_cert("amqtt_folder/selfsigned_example_1.crt")
+                pubkeyobj = x509.get_pubkey()
+                broker_cert_public = crypto.dump_publickey(crypto.FILETYPE_PEM, pubkeyobj)
+                self.logger.debug("********361 Cert Broker public %s",broker_cert_public )
+            except:
+                self.logger.warning("exception at read in broker.py") 
+                self.logger.debug("exception at read in broker.py") 
+        else:
+            pubkeyobj = x509.get_pubkey()
+            broker_cert_public = crypto.dump_publickey(crypto.FILETYPE_PEM, pubkeyobj)
+            self.logger.debug("********361 Cert Broker public %s",broker_cert_public )
+
+        """Burcu: END 30Mart"""
+
+
+
+        
     async def start(self) -> None: ############################################################################################
         """
         Start the broker to serve with the given configuration
@@ -356,7 +453,9 @@ class Broker:
 
             # Start broadcast loop
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
-
+            await self.cert_create_or_read()
+           
+         
             self.logger.debug("Broker started")
         except Exception as e:
             self.logger.error("Broker startup failed: %s" % e)
@@ -425,6 +524,7 @@ class Broker:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(
                 reader, writer, self.plugins_manager
             )
+            
         except AMQTTException as exc:
             self.logger.warning(
                 "[MQTT-3.1.0-1] %s: Can't read first packet an CONNECT: %s"

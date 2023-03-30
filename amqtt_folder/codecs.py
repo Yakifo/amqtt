@@ -33,7 +33,7 @@ def bytes_to_int(data):
  
 
 
-def int_to_bytes(int_value: int, length: int) -> bytes:
+def int_to_bytes(int_value: int, length: int = None) -> bytes:
     """
     convert an integer to a sequence of bytes using big endian byte ordering
     :param int_value: integer value to convert
@@ -44,6 +44,8 @@ def int_to_bytes(int_value: int, length: int) -> bytes:
         fmt = "!B"
     elif length == 2:
         fmt = "!H"
+    else: 
+        fmt = "!B"
     return pack(fmt, int_value)
 
 """

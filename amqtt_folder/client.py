@@ -333,7 +333,7 @@ class MQTTClient:
 
     @mqtt_connected
     async def unsubscribe(self, topics):
-        """
+        """cd
         Unsubscribe from some topics.
 
         Send a MQTT `UNSUBSCRIBE <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718072>`_ message and wait for broker `UNSUBACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718077>`_ message.
