@@ -66,8 +66,8 @@ def pushRowToDatabase(client_id: str, edf_state: int, pub_key: str, priv_key: st
         #self.logger.debug("\n", e.args)
 
 
-    sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`, `nonce_one`, `nonce_two`, `nonce_three`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-    val = (client_id, edf_state, pub_key, priv_key, session_key, None, None, None) #1 means session is active
+    sql_query = "INSERT INTO `clientsessions`(`client_id`, `edf_state`, `pub_key`, `priv_key`, `session_key`, `nonce_one`, `nonce_two`, `nonce_three`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+    val = (client_id, edf_state, pub_key, priv_key, session_key, 0, 0, 0)
 
     #self.logger.debug("\nTrying to push data to table")
     #print("\nTrying to push data to table")
@@ -108,7 +108,7 @@ def updateRowFromDatabase(client_id: str, edf_state: int, pub_key: str, priv_key
         print("\n", e.args)
         #self.logger.debug("\n", e.args)
 
-    sql_query = "UPDATE `clientsessions` SET `edf_state` = %s, `pub_key` = %s, `priv_key` = %s, `session_key` = %s, `nonce_one` = %s, `nonce_two` = %s, `nonce_three` = %s, WHERE `client_id` = %s;"
+    sql_query = "UPDATE `clientsessions` SET `edf_state` = %s, `pub_key` = %s, `priv_key` = %s, `session_key` = %s, `nonce_one` = %s, `nonce_two` = %s, `nonce_three` = %s WHERE `client_id` = %s;"
     values = (edf_state, pub_key, priv_key, session_key, n1, n2, n3, client_id)
 
     #self.logger.debug("\nTrying to push data to table")

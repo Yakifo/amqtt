@@ -282,7 +282,6 @@ class BrokerProtocolHandler(ProtocolHandler):
         pushRowToDatabase(incoming_session.session_info.client_id, incoming_session.session_info.key_establishment_state, 
                           incoming_session.session_info.client_spec_pub_key, incoming_session.session_info.client_spec_priv_key, 
                           incoming_session.session_info.session_key)
-        
 
         if connect.keep_alive > 0:
             incoming_session.keep_alive = connect.keep_alive
