@@ -785,7 +785,7 @@ class Broker:
                             )
                         """START Burcu 30Mart"""
                      
-                        if ( app_message.topic == "AuthenticationTopic"): 
+                        if (app_message.topic == "AuthenticationTopic"): 
                                
                                 #client_session.session_info.key_establishment_state == 6
                                 await (handler.broker_df_publish(app_message.topic, app_message.data, self.x509, self.private_key))

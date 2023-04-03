@@ -22,6 +22,10 @@ class ClientConnection: #session-based class, containig information about the cu
         self.client_dh_public_key = None
         self.client_x509 = None
         self.disconnect_flag = False
+        self.dh_shared_key = None
+        self.nonce2 = None
+        self.nonce1 = None
+        self.nonce3 = None
 
 
     @property
