@@ -1,7 +1,12 @@
 from OpenSSL import crypto, SSL
 from os.path import exists, join
 
-def cert_gen(
+
+def cert_gen():
+    #can look at generated file using openssl:
+    #openssl x509 -inform pem -in selfsigned.crt -noout -text
+    # create a key pair
+
     emailAddress="emailAddress",
     commonName="commonName",
     countryName="TR",
@@ -13,13 +18,8 @@ def cert_gen(
     validityStartInSeconds=0,
     validityEndInSeconds=2*365*24*60*60,
     KEY_FILE = "private_1.key",
-    CERT_FILE="selfsigned_example_1.crt") -> str:
-    #can look at generated file using openssl:
-    #openssl x509 -inform pem -in selfsigned.crt -noout -text
-    # create a key pair
+    CERT_FILE="selfsigned_example_1.crt"
     
-    returnstr = "no exception"
-
 
     try:
         cert_dir="."
@@ -29,7 +29,7 @@ def cert_gen(
             k = crypto.PKey()
             print(k.bits)
             k.generate_key(crypto.TYPE_RSA, 4096)
-            print()
+           
             # create a self-signed cert
 
             try:
@@ -63,8 +63,7 @@ def cert_gen(
     except: 
         returnstr = "outer exception"
 
-    finally:
-        return returnstr
+    
     
 
     

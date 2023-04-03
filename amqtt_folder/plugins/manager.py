@@ -136,7 +136,7 @@ class PluginManager:
        
         tasks = []
         event_method_name = "on_" + event_name
-        self.logger.debug("###Burcu: Event method name%s" % event_method_name)
+        self.logger.debug("###Burcu: Event method namexxxx%s" % event_method_name)
         for plugin in self._plugins:
             self.logger.debug("###Burcu: Loading plugin in fire events%s" % plugin.name)
             event_method = getattr(plugin.object, event_method_name, None)  #Burcu: getattr = get attribute 

@@ -14,11 +14,14 @@ class ClientConnection: #session-based class, containig information about the cu
         self.client_spec_priv_key: str = None #these can be turned into bytes or completely removed later on
         self.client_spec_pub_key: str = None
         self.session_key: bytes = None
-        self.key_establishment_state: int = 0 #start from zero as default
+        self.key_establishment_state: int = 1 #start from one as default
         self.n1: int = 0
         self.n2: int = 0
         self.n3: int = 0
         self.dh: DiffieHellman(group=14, key_bits=2048) #bilgesu: key size increased ton 2048
+        self.client_dh_public_key = None
+        self.client_x509 = None
+        self.disconnect_flag = False
 
 
     @property

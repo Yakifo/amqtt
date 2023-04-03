@@ -10,7 +10,7 @@ import re
 from asyncio import CancelledError, futures
 from collections import deque
 from enum import Enum
-from os.path import exists, join
+
 from functools import partial
 from transitions import Machine, MachineError
 from amqtt_folder.session import Session
@@ -32,9 +32,9 @@ from .plugins.manager import PluginManager, BaseContext
 from amqtt_folder.clientconnection import ClientConnection
 from amqtt_folder.clientconnection import updateRowFromDatabase, deleteRowFromDatabase
 from diffiehellman import DiffieHellman
-from samples.cert_create_read.read_existing_cert_example import read_cert
-from OpenSSL import crypto, SSL
-
+from cryptography.hazmat.primitives import serialization
+from cryptography.x509 import load_pem_x509_certificate
+from os.path import exists, join
 
 from amqtt_folder.codecs import (
     encode_string,
@@ -57,68 +57,9 @@ EVENT_BROKER_CLIENT_SUBSCRIBED = "broker_client_subscribed"
 EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
 EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
 
-from OpenSSL import crypto, SSL
-
-def cert_gen(
-    emailAddress="exampleemail@example.com",
-    commonName="commonName",
-    countryName="TR",
-    localityName="localityName",
-    stateOrProvinceName="stateOrProvinceName",
-    organizationName="organizationName",
-    organizationUnitName="organizationUnitName",
-    serialNumber=0,
-    validityStartInSeconds=0,
-    validityEndInSeconds=2*365*24*60*60,
-    KEY_FILE = "private_1.key",
-    CERT_FILE="selfsigned_example_1.crt") -> str:
-    #can look at generated file using openssl:
-    #openssl x509 -inform pem -in selfsigned.crt -noout -text
-    # create a key pair
-    
-    returnstr = "no exception"
-
-    try:
-        cert_dir="."
-        C_F = join(cert_dir, CERT_FILE)
-        K_F = join(cert_dir, KEY_FILE)
-        
-        if not exists(C_F) or not exists(K_F):
-            k = crypto.PKey()
-            print(k.bits)
-            k.generate_key(crypto.TYPE_RSA, 4096)
-            print()
-         # create a self-signed cert
-
-        try:
-            cert = crypto.X509()
-            cert.get_subject().C = countryName
-            cert.get_subject().ST = stateOrProvinceName
-            cert.get_subject().L = localityName
-            cert.get_subject().O = organizationName
-            cert.get_subject().OU = organizationUnitName
-            cert.get_subject().CN = commonName
-            cert.get_subject().emailAddress = emailAddress
-            cert.set_serial_number(serialNumber)
-            cert.gmtime_adj_notBefore(0)
-            cert.gmtime_adj_notAfter(validityEndInSeconds)
-            cert.set_issuer(cert.get_subject())
-            cert.set_pubkey(k)
-            cert.sign(k, 'sha512')
 
 
 
-            with open(CERT_FILE, "wt") as f:
-                f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert).decode("utf-8"))
-            with open(KEY_FILE, "wt") as f:
-                f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k).decode("utf-8"))
-
-        except:
-            returnstr = "inner exception"
-    except: 
-        returnstr = "outer exception"
-
-    
 
 class Action(Enum):
     subscribe = "subscribe"
@@ -264,8 +205,10 @@ class Broker:
         self._retained_messages = dict()
         self._broadcast_queue = asyncio.Queue()
 
+
         self._broadcast_task = None
         self._broadcast_shutdown_waiter = futures.Future()
+
 
         # Init plugins manager
         context = BrokerContext(self)
@@ -275,6 +218,12 @@ class Broker:
         else:
             namespace = "amqtt.broker.plugins"
         self.plugins_manager = PluginManager(namespace, context, self._loop)
+        self.private_key = "None"
+        self.public_key = "None"
+        self.x509 = "None"
+        #self.cert_read_fnc()
+        
+        
 
     def _build_listeners_config(self, broker_config):
         self.listeners_config = dict()
@@ -310,33 +259,58 @@ class Broker:
             trigger="start", source="stopped", dest="starting"
         )
 
-    async def cert_create_or_read(self) -> None:
+    def cert_read_fnc(self):
         """Burcu: START 30Mart"""
         cert_dir = "."
-        CERT_FILE = "amqtt_folder/selfsigned_example_1.crt"
+        CERT_FILE = "samples/cert_create_read_crypto/key.pem"
         C_F = join(cert_dir, CERT_FILE)
-        x509 = "None"
-        if exists(C_F):
-            x509 = read_cert("amqtt_folder/selfsigned_example_1.crt")
-        if (x509 == "None"):
-            try: 
-                try:
-                    cert_gen()
-                except:
-                    self.logger.debug("exception at cert_gen in broker.py") 
-                    self.logger.warning("exception at cert_gen in broker.py") 
+        private_key = "None"
+        self.logger.debug("#####in function")
+        try: 
+            if exists(C_F):
+                with open(CERT_FILE, "rb") as key_file:
+                    private_key = serialization.load_pem_private_key(
+                    key_file.read(),
+                    password= None,
+                ) 
                 
-                x509 = read_cert("amqtt_folder/selfsigned_example_1.crt")
-                pubkeyobj = x509.get_pubkey()
-                broker_cert_public = crypto.dump_publickey(crypto.FILETYPE_PEM, pubkeyobj)
-                self.logger.debug("********361 Cert Broker public %s",broker_cert_public )
-            except:
-                self.logger.warning("exception at read in broker.py") 
-                self.logger.debug("exception at read in broker.py") 
-        else:
-            pubkeyobj = x509.get_pubkey()
-            broker_cert_public = crypto.dump_publickey(crypto.FILETYPE_PEM, pubkeyobj)
-            self.logger.debug("********361 Cert Broker public %s",broker_cert_public )
+            if (private_key != "None"):
+                public_key = private_key.public_key()
+                private_pem = private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+                )
+                private_pem.splitlines()[0]
+                
+                self.logger.debug("Private key: %s", private_pem )
+                public_pem = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+                )
+                public_pem.splitlines()[0]
+
+                with open("samples/cert_create_read_crypto/certificate.pem", "rb") as key_file:
+                    x509 = load_pem_x509_certificate(
+                        key_file.read()  
+                    )
+                    public_key2 = x509.public_key()
+                    pem2 = public_key2.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                    )
+                    pem2.splitlines()[0]
+                    print(pem2)
+
+            else: 
+                self.logger.debug("Broker cannot read the cerficate")
+
+            self.private_key = private_key
+            self.public_key = public_key
+            self.x509 = x509
+        except:
+            self.logger.warning("Broker cannot read the cerficate")  
+        
 
         """Burcu: END 30Mart"""
 
@@ -453,7 +427,8 @@ class Broker:
 
             # Start broadcast loop
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
-            await self.cert_create_or_read()
+            self.cert_read_fnc()
+            
            
          
             self.logger.debug("Broker started")
@@ -611,7 +586,7 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
-
+        
         await self.plugins_manager.fire_event(
             EVENT_BROKER_CLIENT_CONNECTED, client_id=client_session.client_id
         )
@@ -634,6 +609,7 @@ class Broker:
         )
         wait_deliver = asyncio.ensure_future(handler.mqtt_deliver_next_message())
         connected = True
+        client_session.session_info.key_establishment_state == 2
         while connected:
             try:
                 done, pending = await asyncio.wait(
@@ -741,11 +717,9 @@ class Broker:
                             xtopic = subscription[0] 
                              
                             if (subscription[0] == client_session.client_id) :
-                                
-                                await (handler.broker_df_publish(subscription[0], "none"))
-                                
-                            
-                                xmsg="testxxx topic == clientid"
+                                client_session.session_info.key_establishment_state == 3
+                                await (handler.broker_df_publish(subscription[0], "none", self.x509, self.private_key))
+                                client_session.session_info.key_establishment_state == 5
                             else:
                                 xmsg="testxxx topic != clientid"
 
@@ -756,6 +730,7 @@ class Broker:
                                 
                                 
                             #await self._broadcast_message(client_session, xtopic,encode_string(xmsg) ) 
+                            
                             """ Burcu:  STOP 29mart2023 te eklendi STOP """
                             
                     subscribe_waiter = asyncio.Task(
@@ -810,11 +785,15 @@ class Broker:
                             )
                         """START Burcu 30Mart"""
                      
-                        if (client_session.session_info.key_establishment_state == 4 and app_message.topic == "AuthenticationTopic"): 
-                                self.logger.debug(
-                            " app message  %s" , app_message.topic)
-                                await (handler.broker_df_publish(app_message.topic, app_message.data))
+                        if (client_session.session_info.key_establishment_state == 5 and app_message.topic == "AuthenticationTopic"): 
+                               
+                                client_session.session_info.key_establishment_state == 6
+                                await (handler.broker_df_publish(app_message.topic, app_message.data, self.x509, self.private_key))
+                                if (client_session.session_info.key_establishment_state == 7) :
+                                    await handler.mqtt_publish(client_session.client_id, data = encode_string("hey"), qos=0, retain= False )
                         """END Burcu 30Mart"""
+
+
                     wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")
