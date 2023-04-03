@@ -137,7 +137,8 @@ class BrokerProtocolHandler(ProtocolHandler):
                 pem = x509.public_bytes(encoding=serialization.Encoding.PEM)
                 sent_data = pem + b'::::' + dh1_public + b'::::' + signature
                 await self.mqtt_publish(topicname, data = encode_data_with_length(sent_data), qos=2, retain= False )
-                self.session.session_info.key_establishment_state = 4
+                
+                #self.session.session_info.key_establishment_state = 4
 
                 #modification start
                 """
@@ -155,7 +156,7 @@ class BrokerProtocolHandler(ProtocolHandler):
             except Exception as e2:
                 self.logger.warning("XXXXXXXXXXXX %r ", e2.args)
    
-            self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
+            #self.logger.debug("#######session state %s", self.session.session_info.key_establishment_state)
 
         elif (topicname == "AuthenticationTopic"):
             self.logger.debug("#######159 CLIENT DH PUBLIC KEY:  %s", data)
@@ -198,8 +199,8 @@ class BrokerProtocolHandler(ProtocolHandler):
                     hashes.SHA256()
                 )  
                 print("#####VERIFIED")
-                self.session.session_info.key_establishment_state = 7
-                #await self.mqtt_publish(self.session.client_id, data = encode_string("hey"), qos=2, retain= False )
+                #self.session.session_info.key_establishment_state = 7
+                await self.mqtt_publish(self.session.client_id, data = encode_string("hey"), qos=0, retain= False )
                 
             except:
                 print("NOT VERIFIED")

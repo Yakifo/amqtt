@@ -609,7 +609,7 @@ class Broker:
         )
         wait_deliver = asyncio.ensure_future(handler.mqtt_deliver_next_message())
         connected = True
-        client_session.session_info.key_establishment_state == 2
+        #client_session.session_info.key_establishment_state == 2
         while connected:
             try:
                 done, pending = await asyncio.wait(
@@ -717,9 +717,9 @@ class Broker:
                             xtopic = subscription[0] 
                              
                             if (subscription[0] == client_session.client_id) :
-                                client_session.session_info.key_establishment_state == 3
+                                #client_session.session_info.key_establishment_state == 3
                                 await (handler.broker_df_publish(subscription[0], "none", self.x509, self.private_key))
-                                client_session.session_info.key_establishment_state == 5
+                                #client_session.session_info.key_establishment_state == 5
                             else:
                                 xmsg="testxxx topic != clientid"
 
@@ -785,12 +785,13 @@ class Broker:
                             )
                         """START Burcu 30Mart"""
                      
-                        if (client_session.session_info.key_establishment_state == 5 and app_message.topic == "AuthenticationTopic"): 
+                        if ( app_message.topic == "AuthenticationTopic"): 
                                
-                                client_session.session_info.key_establishment_state == 6
+                                #client_session.session_info.key_establishment_state == 6
                                 await (handler.broker_df_publish(app_message.topic, app_message.data, self.x509, self.private_key))
-                                if (client_session.session_info.key_establishment_state == 7) :
-                                    await handler.mqtt_publish(client_session.client_id, data = encode_string("hey"), qos=0, retain= False )
+                                
+                                #await handler.mqtt_publish(client_session.client_id, data = encode_string("hey"), qos=0, retain= False )
+                                #await self._broadcast_message(client_session, client_session.client_id,encode_string("hey") ) 
                         """END Burcu 30Mart"""
 
 
