@@ -28,9 +28,9 @@ class SQLitePlugin:
                 self.conn = sqlite3.connect(self.db_file)
                 self.cursor = self.conn.cursor()
                 self.context.logger.info("Database file '%s' opened" % self.db_file)
-            except Exception as e:
+            except Exception:
                 self.context.logger.error(
-                    f"Error while initializing database '{self.db_file}' : {e}"
+                    f"Error while initializing database '{self.db_file}'", exc_info=True
                 )
         if self.cursor:
             self.cursor.execute(
@@ -46,8 +46,10 @@ class SQLitePlugin:
                     (session.client_id, dump),
                 )
                 self.conn.commit()
-            except Exception as e:
-                self.context.logger.error(f"Failed saving session '{session}': {e}")
+            except Exception:
+                self.context.logger.error(
+                    f"Failed saving session '{session}'", exc_info=True
+                )
 
     async def find_session(self, client_id):
         if self.cursor:

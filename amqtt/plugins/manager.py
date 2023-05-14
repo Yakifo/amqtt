@@ -73,10 +73,12 @@ class PluginManager:
             plugin_context.logger = self.logger.getChild(ep.name)
             obj = plugin(plugin_context)
             return Plugin(ep.name, ep, obj)
-        except ImportError as ie:
-            self.logger.warning(f"Plugin {ep!r} import failed: {ie}")
-        except pkg_resources.UnknownExtra as ue:
-            self.logger.warning(f"Plugin {ep!r} dependencies resolution failed: {ue}")
+        except ImportError:
+            self.logger.warning(f"Plugin {ep!r} import failed", exc_info=True)
+        except pkg_resources.UnknownExtra:
+            self.logger.warning(
+                f"Plugin {ep!r} dependencies resolution failed", exc_info=True
+            )
 
     def get_plugin(self, name):
         """
