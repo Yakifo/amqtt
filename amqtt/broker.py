@@ -1,7 +1,8 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from typing import Optional
+from typing import Optional, Tuple
+import ipaddress
 import logging
 import ssl
 import websockets
@@ -42,6 +43,48 @@ EVENT_BROKER_CLIENT_DISCONNECTED = "broker_client_disconnected"
 EVENT_BROKER_CLIENT_SUBSCRIBED = "broker_client_subscribed"
 EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
 EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
+
+
+def split_bindaddr_port(port_str: str, default_port: int) -> Tuple[Optional[str], int]:
+    """
+    Split an address:port pair into separate IP address and port, with IPv6
+    special-case handling.
+    """
+    # Address can be specified using one of the following methods:
+    # 1883              - Port number only (listen all interfaces)
+    # :1883             - Port number only (listen all interfaces)
+    # 0.0.0.0:1883      - IPv4 address
+    # [::]:1883         - IPv6 address
+    # empty string      - all interfaces default port
+
+    def _parse_port(port_str: str) -> int:
+        if port_str.startswith(":"):
+            port_str = port_str[1:]
+
+        if not port_str:
+            return default_port
+
+        return int(port_str)
+
+    if port_str.startswith("["):  # IPv6 literal
+        try:
+            addr_end = port_str.index("]")
+        except ValueError:
+            raise ValueError("Expecting '[' to be followed by ']'")
+
+        return (port_str[0 : addr_end + 1], _parse_port(port_str[addr_end + 1 :]))
+    elif ":" in port_str:
+        # Address : port
+        address, port_str = port_str.rsplit(":", 1)
+        return (address or None, _parse_port(port_str))
+    else:
+        # Address or port
+        try:
+            # Port number?
+            return (None, _parse_port(port_str))
+        except ValueError:
+            # Address, default port
+            return (port_str, default_port)
 
 
 class Action(Enum):
