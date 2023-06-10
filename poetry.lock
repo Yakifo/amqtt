@@ -1196,4 +1196,4 @@ ci = ["coveralls"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "fcbca8f2c0d936f5cd16cc3ffc308a2ebd933e596eacd457e6f92a5a1678e580"
+content-hash = "ad09ee67d43cf26190aba2e849b0059afa321e10d559afa041bdbb3a5fe3a7a3"
