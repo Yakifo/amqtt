@@ -530,8 +530,8 @@ class ProtocolHandler:
             await self.handle_connection_closed()
         except asyncio.CancelledError:
             raise
-        except Exception as e:
-            self.logger.warning("Unhandled exception: %s" % e)
+        except:
+            self.logger.warning("Unhandled exception", exc_info=True)
             raise
 
     async def mqtt_deliver_next_message(self):
