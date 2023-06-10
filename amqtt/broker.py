@@ -34,6 +34,9 @@ _defaults = {
     "auth": {"allow-anonymous": True, "password-file": None},
 }
 
+# Default port numbers
+DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
+
 EVENT_BROKER_PRE_START = "broker_pre_start"
 EVENT_BROKER_POST_START = "broker_post_start"
 EVENT_BROKER_PRE_SHUTDOWN = "broker_pre_shutdown"
@@ -97,7 +100,6 @@ class BrokerException(Exception):
 
 
 class RetainedApplicationMessage:
-
     __slots__ = ("source_session", "topic", "data", "qos")
 
     def __init__(self, source_session, topic, data, qos=None):
@@ -337,10 +339,10 @@ class Broker:
                             % (listener["certfile"], listener["keyfile"], fnfe)
                         )
 
-                address, s_port = listener["bind"].split(":")
-                port = 0
                 try:
-                    port = int(s_port)
+                    address, port = split_bindaddr_port(
+                        listener["bind"], DEFAULT_PORTS[listener["type"]]
+                    )
                 except ValueError:
                     raise BrokerException(
                         "Invalid port value in bind value: %s" % listener["bind"]
@@ -979,7 +981,7 @@ class Broker:
                 continue
 
             subscriptions = self._subscriptions[k_filter]
-            for (target_session, qos) in subscriptions:
+            for target_session, qos in subscriptions:
                 qos = broadcast.get("qos", qos)
 
                 # Retain all messages which cannot be broadcasted
