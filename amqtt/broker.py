@@ -2,7 +2,6 @@
 #
 # See the file license.txt for copying permission.
 from typing import Optional, Tuple
-import ipaddress
 import logging
 import ssl
 import websockets
