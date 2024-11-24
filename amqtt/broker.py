@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from typing import Optional
+from typing import Optional, Tuple
 import logging
 import ssl
 import websockets
@@ -33,6 +33,9 @@ _defaults = {
     "auth": {"allow-anonymous": True, "password-file": None},
 }
 
+# Default port numbers
+DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
+
 EVENT_BROKER_PRE_START = "broker_pre_start"
 EVENT_BROKER_POST_START = "broker_post_start"
 EVENT_BROKER_PRE_SHUTDOWN = "broker_pre_shutdown"
@@ -42,6 +45,48 @@ EVENT_BROKER_CLIENT_DISCONNECTED = "broker_client_disconnected"
 EVENT_BROKER_CLIENT_SUBSCRIBED = "broker_client_subscribed"
 EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
 EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
+
+
+def split_bindaddr_port(port_str: str, default_port: int) -> Tuple[Optional[str], int]:
+    """
+    Split an address:port pair into separate IP address and port, with IPv6
+    special-case handling.
+    """
+    # Address can be specified using one of the following methods:
+    # 1883              - Port number only (listen all interfaces)
+    # :1883             - Port number only (listen all interfaces)
+    # 0.0.0.0:1883      - IPv4 address
+    # [::]:1883         - IPv6 address
+    # empty string      - all interfaces default port
+
+    def _parse_port(port_str: str) -> int:
+        if port_str.startswith(":"):
+            port_str = port_str[1:]
+
+        if not port_str:
+            return default_port
+
+        return int(port_str)
+
+    if port_str.startswith("["):  # IPv6 literal
+        try:
+            addr_end = port_str.index("]")
+        except ValueError:
+            raise ValueError("Expecting '[' to be followed by ']'")
+
+        return (port_str[0 : addr_end + 1], _parse_port(port_str[addr_end + 1 :]))
+    elif ":" in port_str:
+        # Address : port
+        address, port_str = port_str.rsplit(":", 1)
+        return (address or None, _parse_port(port_str))
+    else:
+        # Address or port
+        try:
+            # Port number?
+            return (None, _parse_port(port_str))
+        except ValueError:
+            # Address, default port
+            return (port_str, default_port)
 
 
 class Action(Enum):
@@ -54,7 +99,6 @@ class BrokerException(Exception):
 
 
 class RetainedApplicationMessage:
-
     __slots__ = ("source_session", "topic", "data", "qos")
 
     def __init__(self, source_session, topic, data, qos=None):
@@ -294,10 +338,10 @@ class Broker:
                             % (listener["certfile"], listener["keyfile"], fnfe)
                         )
 
-                address, s_port = listener["bind"].split(":")
-                port = 0
                 try:
-                    port = int(s_port)
+                    address, port = split_bindaddr_port(
+                        listener["bind"], DEFAULT_PORTS[listener["type"]]
+                    )
                 except ValueError:
                     raise BrokerException(
                         "Invalid port value in bind value: %s" % listener["bind"]
@@ -936,7 +980,7 @@ class Broker:
                 continue
 
             subscriptions = self._subscriptions[k_filter]
-            for (target_session, qos) in subscriptions:
+            for target_session, qos in subscriptions:
                 qos = broadcast.get("qos", qos)
 
                 # Retain all messages which cannot be broadcasted
