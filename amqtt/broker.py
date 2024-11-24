@@ -247,7 +247,7 @@ class Broker:
         except (MachineError, ValueError) as exc:
             # Backwards compat: MachineError is raised by transitions < 0.5.0.
             self.logger.warning(
-                "[WARN-0001] Invalid method call at this moment: %s" % exc
+                "[WARN-0001] Invalid method call at this moment", exc_info=True
             )
             raise BrokerException("Broker instance can't be started: %s" % exc)
 
@@ -343,7 +343,7 @@ class Broker:
 
             self.logger.debug("Broker started")
         except Exception as e:
-            self.logger.error("Broker startup failed: %s" % e)
+            self.logger.error("Broker startup failed", exc_info=True)
             self.transitions.starting_fail()
             raise BrokerException("Broker instance can't be started: %s" % e)
 
@@ -360,7 +360,7 @@ class Broker:
             self.transitions.shutdown()
         except (MachineError, ValueError) as exc:
             # Backwards compat: MachineError is raised by transitions < 0.5.0.
-            self.logger.debug("Invalid method call at this moment: %s" % exc)
+            self.logger.debug("Invalid method call at this moment", exc_info=True)
             raise BrokerException("Broker instance can't be stopped: %s" % exc)
 
         # Fire broker_shutdown event to plugins
@@ -409,19 +409,21 @@ class Broker:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(
                 reader, writer, self.plugins_manager
             )
-        except AMQTTException as exc:
+        except AMQTTException:
             self.logger.warning(
-                "[MQTT-3.1.0-1] %s: Can't read first packet an CONNECT: %s"
-                % (format_client_message(address=remote_address, port=remote_port), exc)
+                "[MQTT-3.1.0-1] %s: Can't read first packet an CONNECT"
+                % format_client_message(address=remote_address, port=remote_port),
+                exc_info=True,
             )
             # await writer.close()
             self.logger.debug("Connection closed")
             server.release_connection()
             return
-        except MQTTException as me:
+        except MQTTException:
             self.logger.error(
-                "Invalid connection from %s : %s"
-                % (format_client_message(address=remote_address, port=remote_port), me)
+                "Invalid connection from %s"
+                % format_client_message(address=remote_address, port=remote_port),
+                exc_info=True,
             )
             await writer.close()
             server.release_connection()
@@ -684,8 +686,8 @@ class Broker:
         """
         try:
             await handler.stop()
-        except Exception as e:
-            self.logger.error(e)
+        except Exception:
+            self.logger.error("Failed to stop handler", exc_info=True)
 
     async def authenticate(self, session: Session, listener):
         """

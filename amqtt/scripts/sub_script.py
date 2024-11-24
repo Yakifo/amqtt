@@ -104,8 +104,8 @@ async def do_sub(client, arguments):
         await client.disconnect()
     except KeyboardInterrupt:
         await client.disconnect()
-    except ConnectException as ce:
-        logger.fatal("connection to '%s' failed: %r" % (arguments["--url"], ce))
+    except ConnectException:
+        logger.fatal("connection to '%s' failed" % (arguments["--url"]), exc_info=True)
     except asyncio.CancelledError:
         logger.fatal("Publish canceled due to previous error")
 

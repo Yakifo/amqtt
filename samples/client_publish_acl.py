@@ -25,8 +25,8 @@ async def test_coro():
         await C.publish("calendar/amqtt/releases", b"NEW RELEASE", qos=0x01)
         logger.info("messages published")
         await C.disconnect()
-    except ConnectException as ce:
-        logger.error("Connection failed: %s" % ce)
+    except ConnectException:
+        logger.error("Connection failed", exc_info=True)
         asyncio.get_event_loop().stop()
 
 

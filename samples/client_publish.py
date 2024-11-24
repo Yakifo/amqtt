@@ -44,8 +44,8 @@ async def test_coro2():
         await C.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=0x02)
         logger.info("messages published")
         await C.disconnect()
-    except ConnectException as ce:
-        logger.error("Connection failed: %s" % ce)
+    except ConnectException:
+        logger.error("Connection failed", exc_info=True)
         asyncio.get_event_loop().stop()
 
 

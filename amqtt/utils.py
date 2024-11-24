@@ -41,6 +41,6 @@ def read_yaml_config(config_file: str) -> dict:
     try:
         with open(config_file) as stream:
             config = yaml.full_load(stream)
-    except yaml.YAMLError as exc:
-        logger.error("Invalid config_file %s: %r", config_file, exc)
+    except yaml.YAMLError:
+        logger.error("Invalid config_file %s", config_file, exc_info=True)
     return config
