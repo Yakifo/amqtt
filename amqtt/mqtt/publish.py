@@ -82,7 +82,7 @@ class PublishPayload(MQTTPayload):
         return cls(data)
 
     def __repr__(self):
-        return type(self).__name__ + "(data={!r})".format(repr(self.data))
+        return type(self).__name__ + f"(data={repr(self.data)!r})"
 
 
 class PublishPacket(MQTTPacket):

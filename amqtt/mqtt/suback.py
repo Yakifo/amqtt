@@ -28,7 +28,7 @@ class SubackPayload(MQTTPayload):
         self.return_codes = return_codes or []
 
     def __repr__(self):
-        return type(self).__name__ + "(return_codes={})".format(repr(self.return_codes))
+        return type(self).__name__ + f"(return_codes={repr(self.return_codes)})"
 
     def to_bytes(
         self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader

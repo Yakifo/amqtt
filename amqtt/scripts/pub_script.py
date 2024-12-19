@@ -117,7 +117,7 @@ async def do_pub(client, arguments):
         topic = arguments["-t"]
         retain = arguments["-r"]
         for message in _get_message(arguments):
-            logger.info("%s Publishing to '%s'" % (client.client_id, topic))
+            logger.info(f"{client.client_id} Publishing to '{topic}'")
             task = asyncio.ensure_future(client.publish(topic, message, qos, retain))
             running_tasks.append(task)
         if running_tasks:
@@ -128,7 +128,7 @@ async def do_pub(client, arguments):
         await client.disconnect()
         logger.info("%s Disconnected from broker" % client.client_id)
     except ConnectException as ce:
-        logger.fatal("connection to '%s' failed: %r" % (arguments["--url"], ce))
+        logger.fatal("connection to '{}' failed: {!r}".format(arguments["--url"], ce))
     except asyncio.CancelledError:
         logger.fatal("Publish canceled due to previous error")
 

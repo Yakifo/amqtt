@@ -1,74 +1,277 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
 name = "amqtt"
-version = "0.11.0-beta1"
 description = "MQTT client/broker using Python asyncio"
-authors = ["aMQTT Contributers"]
-license = "MIT"
-homepage = "https://github.com/Yakifo/amqtt"
 classifiers = [
-        "Development Status :: 3 - Alpha",
-        "Intended Audience :: Developers",
-        "Operating System :: POSIX",
-        "Operating System :: MacOS",
-        "Operating System :: Microsoft :: Windows",
-        "Topic :: Communications",
-        "Topic :: Internet",
-]
-packages = [
-    { include = "amqtt" },
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: POSIX",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Communications",
+  "Topic :: Internet",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.7"
-transitions = "^0.8.0"
-websockets = ">=9.0,<11.0"
-passlib = "^1.7.0"
-docopt = "^0.6.0"
-PyYAML = ">=5.4.0,<7.0"
-coveralls = {version = "^3.0.1", optional = true}
+version = "0.11.0-beta2"
+requires-python = ">=3.12.0"
+readme = "README.rst"
+license = { text = "MIT" }
 
-[tool.poetry.extras]
-ci = ["coveralls"]
+authors = [{ name = "aMQTT Contributors" }]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.2"
-pytest-cov = "^2.11.1"
-pytest-asyncio = "^0.14.0"
-asyncmock = "^0.4.0"
-mypy = "^1.3.0"
-pylint = "^2.7.2"
-black = "^21.10b0"
-flake8 = "^3.9.0"
-hypothesis = "^6.10.0"
-pytest-logdog = "^0.1.0"
-psutil = "^5.9.0"
+dependencies = [
+  # "transitions==0.8.0",
+  # "websockets>=9.0,<11.0",
+  # "passlib==1.7.0",
+  # "docopt==0.6.0",
+  # "PyYAML>=5.4.0,<7.0",
+  # # "coveralls==4.0.1",
+  "transitions==0.9.2",
+  "websockets==13.1",
+  "passlib==1.7.4",
+  "docopt==0.6.2",
+  "PyYAML==6.0.2",
+]
 
-[tool.poetry.scripts]
+[dependency-groups]
+dev = [
+  "mypy>=1.13.0",
+  "pre-commit>=4.0.1",
+  "pycountry>=24.6.1",
+  "pylint>=3.3.2",
+  "pytest-aiofiles>=0.2.0",
+  "pytest-aiohttp>=1.0.5",
+  "pytest-asyncio>=0.25.0",
+  "pytest-cov>=6.0.0",
+  "pytest-docker-fixtures>=1.3.19",
+  "pytest-env>=1.1.5",
+  "pytest-timeout>=2.3.1",
+  "pytest>=8.3.4",
+  "ruff>=0.8.3",
+  "testfixtures>=8.3.0",
+  "types-aiofiles>=24.1.0.20240626",
+  "types-cachetools>=5.5.0.20240820",
+  "types-mock>=5.1.0.20240425",
+  "types-pillow>=10.2.0.20240822",
+  "types-pytz>=2024.2.0.20241003",
+  "types-setuptools>=75.6.0.20241126",
+  "types-PyYAML>=6.0.12.20240917",
+  "hypothesis==6.122.4",
+  "pytest-logdog==0.1.0",
+  "psutil==6.1.0",
+  "setuptools>=75.6.0",
+]
+
+[project.optional-dependencies]
+ci = ["coveralls==4.0.1"]
+
+[project.scripts]
 amqtt = 'amqtt.scripts.broker_script:main'
 amqtt_pub = 'amqtt.scripts.pub_script:main'
 amqtt_sub = 'amqtt.scripts.sub_script:main'
 
-[tool.poetry.plugins]
+[tool.hatch.build.targets.sdist]
+include = ["/amqtt"]
 
-[tool.poetry.plugins."amqtt.test.plugins"]
-"test_plugin" = "tests.plugins.test_manager:EmptyTestPlugin"
-"event_plugin" = "tests.plugins.test_manager:EventTestPlugin"
-"packet_logger_plugin" = "amqtt.plugins.logging:PacketLoggerPlugin"
+[tool.hatch.version]
+source = "vcs"
 
-[tool.poetry.plugins."amqtt.broker.plugins"]
-"event_logger_plugin" = "amqtt.plugins.logging:EventLoggerPlugin"
-"packet_logger_plugin" = "amqtt.plugins.logging:PacketLoggerPlugin"
-"auth_anonymous" = "amqtt.plugins.authentication:AnonymousAuthPlugin"
-"auth_file" = "amqtt.plugins.authentication:FileAuthPlugin"
-"topic_taboo" = "amqtt.plugins.topic_checking:TopicTabooPlugin"
-"topic_acl" = "amqtt.plugins.topic_checking:TopicAccessControlListPlugin"
-"broker_sys" = "amqtt.plugins.sys.broker:BrokerSysPlugin"
+# ___________________________________ PLUGINS __________________________________
+[project.entry-points."amqtt.test.plugins"]
+test_plugin = "tests.plugins.test_manager:EmptyTestPlugin"
+event_plugin = "tests.plugins.test_manager:EventTestPlugin"
+packet_logger_plugin = "amqtt.plugins.logging:PacketLoggerPlugin"
 
+[project.entry-points."amqtt.broker.plugins"]
+event_logger_plugin = "amqtt.plugins.logging:EventLoggerPlugin"
+packet_logger_plugin = "amqtt.plugins.logging:PacketLoggerPlugin"
+auth_anonymous = "amqtt.plugins.authentication:AnonymousAuthPlugin"
+auth_file = "amqtt.plugins.authentication:FileAuthPlugin"
+topic_taboo = "amqtt.plugins.topic_checking:TopicTabooPlugin"
+topic_acl = "amqtt.plugins.topic_checking:TopicAccessControlListPlugin"
+broker_sys = "amqtt.plugins.sys.broker:BrokerSysPlugin"
 
-[tool.poetry.plugins."amqtt.client.plugins"]
-"packet_logger_plugin" = "amqtt.plugins.logging:PacketLoggerPlugin"
+[project.entry-points."amqtt.client.plugins"]
+packet_logger_plugin = "amqtt.plugins.logging:PacketLoggerPlugin"
 
+# ____________________________________ RUFF ____________________________________
+# https://docs.astral.sh/ruff/settings/
+[tool.ruff]
+line-length = 130
+fix = true
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.ruff.format]
+# quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+
+extend-select = [
+  "UP", # pyupgrade
+  "D",  # pydocstyle
+]
+
+ignore = [
+  "ANN401",  # Checks that function arguments are annotated with a more specific type than Any.
+  "BLE001",  # Checks for except clauses that catch all exceptions.
+  "D107",    # Missing docstring in `__init__`
+  "ERA001",  # Checks for commented-out Python code.
+  "FBT001",  # Checks for the use of boolean positional arguments in function definitions.
+  "FBT002",  # Checks for the use of boolean positional arguments in function definitions.
+  "FBT003",  # Checks for boolean positional arguments in function calls.
+  "FIX002",  # Checks for "TODO" comments.
+  "G004",    # Logging statement uses f-string
+  "PLR2004", # Magic value used in comparison, consider replacing 5 with a constant variable
+  "RUF001",  # Checks for ambiguous Unicode characters in strings.
+  "RUF012",  # Checks for mutable default values in class attributes.
+  "TD002",   # Checks that a TODO comment includes an author.
+  "TD003",   # Checks that a TODO comment is associated with a link to a relevant issue or ticket.
+  "TRY002",  # Checks for code that raises Exception or BaseException directly.
+  "TRY300",  # Checks for return statements in try blocks.
+  "TRY301",  # Checks for raise statements within try blocks.
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+  "F403", # Checks for the use of wildcard imports.
+  "F405", # Checks for names that might be undefined
+]
+"tests/**" = [
+  "D100",     # Missing docstring in public module
+  "D101",     #
+  "D103",     # Missing docstring in public function
+  "D104",     # Missing docstring in public package
+  "N802",     # Function name {name} should be lowercase
+  "N806",     # Variable `userId` in function should be lowercase
+  "N816",     # Variable {name} in global scope should not be mixedCase
+  "S101",     # Use of assert detected
+  "S106",     # Possible hardcoded password assigned to argument: "password_file"
+  "SLF001",   # Private member accessed: {access}
+  "ANN001",
+  "ANN201",
+  "ARG001",
+  "ASYNC110",
+  "INP001",
+  "PGH003",
+  "PTH107",
+  "PTH110",
+  "PTH118",
+]
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+case-sensitive = true
+extra-standard-library = ["typing_extensions"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 20
+
+[tool.ruff.lint.pylint]
+max-args = 12
+max-branches = 25
+max-statements = 70
+max-returns = 10
+
+# ----------------------------------- PYTEST -----------------------------------
+[tool.pytest.ini_options]
+addopts = ["--cov=./", "--cov-report=xml"]
+testpaths = ["tests"]
+pythonpath = "amqtt"
+env = []
+
+asyncio_mode = "auto"
+timeout = 10
+# log_cli = true
+# log_level = "INFO"
+
+# ------------------------------------ MYPY ------------------------------------
+[tool.mypy]
+follow_imports = "silent"
+show_error_codes = true
+ignore_missing_imports = true
+strict_equality = true
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unreachable = true
+strict = true
+
+# exclude = "^tests/.*$"
+
+disable_error_code = ["no-untyped-def", "no-untyped-call"]
+
+# ----------------------------------- PYLINT -----------------------------------
+[tool.pylint.MAIN]
+jobs = 2
+ignore = ["tests"]
+fail-on = ["I"]
+max-line-length = 130
+
+[tool.pylint.BASIC]
+# Good variable names which should always be accepted, separated by a comma.
+good-names = ["i", "j", "k", "e", "ex", "f", "_", "T", "x", "y", "id", "tg"]
+
+[tool.pylint."MESSAGES CONTROL"]
+# Reasons disabled:
+# duplicate-code - unavoidable
+# too-many-* - are not enforced for the sake of readability
+disable = [
+  "duplicate-code",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-instance-attributes",
+  "too-many-locals",
+  "too-many-ancestors",
+  "logging-fstring-interpolation",
+  "broad-exception-caught",
+  "broad-exception-raised",
+  "fixme",
+  "import-error",
+]
+# enable useless-suppression temporarily every now and then to clean them up
+enable = [
+  "useless-suppression",
+  "use-symbolic-message-instead",
+  "c-extension-no-member",
+]
+
+[tool.pylint.REPORTS]
+score = false
+
+[tool.pylint.FORMAT]
+expected-line-ending-format = "LF"
+
+[tool.pylint.EXCEPTIONS]
+overgeneral-exceptions = ["builtins.BaseException", "builtins.Exception"]
+
+[tool.pylint.REFACTORING]
+max-nested-blocks = 5
+never-returning-functions = ["sys.exit", "argparse.parse_error"]
+
+[tool.pylint.DESIGN]
+max-branches = 20             # too-many-branches
+max-parents = 10
+max-positional-arguments = 10 # too-many-positional-arguments
+max-returns = 7
+max-statements = 60           # too-many-statements

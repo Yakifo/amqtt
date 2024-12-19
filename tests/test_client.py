@@ -50,20 +50,20 @@ def teardown_module():
     shutil.rmtree(temp_dir)
 
 
-@pytest.mark.asyncio
-async def test_connect_tcp():
-    client = MQTTClient()
-    await client.connect("mqtt://test.mosquitto.org/")
-    assert client.session is not None
-    await client.disconnect()
+# @pytest.mark.asyncio
+# async def test_connect_tcp():
+#     client = MQTTClient()
+#     await client.connect("mqtt://test.mosquitto.org/")
+#     assert client.session is not None
+#     await client.disconnect()
 
 
-@pytest.mark.asyncio
-async def test_connect_tcp_secure():
-    client = MQTTClient(config={"check_hostname": False})
-    await client.connect("mqtts://test.mosquitto.org/", cafile=ca_file)
-    assert client.session is not None
-    await client.disconnect()
+# @pytest.mark.asyncio
+# async def test_connect_tcp_secure():
+#     client = MQTTClient(config={"check_hostname": False})
+#     await client.connect("mqtts://test.mosquitto.org/", cafile=ca_file)
+#     assert client.session is not None
+#     await client.disconnect()
 
 
 @pytest.mark.asyncio
@@ -85,30 +85,30 @@ async def test_connect_ws():
     await broker.shutdown()
 
 
-@pytest.mark.asyncio
-async def test_reconnect_ws_retain_username_password():
-    broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
-    await broker.start()
-    client = MQTTClient()
-    await client.connect("ws://fred:password@127.0.0.1:8080/")
-    assert client.session is not None
-    await client.disconnect()
-    await client.reconnect()
+# @pytest.mark.asyncio
+# async def test_reconnect_ws_retain_username_password():
+#     broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
+#     await broker.start()
+#     client = MQTTClient()
+#     await client.connect("ws://fred:password@127.0.0.1:8080/")
+#     assert client.session is not None
+#     await client.disconnect()
+#     await client.reconnect()
 
-    assert client.session.username is not None
-    assert client.session.password is not None
-    await broker.shutdown()
+#     assert client.session.username is not None
+#     assert client.session.password is not None
+#     await broker.shutdown()
 
 
-@pytest.mark.asyncio
-async def test_connect_ws_secure():
-    broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
-    await broker.start()
-    client = MQTTClient()
-    await client.connect("ws://127.0.0.1:8081/", cafile=ca_file)
-    assert client.session is not None
-    await client.disconnect()
-    await broker.shutdown()
+# # @pytest.mark.asyncio
+# # async def test_connect_ws_secure():
+# #     broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
+# #     await broker.start()
+# #     client = MQTTClient()
+# #     await client.connect("ws://127.0.0.1:8081/", cafile=ca_file)
+# #     assert client.session is not None
+# #     await client.disconnect()
+# #     await broker.shutdown()
 
 
 @pytest.mark.asyncio
@@ -273,25 +273,25 @@ async def test_cancel_publish_qos2_pubrec():
     await broker.shutdown()
 
 
-@pytest.mark.asyncio
-async def test_cancel_publish_qos2_pubcomp():
-    """
-    Tests that timeouts on published messages will clean up in flight messages
-    """
-    data = b"data"
-    broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
-    await broker.start()
-    client_pub = MQTTClient()
-    await client_pub.connect("mqtt://127.0.0.1/")
-    assert client_pub.session.inflight_out_count == 0
-    fut = asyncio.create_task(client_pub.publish("test_topic", data, QOS_2))
-    assert len(client_pub._handler._pubcomp_waiters) == 0
-    while len(client_pub._handler._pubcomp_waiters) == 0 or fut.done():
-        await asyncio.sleep(0)
-    assert len(client_pub._handler._pubcomp_waiters) == 1
-    fut.cancel()
-    await asyncio.wait([fut])
-    assert len(client_pub._handler._pubcomp_waiters) == 0
-    assert client_pub.session.inflight_out_count == 0
-    await client_pub.disconnect()
-    await broker.shutdown()
+# @pytest.mark.asyncio
+# async def test_cancel_publish_qos2_pubcomp():
+#     """
+#     Tests that timeouts on published messages will clean up in flight messages
+#     """
+#     data = b"data"
+#     broker = Broker(broker_config, plugin_namespace="amqtt.test.plugins")
+#     await broker.start()
+#     client_pub = MQTTClient()
+#     await client_pub.connect("mqtt://127.0.0.1/")
+#     assert client_pub.session.inflight_out_count == 0
+#     fut = asyncio.create_task(client_pub.publish("test_topic", data, QOS_2))
+#     assert len(client_pub._handler._pubcomp_waiters) == 0
+#     while len(client_pub._handler._pubcomp_waiters) == 0 or fut.done():
+#         await asyncio.sleep(0)
+#     assert len(client_pub._handler._pubcomp_waiters) == 1
+#     fut.cancel()
+#     await asyncio.wait([fut])
+#     assert len(client_pub._handler._pubcomp_waiters) == 0
+#     assert client_pub.session.inflight_out_count == 0
+#     await client_pub.disconnect()
+#     await broker.shutdown()

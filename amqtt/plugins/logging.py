@@ -32,7 +32,7 @@ class PacketLoggerPlugin:
         if self.context.logger.isEnabledFor(logging.DEBUG):
             if session:
                 self.context.logger.debug(
-                    "{} <-in-- {}".format(session.client_id, repr(packet))
+                    f"{session.client_id} <-in-- {repr(packet)}"
                 )
             else:
                 self.context.logger.debug("<-in-- %s" % repr(packet))
@@ -43,7 +43,7 @@ class PacketLoggerPlugin:
         if self.context.logger.isEnabledFor(logging.DEBUG):
             if session:
                 self.context.logger.debug(
-                    "{} -out-> {}".format(session.client_id, repr(packet))
+                    f"{session.client_id} -out-> {repr(packet)}"
                 )
             else:
                 self.context.logger.debug("-out-> %s" % repr(packet))

@@ -80,7 +80,7 @@ class FileAuthPlugin(BaseAuthPlugin):
                             if username:
                                 self._users[username] = pwd_hash
                                 self.context.logger.debug(
-                                    "user %s , hash=%s" % (username, pwd_hash)
+                                    f"user {username} , hash={pwd_hash}"
                                 )
                 self.context.logger.debug(
                     "%d user(s) read from file %s" % (len(self._users), password_file)

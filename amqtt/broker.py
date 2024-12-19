@@ -347,21 +347,21 @@ class Broker:
             self.transitions.starting_fail()
             raise BrokerException("Broker instance can't be started: %s" % e)
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         """
         Stop broker instance.
 
         Closes all connected session, stop listening on network socket and free resources.
         """
         try:
-            self._sessions = dict()
-            self._subscriptions = dict()
-            self._retained_messages = dict()
+            self._sessions = {}
+            self._subscriptions = {}
+            self._retained_messages = {}
             self.transitions.shutdown()
         except (MachineError, ValueError) as exc:
             # Backwards compat: MachineError is raised by transitions < 0.5.0.
-            self.logger.debug("Invalid method call at this moment: %s" % exc)
-            raise BrokerException("Broker instance can't be stopped: %s" % exc)
+            self.logger.debug(f"Invalid method call at this moment: {exc}")
+            raise
 
         # Fire broker_shutdown event to plugins
         await self.plugins_manager.fire_event(EVENT_BROKER_PRE_SHUTDOWN)
@@ -534,7 +534,7 @@ class Broker:
                     )
                     if result is None:
                         self.logger.debug("Will flag: %s" % client_session.will_flag)
-                        # Connection closed anormally, send will message
+                        # Connection closed abnormally, send will message
                         if client_session.will_flag:
                             self.logger.debug(
                                 "Client %s disconnected abnormally, sending will message"
@@ -717,7 +717,7 @@ class Broker:
                         % (plugin.name, res)
                     )
                 else:
-                    self.logger.debug("'%s' plugin result: %s" % (plugin.name, res))
+                    self.logger.debug(f"'{plugin.name}' plugin result: {res}")
         # If all plugins returned True, authentication is success
         return auth_result
 
@@ -762,7 +762,7 @@ class Broker:
                         % (plugin.name, res)
                     )
                 else:
-                    self.logger.debug("'%s' plugin result: %s" % (plugin.name, res))
+                    self.logger.debug(f"'{plugin.name}' plugin result: {res}")
         # If all plugins returned True, authentication is success
         return topic_result
 
@@ -771,7 +771,7 @@ class Broker:
         source_session: Session,
         topic_name: str,
         data: bytearray,
-        qos: Optional[int] = None,
+        qos: int | None = None,
     ) -> None:
         if data is not None and data != b"":
             # If retained flag set, store the message for further subscriptions
@@ -989,18 +989,16 @@ class Broker:
                 target_session.retained_messages.qsize(),
             )
 
-    async def _shutdown_broadcast_loop(self):
-        if self._broadcast_task:
+    async def _shutdown_broadcast_loop(self) -> None:
+        if self._broadcast_task and not self._broadcast_shutdown_waiter.done():
             self._broadcast_shutdown_waiter.set_result(True)
             try:
                 await asyncio.wait_for(self._broadcast_task, timeout=30)
             except BaseException as e:
-                self.logger.warning("Failed to cleanly shutdown broadcast loop: %r", e)
+                self.logger.warning(f"Failed to cleanly shutdown broadcast loop: {e}")
 
         if self._broadcast_queue.qsize() > 0:
-            self.logger.warning(
-                "%d messages not broadcasted", self._broadcast_queue.qsize()
-            )
+            self.logger.warning(f"{self._broadcast_queue.qsize()} messages not broadcasted")
 
     async def _broadcast_message(self, session, topic, data, force_qos=None):
         broadcast = {"session": session, "topic": topic, "data": data}
@@ -1038,9 +1036,9 @@ class Broker:
         publish_tasks = []
         handler = self._get_handler(session)
         for d_topic in self._retained_messages:
-            self.logger.debug("matching : %s %s" % (d_topic, subscription[0]))
+            self.logger.debug(f"matching : {d_topic} {subscription[0]}")
             if self.matches(d_topic, subscription[0]):
-                self.logger.debug("%s and %s match" % (d_topic, subscription[0]))
+                self.logger.debug(f"{d_topic} and {subscription[0]} match")
                 retained = self._retained_messages[d_topic]
                 publish_tasks.append(
                     asyncio.Task(

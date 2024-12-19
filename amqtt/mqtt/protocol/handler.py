@@ -493,7 +493,7 @@ class ProtocolHandler:
             except asyncio.CancelledError:
                 self.logger.debug("Task cancelled, reader loop ending")
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self.logger.debug(
                     "%s Input stream read timeout" % self.session.client_id
                 )

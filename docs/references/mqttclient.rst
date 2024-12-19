@@ -19,7 +19,7 @@ The example below shows how to write a simple MQTT client which subscribes a top
 
     from amqtt.client import MQTTClient, ClientException
     from amqtt.mqtt.constants import QOS_1, QOS_2
-    
+
     logger = logging.getLogger(__name__)
 
     async def uptime_coro():
@@ -69,7 +69,7 @@ This example also shows to method for publishing message asynchronously.
     from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
     logger = logging.getLogger(__name__)
-    
+
     async def test_coro():
         C = MQTTClient()
         await C.connect('mqtt://test.mosquitto.org/')
@@ -163,7 +163,7 @@ The :class:`~amqtt.client.MQTTClient` ``__init__`` method accepts a ``config`` p
 * ``auto_reconnect``: enable or disable auto-reconnect feature (defaults to ``True``).
 * ``reconnect_max_interval``: maximum interval (in seconds) to wait before two connection retries (defaults to ``10``).
 * ``reconnect_retries``: maximum number of connect retries (defaults to ``2``). Negative value will cause client to reconnect infinietly.
-Default QoS and default retain can also be overriden by adding a ``topics`` with may contain QoS and retain values for specific topics. See the following example:
+Default QoS and default retain can also be overridden by adding a ``topics`` with may contain QoS and retain values for specific topics. See the following example:
 
 .. code-block:: python
 

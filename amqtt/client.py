@@ -136,7 +136,7 @@ class MQTTClient:
         """
         Connect to a remote broker.
 
-        At first, a network connection is established with the server using the given protocol (``mqtt``, ``mqtts``, ``ws`` or ``wss``). Once the socket is connected, a `CONNECT <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028>`_ message is sent with the requested informations.
+        At first, a network connection is established with the server using the given protocol (``mqtt``, ``mqtts``, ``ws`` or ``wss``). Once the socket is connected, a `CONNECT <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028>`_ message is sent with the requested information.
 
         This method is a *coroutine*.
 
@@ -169,26 +169,35 @@ class MQTTClient:
             else:
                 return await self.reconnect()
 
+
     async def disconnect(self):
         """
         Disconnect from the connected broker.
 
-        This method sends a `DISCONNECT <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090>`_ message and closes the network socket.
-
+        This method sends a `DISCONNECT <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718090>` message and closes the network socket.
         This method is a *coroutine*.
         """
         await self.cancel_tasks()
-        if self.session.transitions.is_connected():
-            if not self._disconnect_task.done():
-                self._disconnect_task.cancel()
-            await self._handler.mqtt_disconnect()
+
+        if self.session is None or self._handler is None:
+            self.logger.warning("Session or handler is not initialized, ignoring disconnect.")
+            return
+
+        if not self.session.transitions.is_connected():
+            self.logger.warning("Client session is not currently connected, ignoring call.")
+            return
+
+        if self._disconnect_task and not self._disconnect_task.done():
+            self._disconnect_task.cancel()
+
+        await self._handler.mqtt_disconnect()
+        if self._connected_state:
             self._connected_state.clear()
-            await self._handler.stop()
-            self.session.transitions.disconnect()
-        else:
-            self.logger.warning(
-                "Client session is not currently connected, ignoring call"
-            )
+
+        await self._handler.stop()
+        self.session.transitions.disconnect()
+
+
 
     async def cancel_tasks(self):
         """
@@ -377,9 +386,9 @@ class MQTTClient:
                 raise deliver_task.exception()
             return deliver_task.result()
         else:
-            # timeout occured before message received
+            # timeout occurred before message received
             deliver_task.cancel()
-            raise asyncio.TimeoutError
+            raise TimeoutError
 
     async def _connect_coro(self):
         kwargs = dict()
@@ -494,7 +503,7 @@ class MQTTClient:
             while self.client_tasks:
                 task = self.client_tasks.popleft()
                 if not task.done():
-                    task.set_exception(ClientException("Connection lost"))
+                    task.cancel()
 
         self.logger.debug("Watch broker disconnection")
         # Wait for disconnection from broker (like connection lost)
@@ -505,7 +514,7 @@ class MQTTClient:
         self._connected_state.clear()
 
         # stop an clean handler
-        # await self._handler.stop()
+        await self._handler.stop()
         self._handler.detach()
         self.session.transitions.disconnect()
 

@@ -17,7 +17,7 @@ Options:
     -i CLIENT_ID        Id to use as client ID.
     -n COUNT            Number of messages to read before ending.
     -q | --qos QOS      Quality of service desired to receive messages, from 0, 1 and 2. Defaults to 0.
-    -t TOPIC...         Topic filter to subcribe
+    -t TOPIC...         Topic filter to subscribe
     -k KEEP_ALIVE       Keep alive timeout in second
     --clean-session     Clean session on connect (defaults to False)
     --ca-file CAFILE]   CA file
@@ -105,7 +105,7 @@ async def do_sub(client, arguments):
     except KeyboardInterrupt:
         await client.disconnect()
     except ConnectException as ce:
-        logger.fatal("connection to '%s' failed: %r" % (arguments["--url"], ce))
+        logger.fatal("connection to '{}' failed: {!r}".format(arguments["--url"], ce))
     except asyncio.CancelledError:
         logger.fatal("Publish canceled due to previous error")
 

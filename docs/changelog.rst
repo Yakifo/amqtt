@@ -44,7 +44,7 @@ Changelog
 0.9.0
 .....
 
-* fix a `serie of issues <https://github.com/beerfactory/hbmqtt/milestone/8?closed=1>`_
+* fix a `series of issues <https://github.com/beerfactory/hbmqtt/milestone/8?closed=1>`_
 * improve plugin performance
 * support Python 3.6
 * upgrade to ``websockets`` 3.3.0
@@ -52,7 +52,7 @@ Changelog
 0.8.0
 .....
 
-* fix a `serie of issues <https://github.com/beerfactory/hbmqtt/milestone/7?closed=1>`_
+* fix a `series of issues <https://github.com/beerfactory/hbmqtt/milestone/7?closed=1>`_
 
 0.7.3
 .....
@@ -70,7 +70,7 @@ Version 0.7.2 has been jumped due to troubles with pypi...
 0.7.0
 .....
 
-* Fix a `serie of issues <https://github.com/beerfactory/hbmqtt/issues?q=milestone%3A0.7+is%3Aclosed>`_ reported by `Christoph Krey <https://github.com/ckrey>`_
+* Fix a `series of issues <https://github.com/beerfactory/hbmqtt/issues?q=milestone%3A0.7+is%3Aclosed>`_ reported by `Christoph Krey <https://github.com/ckrey>`_
 
 0.6.3
 .....
