@@ -21,12 +21,6 @@
       "groupName": "GitHub Actions"
     },
     {
-      "addLabels": ["docker"],
-      "matchManagers": ["dockerfile"],
-      "groupName": "Docker updates",
-      "automerge": false
-    },
-    {
       "addLabels": ["pre-commit"],
       "matchManagers": ["pre-commit"],
       "groupName": "Pre-commit hooks",
