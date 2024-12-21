@@ -28,6 +28,12 @@
     :target: https://pypi.org/project/amqtt/
     :alt: PyPI
 
+NOTE
+======
+
+TRY to upgrade versions and add types into project with direct add improves while work on project and open pull requests from original repo.
+
+WORK IN PROGRESS.
 
 aMQTT
 ======
