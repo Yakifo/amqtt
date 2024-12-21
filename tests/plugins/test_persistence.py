@@ -2,17 +2,16 @@
 #
 # See the file license.txt for copying permission.
 
-import unittest
+import asyncio
 import logging
 import os
-import asyncio
 import sqlite3
+import unittest
+
 from amqtt.plugins.manager import BaseContext
 from amqtt.plugins.persistence import SQLitePlugin
 
-formatter = (
-    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-)
+formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 
 
@@ -33,7 +32,7 @@ class TestSQLitePlugin(unittest.TestCase):
         tables = []
         for row in rows:
             tables.append(row[0])
-        self.assertIn("session", tables)
+        assert "session" in tables
 
     # def test_save_session(self):
     #     dbfile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test.db")

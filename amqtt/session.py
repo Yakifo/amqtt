@@ -1,195 +1,211 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
-from transitions import Machine
 from asyncio import Queue
 from collections import OrderedDict
-from amqtt.mqtt.publish import PublishPacket
+from typing import Any
+
+from transitions import Machine
+
 from amqtt.errors import AMQTTException
+from amqtt.mqtt.publish import PublishPacket
 
 OUTGOING = 0
 INCOMING = 1
 
 
 class ApplicationMessage:
+    """ApplicationMessage and subclasses are used to store published message information flow.
 
-    """
-    ApplicationMessage and subclasses are used to store published message information flow. These objects can contain different information depending on the way they were created (incoming or outgoing) and the quality of service used between peers.
+    These objects can contain different information depending on the way they were created (incoming or outgoing)
+    and the quality of service used between peers.
     """
 
     __slots__ = (
-        "packet_id",
-        "topic",
-        "qos",
         "data",
-        "retain",
-        "publish_packet",
+        "packet_id",
         "puback_packet",
+        "pubcomp_packet",
+        "publish_packet",
         "pubrec_packet",
         "pubrel_packet",
-        "pubcomp_packet",
+        "qos",
+        "retain",
+        "topic",
     )
 
-    def __init__(self, packet_id, topic, qos, data, retain):
-        self.packet_id = packet_id
-        """ Publish message `packet identifier <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718025>`_"""
+    def __init__(self, packet_id: int, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
+        self.packet_id: int = packet_id
+        """ Publish message packet identifier <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718025>_"""
 
-        self.topic = topic
+        self.topic: str = topic
         """ Publish message topic"""
 
-        self.qos = qos
+        self.qos: int | None = qos
         """ Publish message Quality of Service"""
 
-        self.data = data
+        self.data: bytes = data
         """ Publish message payload data"""
 
-        self.retain = retain
+        self.retain: bool = retain
         """ Publish message retain flag"""
 
-        self.publish_packet = None
-        """ :class:`amqtt.mqtt.publish.PublishPacket` instance corresponding to the `PUBLISH <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718037>`_ packet in the messages flow. ``None`` if the PUBLISH packet has not already been received or sent."""
+        self.publish_packet: PublishPacket | None = None
+        """ :class:`amqtt.mqtt.publish.PublishPacket` instance corresponding to the
+        `PUBLISH <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718037>`_ packet in the messages flow.
+        ``None`` if the PUBLISH packet has not already been received or sent."""
 
-        self.puback_packet = None
-        """ :class:`amqtt.mqtt.puback.PubackPacket` instance corresponding to the `PUBACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043>`_ packet in the messages flow. ``None`` if QoS != QOS_1 or if the PUBACK packet has not already been received or sent."""
+        self.puback_packet: Any | None = None
+        """ :class:`amqtt.mqtt.puback.PubackPacket` instance corresponding to the
+        `PUBACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718043>`_ packet in the messages flow.
+        ``None`` if QoS != QOS_1 or if the PUBACK packet has not already been received or sent."""
 
-        self.pubrec_packet = None
-        """ :class:`amqtt.mqtt.puback.PubrecPacket` instance corresponding to the `PUBREC <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREC packet has not already been received or sent."""
+        self.pubrec_packet: Any | None = None
+        """ :class:`amqtt.mqtt.puback.PubrecPacket` instance corresponding to the
+        `PUBREC <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718048>`_ packet in the messages flow.
+        ``None`` if QoS != QOS_2 or if the PUBREC packet has not already been received or sent."""
 
-        self.pubrel_packet = None
-        """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBREL <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBREL packet has not already been received or sent."""
+        self.pubrel_packet: Any | None = None
+        """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the
+        `PUBREL <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718053>`_ packet in the messages flow.
+        ``None`` if QoS != QOS_2 or if the PUBREL packet has not already been received or sent."""
 
-        self.pubcomp_packet = None
-        """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the `PUBCOMP <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058>`_ packet in the messages flow. ``None`` if QoS != QOS_2 or if the PUBCOMP packet has not already been received or sent."""
+        self.pubcomp_packet: Any | None = None
+        """ :class:`amqtt.mqtt.puback.PubrelPacket` instance corresponding to the
+        `PUBCOMP <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058>`_ packet in the messages flow.
+        ``None`` if QoS != QOS_2 or if the PUBCOMP packet has not already been received or sent."""
 
-    def build_publish_packet(self, dup=False):
-        """
-            Build :class:`amqtt.mqtt.publish.PublishPacket` from attributes
+    def build_publish_packet(self, dup: bool = False) -> Any | PublishPacket:
+        """Build :class:`amqtt.mqtt.publish.PublishPacket` from attributes.
 
         :param dup: force dup flag
         :return: :class:`amqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
         """
         return PublishPacket.build(
-            self.topic, self.data, self.packet_id, dup, self.qos, self.retain
+            self.topic,
+            self.data,
+            self.packet_id,
+            dup,
+            self.qos,
+            self.retain,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ApplicationMessage):
+            return False
         return self.packet_id == other.packet_id
 
 
 class IncomingApplicationMessage(ApplicationMessage):
-
-    """
-    Incoming :class:`~amqtt.session.ApplicationMessage`.
-    """
+    """Incoming :class:~amqtt.session.ApplicationMessage."""
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id: int, topic: str, qos: int, data: bytes, retain: bool) -> None:
         super().__init__(packet_id, topic, qos, data, retain)
-        self.direction = INCOMING
+        self.direction: int = INCOMING
 
 
 class OutgoingApplicationMessage(ApplicationMessage):
-
-    """
-    Outgoing :class:`~amqtt.session.ApplicationMessage`.
-    """
+    """Outgoing :class:~amqtt.session.ApplicationMessage."""
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id, topic, qos, data, retain):
+    def __init__(self, packet_id: int, topic: str, qos: int, data: bytes, retain: bool) -> None:
         super().__init__(packet_id, topic, qos, data, retain)
-        self.direction = OUTGOING
+        self.direction: int = OUTGOING
 
 
 class Session:
     states = ["new", "connected", "disconnected"]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._init_states()
-        self.remote_address = None
-        self.remote_port = None
-        self.client_id = None
-        self.clean_session = None
-        self.will_flag = False
-        self.will_message = None
-        self.will_qos = None
-        self.will_retain = None
-        self.will_topic = None
-        self.keep_alive = 0
-        self.publish_retry_delay = 0
-        self.broker_uri = None
-        self.username = None
-        self.password = None
-        self.cafile = None
-        self.capath = None
-        self.cadata = None
-        self._packet_id = 0
-        self.parent = 0
+        self.remote_address: str | None = None
+        self.remote_port: int | None = None
+        self.client_id: str | None = None
+        self.clean_session: bool | None = None
+        self.will_flag: bool = False
+        self.will_message: str | None = None
+        self.will_qos: int | None = None
+        self.will_retain: bool | None = None
+        self.will_topic: str | None = None
+        self.keep_alive: int = 0
+        self.publish_retry_delay: int = 0
+        self.broker_uri: str | None = None
+        self.username: str | None = None
+        self.password: str | None = None
+        self.cafile: str | None = None
+        self.capath: str | None = None
+        self.cadata: bytes | None = None
+        self._packet_id: int = 0
+        self.parent: int = 0
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
-        self.inflight_out = OrderedDict()
+        self.inflight_out: OrderedDict[int, ApplicationMessage] = OrderedDict()
 
         # Used to store incoming ApplicationMessage while publish protocol flows
-        self.inflight_in = OrderedDict()
+        self.inflight_in: OrderedDict[int, ApplicationMessage] = OrderedDict()
 
         # Stores messages retained for this session
-        self.retained_messages = Queue()
+        self.retained_messages: Queue[ApplicationMessage] = Queue()
 
         # Stores PUBLISH messages ID received in order and ready for application process
-        self.delivered_message_queue = Queue()
+        self.delivered_message_queue: Queue[ApplicationMessage] = Queue()
 
-    def _init_states(self):
+    def _init_states(self) -> None:
         self.transitions = Machine(states=Session.states, initial="new")
         self.transitions.add_transition(
-            trigger="connect", source="new", dest="connected"
+            trigger="connect",
+            source="new",
+            dest="connected",
         )
         self.transitions.add_transition(
-            trigger="connect", source="disconnected", dest="connected"
+            trigger="connect",
+            source="disconnected",
+            dest="connected",
         )
         self.transitions.add_transition(
-            trigger="disconnect", source="connected", dest="disconnected"
+            trigger="disconnect",
+            source="connected",
+            dest="disconnected",
         )
         self.transitions.add_transition(
-            trigger="disconnect", source="new", dest="disconnected"
+            trigger="disconnect",
+            source="new",
+            dest="disconnected",
         )
         self.transitions.add_transition(
-            trigger="disconnect", source="disconnected", dest="disconnected"
+            trigger="disconnect",
+            source="disconnected",
+            dest="disconnected",
         )
 
     @property
-    def next_packet_id(self):
+    def next_packet_id(self) -> int:
         self._packet_id = (self._packet_id % 65535) + 1
         limit = self._packet_id
-        while (
-            self._packet_id in self.inflight_in or self._packet_id in self.inflight_out
-        ):
+        while self._packet_id in self.inflight_in or self._packet_id in self.inflight_out:
             self._packet_id = (self._packet_id % 65535) + 1
             if self._packet_id == limit:
-                raise AMQTTException(
-                    "More than 65535 messages pending. No free packet ID"
-                )
+                msg = "More than 65535 messages pending. No free packet ID"
+                raise AMQTTException(msg)
 
         return self._packet_id
 
     @property
-    def inflight_in_count(self):
+    def inflight_in_count(self) -> int:
         return len(self.inflight_in)
 
     @property
-    def inflight_out_count(self):
+    def inflight_out_count(self) -> int:
         return len(self.inflight_out)
 
     @property
-    def retained_messages_count(self):
+    def retained_messages_count(self) -> int:
         return self.retained_messages.qsize()
 
-    def __repr__(self):
-        return type(self).__name__ + "(clientId={}, state={})".format(
-            self.client_id, self.transitions.state
-        )
+    def __repr__(self) -> str:
+        return type(self).__name__ + f"(clientId={self.client_id}, state={self.transitions.state})"
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         state = self.__dict__.copy()
         # Remove the unpicklable entries.
         # del state['transitions']
@@ -197,10 +213,12 @@ class Session:
         del state["delivered_message_queue"]
         return state
 
-    def __setstate(self, state):
+    def __setstate__(self, state: dict[str, Any]) -> None:
         self.__dict__.update(state)
         self.retained_messages = Queue()
         self.delivered_message_queue = Queue()
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Session):
+            return False
         return self.client_id == other.client_id

@@ -4,8 +4,8 @@
 import asyncio
 import unittest
 
-from amqtt.mqtt.pubrel import PubrelPacket, PacketIdVariableHeader
 from amqtt.adapters import BufferReader
+from amqtt.mqtt.pubrel import PacketIdVariableHeader, PubrelPacket
 
 
 class PubrelPacketTest(unittest.TestCase):
@@ -16,10 +16,10 @@ class PubrelPacketTest(unittest.TestCase):
         data = b"\x60\x02\x00\x0a"
         stream = BufferReader(data)
         message = self.loop.run_until_complete(PubrelPacket.from_stream(stream))
-        self.assertEqual(message.variable_header.packet_id, 10)
+        assert message.variable_header.packet_id == 10
 
     def test_to_bytes(self):
         variable_header = PacketIdVariableHeader(10)
         publish = PubrelPacket(variable_header=variable_header)
         out = publish.to_bytes()
-        self.assertEqual(out, b"\x62\x02\x00\x0a")
+        assert out == b"b\x02\x00\n"

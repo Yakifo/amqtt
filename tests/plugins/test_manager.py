@@ -1,25 +1,23 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-import unittest
-import logging
 import asyncio
+import logging
+import unittest
 
 from amqtt.plugins.manager import PluginManager
 
-formatter = (
-    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-)
+formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.INFO, format=formatter)
 
 
 class EmptyTestPlugin:
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
 
 
 class EventTestPlugin:
-    def __init__(self, context):
+    def __init__(self, context) -> None:
         self.context = context
         self.test_flag = False
         self.coro_flag = False
@@ -44,7 +42,7 @@ class TestPluginManager(unittest.TestCase):
         assert len(manager._plugins) > 0
 
     def test_fire_event(self):
-        async def fire_event():
+        async def fire_event() -> None:
             await manager.fire_event("test")
             await asyncio.sleep(1)
             await manager.close()
@@ -55,7 +53,7 @@ class TestPluginManager(unittest.TestCase):
         assert plugin.object.test_flag
 
     def test_fire_event_wait(self):
-        async def fire_event():
+        async def fire_event() -> None:
             await manager.fire_event("test", wait=True)
             await manager.close()
 
@@ -65,7 +63,7 @@ class TestPluginManager(unittest.TestCase):
         assert plugin.object.test_flag
 
     def test_map_coro(self):
-        async def call_coro():
+        async def call_coro() -> None:
             await manager.map_plugin_coro("test_coro")
 
         manager = PluginManager("amqtt.test.plugins", context=None)
@@ -80,11 +78,10 @@ class TestPluginManager(unittest.TestCase):
         manager = PluginManager("amqtt.test.plugins", context=None)
         ret = self.loop.run_until_complete(call_coro())
         plugin = manager.get_plugin("event_plugin")
-        self.assertEqual(ret[plugin], "TEST")
+        assert ret[plugin] == "TEST"
 
     def test_map_coro_filter(self):
-        """
-        Run plugin coro but expect no return as an empty filter is given
+        """Run plugin coro but expect no return as an empty filter is given
         :return:
         """
 

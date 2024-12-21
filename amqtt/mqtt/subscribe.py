@@ -3,15 +3,6 @@
 # See the file license.txt for copying permission.
 import asyncio
 
-from amqtt.mqtt.packet import (
-    MQTTPacket,
-    MQTTFixedHeader,
-    SUBSCRIBE,
-    PacketIdVariableHeader,
-    MQTTPayload,
-    MQTTVariableHeader,
-)
-from amqtt.errors import AMQTTException, NoDataException
 from amqtt.codecs import (
     bytes_to_int,
     decode_string,
@@ -19,18 +10,28 @@ from amqtt.codecs import (
     int_to_bytes,
     read_or_raise,
 )
+from amqtt.errors import AMQTTException, NoDataException
+from amqtt.mqtt.packet import (
+    SUBSCRIBE,
+    MQTTFixedHeader,
+    MQTTPacket,
+    MQTTPayload,
+    MQTTVariableHeader,
+    PacketIdVariableHeader,
+)
 
 
 class SubscribePayload(MQTTPayload):
-
     __slots__ = ("topics",)
 
-    def __init__(self, topics=None):
+    def __init__(self, topics=None) -> None:
         super().__init__()
         self.topics = topics or []
 
     def to_bytes(
-        self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
+        self,
+        fixed_header: MQTTFixedHeader,
+        variable_header: MQTTVariableHeader,
     ):
         out = b""
         for topic in self.topics:
@@ -59,7 +60,7 @@ class SubscribePayload(MQTTPayload):
                 break
         return cls(topics)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return type(self).__name__ + f"(topics={self.topics!r})"
 
 
@@ -72,14 +73,14 @@ class SubscribePacket(MQTTPacket):
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
         payload=None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(SUBSCRIBE, 0x02)  # [MQTT-3.8.1-1]
         else:
             if fixed.packet_type is not SUBSCRIBE:
+                msg = f"Invalid fixed packet type {fixed.packet_type} for SubscribePacket init"
                 raise AMQTTException(
-                    "Invalid fixed packet type %s for SubscribePacket init"
-                    % fixed.packet_type
+                    msg,
                 )
             header = fixed
 

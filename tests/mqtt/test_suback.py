@@ -4,9 +4,9 @@
 import asyncio
 import unittest
 
-from amqtt.mqtt.suback import SubackPacket, SubackPayload
-from amqtt.mqtt.packet import PacketIdVariableHeader
 from amqtt.adapters import BufferReader
+from amqtt.mqtt.packet import PacketIdVariableHeader
+from amqtt.mqtt.suback import SubackPacket, SubackPayload
 
 
 class SubackPacketTest(unittest.TestCase):
@@ -17,10 +17,10 @@ class SubackPacketTest(unittest.TestCase):
         data = b"\x90\x06\x00\x0a\x00\x01\x02\x80"
         stream = BufferReader(data)
         message = self.loop.run_until_complete(SubackPacket.from_stream(stream))
-        self.assertEqual(message.payload.return_codes[0], SubackPayload.RETURN_CODE_00)
-        self.assertEqual(message.payload.return_codes[1], SubackPayload.RETURN_CODE_01)
-        self.assertEqual(message.payload.return_codes[2], SubackPayload.RETURN_CODE_02)
-        self.assertEqual(message.payload.return_codes[3], SubackPayload.RETURN_CODE_80)
+        assert message.payload.return_codes[0] == SubackPayload.RETURN_CODE_00
+        assert message.payload.return_codes[1] == SubackPayload.RETURN_CODE_01
+        assert message.payload.return_codes[2] == SubackPayload.RETURN_CODE_02
+        assert message.payload.return_codes[3] == SubackPayload.RETURN_CODE_80
 
     def test_to_stream(self):
         variable_header = PacketIdVariableHeader(10)
@@ -30,8 +30,8 @@ class SubackPacketTest(unittest.TestCase):
                 SubackPayload.RETURN_CODE_01,
                 SubackPayload.RETURN_CODE_02,
                 SubackPayload.RETURN_CODE_80,
-            ]
+            ],
         )
         suback = SubackPacket(variable_header=variable_header, payload=payload)
         out = suback.to_bytes()
-        self.assertEqual(out, b"\x90\x06\x00\x0a\x00\x01\x02\x80")
+        assert out == b"\x90\x06\x00\n\x00\x01\x02\x80"

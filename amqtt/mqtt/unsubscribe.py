@@ -3,28 +3,29 @@
 # See the file license.txt for copying permission.
 import asyncio
 
+from amqtt.codecs import decode_string, encode_string
+from amqtt.errors import AMQTTException, NoDataException
 from amqtt.mqtt.packet import (
-    MQTTPacket,
-    MQTTFixedHeader,
     UNSUBSCRIBE,
-    PacketIdVariableHeader,
+    MQTTFixedHeader,
+    MQTTPacket,
     MQTTPayload,
     MQTTVariableHeader,
+    PacketIdVariableHeader,
 )
-from amqtt.errors import AMQTTException, NoDataException
-from amqtt.codecs import decode_string, encode_string
 
 
 class UnubscribePayload(MQTTPayload):
-
     __slots__ = ("topics",)
 
-    def __init__(self, topics=None):
+    def __init__(self, topics=None) -> None:
         super().__init__()
         self.topics = topics or []
 
     def to_bytes(
-        self, fixed_header: MQTTFixedHeader, variable_header: MQTTVariableHeader
+        self,
+        fixed_header: MQTTFixedHeader,
+        variable_header: MQTTVariableHeader,
     ):
         out = b""
         for topic in self.topics:
@@ -60,14 +61,14 @@ class UnsubscribePacket(MQTTPacket):
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
         payload=None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(UNSUBSCRIBE, 0x02)  # [MQTT-3.10.1-1]
         else:
             if fixed.packet_type is not UNSUBSCRIBE:
+                msg = f"Invalid fixed packet type {fixed.packet_type} for UnsubscribePacket init"
                 raise AMQTTException(
-                    "Invalid fixed packet type %s for UnsubscribePacket init"
-                    % fixed.packet_type
+                    msg,
                 )
             header = fixed
 

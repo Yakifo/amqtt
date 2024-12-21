@@ -2,17 +2,16 @@
 #
 # See the file license.txt for copying permission.
 
-import unittest
+import asyncio
 import logging
 import os
-import asyncio
-from amqtt.plugins.manager import BaseContext
+import unittest
+
 from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
+from amqtt.plugins.manager import BaseContext
 from amqtt.session import Session
 
-formatter = (
-    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-)
+formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 
 
@@ -38,7 +37,7 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        self.assertFalse(ret)
+        assert not ret
 
     def test_allow_nonanonymous(self):
         context = BaseContext()
@@ -61,9 +60,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         context.config = {
             "auth": {
                 "password-file": os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "passwd"
-                )
-            }
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "passwd",
+                ),
+            },
         }
         s = Session()
         s.username = "user"
@@ -78,16 +78,17 @@ class TestFileAuthPlugin(unittest.TestCase):
         context.config = {
             "auth": {
                 "password-file": os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "passwd"
-                )
-            }
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "passwd",
+                ),
+            },
         }
         s = Session()
         s.username = "user"
         s.password = "wrong password"
         auth_plugin = FileAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        self.assertFalse(ret)
+        assert not ret
 
     def test_unknown_password(self):
         context = BaseContext()
@@ -95,13 +96,14 @@ class TestFileAuthPlugin(unittest.TestCase):
         context.config = {
             "auth": {
                 "password-file": os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "passwd"
-                )
-            }
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "passwd",
+                ),
+            },
         }
         s = Session()
         s.username = "some user"
         s.password = "some password"
         auth_plugin = FileAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        self.assertFalse(ret)
+        assert not ret

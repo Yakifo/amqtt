@@ -1,12 +1,11 @@
+from glob import glob
 import inspect
 from logging import getLogger
-from os.path import join, dirname, isfile
+from os.path import dirname, isfile, join
 
 import pytest
 
 import amqtt.plugins
-from glob import glob
-
 from amqtt.plugins.manager import BaseContext
 
 _INVALID_METHOD = "invalid_foo"
@@ -14,13 +13,13 @@ _PLUGIN = "Plugin"
 
 
 class _TestContext(BaseContext):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.config = {"auth": {}}
-        self.logger = getLogger(__file__)
+        self.logger = getLogger(__name__)
 
 
-def _verify_module(module, plugin_module_name):
+def _verify_module(module, plugin_module_name) -> None:
     if not module.__name__.startswith(plugin_module_name):
         return
 
@@ -44,8 +43,7 @@ def removesuffix(self: str, suffix: str) -> str:
     # compatibility for pre 3.9
     if suffix and self.endswith(suffix):
         return self[: -len(suffix)]
-    else:
-        return self[:]
+    return self[:]
 
 
 def test_plugins_correct_has_attr():

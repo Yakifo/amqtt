@@ -1,28 +1,27 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-import unittest
 import asyncio
 import logging
 import random
-from amqtt.plugins.manager import PluginManager
-from amqtt.session import (
-    Session,
-    OutgoingApplicationMessage,
-    IncomingApplicationMessage,
-)
-from amqtt.mqtt.protocol.handler import ProtocolHandler
-from amqtt.adapters import StreamWriterAdapter, StreamReaderAdapter
+import unittest
+
+from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.publish import PublishPacket
+from amqtt.mqtt.protocol.handler import ProtocolHandler
 from amqtt.mqtt.puback import PubackPacket
+from amqtt.mqtt.pubcomp import PubcompPacket
+from amqtt.mqtt.publish import PublishPacket
 from amqtt.mqtt.pubrec import PubrecPacket
 from amqtt.mqtt.pubrel import PubrelPacket
-from amqtt.mqtt.pubcomp import PubcompPacket
-
-formatter = (
-    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+from amqtt.plugins.manager import PluginManager
+from amqtt.session import (
+    IncomingApplicationMessage,
+    OutgoingApplicationMessage,
+    Session,
 )
+
+formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 log = logging.getLogger(__name__)
 
@@ -47,15 +46,15 @@ class ProtocolHandlerTest(unittest.TestCase):
     def test_init_handler(self):
         Session()
         handler = ProtocolHandler(self.plugin_manager)
-        self.assertIsNone(handler.session)
-        self.assertIs(handler._loop, self.loop)
+        assert handler.session is None
+        assert handler._loop is self.loop
         self.check_empty_waiters(handler)
 
     def test_start_stop(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             pass
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 s = Session()
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
@@ -78,16 +77,16 @@ class ProtocolHandlerTest(unittest.TestCase):
             raise future.exception()
 
     def test_publish_qos0(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             try:
                 packet = await PublishPacket.from_stream(reader)
-                self.assertEqual(packet.variable_header.topic_name, "/topic")
-                self.assertEqual(packet.qos, QOS_0)
-                self.assertIsNone(packet.packet_id)
+                assert packet.variable_header.topic_name == "/topic"
+                assert packet.qos == QOS_0
+                assert packet.packet_id is None
             except Exception as ae:
                 future.set_exception(ae)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 s = Session()
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
@@ -96,14 +95,17 @@ class ProtocolHandlerTest(unittest.TestCase):
                 handler.attach(s, reader_adapted, writer_adapted)
                 await self.start_handler(handler, s)
                 message = await handler.mqtt_publish(
-                    "/topic", b"test_data", QOS_0, False
+                    "/topic",
+                    b"test_data",
+                    QOS_0,
+                    False,
                 )
-                self.assertIsInstance(message, OutgoingApplicationMessage)
-                self.assertIsNotNone(message.publish_packet)
-                self.assertIsNone(message.puback_packet)
-                self.assertIsNone(message.pubrec_packet)
-                self.assertIsNone(message.pubrel_packet)
-                self.assertIsNone(message.pubcomp_packet)
+                assert isinstance(message, OutgoingApplicationMessage)
+                assert message.publish_packet is not None
+                assert message.puback_packet is None
+                assert message.pubrec_packet is None
+                assert message.pubrel_packet is None
+                assert message.pubcomp_packet is None
                 await self.stop_handler(handler, s)
                 future.set_result(True)
             except Exception as ae:
@@ -119,20 +121,20 @@ class ProtocolHandlerTest(unittest.TestCase):
             raise future.exception()
 
     def test_publish_qos1(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             packet = await PublishPacket.from_stream(reader)
             try:
-                self.assertEqual(packet.variable_header.topic_name, "/topic")
-                self.assertEqual(packet.qos, QOS_1)
-                self.assertIsNotNone(packet.packet_id)
-                self.assertIn(packet.packet_id, self.session.inflight_out)
-                self.assertIn(packet.packet_id, self.handler._puback_waiters)
+                assert packet.variable_header.topic_name == "/topic"
+                assert packet.qos == QOS_1
+                assert packet.packet_id is not None
+                assert packet.packet_id in self.session.inflight_out
+                assert packet.packet_id in self.handler._puback_waiters
                 puback = PubackPacket.build(packet.packet_id)
                 await puback.to_stream(writer)
             except Exception as ae:
                 future.set_exception(ae)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
@@ -140,14 +142,17 @@ class ProtocolHandlerTest(unittest.TestCase):
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_publish(
-                    "/topic", b"test_data", QOS_1, False
+                    "/topic",
+                    b"test_data",
+                    QOS_1,
+                    False,
                 )
-                self.assertIsInstance(message, OutgoingApplicationMessage)
-                self.assertIsNotNone(message.publish_packet)
-                self.assertIsNotNone(message.puback_packet)
-                self.assertIsNone(message.pubrec_packet)
-                self.assertIsNone(message.pubrel_packet)
-                self.assertIsNone(message.pubcomp_packet)
+                assert isinstance(message, OutgoingApplicationMessage)
+                assert message.publish_packet is not None
+                assert message.puback_packet is not None
+                assert message.pubrec_packet is None
+                assert message.pubrel_packet is None
+                assert message.pubcomp_packet is None
                 await self.stop_handler(self.handler, self.session)
                 if not future.done():
                     future.set_result(True)
@@ -167,25 +172,25 @@ class ProtocolHandlerTest(unittest.TestCase):
             raise future.exception()
 
     def test_publish_qos2(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             try:
                 packet = await PublishPacket.from_stream(reader)
-                self.assertEqual(packet.topic_name, "/topic")
-                self.assertEqual(packet.qos, QOS_2)
-                self.assertIsNotNone(packet.packet_id)
-                self.assertIn(packet.packet_id, self.session.inflight_out)
-                self.assertIn(packet.packet_id, self.handler._pubrec_waiters)
+                assert packet.topic_name == "/topic"
+                assert packet.qos == QOS_2
+                assert packet.packet_id is not None
+                assert packet.packet_id in self.session.inflight_out
+                assert packet.packet_id in self.handler._pubrec_waiters
                 pubrec = PubrecPacket.build(packet.packet_id)
                 await pubrec.to_stream(writer)
 
                 await PubrelPacket.from_stream(reader)
-                self.assertIn(packet.packet_id, self.handler._pubcomp_waiters)
+                assert packet.packet_id in self.handler._pubcomp_waiters
                 pubcomp = PubcompPacket.build(packet.packet_id)
                 await pubcomp.to_stream(writer)
             except Exception as ae:
                 future.set_exception(ae)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
@@ -193,14 +198,17 @@ class ProtocolHandlerTest(unittest.TestCase):
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_publish(
-                    "/topic", b"test_data", QOS_2, False
+                    "/topic",
+                    b"test_data",
+                    QOS_2,
+                    False,
                 )
-                self.assertIsInstance(message, OutgoingApplicationMessage)
-                self.assertIsNotNone(message.publish_packet)
-                self.assertIsNone(message.puback_packet)
-                self.assertIsNotNone(message.pubrec_packet)
-                self.assertIsNotNone(message.pubrel_packet)
-                self.assertIsNotNone(message.pubcomp_packet)
+                assert isinstance(message, OutgoingApplicationMessage)
+                assert message.publish_packet is not None
+                assert message.puback_packet is None
+                assert message.pubrec_packet is not None
+                assert message.pubrel_packet is not None
+                assert message.pubcomp_packet is not None
                 await self.stop_handler(self.handler, self.session)
                 if not future.done():
                     future.set_result(True)
@@ -220,13 +228,18 @@ class ProtocolHandlerTest(unittest.TestCase):
             raise future.exception()
 
     def test_receive_qos0(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             packet = PublishPacket.build(
-                "/topic", b"test_data", rand_packet_id(), False, QOS_0, False
+                "/topic",
+                b"test_data",
+                rand_packet_id(),
+                False,
+                QOS_0,
+                False,
             )
             await packet.to_stream(writer)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
@@ -234,12 +247,12 @@ class ProtocolHandlerTest(unittest.TestCase):
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_deliver_next_message()
-                self.assertIsInstance(message, IncomingApplicationMessage)
-                self.assertIsNotNone(message.publish_packet)
-                self.assertIsNone(message.puback_packet)
-                self.assertIsNone(message.pubrec_packet)
-                self.assertIsNone(message.pubrel_packet)
-                self.assertIsNone(message.pubcomp_packet)
+                assert isinstance(message, IncomingApplicationMessage)
+                assert message.publish_packet is not None
+                assert message.puback_packet is None
+                assert message.pubrec_packet is None
+                assert message.pubrel_packet is None
+                assert message.pubcomp_packet is None
                 await self.stop_handler(self.handler, self.session)
                 future.set_result(True)
             except Exception as ae:
@@ -257,20 +270,24 @@ class ProtocolHandlerTest(unittest.TestCase):
             raise future.exception()
 
     def test_receive_qos1(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             try:
                 packet = PublishPacket.build(
-                    "/topic", b"test_data", rand_packet_id(), False, QOS_1, False
+                    "/topic",
+                    b"test_data",
+                    rand_packet_id(),
+                    False,
+                    QOS_1,
+                    False,
                 )
                 await packet.to_stream(writer)
                 puback = await PubackPacket.from_stream(reader)
-                self.assertIsNotNone(puback)
-                self.assertEqual(packet.packet_id, puback.packet_id)
+                assert puback is not None
+                assert packet.packet_id == puback.packet_id
             except Exception as ae:
-                print(ae)
                 future.set_exception(ae)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
@@ -278,12 +295,12 @@ class ProtocolHandlerTest(unittest.TestCase):
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_deliver_next_message()
-                self.assertIsInstance(message, IncomingApplicationMessage)
-                self.assertIsNotNone(message.publish_packet)
-                self.assertIsNotNone(message.puback_packet)
-                self.assertIsNone(message.pubrec_packet)
-                self.assertIsNone(message.pubrel_packet)
-                self.assertIsNone(message.pubcomp_packet)
+                assert isinstance(message, IncomingApplicationMessage)
+                assert message.publish_packet is not None
+                assert message.puback_packet is not None
+                assert message.pubrec_packet is None
+                assert message.pubrel_packet is None
+                assert message.pubcomp_packet is None
                 await self.stop_handler(self.handler, self.session)
                 future.set_result(True)
             except Exception as ae:
@@ -302,25 +319,30 @@ class ProtocolHandlerTest(unittest.TestCase):
             raise future.exception()
 
     def test_receive_qos2(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             try:
                 packet = PublishPacket.build(
-                    "/topic", b"test_data", rand_packet_id(), False, QOS_2, False
+                    "/topic",
+                    b"test_data",
+                    rand_packet_id(),
+                    False,
+                    QOS_2,
+                    False,
                 )
                 await packet.to_stream(writer)
                 pubrec = await PubrecPacket.from_stream(reader)
-                self.assertIsNotNone(pubrec)
-                self.assertEqual(packet.packet_id, pubrec.packet_id)
-                self.assertIn(packet.packet_id, self.handler._pubrel_waiters)
+                assert pubrec is not None
+                assert packet.packet_id == pubrec.packet_id
+                assert packet.packet_id in self.handler._pubrel_waiters
                 pubrel = PubrelPacket.build(packet.packet_id)
                 await pubrel.to_stream(writer)
                 pubcomp = await PubcompPacket.from_stream(reader)
-                self.assertIsNotNone(pubcomp)
-                self.assertEqual(packet.packet_id, pubcomp.packet_id)
+                assert pubcomp is not None
+                assert packet.packet_id == pubcomp.packet_id
             except Exception as ae:
                 future.set_exception(ae)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
@@ -328,12 +350,12 @@ class ProtocolHandlerTest(unittest.TestCase):
                 self.handler.attach(self.session, reader_adapted, writer_adapted)
                 await self.start_handler(self.handler, self.session)
                 message = await self.handler.mqtt_deliver_next_message()
-                self.assertIsInstance(message, IncomingApplicationMessage)
-                self.assertIsNotNone(message.publish_packet)
-                self.assertIsNone(message.puback_packet)
-                self.assertIsNotNone(message.pubrec_packet)
-                self.assertIsNotNone(message.pubrel_packet)
-                self.assertIsNotNone(message.pubcomp_packet)
+                assert isinstance(message, IncomingApplicationMessage)
+                assert message.publish_packet is not None
+                assert message.puback_packet is None
+                assert message.pubrec_packet is not None
+                assert message.pubrel_packet is not None
+                assert message.pubcomp_packet is not None
                 await self.stop_handler(self.handler, self.session)
                 future.set_result(True)
             except Exception as ae:
@@ -363,30 +385,30 @@ class ProtocolHandlerTest(unittest.TestCase):
         self.check_no_message(session)
 
     def check_empty_waiters(self, handler):
-        self.assertFalse(handler._puback_waiters)
-        self.assertFalse(handler._pubrec_waiters)
-        self.assertFalse(handler._pubrel_waiters)
-        self.assertFalse(handler._pubcomp_waiters)
+        assert not handler._puback_waiters
+        assert not handler._pubrec_waiters
+        assert not handler._pubrel_waiters
+        assert not handler._pubcomp_waiters
 
     def check_no_message(self, session):
-        self.assertFalse(session.inflight_out)
-        self.assertFalse(session.inflight_in)
+        assert not session.inflight_out
+        assert not session.inflight_in
 
     def test_publish_qos1_retry(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             packet = await PublishPacket.from_stream(reader)
             try:
-                self.assertEqual(packet.topic_name, "/topic")
-                self.assertEqual(packet.qos, QOS_1)
-                self.assertIsNotNone(packet.packet_id)
-                self.assertIn(packet.packet_id, self.session.inflight_out)
-                self.assertIn(packet.packet_id, self.handler._puback_waiters)
+                assert packet.topic_name == "/topic"
+                assert packet.qos == QOS_1
+                assert packet.packet_id is not None
+                assert packet.packet_id in self.session.inflight_out
+                assert packet.packet_id in self.handler._puback_waiters
                 puback = PubackPacket.build(packet.packet_id)
                 await puback.to_stream(writer)
             except Exception as ae:
                 future.set_exception(ae)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
@@ -403,7 +425,12 @@ class ProtocolHandlerTest(unittest.TestCase):
         self.session = Session()
         message = OutgoingApplicationMessage(1, "/topic", QOS_1, b"test_data", False)
         message.publish_packet = PublishPacket.build(
-            "/topic", b"test_data", rand_packet_id(), False, QOS_1, False
+            "/topic",
+            b"test_data",
+            rand_packet_id(),
+            False,
+            QOS_1,
+            False,
         )
         self.session.inflight_out[1] = message
         future = asyncio.Future()
@@ -417,25 +444,25 @@ class ProtocolHandlerTest(unittest.TestCase):
             raise future.exception()
 
     def test_publish_qos2_retry(self):
-        async def server_mock(reader, writer):
+        async def server_mock(reader, writer) -> None:
             try:
                 packet = await PublishPacket.from_stream(reader)
-                self.assertEqual(packet.topic_name, "/topic")
-                self.assertEqual(packet.qos, QOS_2)
-                self.assertIsNotNone(packet.packet_id)
-                self.assertIn(packet.packet_id, self.session.inflight_out)
-                self.assertIn(packet.packet_id, self.handler._pubrec_waiters)
+                assert packet.topic_name == "/topic"
+                assert packet.qos == QOS_2
+                assert packet.packet_id is not None
+                assert packet.packet_id in self.session.inflight_out
+                assert packet.packet_id in self.handler._pubrec_waiters
                 pubrec = PubrecPacket.build(packet.packet_id)
                 await pubrec.to_stream(writer)
 
                 await PubrelPacket.from_stream(reader)
-                self.assertIn(packet.packet_id, self.handler._pubcomp_waiters)
+                assert packet.packet_id in self.handler._pubcomp_waiters
                 pubcomp = PubcompPacket.build(packet.packet_id)
                 await pubcomp.to_stream(writer)
             except Exception as ae:
                 future.set_exception(ae)
 
-        async def test_coro():
+        async def test_coro() -> None:
             try:
                 reader, writer = await asyncio.open_connection("127.0.0.1", 8888)
                 reader_adapted, writer_adapted = adapt(reader, writer)
@@ -452,7 +479,12 @@ class ProtocolHandlerTest(unittest.TestCase):
         self.session = Session()
         message = OutgoingApplicationMessage(1, "/topic", QOS_2, b"test_data", False)
         message.publish_packet = PublishPacket.build(
-            "/topic", b"test_data", rand_packet_id(), False, QOS_2, False
+            "/topic",
+            b"test_data",
+            rand_packet_id(),
+            False,
+            QOS_2,
+            False,
         )
         self.session.inflight_out[1] = message
         future = asyncio.Future()

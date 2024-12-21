@@ -1,12 +1,14 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-import unittest
 import asyncio
+import unittest
 
-from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader
-from amqtt.errors import MQTTException
+import pytest
+
 from amqtt.adapters import BufferReader
+from amqtt.errors import MQTTException
+from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader
 
 
 class TestMQTTFixedHeaderTest(unittest.TestCase):
@@ -17,34 +19,34 @@ class TestMQTTFixedHeaderTest(unittest.TestCase):
         data = b"\x10\x7f"
         stream = BufferReader(data)
         header = self.loop.run_until_complete(MQTTFixedHeader.from_stream(stream))
-        self.assertEqual(header.packet_type, CONNECT)
-        self.assertFalse(header.flags & 0x08)
-        self.assertEqual((header.flags & 0x06) >> 1, 0)
-        self.assertFalse(header.flags & 0x01)
-        self.assertEqual(header.remaining_length, 127)
+        assert header.packet_type == CONNECT
+        assert not header.flags & 8
+        assert (header.flags & 6) >> 1 == 0
+        assert not header.flags & 1
+        assert header.remaining_length == 127
 
     def test_from_bytes_with_length(self):
         data = b"\x10\xff\xff\xff\x7f"
         stream = BufferReader(data)
         header = self.loop.run_until_complete(MQTTFixedHeader.from_stream(stream))
-        self.assertEqual(header.packet_type, CONNECT)
-        self.assertFalse(header.flags & 0x08)
-        self.assertEqual((header.flags & 0x06) >> 1, 0)
-        self.assertFalse(header.flags & 0x01)
-        self.assertEqual(header.remaining_length, 268435455)
+        assert header.packet_type == CONNECT
+        assert not header.flags & 8
+        assert (header.flags & 6) >> 1 == 0
+        assert not header.flags & 1
+        assert header.remaining_length == 268435455
 
     def test_from_bytes_ko_with_length(self):
         data = b"\x10\xff\xff\xff\xff\x7f"
         stream = BufferReader(data)
-        with self.assertRaises(MQTTException):
+        with pytest.raises(MQTTException):
             self.loop.run_until_complete(MQTTFixedHeader.from_stream(stream))
 
     def test_to_bytes(self):
         header = MQTTFixedHeader(CONNECT, 0x00, 0)
         data = header.to_bytes()
-        self.assertEqual(data, b"\x10\x00")
+        assert data == b"\x10\x00"
 
     def test_to_bytes_2(self):
         header = MQTTFixedHeader(CONNECT, 0x00, 268435455)
         data = header.to_bytes()
-        self.assertEqual(data, b"\x10\xff\xff\xff\x7f")
+        assert data == b"\x10\xff\xff\xff\x7f"

@@ -2,41 +2,40 @@
 #
 # See the file license.txt for copying permission.
 
-__all__ = ["get_plugin_manager", "BaseContext", "PluginManager"]
+__all__ = ["BaseContext", "PluginManager", "get_plugin_manager"]
 
+import asyncio
+from collections import namedtuple
+import contextlib
+import copy
 from importlib.metadata import EntryPoint, entry_points
 import logging
-import asyncio
-import copy
-
-from collections import namedtuple
-
+from typing import Any
 
 Plugin = namedtuple("Plugin", ["name", "ep", "object"])
 
-plugins_manager = dict()
+plugins_manager = {}
 
 
 def get_plugin_manager(namespace):
     global plugins_manager
-    return plugins_manager.get(namespace, None)
+    return plugins_manager.get(namespace)
 
 
 class BaseContext:
-    def __init__(self):
+    def __init__(self) -> None:
         self.loop = None
         self.logger = None
-        self.config = None
+        self.config: dict[str, Any] | None = None
 
 
 class PluginManager:
-    """
-    Wraps setuptools Entry point mechanism to provide a basic plugin system. Plugins
+    """Wraps setuptools Entry point mechanism to provide a basic plugin system. Plugins
     are loaded for a given namespace (group). This plugin manager uses coroutines to
-    run plugin call asynchronously in an event queue
+    run plugin call asynchronously in an event queue.
     """
 
-    def __init__(self, namespace, context, loop=None):
+    def __init__(self, namespace, context, loop=None) -> None:
         global plugins_manager
         if loop is not None:
             self._loop = loop
@@ -58,8 +57,8 @@ class PluginManager:
     def app_context(self):
         return self.context
 
-    def _load_plugins(self, namespace):
-        self.logger.debug("Loading plugins for namespace %s" % namespace)
+    def _load_plugins(self, namespace) -> None:
+        self.logger.debug(f"Loading plugins for namespace {namespace}")
         if hasattr(entry_points(), "select"):
             ep = entry_points().select(group=namespace)
         elif namespace in entry_points():
@@ -70,13 +69,13 @@ class PluginManager:
         for item in ep:
             plugin = self._load_plugin(item)
             self._plugins.append(plugin)
-            self.logger.debug(" Plugin %s ready" % item.name)
+            self.logger.debug(f" Plugin {item.name} ready")
 
     def _load_plugin(self, ep: EntryPoint):
         try:
-            self.logger.debug(" Loading plugin %s" % str(ep))
+            self.logger.debug(f" Loading plugin {ep!s}")
             plugin = ep.load()
-            self.logger.debug(" Initializing plugin %s" % str(ep))
+            self.logger.debug(f" Initializing plugin {ep!s}")
             plugin_context = copy.copy(self.app_context)
             plugin_context.logger = self.logger.getChild(ep.name)
             obj = plugin(plugin_context)
@@ -85,8 +84,7 @@ class PluginManager:
             self.logger.warning(f"Plugin {ep!r} import failed: {ie}")
 
     def get_plugin(self, name):
-        """
-        Get a plugin by its name from the plugins loaded for the current namespace
+        """Get a plugin by its name from the plugins loaded for the current namespace
         :param name:
         :return:
         """
@@ -95,9 +93,8 @@ class PluginManager:
                 return p
         return None
 
-    async def close(self):
-        """
-        Free PluginManager resources and cancel pending event methods
+    async def close(self) -> None:
+        """Free PluginManager resources and cancel pending event methods
         This method call a close() coroutine for each plugin, allowing plugins to close
         and free resources
         :return:
@@ -108,8 +105,7 @@ class PluginManager:
 
     @property
     def plugins(self):
-        """
-        Get the loaded plugins list
+        """Get the loaded plugins list
         :return:
         """
         return self._plugins
@@ -117,9 +113,8 @@ class PluginManager:
     def _schedule_coro(self, coro):
         return asyncio.ensure_future(coro)
 
-    async def fire_event(self, event_name, wait=False, *args, **kwargs):
-        """
-        Fire an event to plugins.
+    async def fire_event(self, event_name, wait=False, *args, **kwargs) -> None:
+        """Fire an event to plugins.
         PluginManager schedule async calls for each plugin on method called "on_" + event_name
         For example, on_connect will be called on event 'connect'
         Method calls are schedule in the async loop. wait parameter must be set to true
@@ -139,25 +134,21 @@ class PluginManager:
                     task = self._schedule_coro(event_method(*args, **kwargs))
                     tasks.append(task)
 
-                    def clean_fired_events(future):
-                        try:
+                    def clean_fired_events(future) -> None:
+                        with contextlib.suppress(KeyError, ValueError):
                             self._fired_events.remove(future)
-                        except (KeyError, ValueError):
-                            pass
 
                     task.add_done_callback(clean_fired_events)
                 except AssertionError:
-                    self.logger.error(f"Method '{event_method_name}' on plugin '{plugin.name}' is not a coroutine")
+                    self.logger.exception(f"Method '{event_method_name}' on plugin '{plugin.name}' is not a coroutine")
 
         self._fired_events.extend(tasks)
-        if wait:
-            if tasks:
-                await asyncio.wait(tasks)
+        if wait and tasks:
+            await asyncio.wait(tasks)
         self.logger.debug("Plugins len(_fired_events)=%d" % (len(self._fired_events)))
 
     async def map(self, coro, *args, **kwargs):
-        """
-        Schedule a given coroutine call for each plugin.
+        """Schedule a given coroutine call for each plugin.
         The coro called get the Plugin instance as first argument of its method call
         :param coro: coro to call on each plugin
         :param filter_plugins: list of plugin names to filter (only plugin whose name is
@@ -165,7 +156,7 @@ class PluginManager:
         None will call all plugins. [] will call None.
         :param args: arguments to pass to coro
         :param kwargs: arguments to pass to coro
-        :return: dict containing return from coro call for each plugin
+        :return: dict containing return from coro call for each plugin.
         """
         p_list = kwargs.pop("filter_plugins", None)
         if p_list is None:
@@ -180,11 +171,11 @@ class PluginManager:
                         tasks.append(self._schedule_coro(coro_instance))
                         plugins_list.append(plugin)
                     except AssertionError:
-                        self.logger.error(f"Method '{coro!r}' on plugin '{plugin.name}' is not a coroutine")
+                        self.logger.exception(f"Method '{coro!r}' on plugin '{plugin.name}' is not a coroutine")
         if tasks:
             ret_list = await asyncio.gather(*tasks)
             # Create result map plugin=>ret
-            ret_dict = {k: v for k, v in zip(plugins_list, ret_list)}
+            ret_dict = dict(zip(plugins_list, ret_list, strict=False))
         else:
             ret_dict = {}
         return ret_dict
@@ -199,8 +190,7 @@ class PluginManager:
         return await coro
 
     async def map_plugin_coro(self, coro_name, *args, **kwargs):
-        """
-        Call a plugin declared by plugin by its name
+        """Call a plugin declared by plugin by its name
         :param coro_name:
         :param args:
         :param kwargs:

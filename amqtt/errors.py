@@ -1,35 +1,28 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
+class AMQTTException(Exception):  # noqa: N818
+    """aMQTT base exception."""
 
 
-class AMQTTException(Exception):
-    """
-    aMQTT base exception
-    """
-
-    pass
+class MQTTException(Exception):  # noqa: N818
+    """Base class for all errors referring to MQTT specifications."""
 
 
-class MQTTException(Exception):
-    """
-    Base class for all errors referring to MQTT specifications
-    """
-
-    pass
+class CodecException(Exception):  # noqa: N818
+    """Exceptions thrown by packet encode/decode functions."""
 
 
-class CodecException(Exception):
-    """
-    Exceptions thrown by packet encode/decode functions
-    """
-
-    pass
+class NoDataException(Exception):  # noqa: N818
+    """Exceptions thrown by packet encode/decode functions."""
 
 
-class NoDataException(Exception):
-    """
-    Exceptions thrown by packet encode/decode functions
-    """
+class BrokerException(Exception):  # noqa: N818
+    """Exceptions thrown by broker."""
 
-    pass
+
+class ClientException(Exception):  # noqa: N818
+    """Exceptions thrown by client."""
+
+
+class ConnectException(ClientException):
+    """Exceptions thrown by client connect."""
+
+    return_code: int | None = None

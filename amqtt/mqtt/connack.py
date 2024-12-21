@@ -1,10 +1,10 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
-from amqtt.mqtt.packet import CONNACK, MQTTPacket, MQTTFixedHeader, MQTTVariableHeader
-from amqtt.codecs import read_or_raise, bytes_to_int
-from amqtt.errors import AMQTTException
 from amqtt.adapters import ReaderAdapter
+from amqtt.codecs import bytes_to_int, read_or_raise
+from amqtt.errors import AMQTTException
+from amqtt.mqtt.packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTVariableHeader
 
 CONNECTION_ACCEPTED = 0x00
 UNACCEPTABLE_PROTOCOL_VERSION = 0x01
@@ -15,10 +15,9 @@ NOT_AUTHORIZED = 0x05
 
 
 class ConnackVariableHeader(MQTTVariableHeader):
+    __slots__ = ("return_code", "session_parent")
 
-    __slots__ = ("session_parent", "return_code")
-
-    def __init__(self, session_parent=None, return_code=None):
+    def __init__(self, session_parent=None, return_code=None) -> None:
         super().__init__()
         self.session_parent = session_parent
         self.return_code = return_code
@@ -42,10 +41,8 @@ class ConnackVariableHeader(MQTTVariableHeader):
 
         return out
 
-    def __repr__(self):
-        return type(self).__name__ + "(session_parent={}, return_code={})".format(
-            hex(self.session_parent), hex(self.return_code)
-        )
+    def __repr__(self) -> str:
+        return type(self).__name__ + f"(session_parent={hex(self.session_parent)}, return_code={hex(self.return_code)})"
 
 
 class ConnackPacket(MQTTPacket):
@@ -57,7 +54,7 @@ class ConnackPacket(MQTTPacket):
         return self.variable_header.return_code
 
     @return_code.setter
-    def return_code(self, return_code):
+    def return_code(self, return_code) -> None:
         self.variable_header.return_code = return_code
 
     @property
@@ -65,7 +62,7 @@ class ConnackPacket(MQTTPacket):
         return self.variable_header.session_parent
 
     @session_parent.setter
-    def session_parent(self, session_parent):
+    def session_parent(self, session_parent) -> None:
         self.variable_header.session_parent = session_parent
 
     def __init__(
@@ -73,14 +70,14 @@ class ConnackPacket(MQTTPacket):
         fixed: MQTTFixedHeader = None,
         variable_header: ConnackVariableHeader = None,
         payload=None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(CONNACK, 0x00)
         else:
             if fixed.packet_type is not CONNACK:
+                msg = f"Invalid fixed packet type {fixed.packet_type} for ConnackPacket init"
                 raise AMQTTException(
-                    "Invalid fixed packet type %s for ConnackPacket init"
-                    % fixed.packet_type
+                    msg,
                 )
             header = fixed
         super().__init__(header)
@@ -90,5 +87,4 @@ class ConnackPacket(MQTTPacket):
     @classmethod
     def build(cls, session_parent=None, return_code=None):
         v_header = ConnackVariableHeader(session_parent, return_code)
-        packet = ConnackPacket(variable_header=v_header)
-        return packet
+        return ConnackPacket(variable_header=v_header)

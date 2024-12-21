@@ -1,13 +1,13 @@
 # Copyright (c) 2015 Nicolas JOUANIN
 #
 # See the file license.txt for copying permission.
+from amqtt.errors import AMQTTException
 from amqtt.mqtt.packet import (
-    MQTTPacket,
-    MQTTFixedHeader,
     PUBREC,
+    MQTTFixedHeader,
+    MQTTPacket,
     PacketIdVariableHeader,
 )
-from amqtt.errors import AMQTTException
 
 
 class PubrecPacket(MQTTPacket):
@@ -19,21 +19,21 @@ class PubrecPacket(MQTTPacket):
         return self.variable_header.packet_id
 
     @packet_id.setter
-    def packet_id(self, val: int):
+    def packet_id(self, val: int) -> None:
         self.variable_header.packet_id = val
 
     def __init__(
         self,
         fixed: MQTTFixedHeader = None,
         variable_header: PacketIdVariableHeader = None,
-    ):
+    ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(PUBREC, 0x00)
         else:
             if fixed.packet_type is not PUBREC:
+                msg = f"Invalid fixed packet type {fixed.packet_type} for PubrecPacket init"
                 raise AMQTTException(
-                    "Invalid fixed packet type %s for PubrecPacket init"
-                    % fixed.packet_type
+                    msg,
                 )
             header = fixed
         super().__init__(header)
@@ -43,5 +43,4 @@ class PubrecPacket(MQTTPacket):
     @classmethod
     def build(cls, packet_id: int):
         v_header = PacketIdVariableHeader(packet_id)
-        packet = PubrecPacket(variable_header=v_header)
-        return packet
+        return PubrecPacket(variable_header=v_header)

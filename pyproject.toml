@@ -31,6 +31,7 @@ dependencies = [
   # # "coveralls==4.0.1",
   "transitions==0.9.2",
   "websockets==13.1",
+  # "websockets==14.1",
   "passlib==1.7.4",
   "docopt==0.6.2",
   "PyYAML==6.0.2",
@@ -57,12 +58,12 @@ dev = [
   "types-mock>=5.1.0.20240425",
   "types-pillow>=10.2.0.20240822",
   "types-pytz>=2024.2.0.20241003",
-  "types-setuptools>=75.6.0.20241126",
   "types-PyYAML>=6.0.12.20240917",
   "hypothesis==6.122.4",
   "pytest-logdog==0.1.0",
   "psutil==6.1.0",
   "setuptools>=75.6.0",
+  "types-setuptools>=75.6.0.20241126",
 ]
 
 [project.optional-dependencies]
@@ -134,6 +135,11 @@ ignore = [
   "TRY002",  # Checks for code that raises Exception or BaseException directly.
   "TRY300",  # Checks for return statements in try blocks.
   "TRY301",  # Checks for raise statements within try blocks.
+  "D103",    # Missing docstring in public function
+  "D100",    # Missing docstring in public module
+  "D101",    # Missing docstring in public class
+  "D102",    # Missing docstring in public method
+  "D105",    # Missing docstring in magic method
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -144,6 +150,7 @@ ignore = [
 "tests/**" = [
   "D100",     # Missing docstring in public module
   "D101",     #
+  "D102",     # Missing docstring in public method
   "D103",     # Missing docstring in public function
   "D104",     # Missing docstring in public package
   "N802",     # Function name {name} should be lowercase
@@ -216,8 +223,6 @@ no_implicit_optional = true
 warn_return_any = true
 warn_unreachable = true
 strict = true
-
-# exclude = "^tests/.*$"
 
 disable_error_code = ["no-untyped-def", "no-untyped-call"]
 

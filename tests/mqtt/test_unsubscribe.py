@@ -4,9 +4,9 @@
 import asyncio
 import unittest
 
-from amqtt.mqtt.unsubscribe import UnsubscribePacket, UnubscribePayload
-from amqtt.mqtt.packet import PacketIdVariableHeader
 from amqtt.adapters import BufferReader
+from amqtt.mqtt.packet import PacketIdVariableHeader
+from amqtt.mqtt.unsubscribe import UnsubscribePacket, UnubscribePayload
 
 
 class UnsubscribePacketTest(unittest.TestCase):
@@ -17,12 +17,12 @@ class UnsubscribePacketTest(unittest.TestCase):
         data = b"\xa2\x0c\x00\n\x00\x03a/b\x00\x03c/d"
         stream = BufferReader(data)
         message = self.loop.run_until_complete(UnsubscribePacket.from_stream(stream))
-        self.assertEqual(message.payload.topics[0], "a/b")
-        self.assertEqual(message.payload.topics[1], "c/d")
+        assert message.payload.topics[0] == "a/b"
+        assert message.payload.topics[1] == "c/d"
 
     def test_to_stream(self):
         variable_header = PacketIdVariableHeader(10)
         payload = UnubscribePayload(["a/b", "c/d"])
         publish = UnsubscribePacket(variable_header=variable_header, payload=payload)
         out = publish.to_bytes()
-        self.assertEqual(out, b"\xa2\x0c\x00\n\x00\x03a/b\x00\x03c/d")
+        assert out == b"\xa2\x0c\x00\n\x00\x03a/b\x00\x03c/d"
