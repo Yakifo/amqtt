@@ -4,7 +4,7 @@
 
 __all__ = ["get_plugin_manager", "BaseContext", "PluginManager"]
 
-import pkg_resources
+from importlib.metadata import EntryPoint, entry_points
 import logging
 import asyncio
 import copy
@@ -59,24 +59,29 @@ class PluginManager:
 
     def _load_plugins(self, namespace):
         self.logger.debug("Loading plugins for namespace %s" % namespace)
-        for ep in pkg_resources.iter_entry_points(group=namespace):
-            plugin = self._load_plugin(ep)
-            self._plugins.append(plugin)
-            self.logger.debug(" Plugin %s ready" % ep.name)
+        if hasattr(entry_points(), "select"):
+            ep = entry_points().select(group=namespace)
+        elif namespace in entry_points():
+            ep = entry_points()[namespace]
+        else:
+            ep = []
 
-    def _load_plugin(self, ep: pkg_resources.EntryPoint):
+        for item in ep:
+            plugin = self._load_plugin(item)
+            self._plugins.append(plugin)
+            self.logger.debug(" Plugin %s ready" % item.name)
+
+    def _load_plugin(self, ep: EntryPoint):
         try:
-            self.logger.debug(" Loading plugin %s" % ep)
-            plugin = ep.load(require=True)
-            self.logger.debug(" Initializing plugin %s" % ep)
+            self.logger.debug(" Loading plugin %s" % str(ep))
+            plugin = ep.load()
+            self.logger.debug(" Initializing plugin %s" % str(ep))
             plugin_context = copy.copy(self.app_context)
             plugin_context.logger = self.logger.getChild(ep.name)
             obj = plugin(plugin_context)
             return Plugin(ep.name, ep, obj)
         except ImportError as ie:
             self.logger.warning(f"Plugin {ep!r} import failed: {ie}")
-        except pkg_resources.UnknownExtra as ue:
-            self.logger.warning(f"Plugin {ep!r} dependencies resolution failed: {ue}")
 
     def get_plugin(self, name):
         """
