@@ -38,8 +38,8 @@ from typing import Any
 from docopt import docopt
 
 import amqtt
-from amqtt.client import ConnectException, MQTTClient
-from amqtt.errors import MQTTException
+from amqtt.client import MQTTClient
+from amqtt.errors import ConnectException, MQTTException
 from amqtt.mqtt.constants import QOS_0
 from amqtt.utils import read_yaml_config
 
@@ -93,7 +93,7 @@ async def do_sub(client: MQTTClient, arguments: dict[str, Any]) -> None:
                 break
             try:
                 message = await client.deliver_message()
-                if message and message.publish_packet:
+                if message and message.publish_packet and message.publish_packet.data:
                     count += 1
                     sys.stdout.buffer.write(message.publish_packet.data)
                     sys.stdout.write("\n")

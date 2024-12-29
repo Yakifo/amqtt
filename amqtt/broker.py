@@ -106,7 +106,7 @@ class BrokerContext(BaseContext):
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
-    def retain_message(self, topic_name: str, data: bytes, qos: int | None = None) -> None:
+    def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
         self._broker_instance.retain_message(None, topic_name, data, qos)
 
     @property
@@ -338,33 +338,35 @@ class Broker:
             raise BrokerException(msg)
         await server.acquire_connection()
 
-        remote_address, remote_port = writer.get_peer_info()
-        self.logger.info(f"Connection from {remote_address}:{remote_port} on listener '{listener_name}'")
+        remote_info = writer.get_peer_info()
+        if remote_info is not None:
+            remote_address, remote_port = remote_info
+            self.logger.info(f"Connection from {remote_address}:{remote_port} on listener '{listener_name}'")
 
-        # Wait for first packet and expect a CONNECT
-        try:
-            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
-        except AMQTTException as exc:
-            self.logger.warning(
-                f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"
-                f"Can't read first packet an CONNECT: {exc}",
-            )
-            # await writer.close()
-            self.logger.debug("Connection closed")
-            server.release_connection()
-            return
-        except MQTTException:
-            self.logger.exception(
-                f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
-            )
-            await writer.close()
-            server.release_connection()
-            self.logger.debug("Connection closed")
-            return
-        except NoDataException as ne:
-            self.logger.error(f"No data from {format_client_message(address=remote_address, port=remote_port)} : {ne}")  # noqa: TRY400 # cannot replace with exception else test fails
-            server.release_connection()
-            return
+            # Wait for first packet and expect a CONNECT
+            try:
+                handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
+            except AMQTTException as exc:
+                self.logger.warning(
+                    f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"
+                    f"Can't read first packet an CONNECT: {exc}",
+                )
+                # await writer.close()
+                self.logger.debug("Connection closed")
+                server.release_connection()
+                return
+            except MQTTException:
+                self.logger.exception(
+                    f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
+                )
+                await writer.close()
+                server.release_connection()
+                self.logger.debug("Connection closed")
+                return
+            except NoDataException as ne:
+                self.logger.error(f"No data from {format_client_message(address=remote_address, port=remote_port)} : {ne}")  # noqa: TRY400 # cannot replace with exception else test fails
+                server.release_connection()
+                return
 
         if client_session.clean_session:
             # Delete existing session and create a new one
@@ -380,8 +382,14 @@ class Broker:
             client_session.parent = 1
         else:
             client_session.parent = 0
-        if client_session.keep_alive > 0:
-            client_session.keep_alive += self.config["timeout-disconnect-delay"]
+
+        if client_session.client_id is None:
+            msg = "Client ID was not correct created/set."
+            raise BrokerException(msg)
+
+        timeout_disconnect_delay = self.config.get("timeout-disconnect-delay")
+        if client_session.keep_alive > 0 and isinstance(timeout_disconnect_delay, int):
+            client_session.keep_alive += timeout_disconnect_delay
         self.logger.debug(f"Keep-alive timeout={client_session.keep_alive}")
 
         authenticated = await self.authenticate(client_session, self.listeners_config[listener_name])
@@ -469,24 +477,24 @@ class Broker:
                 if unsubscribe_waiter in done:
                     self.logger.debug(f"{client_session.client_id} handling unsubscription")
                     unsubscription = unsubscribe_waiter.result()
-                    for topic in unsubscription["topics"]:
+                    for topic in unsubscription.topics:
                         self._del_subscription(topic, client_session)
                         await self.plugins_manager.fire_event(
                             EVENT_BROKER_CLIENT_UNSUBSCRIBED,
                             client_id=client_session.client_id,
                             topic=topic,
                         )
-                    await handler.mqtt_acknowledge_unsubscription(unsubscription["packet_id"])
+                    await handler.mqtt_acknowledge_unsubscription(unsubscription.packet_id)
                     unsubscribe_waiter = asyncio.Task(handler.get_next_pending_unsubscription())
                 if subscribe_waiter in done:
                     self.logger.debug(f"{client_session.client_id} handling subscription")
                     subscriptions = subscribe_waiter.result()
                     return_codes = []
-                    for subscription in subscriptions["topics"]:
-                        result = await self.add_subscription(subscription, client_session)
-                        return_codes.append(result)
-                    await handler.mqtt_acknowledge_subscription(subscriptions["packet_id"], return_codes)
-                    for index, subscription in enumerate(subscriptions["topics"]):
+                    return_codes = [
+                        await self.add_subscription(subscription, client_session) for subscription in subscriptions.topics
+                    ]
+                    await handler.mqtt_acknowledge_subscription(subscriptions.packet_id, return_codes)
+                    for index, subscription in enumerate(subscriptions.topics):
                         if return_codes[index] != 0x80:
                             await self.plugins_manager.fire_event(
                                 EVENT_BROKER_CLIENT_SUBSCRIBED,
@@ -501,6 +509,11 @@ class Broker:
                     if self.logger.isEnabledFor(logging.DEBUG):
                         self.logger.debug(f"{client_session.client_id} handling message delivery")
                     app_message = wait_deliver.result()
+
+                    if app_message is None:
+                        self.logger.debug("app_message was empty!")
+                        continue
+
                     if not app_message.topic:
                         self.logger.warning(
                             f"[MQTT-4.7.3-1] - {client_session.client_id}"
@@ -527,13 +540,8 @@ class Broker:
                             message=app_message,
                         )
                         await self._broadcast_message(client_session, app_message.topic, app_message.data)
-                        if app_message.publish_packet.retain_flag:
-                            self.retain_message(
-                                client_session,
-                                app_message.topic,
-                                app_message.data,
-                                app_message.qos,
-                            )
+                        if app_message.publish_packet is not None and app_message.publish_packet.retain_flag:
+                            self.retain_message(client_session, app_message.topic, app_message.data, app_message.qos)
                     wait_deliver = asyncio.Task(handler.mqtt_deliver_next_message())
             except asyncio.CancelledError:
                 self.logger.debug("Client loop cancelled")
@@ -630,8 +638,14 @@ class Broker:
         )
         return all(result for result in results.values())
 
-    def retain_message(self, source_session: Session | None, topic_name: str, data: bytes, qos: int | None = None) -> None:
-        if data:
+    def retain_message(
+        self,
+        source_session: Session | None,
+        topic_name: str | None,
+        data: bytes | bytearray | None,
+        qos: int | None = None,
+    ) -> None:
+        if data and topic_name is not None:
             # If retained flag set, store the message for further subscriptions
             self.logger.debug(f"Retaining message on topic {topic_name}")
             self._retained_messages[topic_name] = RetainedApplicationMessage(source_session, topic_name, data, qos)
@@ -810,7 +824,13 @@ class Broker:
         if not self._broadcast_queue.empty():
             self.logger.warning(f"{self._broadcast_queue.qsize()} messages not broadcasted")
 
-    async def _broadcast_message(self, session: Session | None, topic: str, data: bytes, force_qos: int | None = None) -> None:
+    async def _broadcast_message(
+        self,
+        session: Session | None,
+        topic: str | None,
+        data: bytes | None,
+        force_qos: int | None = None,
+    ) -> None:
         broadcast: dict[str, Session | str | bytes | int | None] = {"session": session, "topic": topic, "data": data}
         if force_qos is not None:
             broadcast["qos"] = force_qos

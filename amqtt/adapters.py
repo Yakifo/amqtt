@@ -2,7 +2,6 @@ from asyncio import StreamReader, StreamWriter
 from contextlib import suppress
 import io
 import logging
-from typing import Any
 
 from websockets import ConnectionClosed
 from websockets.legacy.protocol import WebSocketCommonProtocol
@@ -43,7 +42,7 @@ class WriterAdapter:
         """Let the write buffer of the underlying transport a chance to be flushed."""
         raise NotImplementedError
 
-    def get_peer_info(self) -> Any | tuple[Any, Any]:
+    def get_peer_info(self) -> tuple[str, int] | None:
         """Return peer socket info (remote address and remote port as tuple)."""
         raise NotImplementedError
 
@@ -107,11 +106,12 @@ class WebSocketsWriter(WriterAdapter):
             await self._protocol.send(data)
         self._stream = io.BytesIO(b"")
 
-    def get_peer_info(self) -> Any:
+    def get_peer_info(self) -> tuple[str, int] | None:
         # remote_address can be either a 4-tuple or 2-tuple depending on whether
         # it is an IPv6 or IPv4 address, so we take their shared (host, port)
         # prefix here to present a uniform return value.
-        return self._protocol.remote_address[:2]
+        remote_address: tuple[str, int] | None = self._protocol.remote_address[:2]
+        return remote_address
 
     async def close(self) -> None:
         await self._protocol.close()

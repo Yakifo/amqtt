@@ -1,17 +1,10 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
 import asyncio
+from typing import Self
 
+from amqtt.adapters import ReaderAdapter
 from amqtt.codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
 from amqtt.errors import AMQTTException, MQTTException
-from amqtt.mqtt.packet import (
-    PUBLISH,
-    MQTTFixedHeader,
-    MQTTPacket,
-    MQTTPayload,
-    MQTTVariableHeader,
-)
+from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 
 class PublishVariableHeader(MQTTVariableHeader):
@@ -21,16 +14,14 @@ class PublishVariableHeader(MQTTVariableHeader):
         super().__init__()
         if "*" in topic_name:
             msg = "[MQTT-3.3.2-2] Topic name in the PUBLISH Packet MUST NOT contain wildcard characters."
-            raise MQTTException(
-                msg,
-            )
+            raise MQTTException(msg)
         self.topic_name = topic_name
         self.packet_id = packet_id
 
     def __repr__(self) -> str:
-        return type(self).__name__ + f"(topic={self.topic_name}, packet_id={self.packet_id})"
+        return f"{type(self).__name__}(topic={self.topic_name}, packet_id={self.packet_id})"
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytearray:
         out = bytearray()
         out.extend(encode_string(self.topic_name))
         if self.packet_id is not None:
@@ -38,17 +29,10 @@ class PublishVariableHeader(MQTTVariableHeader):
         return out
 
     @classmethod
-    async def from_stream(
-        cls,
-        reader: asyncio.StreamReader,
-        fixed_header: MQTTFixedHeader,
-    ):
+    async def from_stream(cls, reader: ReaderAdapter | asyncio.StreamReader, fixed_header: MQTTFixedHeader) -> Self:
         topic_name = await decode_string(reader)
         has_qos = (fixed_header.flags >> 1) & 0x03
-        if has_qos:
-            packet_id = await decode_packet_id(reader)
-        else:
-            packet_id = None
+        packet_id = await decode_packet_id(reader) if has_qos else None
         return cls(topic_name, packet_id)
 
 
@@ -61,19 +45,23 @@ class PublishPayload(MQTTPayload):
 
     def to_bytes(
         self,
-        fixed_header: MQTTFixedHeader,
-        variable_header: MQTTVariableHeader,
-    ):
-        return self.data
+        fixed_header: MQTTFixedHeader | None = None,  # noqa: ARG002
+        variable_header: MQTTVariableHeader | None = None,  # noqa: ARG002
+    ) -> bytes:
+        return self.data if self.data is not None else b""
 
     @classmethod
     async def from_stream(
         cls,
-        reader: asyncio.StreamReader,
-        fixed_header: MQTTFixedHeader,
-        variable_header: MQTTVariableHeader,
-    ):
+        reader: asyncio.StreamReader | ReaderAdapter,
+        fixed_header: MQTTFixedHeader | None,
+        variable_header: MQTTVariableHeader | None,
+    ) -> Self:
         data = bytearray()
+        if fixed_header is None or variable_header is None:
+            msg = "Fixed header or variable header cannot be None"
+            raise ValueError(msg)
+
         data_length = fixed_header.remaining_length - variable_header.bytes_length
         length_read = 0
         while length_read < data_length:
@@ -83,10 +71,10 @@ class PublishPayload(MQTTPayload):
         return cls(data)
 
     def __repr__(self) -> str:
-        return type(self).__name__ + f"(data={repr(self.data)!r})"
+        return f"{type(self).__name__}(data={repr(self.data)!r})"
 
 
-class PublishPacket(MQTTPacket):
+class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload]):
     VARIABLE_HEADER = PublishVariableHeader
     PAYLOAD = PublishPayload
 
@@ -96,36 +84,40 @@ class PublishPacket(MQTTPacket):
 
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: PublishVariableHeader = None,
-        payload=None,
+        fixed: MQTTFixedHeader | None = None,
+        variable_header: PublishVariableHeader | None = None,
+        payload: PublishPayload | None = None,
     ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(PUBLISH, 0x00)
+        elif fixed.packet_type != PUBLISH:
+            msg = f"Invalid fixed packet type {fixed.packet_type} for PublishPacket init"
+            raise AMQTTException(msg) from None
         else:
-            if fixed.packet_type is not PUBLISH:
-                msg = f"Invalid fixed packet type {fixed.packet_type} for PublishPacket init"
-                raise AMQTTException(
-                    msg,
-                )
             header = fixed
 
         super().__init__(header)
         self.variable_header = variable_header
         self.payload = payload
 
-    def set_flags(self, dup_flag=False, qos=0, retain_flag=False) -> None:
+    def set_flags(self, dup_flag: bool = False, qos: int = 0, retain_flag: bool = False) -> None:
         self.dup_flag = dup_flag
         self.retain_flag = retain_flag
         self.qos = qos
 
-    def _set_header_flag(self, val, mask) -> None:
+    def _set_header_flag(self, val: bool, mask: int) -> None:
+        if self.fixed_header is None:
+            msg = "Fixed header is not set"
+            raise ValueError(msg)
         if val:
             self.fixed_header.flags |= mask
         else:
             self.fixed_header.flags &= ~mask
 
-    def _get_header_flag(self, mask) -> bool:
+    def _get_header_flag(self, mask: int) -> bool:
+        if self.fixed_header is None:
+            msg = "Fixed header is not set"
+            raise ValueError(msg)
         return bool(self.fixed_header.flags & mask)
 
     @property
@@ -145,51 +137,67 @@ class PublishPacket(MQTTPacket):
         self._set_header_flag(val, self.RETAIN_FLAG)
 
     @property
-    def qos(self):
+    def qos(self) -> int | None:
+        if self.fixed_header is None:
+            msg = "Fixed header is not set"
+            raise ValueError(msg)
         return (self.fixed_header.flags & self.QOS_FLAG) >> 1
 
     @qos.setter
     def qos(self, val: int) -> None:
+        if self.fixed_header is None:
+            msg = "Fixed header is not set"
+            raise ValueError(msg)
         self.fixed_header.flags &= 0xF9
         self.fixed_header.flags |= val << 1
 
     @property
-    def packet_id(self):
+    def packet_id(self) -> int | None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         return self.variable_header.packet_id
 
     @packet_id.setter
     def packet_id(self, val: int) -> None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         self.variable_header.packet_id = val
 
     @property
-    def data(self):
+    def data(self) -> bytes | None:
+        if self.payload is None:
+            msg = "Payload header is not set"
+            raise ValueError(msg)
         return self.payload.data
 
     @data.setter
     def data(self, data: bytes) -> None:
+        if self.payload is None:
+            msg = "Payload header is not set"
+            raise ValueError(msg)
         self.payload.data = data
 
     @property
-    def topic_name(self):
+    def topic_name(self) -> str | None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         return self.variable_header.topic_name
 
     @topic_name.setter
     def topic_name(self, name: str) -> None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         self.variable_header.topic_name = name
 
     @classmethod
-    def build(
-        cls,
-        topic_name: str,
-        message: bytes,
-        packet_id: int,
-        dup_flag,
-        qos,
-        retain,
-    ):
+    def build(cls, topic_name: str, message: bytes, packet_id: int | None, dup_flag: bool, qos: int | None, retain: bool) -> Self:
         v_header = PublishVariableHeader(topic_name, packet_id)
         payload = PublishPayload(message)
-        packet = PublishPacket(variable_header=v_header, payload=payload)
+        packet = cls(variable_header=v_header, payload=payload)
         packet.dup_flag = dup_flag
         packet.retain_flag = retain
         packet.qos = qos

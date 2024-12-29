@@ -31,6 +31,7 @@ Options:
 """  # noqa: E501
 
 import asyncio
+from collections.abc import Generator
 import contextlib
 import json
 import logging
@@ -40,7 +41,8 @@ from typing import Any
 from docopt import docopt
 
 import amqtt
-from amqtt.client import ConnectException, MQTTClient
+from amqtt.client import MQTTClient
+from amqtt.errors import ConnectException
 from amqtt.utils import read_yaml_config
 
 logger = logging.getLogger(__name__)
@@ -69,7 +71,7 @@ def _get_extra_headers(arguments: dict[str, Any]) -> Any:
         return {}
 
 
-def _get_message(arguments: dict[str, Any]) -> bytes | Any:
+def _get_message(arguments: dict[str, Any]) -> Generator[bytes | bytearray]:
     if arguments["-n"]:
         yield b""
     if arguments["-m"]:

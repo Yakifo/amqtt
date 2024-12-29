@@ -1,6 +1,5 @@
 import asyncio
 from struct import pack, unpack
-from typing import Any
 
 from amqtt.adapters import ReaderAdapter
 from amqtt.errors import NoDataException
@@ -15,19 +14,16 @@ def bytes_to_hex_str(data: bytes) -> str:
     return "0x" + "".join(format(b, "02x") for b in data)
 
 
-def bytes_to_int(data: bytes | int) -> bytes | int:
+def bytes_to_int(data: bytes | int) -> int:
     """Convert a sequence of bytes to an integer using big endian byte ordering.
 
     :param data: byte sequence
     :return: integer value.
     """
-    try:
-        if isinstance(data, int):
-            return data
-
-        return int.from_bytes(data, byteorder="big")
-    except ValueError:
+    if isinstance(data, int):
         return data
+
+    return int.from_bytes(data, byteorder="big")
 
 
 def int_to_bytes(int_value: int, length: int) -> bytes:
@@ -47,7 +43,7 @@ def int_to_bytes(int_value: int, length: int) -> bytes:
     return pack(fmt, int_value)
 
 
-async def read_or_raise(reader: ReaderAdapter, n: int = -1) -> bytes:
+async def read_or_raise(reader: ReaderAdapter | asyncio.StreamReader, n: int = -1) -> bytes:
     """Read a given byte number from Stream. NoDataException is raised if read gives no data.
 
     :param reader: reader adapter
@@ -64,7 +60,7 @@ async def read_or_raise(reader: ReaderAdapter, n: int = -1) -> bytes:
     return data
 
 
-async def decode_string(reader: ReaderAdapter) -> str:
+async def decode_string(reader: ReaderAdapter | asyncio.StreamReader) -> str:
     """Read a string from a reader and decode it according to MQTT string specification.
 
     :param reader: Stream reader
@@ -82,7 +78,7 @@ async def decode_string(reader: ReaderAdapter) -> str:
         return ""
 
 
-async def decode_data_with_length(reader: ReaderAdapter) -> bytes:
+async def decode_data_with_length(reader: ReaderAdapter | asyncio.StreamReader) -> bytes:
     """Read data from a reader. Data is prefixed with 2 bytes length.
 
     :param reader: Stream reader
@@ -104,7 +100,7 @@ def encode_data_with_length(data: bytes) -> bytes:
     return int_to_bytes(data_length, 2) + data
 
 
-async def decode_packet_id(reader: ReaderAdapter) -> int | Any:
+async def decode_packet_id(reader: ReaderAdapter | asyncio.StreamReader) -> int:
     """Read a packet ID as 2-bytes int from stream according to MQTT specification (2.3.1).
 
     :param reader: Stream reader
@@ -112,7 +108,8 @@ async def decode_packet_id(reader: ReaderAdapter) -> int | Any:
     """
     packet_id_bytes = await read_or_raise(reader, 2)
     packet_id = unpack("!H", packet_id_bytes)
-    return packet_id[0]
+    packet: int = packet_id[0]
+    return packet
 
 
 def int_to_bytes_str(value: int) -> bytes:

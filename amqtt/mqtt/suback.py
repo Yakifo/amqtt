@@ -1,17 +1,10 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
+import asyncio
+from typing import Self
+
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
 from amqtt.errors import AMQTTException, NoDataException
-from amqtt.mqtt.packet import (
-    SUBACK,
-    MQTTFixedHeader,
-    MQTTPacket,
-    MQTTPayload,
-    MQTTVariableHeader,
-    PacketIdVariableHeader,
-)
+from amqtt.mqtt.packet import SUBACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader, PacketIdVariableHeader
 
 
 class SubackPayload(MQTTPayload):
@@ -22,18 +15,18 @@ class SubackPayload(MQTTPayload):
     RETURN_CODE_02 = 0x02
     RETURN_CODE_80 = 0x80
 
-    def __init__(self, return_codes=None) -> None:
+    def __init__(self, return_codes: list[int] | None = None) -> None:
         super().__init__()
         self.return_codes = return_codes or []
 
     def __repr__(self) -> str:
-        return type(self).__name__ + f"(return_codes={self.return_codes!r})"
+        return f"{type(self).__name__}(return_codes={self.return_codes!r})"
 
     def to_bytes(
         self,
-        fixed_header: MQTTFixedHeader,
-        variable_header: MQTTVariableHeader,
-    ):
+        fixed_header: MQTTFixedHeader | None = None,  # noqa: ARG002
+        variable_header: MQTTVariableHeader | None = None,  # noqa: ARG002
+    ) -> bytes:
         out = b""
         for return_code in self.return_codes:
             out += int_to_bytes(return_code, 1)
@@ -42,13 +35,17 @@ class SubackPayload(MQTTPayload):
     @classmethod
     async def from_stream(
         cls,
-        reader: ReaderAdapter,
-        fixed_header: MQTTFixedHeader,
-        variable_header: MQTTVariableHeader,
-    ):
+        reader: asyncio.StreamReader | ReaderAdapter,
+        fixed_header: MQTTFixedHeader | None,
+        variable_header: MQTTVariableHeader | None,
+    ) -> Self:
         return_codes = []
+        if fixed_header is None or variable_header is None:
+            msg = "Fixed header or variable header cannot be None"
+            raise AMQTTException(msg)
+
         bytes_to_read = fixed_header.remaining_length - variable_header.bytes_length
-        for _i in range(bytes_to_read):
+        for _ in range(bytes_to_read):
             try:
                 return_code_byte = await read_or_raise(reader, 1)
                 return_code = bytes_to_int(return_code_byte)
@@ -58,24 +55,22 @@ class SubackPayload(MQTTPayload):
         return cls(return_codes)
 
 
-class SubackPacket(MQTTPacket):
+class SubackPacket(MQTTPacket[PacketIdVariableHeader, SubackPayload]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = SubackPayload
 
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: PacketIdVariableHeader = None,
-        payload=None,
+        fixed: MQTTFixedHeader | None = None,
+        variable_header: PacketIdVariableHeader | None = None,
+        payload: SubackPayload | None = None,
     ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(SUBACK, 0x00)
         else:
             if fixed.packet_type is not SUBACK:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for SubackPacket init"
-                raise AMQTTException(
-                    msg,
-                )
+                raise AMQTTException(msg)
             header = fixed
 
         super().__init__(header)
@@ -83,7 +78,7 @@ class SubackPacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, packet_id, return_codes):
+    def build(cls, packet_id: int, return_codes: list[int]) -> Self:
         variable_header = cls.VARIABLE_HEADER(packet_id)
         payload = cls.PAYLOAD(return_codes)
         return cls(variable_header=variable_header, payload=payload)

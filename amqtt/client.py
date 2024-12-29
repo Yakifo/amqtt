@@ -18,11 +18,10 @@ from amqtt.adapters import (
     WebSocketsReader,
     WebSocketsWriter,
 )
-from amqtt.errors import ClientException, ConnectException
+from amqtt.errors import ClientException, ConnectException, ProtocolHandlerException
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
-from amqtt.mqtt.protocol.handler import ProtocolHandlerException
 from amqtt.plugins.manager import BaseContext, PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id
@@ -407,10 +406,17 @@ class MQTTClient:
         uri_attributes = urlparse(self.session.broker_uri)
         scheme = uri_attributes.scheme
         secure = scheme in ("mqtts", "wss")
-
-        self.session.username = self.session.username if self.session.username else str(uri_attributes.username)
-        self.session.password = self.session.password if self.session.password else str(uri_attributes.password)
-        self.session.remote_address = str(uri_attributes.hostname)
+        self.session.username = (
+            self.session.username
+            if self.session.username
+            else (str(uri_attributes.username) if uri_attributes.username else None)
+        )
+        self.session.password = (
+            self.session.password
+            if self.session.password
+            else (str(uri_attributes.password) if uri_attributes.password else None)
+        )
+        self.session.remote_address = str(uri_attributes.hostname) if uri_attributes.hostname else None
         self.session.remote_port = uri_attributes.port
 
         if scheme in ("mqtt", "mqtts") and not self.session.remote_port:
@@ -431,6 +437,7 @@ class MQTTClient:
             )
             self.session.broker_uri = str(urlunparse(uri))
         # Init protocol handler
+        # if not self._handler:
         self._handler = ClientProtocolHandler(self.plugins_manager)
 
         if secure:
@@ -477,7 +484,7 @@ class MQTTClient:
 
             # Start MQTT protocol
             self._handler.attach(self.session, reader, writer)
-            return_code: int = await self._handler.mqtt_connect()
+            return_code: int | None = await self._handler.mqtt_connect()
 
             if return_code is not CONNECTION_ACCEPTED:
                 self.session.transitions.disconnect()

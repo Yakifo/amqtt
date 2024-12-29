@@ -20,6 +20,7 @@ from amqtt.mqtt.packet import (
     UNSUBACK,
     UNSUBSCRIBE,
     MQTTFixedHeader,
+    MQTTPacket,
 )
 from amqtt.mqtt.pingreq import PingReqPacket
 from amqtt.mqtt.pingresp import PingRespPacket
@@ -51,9 +52,9 @@ packet_dict = {
 }
 
 
-def packet_class(fixed_header: MQTTFixedHeader):
+def packet_class(fixed_header: MQTTFixedHeader) -> type[MQTTPacket]:
     try:
         return packet_dict[fixed_header.packet_type]
-    except KeyError:
+    except KeyError as e:
         msg = f"Unexpected packet Type '{fixed_header.packet_type}'"
-        raise AMQTTException(msg)
+        raise AMQTTException(msg) from e

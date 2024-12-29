@@ -1,32 +1,20 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
-import asyncio
+from asyncio import StreamReader
+from typing import Self
 
+from amqtt.adapters import ReaderAdapter
 from amqtt.codecs import decode_string, encode_string
 from amqtt.errors import AMQTTException, NoDataException
-from amqtt.mqtt.packet import (
-    UNSUBSCRIBE,
-    MQTTFixedHeader,
-    MQTTPacket,
-    MQTTPayload,
-    MQTTVariableHeader,
-    PacketIdVariableHeader,
-)
+from amqtt.mqtt.packet import UNSUBSCRIBE, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader, PacketIdVariableHeader
 
 
-class UnubscribePayload(MQTTPayload):
+class UnubscribePayload(MQTTPayload[MQTTVariableHeader]):
     __slots__ = ("topics",)
 
-    def __init__(self, topics=None) -> None:
+    def __init__(self, topics: list[str] | None = None) -> None:
         super().__init__()
         self.topics = topics or []
 
-    def to_bytes(
-        self,
-        fixed_header: MQTTFixedHeader,
-        variable_header: MQTTVariableHeader,
-    ):
+    def to_bytes(self, fixed_header: MQTTFixedHeader | None = None, variable_header: MQTTVariableHeader | None = None) -> bytes:  # noqa: ARG002
         out = b""
         for topic in self.topics:
             out += encode_string(topic)
@@ -34,11 +22,15 @@ class UnubscribePayload(MQTTPayload):
 
     @classmethod
     async def from_stream(
-        cls,
-        reader: asyncio.StreamReader,
-        fixed_header: MQTTFixedHeader,
-        variable_header: MQTTVariableHeader,
-    ):
+        cls: type[Self],
+        reader: StreamReader | ReaderAdapter,
+        fixed_header: MQTTFixedHeader | None,
+        variable_header: MQTTVariableHeader | None,
+    ) -> Self:
+        if fixed_header is None or variable_header is None:
+            msg = "Fixed header or Value header is not set."
+            raise ValueError(msg)
+
         topics = []
         payload_length = fixed_header.remaining_length - variable_header.bytes_length
         read_bytes = 0
@@ -52,24 +44,22 @@ class UnubscribePayload(MQTTPayload):
         return cls(topics)
 
 
-class UnsubscribePacket(MQTTPacket):
+class UnsubscribePacket(MQTTPacket[PacketIdVariableHeader, UnubscribePayload, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = UnubscribePayload
 
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: PacketIdVariableHeader = None,
-        payload=None,
+        fixed: MQTTFixedHeader | None = None,
+        variable_header: PacketIdVariableHeader | None = None,
+        payload: UnubscribePayload | None = None,
     ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(UNSUBSCRIBE, 0x02)  # [MQTT-3.10.1-1]
         else:
             if fixed.packet_type is not UNSUBSCRIBE:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for UnsubscribePacket init"
-                raise AMQTTException(
-                    msg,
-                )
+                raise AMQTTException(msg)
             header = fixed
 
         super().__init__(header)
@@ -77,7 +67,7 @@ class UnsubscribePacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, topics, packet_id):
+    def build(cls, topics: list[str], packet_id: int) -> "UnsubscribePacket":
         v_header = PacketIdVariableHeader(packet_id)
         payload = UnubscribePayload(topics)
         return UnsubscribePacket(variable_header=v_header, payload=payload)

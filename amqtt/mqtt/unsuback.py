@@ -1,24 +1,18 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
+from typing import Self
+
 from amqtt.errors import AMQTTException
-from amqtt.mqtt.packet import (
-    UNSUBACK,
-    MQTTFixedHeader,
-    MQTTPacket,
-    PacketIdVariableHeader,
-)
+from amqtt.mqtt.packet import UNSUBACK, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class UnsubackPacket(MQTTPacket):
+class UnsubackPacket(MQTTPacket[PacketIdVariableHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: PacketIdVariableHeader = None,
-        payload=None,
+        fixed: MQTTFixedHeader | None = None,
+        variable_header: PacketIdVariableHeader | None = None,
+        payload: None = None,
     ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(UNSUBACK, 0x00)
@@ -35,6 +29,6 @@ class UnsubackPacket(MQTTPacket):
         self.payload = payload
 
     @classmethod
-    def build(cls, packet_id):
+    def build(cls, packet_id: int) -> Self:
         variable_header = PacketIdVariableHeader(packet_id)
         return cls(variable_header=variable_header)

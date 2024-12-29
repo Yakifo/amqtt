@@ -26,3 +26,7 @@ class ConnectException(ClientException):
     """Exceptions thrown by client connect."""
 
     return_code: int | None = None
+
+
+class ProtocolHandlerException(Exception):  # noqa: N818
+    """Exceptions thrown by protocol handle."""

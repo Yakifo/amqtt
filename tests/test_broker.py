@@ -158,7 +158,7 @@ async def test_client_connect_will_flag(broker):
     payload.client_id = "test_id"
     payload.will_message = b"test"
     payload.will_topic = "/topic"
-    connect = ConnectPacket(vh=vh, payload=payload)
+    connect = ConnectPacket(variable_header=vh, payload=payload)
     await connect.to_stream(writer)
     await ConnackPacket.from_stream(reader)
 
@@ -422,7 +422,7 @@ async def test_client_publish_dup(broker):
     vh.clean_session_flag = False
     vh.will_retain_flag = False
     payload.client_id = "test_id"
-    connect = ConnectPacket(vh=vh, payload=payload)
+    connect = ConnectPacket(variable_header=vh, payload=payload)
     await connect.to_stream(writer)
     await ConnackPacket.from_stream(reader)
 

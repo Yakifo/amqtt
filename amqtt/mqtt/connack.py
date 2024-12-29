@@ -1,10 +1,9 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
+from typing import Self
+
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs import bytes_to_int, read_or_raise
 from amqtt.errors import AMQTTException
-from amqtt.mqtt.packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTVariableHeader
+from amqtt.mqtt.packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 CONNECTION_ACCEPTED = 0x00
 UNACCEPTABLE_PROTOCOL_VERSION = 0x01
@@ -17,74 +16,79 @@ NOT_AUTHORIZED = 0x05
 class ConnackVariableHeader(MQTTVariableHeader):
     __slots__ = ("return_code", "session_parent")
 
-    def __init__(self, session_parent=None, return_code=None) -> None:
+    def __init__(self, session_parent: int | None = None, return_code: int | None = None) -> None:
         super().__init__()
         self.session_parent = session_parent
         self.return_code = return_code
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader):
+    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader | None) -> Self:  # noqa: ARG003
         data = await read_or_raise(reader, 2)
         session_parent = data[0] & 0x01
         return_code = bytes_to_int(data[1])
         return cls(session_parent, return_code)
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytearray:
         out = bytearray(2)
         # Connect acknowledge flags
-        if self.session_parent:
-            out[0] = 1
-        else:
-            out[0] = 0
-        # return code
-        out[1] = self.return_code
-
+        out[0] = 1 if self.session_parent else 0
+        # Return code
+        out[1] = self.return_code or 0
         return out
 
     def __repr__(self) -> str:
-        return type(self).__name__ + f"(session_parent={hex(self.session_parent)}, return_code={hex(self.return_code)})"
+        return f"{type(self).__name__}(session_parent={hex(self.session_parent or 0)}, return_code={hex(self.return_code or 0)})"
 
 
-class ConnackPacket(MQTTPacket):
+class ConnackPacket(MQTTPacket[ConnackVariableHeader, MQTTPayload[MQTTVariableHeader]]):
     VARIABLE_HEADER = ConnackVariableHeader
-    PAYLOAD = None
+    PAYLOAD = MQTTPayload[MQTTVariableHeader]
 
     @property
-    def return_code(self):
+    def return_code(self) -> int | None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         return self.variable_header.return_code
 
     @return_code.setter
-    def return_code(self, return_code) -> None:
+    def return_code(self, return_code: int | None) -> None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         self.variable_header.return_code = return_code
 
     @property
-    def session_parent(self):
+    def session_parent(self) -> int | None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         return self.variable_header.session_parent
 
     @session_parent.setter
-    def session_parent(self, session_parent) -> None:
+    def session_parent(self, session_parent: int | None) -> None:
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
         self.variable_header.session_parent = session_parent
 
     def __init__(
         self,
-        fixed: MQTTFixedHeader = None,
-        variable_header: ConnackVariableHeader = None,
-        payload=None,
+        fixed: MQTTFixedHeader | None = None,
+        variable_header: ConnackVariableHeader | None = None,
+        payload: MQTTPayload | None = None,
     ) -> None:
         if fixed is None:
             header = MQTTFixedHeader(CONNACK, 0x00)
+        elif fixed.packet_type != CONNACK:
+            msg = f"Invalid fixed packet type {fixed.packet_type} for ConnackPacket init"
+            raise AMQTTException(msg) from None
         else:
-            if fixed.packet_type is not CONNACK:
-                msg = f"Invalid fixed packet type {fixed.packet_type} for ConnackPacket init"
-                raise AMQTTException(
-                    msg,
-                )
             header = fixed
-        super().__init__(header)
-        self.variable_header = variable_header
-        self.payload = None
+
+        super().__init__(header, variable_header, payload)
 
     @classmethod
-    def build(cls, session_parent=None, return_code=None):
+    def build(cls, session_parent: int | None = None, return_code: int | None = None) -> Self:
         v_header = ConnackVariableHeader(session_parent, return_code)
-        return ConnackPacket(variable_header=v_header)
+        return cls(variable_header=v_header)

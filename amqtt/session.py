@@ -31,8 +31,8 @@ class ApplicationMessage:
         "topic",
     )
 
-    def __init__(self, packet_id: int, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
-        self.packet_id: int = packet_id
+    def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
+        self.packet_id: int | None = packet_id
         """ Publish message packet identifier <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718025>_"""
 
         self.topic: str = topic
@@ -41,7 +41,7 @@ class ApplicationMessage:
         self.qos: int | None = qos
         """ Publish message Quality of Service"""
 
-        self.data: bytes = data
+        self.data: bytes | bytearray = data
         """ Publish message payload data"""
 
         self.retain: bool = retain
@@ -72,20 +72,13 @@ class ApplicationMessage:
         `PUBCOMP <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718058>`_ packet in the messages flow.
         ``None`` if QoS != QOS_2 or if the PUBCOMP packet has not already been received or sent."""
 
-    def build_publish_packet(self, dup: bool = False) -> Any | PublishPacket:
+    def build_publish_packet(self, dup: bool = False) -> PublishPacket:
         """Build :class:`amqtt.mqtt.publish.PublishPacket` from attributes.
 
         :param dup: force dup flag
         :return: :class:`amqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
         """
-        return PublishPacket.build(
-            self.topic,
-            self.data,
-            self.packet_id,
-            dup,
-            self.qos,
-            self.retain,
-        )
+        return PublishPacket.build(self.topic, self.data, self.packet_id, dup, self.qos, self.retain)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ApplicationMessage):
@@ -98,7 +91,7 @@ class IncomingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id: int, topic: str, qos: int, data: bytes, retain: bool) -> None:
+    def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
         super().__init__(packet_id, topic, qos, data, retain)
         self.direction: int = INCOMING
 
@@ -108,7 +101,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id: int, topic: str, qos: int, data: bytes, retain: bool) -> None:
+    def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
         super().__init__(packet_id, topic, qos, data, retain)
         self.direction: int = OUTGOING
 
@@ -123,7 +116,7 @@ class Session:
         self.client_id: str | None = None
         self.clean_session: bool | None = None
         self.will_flag: bool = False
-        self.will_message: str | None = None
+        self.will_message: bytes | bytearray | None = None
         self.will_qos: int | None = None
         self.will_retain: bool | None = None
         self.will_topic: str | None = None
@@ -139,10 +132,10 @@ class Session:
         self.parent: int = 0
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
-        self.inflight_out: OrderedDict[int, ApplicationMessage] = OrderedDict()
+        self.inflight_out: OrderedDict[int, OutgoingApplicationMessage] = OrderedDict()
 
         # Used to store incoming ApplicationMessage while publish protocol flows
-        self.inflight_in: OrderedDict[int, ApplicationMessage] = OrderedDict()
+        self.inflight_in: OrderedDict[int, IncomingApplicationMessage] = OrderedDict()
 
         # Stores messages retained for this session
         self.retained_messages: Queue[ApplicationMessage] = Queue()

@@ -80,36 +80,36 @@ repos:
       - id: yamllint
 
   # Python-specific hooks ######################################################
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.8.3
-  #   hooks:
-  #     - id: ruff
-  #       args:
-  #         - --fix
-  #         - --unsafe-fixes
-  #         - --line-length=130
-  #         - --exit-non-zero-on-fix
-  #     - id: ruff-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.3
+    hooks:
+      - id: ruff
+        args:
+          - --fix
+          - --unsafe-fixes
+          - --line-length=130
+          - --exit-non-zero-on-fix
+      - id: ruff-format
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.19.1
     hooks:
       - id: pyupgrade
         args: [--py313-plus]
 
-  # # Local hooks for mypy and pylint
-  # - repo: local
-  #   hooks:
-  #     - id: mypy
-  #       name: Run Mypy in Virtualenv
-  #       entry: scripts/run-in-env.sh python3 -m mypy
-  #       language: script
-  #       types: [python]
-  #       require_serial: true
-  #       exclude: ^tests/.+
-  #     - id: pylint
-  #       name: Run Pylint in Virtualenv
-  #       entry: scripts/run-in-env.sh python3 -m pylint
-  #       language: script
-  #       types: [python]
-  #       require_serial: true
-  #       exclude: ^tests/.+
+  # Local hooks for mypy and pylint
+  - repo: local
+    hooks:
+      - id: mypy
+        name: Run Mypy in Virtualenv
+        entry: scripts/run-in-env.sh mypy
+        language: script
+        types: [python]
+        require_serial: true
+        exclude: ^tests/.+|^docs/.+|^samples/.+
+      # - id: pylint
+      #   name: Run Pylint in Virtualenv
+      #   entry: scripts/run-in-env.sh pylint
+      #   language: script
+      #   types: [python]
+      #   require_serial: true
+      #   exclude: ^tests/.+|^docs/.+|^samples/.+

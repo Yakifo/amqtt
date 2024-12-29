@@ -104,6 +104,8 @@ packet_logger_plugin = "amqtt.plugins.logging:PacketLoggerPlugin"
 line-length = 130
 fix = true
 
+extend-exclude = ["docs/", "samples/"]
+
 [tool.ruff.format]
 # quote-style = "single"
 indent-style = "space"
@@ -205,6 +207,8 @@ timeout = 10
 
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]
+# mypy_path = "amqtt"
+exclude = ["^tests/.*", "^docs/.*", "^samples/.*"]
 follow_imports = "silent"
 show_error_codes = true
 ignore_missing_imports = true
@@ -224,7 +228,6 @@ warn_return_any = true
 warn_unreachable = true
 strict = true
 
-disable_error_code = ["no-untyped-def", "no-untyped-call"]
 
 # ----------------------------------- PYLINT -----------------------------------
 [tool.pylint.MAIN]
@@ -253,6 +256,10 @@ disable = [
   "broad-exception-raised",
   "fixme",
   "import-error",
+  "missing-module-docstring",
+  "missing-function-docstring",
+  "missing-class-docstring",
+  "unused-argument",
 ]
 # enable useless-suppression temporarily every now and then to clean them up
 enable = [

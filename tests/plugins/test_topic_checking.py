@@ -2,13 +2,9 @@ import logging
 
 import pytest
 
+from amqtt.broker import Action
 from amqtt.plugins.manager import BaseContext
-from amqtt.plugins.topic_checking import (
-    Action,
-    BaseTopicPlugin,
-    TopicAccessControlListPlugin,
-    TopicTabooPlugin,
-)
+from amqtt.plugins.topic_checking import BaseTopicPlugin, TopicAccessControlListPlugin, TopicTabooPlugin
 from amqtt.session import Session
 
 # Base plug-in object
@@ -23,7 +19,7 @@ async def test_base_no_config(logdog):
         context.config = {}
 
         plugin = BaseTopicPlugin(context)
-        authorised = plugin.topic_filtering()
+        authorised = await plugin.topic_filtering()
         assert authorised is False
 
     # Should have printed a couple of warnings
@@ -46,7 +42,7 @@ async def test_base_empty_config(logdog):
         context.config = {"topic-check": {}}
 
         plugin = BaseTopicPlugin(context)
-        authorised = plugin.topic_filtering()
+        authorised = await plugin.topic_filtering()
         assert authorised is False
 
     # Should have printed just one warning
@@ -65,7 +61,7 @@ async def test_base_disabled_config(logdog):
         context.config = {"topic-check": {"enabled": False}}
 
         plugin = BaseTopicPlugin(context)
-        authorised = plugin.topic_filtering()
+        authorised = await plugin.topic_filtering()
         assert authorised is True
 
     # Should NOT have printed warnings
@@ -82,7 +78,7 @@ async def test_base_enabled_config(logdog):
         context.config = {"topic-check": {"enabled": True}}
 
         plugin = BaseTopicPlugin(context)
-        authorised = plugin.topic_filtering()
+        authorised = await plugin.topic_filtering()
         assert authorised is True
 
     # Should NOT have printed warnings
@@ -293,6 +289,7 @@ async def test_taclp_true_disabled(logdog):
 @pytest.mark.asyncio
 async def test_taclp_true_no_pub_acl(logdog):
     """Check TopicAccessControlListPlugin returns true if action=publish and no publish-acl given.
+
     (This is for backward-compatibility with existing installations.).
     """
     context = BaseContext()
