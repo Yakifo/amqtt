@@ -187,6 +187,8 @@ class Broker:
         self._broadcast_task = None
         self._broadcast_shutdown_waiter = futures.Future()
 
+        self._tasks_queue = deque()
+
         # Init plugins manager
         context = BrokerContext(self)
         context.config = self.config
@@ -881,7 +883,7 @@ class Broker:
             return match_pattern.fullmatch(topic)
 
     async def _broadcast_loop(self):
-        running_tasks = deque()
+        running_tasks = self._tasks_queue
         try:
             while True:
                 while running_tasks and running_tasks[0].done():
