@@ -3,10 +3,10 @@
 # See the file license.txt for copying permission.
 import logging
 from passlib.apps import custom_app_context as pwd_context
-
+from amqtt.broker import BrokerContext
 
 class BaseAuthPlugin:
-    def __init__(self, context):
+    def __init__(self, context: BrokerContext):
         self.context = context
         try:
             self.auth_config = self.context.config["auth"]
