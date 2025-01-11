@@ -9,8 +9,8 @@ import ssl
 from typing import Any
 
 from transitions import Machine, MachineError
-import websockets
-from websockets.legacy.server import WebSocketServerProtocol
+import websockets.asyncio.server
+from websockets.asyncio.server import ServerConnection
 
 from amqtt.adapters import (
     ReaderAdapter,
@@ -257,7 +257,7 @@ class Broker:
                     msg = "Invalid port value in bind value: {}".format(listener["bind"])
                     raise BrokerException(msg) from e
 
-                instance: asyncio.Server | websockets.WebSocketServer | None = None
+                instance: asyncio.Server | websockets.asyncio.server.Server | None = None
                 if listener["type"] == "tcp":
                     cb_partial = partial(self.stream_connected, listener_name=listener_name)
                     instance = await asyncio.start_server(
@@ -324,7 +324,7 @@ class Broker:
     async def internal_message_broadcast(self, topic: str, data: bytes, qos: int | None = None) -> None:
         return await self._broadcast_message(None, topic, data, qos)
 
-    async def ws_connected(self, websocket: WebSocketServerProtocol, uri: Any, listener_name: str) -> None:  # noqa: ARG002
+    async def ws_connected(self, websocket: ServerConnection, listener_name: str) -> None:
         await self.client_connected(listener_name, WebSocketsReader(websocket), WebSocketsWriter(websocket))
 
     async def stream_connected(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, listener_name: str) -> None:

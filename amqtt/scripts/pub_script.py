@@ -110,7 +110,7 @@ async def do_pub(client: MQTTClient, arguments: dict[str, Any]) -> None:
             cafile=arguments["--ca-file"],
             capath=arguments["--ca-path"],
             cadata=arguments["--ca-data"],
-            extra_headers=_get_extra_headers(arguments),
+            additional_headers=_get_extra_headers(arguments),
         )
 
         qos = _get_qos(arguments)

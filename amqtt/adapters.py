@@ -4,7 +4,7 @@ import io
 import logging
 
 from websockets import ConnectionClosed
-from websockets.legacy.protocol import WebSocketCommonProtocol
+from websockets.asyncio.connection import Connection
 
 
 class ReaderAdapter:
@@ -54,10 +54,10 @@ class WriterAdapter:
 class WebSocketsReader(ReaderAdapter):
     """WebSockets API reader adapter.
 
-    This adapter relies on WebSocketCommonProtocol to read from a WebSocket.
+    This adapter relies on Connection to read from a WebSocket.
     """
 
-    def __init__(self, protocol: WebSocketCommonProtocol) -> None:
+    def __init__(self, protocol: Connection) -> None:
         self._protocol = protocol
         self._stream = io.BytesIO(b"")
 
@@ -88,10 +88,10 @@ class WebSocketsReader(ReaderAdapter):
 class WebSocketsWriter(WriterAdapter):
     """WebSockets API writer adapter.
 
-    This adapter relies on WebSocketCommonProtocol to write to a WebSocket.
+    This adapter relies on Connection to write to a WebSocket.
     """
 
-    def __init__(self, protocol: WebSocketCommonProtocol) -> None:
+    def __init__(self, protocol: Connection) -> None:
         self._protocol = protocol
         self._stream = io.BytesIO(b"")
 

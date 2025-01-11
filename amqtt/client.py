@@ -6,7 +6,7 @@ import copy
 from functools import wraps
 import logging
 import ssl
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 from urllib.parse import urlparse, urlunparse
 
 import websockets
@@ -25,6 +25,9 @@ from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
 from amqtt.plugins.manager import BaseContext, PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id
+
+if TYPE_CHECKING:
+    from websockets.asyncio.client import ClientConnection
 
 _defaults: dict[str, Any] = {
     "keep_alive": 10,
@@ -104,7 +107,7 @@ class MQTTClient:
         self._disconnect_task: asyncio.Task[Any] | None = None
         self._connected_state = asyncio.Event()
         self._no_more_connections = asyncio.Event()
-        self.extra_headers: dict[str, Any] | HeadersLike = {}
+        self.additional_headers: dict[str, Any] | HeadersLike = {}
 
         # Init plugins manager
         context = ClientContext()
@@ -119,7 +122,7 @@ class MQTTClient:
         cafile: str | None = None,
         capath: str | None = None,
         cadata: str | None = None,
-        extra_headers: dict[str, Any] | HeadersLike | None = None,
+        additional_headers: dict[str, Any] | HeadersLike | None = None,
     ) -> int:
         """Connect to a remote broker.
 
@@ -136,14 +139,14 @@ class MQTTClient:
         :param cafile: server certificate authority file (optional, used for secured connection)
         :param capath: server certificate authority path (optional, used for secured connection)
         :param cadata: server certificate authority data (optional, used for secured connection)
-        :param extra_headers: a dictionary with additional http headers that should be sent on the initial connection (optional,
-        used only with websocket connections)
+        :param additional_headers: a dictionary with additional http headers that should be sent on the initial connection
+        (optional, used only with websocket connections)
         :return: `CONNACK <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033>`_ return code
         :raise: :class:`amqtt.client.ConnectException` if connection fails
         """
-        extra_headers = extra_headers if extra_headers is not None else {}
+        additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)
-        self.extra_headers = extra_headers
+        self.additional_headers = additional_headers
         self.logger.debug(f"Connecting to: {uri}")
 
         try:
@@ -467,10 +470,10 @@ class MQTTClient:
                 reader = StreamReaderAdapter(conn_reader)
                 writer = StreamWriterAdapter(conn_writer)
             elif scheme in ("ws", "wss") and self.session.broker_uri:
-                websocket = await websockets.connect(
+                websocket: ClientConnection = await websockets.connect(
                     self.session.broker_uri,
                     subprotocols=[websockets.Subprotocol("mqtt")],
-                    extra_headers=self.extra_headers,
+                    additional_headers=self.additional_headers,
                     **kwargs,
                 )
                 reader = WebSocketsReader(websocket)
