@@ -11,7 +11,7 @@ class BaseTopicPlugin:
         if self.topic_config is None:
             self.context.logger.warning("'topic-check' section not found in context configuration")
 
-    async def topic_filtering(self, *args: Any, **kwargs: Any) -> bool:  # noqa: ARG002
+    async def topic_filtering(self, *args: Any, **kwargs: Any) -> bool:
         if not self.topic_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")

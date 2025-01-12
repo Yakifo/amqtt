@@ -12,17 +12,18 @@ class SQLitePlugin:
         self.conn: sqlite3.Connection | None = None
         self.cursor: sqlite3.Cursor | None = None
         self.db_file: str | None = None
-        try:
-            if self.context.config is None:
-                msg = "Context configuration is missing or malformed."
-                raise ValueError(msg)
-            self.persistence_config: dict[str, Any] = self.context.config.get("persistence", {})
+        self.persistence_config: dict[str, Any]
+
+        if (
+            persistence_config := self.context.config.get("persistence") if self.context.config is not None else None
+        ) is not None:
+            self.persistence_config = persistence_config
             self.init_db()
-        except (KeyError, ValueError) as e:
-            self.context.logger.warning(f"'persistence' section not found in context configuration: {e}")
+        else:
+            self.context.logger.warning("'persistence' section not found in context configuration")
 
     def init_db(self) -> None:
-        self.db_file = self.persistence_config.get("file", None)
+        self.db_file = self.persistence_config.get("file")
         if not self.db_file:
             self.context.logger.warning("'file' persistence parameter not found")
         else:
@@ -36,9 +37,7 @@ class SQLitePlugin:
             self.cursor.execute(
                 "CREATE TABLE IF NOT EXISTS session(client_id TEXT PRIMARY KEY, data BLOB)",
             )
-            self.cursor.execute(
-                "PRAGMA table_info(session)",
-            )
+            self.cursor.execute("PRAGMA table_info(session)")
             columns = {col[1] for col in self.cursor.fetchall()}
             required_columns = {"client_id", "data"}
             if not required_columns.issubset(columns):
@@ -56,14 +55,13 @@ class SQLitePlugin:
             except Exception:
                 self.context.logger.exception(f"Failed saving session '{session}'")
 
-    async def find_session(self, client_id: str) -> Any | None:
+    async def find_session(self, client_id: str) -> Session | None:
         if self.cursor:
             row = self.cursor.execute(
                 "SELECT data FROM session where client_id=?",
                 (client_id,),
             ).fetchone()
-            if row:
-                return json.loads(row[0])
+            return json.loads(row[0]) if row else None
         return None
 
     async def del_session(self, client_id: str) -> None:

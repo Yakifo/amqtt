@@ -4,7 +4,7 @@ import logging
 import pytest
 
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectException
+from amqtt.errors import ConnectError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 async def test_connect_tcp_failure():
     config = {"auto_reconnect": False}
     client = MQTTClient(config=config)
-    with pytest.raises(ConnectException):
+    with pytest.raises(ConnectError):
         await client.connect("mqtt://127.0.0.1/")
 
 

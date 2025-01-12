@@ -1,10 +1,10 @@
 from asyncio import Queue
 from collections import OrderedDict
-from typing import Any
+from typing import Any, ClassVar
 
 from transitions import Machine
 
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.publish import PublishPacket
 
 OUTGOING = 0
@@ -107,7 +107,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
 
 class Session:
-    states = ["new", "connected", "disconnected"]
+    states: ClassVar[list[str]] = ["new", "connected", "disconnected"]
 
     def __init__(self) -> None:
         self._init_states()
@@ -179,7 +179,7 @@ class Session:
             self._packet_id = (self._packet_id % 65535) + 1
             if self._packet_id == limit:
                 msg = "More than 65535 messages pending. No free packet ID"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
 
         return self._packet_id
 

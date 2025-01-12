@@ -1,13 +1,10 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
 import asyncio
 import unittest
 
 import pytest
 
 from amqtt.adapters import BufferReader
-from amqtt.errors import MQTTException
+from amqtt.errors import MQTTError
 from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader
 
 
@@ -38,7 +35,7 @@ class TestMQTTFixedHeaderTest(unittest.TestCase):
     def test_from_bytes_ko_with_length(self):
         data = b"\x10\xff\xff\xff\xff\x7f"
         stream = BufferReader(data)
-        with pytest.raises(MQTTException):
+        with pytest.raises(MQTTError):
             self.loop.run_until_complete(MQTTFixedHeader.from_stream(stream))
 
     def test_to_bytes(self):

@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import Any
 
 from passlib.apps import custom_app_context as pwd_context
 
 from amqtt.plugins.manager import BaseContext
+from amqtt.session import Session
 
 
 class BaseAuthPlugin:
@@ -15,7 +15,7 @@ class BaseAuthPlugin:
         if not self.auth_config:
             self.context.logger.warning("'auth' section not found in context configuration")
 
-    async def authenticate(self, *args: Any, **kwargs: Any) -> bool | None:  # noqa: ARG002
+    async def authenticate(self, *args: None, **kwargs: Session) -> bool | None:
         """Logic for base Authentication. Returns True if auth config exists."""
         if not self.auth_config:
             # auth config section not found
@@ -27,7 +27,7 @@ class BaseAuthPlugin:
 class AnonymousAuthPlugin(BaseAuthPlugin):
     """Authentication plugin allowing anonymous access."""
 
-    async def authenticate(self, *args: Any, **kwargs: Any) -> bool:
+    async def authenticate(self, *args: None, **kwargs: Session) -> bool:
         authenticated = await super().authenticate(*args, **kwargs)
         if authenticated:
             # Default to allowing anonymous
@@ -36,7 +36,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
                 self.context.logger.debug("Authentication success: config allows anonymous")
                 return True
 
-            session = kwargs.get("session")
+            session: Session | None = kwargs.get("session")
             if session and session.username:
                 self.context.logger.debug(f"Authentication success: session has username '{session.username}'")
                 return True
@@ -80,7 +80,7 @@ class FileAuthPlugin(BaseAuthPlugin):
         except Exception:
             self.context.logger.exception(f"Unexpected error reading password file '{password_file}'")
 
-    async def authenticate(self, *args: Any, **kwargs: Any) -> bool | None:
+    async def authenticate(self, *args: None, **kwargs: Session) -> bool | None:
         """Authenticate users based on the file-stored user database."""
         authenticated = await super().authenticate(*args, **kwargs)
         if authenticated:

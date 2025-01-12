@@ -2,8 +2,8 @@ from asyncio import StreamReader
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs import decode_string, encode_string
-from amqtt.errors import AMQTTException, NoDataException
+from amqtt.codecs_a import decode_string, encode_string
+from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.packet import UNSUBSCRIBE, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader, PacketIdVariableHeader
 
 
@@ -14,7 +14,7 @@ class UnubscribePayload(MQTTPayload[MQTTVariableHeader]):
         super().__init__()
         self.topics = topics or []
 
-    def to_bytes(self, fixed_header: MQTTFixedHeader | None = None, variable_header: MQTTVariableHeader | None = None) -> bytes:  # noqa: ARG002
+    def to_bytes(self, fixed_header: MQTTFixedHeader | None = None, variable_header: MQTTVariableHeader | None = None) -> bytes:
         out = b""
         for topic in self.topics:
             out += encode_string(topic)
@@ -39,7 +39,7 @@ class UnubscribePayload(MQTTPayload[MQTTVariableHeader]):
                 topic = await decode_string(reader)
                 topics.append(topic)
                 read_bytes += 2 + len(topic.encode("utf-8"))
-            except NoDataException:
+            except NoDataError:
                 break
         return cls(topics)
 
@@ -59,7 +59,7 @@ class UnsubscribePacket(MQTTPacket[PacketIdVariableHeader, UnubscribePayload, MQ
         else:
             if fixed.packet_type is not UNSUBSCRIBE:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for UnsubscribePacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
 
         super().__init__(header)

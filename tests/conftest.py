@@ -106,7 +106,7 @@ def ca_file_fixture():
     temp_dir = Path(tempfile.mkdtemp(prefix="amqtt-test-"))
     url = "http://test.mosquitto.org/ssl/mosquitto.org.crt"
     ca_file = temp_dir / "mosquitto.org.crt"
-    urllib.request.urlretrieve(url, str(ca_file))  # noqa: S310
+    urllib.request.urlretrieve(url, str(ca_file))
     log.info(f"Stored mosquitto cert at {ca_file}")
 
     # Yield the CA file path for tests

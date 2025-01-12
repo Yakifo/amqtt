@@ -1,10 +1,10 @@
 from typing import Self
 
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import PUBACK, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class PubackPacket(MQTTPacket[PacketIdVariableHeader, None]):
+class PubackPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
@@ -32,7 +32,7 @@ class PubackPacket(MQTTPacket[PacketIdVariableHeader, None]):
         else:
             if fixed.packet_type is not PUBACK:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for PubackPacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
 
         super().__init__(header, variable_header, None)

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from amqtt.client import ConnectException, MQTTClient
+from amqtt.client import ConnectError, MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
 #
@@ -43,7 +43,7 @@ async def test_coro2() -> None:
         await C.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=0x02)
         logger.info("messages published")
         await C.disconnect()
-    except ConnectException as ce:
+    except ConnectError as ce:
         logger.exception(f"Connection failed: {ce}")
         asyncio.get_event_loop().stop()
 

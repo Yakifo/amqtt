@@ -39,7 +39,7 @@ from docopt import docopt
 
 import amqtt
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectException, MQTTException
+from amqtt.errors import ConnectError, MQTTError
 from amqtt.mqtt.constants import QOS_0
 from amqtt.utils import read_yaml_config
 
@@ -62,9 +62,10 @@ def _get_qos(arguments: dict[str, Any]) -> int:
         return QOS_0
 
 
-def _get_extra_headers(arguments: dict[str, Any]) -> Any:
+def _get_extra_headers(arguments: dict[str, Any]) -> dict[str, Any]:
     try:
-        return json.loads(arguments["--extra-headers"])
+        extra_headers: dict[str, Any] = json.loads(arguments["--extra-headers"])
+        return extra_headers
     except (json.JSONDecodeError, TypeError):
         return {}
 
@@ -97,7 +98,7 @@ async def do_sub(client: MQTTClient, arguments: dict[str, Any]) -> None:
                     count += 1
                     sys.stdout.buffer.write(message.publish_packet.data)
                     sys.stdout.write("\n")
-            except MQTTException:
+            except MQTTError:
                 logger.debug("Error reading packet")
 
         await client.disconnect()
@@ -105,7 +106,7 @@ async def do_sub(client: MQTTClient, arguments: dict[str, Any]) -> None:
     except KeyboardInterrupt:
         await client.disconnect()
         logger.info(f"{client.client_id} Disconnected from broker")
-    except ConnectException as ce:
+    except ConnectError as ce:
         logger.fatal(f"Connection to '{arguments['--url']}' failed: {ce!r}")
     except asyncio.CancelledError:
         logger.fatal("Publish canceled due to previous error")

@@ -1,10 +1,10 @@
 from typing import Self
 
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import PINGRESP, MQTTFixedHeader, MQTTPacket
 
 
-class PingRespPacket(MQTTPacket[None, None]):
+class PingRespPacket(MQTTPacket[None, None, MQTTFixedHeader]):
     VARIABLE_HEADER = None
     PAYLOAD = None
 
@@ -14,7 +14,7 @@ class PingRespPacket(MQTTPacket[None, None]):
         else:
             if fixed.packet_type is not PINGRESP:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for PingRespPacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
         super().__init__(header)
         self.variable_header = None

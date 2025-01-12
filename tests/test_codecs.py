@@ -2,7 +2,7 @@ import asyncio
 import unittest
 
 from amqtt.adapters import StreamReaderAdapter
-from amqtt.codecs import (
+from amqtt.codecs_a import (
     bytes_to_hex_str,
     bytes_to_int,
     decode_string,

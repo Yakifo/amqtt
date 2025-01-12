@@ -1,10 +1,10 @@
 from typing import Self
 
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import PUBCOMP, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class PubcompPacket(MQTTPacket[PacketIdVariableHeader]):
+class PubcompPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
@@ -18,7 +18,7 @@ class PubcompPacket(MQTTPacket[PacketIdVariableHeader]):
         else:
             if fixed.packet_type is not PUBCOMP:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for PubcompPacket init"
-                raise AMQTTException(
+                raise AMQTTError(
                     msg,
                 )
             header = fixed

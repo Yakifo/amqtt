@@ -1,6 +1,8 @@
 """INIT."""
 
-from amqtt.errors import AMQTTException
+from typing import Any
+
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
 from amqtt.mqtt.disconnect import DisconnectPacket
@@ -34,7 +36,9 @@ from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
 
-packet_dict = {
+type _P = MQTTPacket[Any, Any, Any]
+
+packet_dict: dict[int, type[_P]] = {
     CONNECT: ConnectPacket,
     CONNACK: ConnackPacket,
     PUBLISH: PublishPacket,
@@ -52,9 +56,11 @@ packet_dict = {
 }
 
 
-def packet_class(fixed_header: MQTTFixedHeader) -> type[MQTTPacket]:
+def packet_class(
+    fixed_header: MQTTFixedHeader,
+) -> type[_P]:
     try:
         return packet_dict[fixed_header.packet_type]
     except KeyError as e:
         msg = f"Unexpected packet Type '{fixed_header.packet_type}'"
-        raise AMQTTException(msg) from e
+        raise AMQTTError(msg) from e

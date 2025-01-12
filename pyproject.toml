@@ -113,56 +113,42 @@ extend-select = [
 ]
 
 ignore = [
-  "ANN401",  # Checks that function arguments are annotated with a more specific type than Any.
-  "BLE001",  # Checks for except clauses that catch all exceptions.
-  "D107",    # Missing docstring in `__init__`
   "ERA001",  # Checks for commented-out Python code.
   "FBT001",  # Checks for the use of boolean positional arguments in function definitions.
   "FBT002",  # Checks for the use of boolean positional arguments in function definitions.
-  "FBT003",  # Checks for boolean positional arguments in function calls.
-  "FIX002",  # Checks for "TODO" comments.
   "G004",    # Logging statement uses f-string
-  "PLR2004", # Magic value used in comparison, consider replacing 5 with a constant variable
-  "RUF001",  # Checks for ambiguous Unicode characters in strings.
-  "RUF012",  # Checks for mutable default values in class attributes.
-  "TD002",   # Checks that a TODO comment includes an author.
-  "TD003",   # Checks that a TODO comment is associated with a link to a relevant issue or ticket.
-  "TRY002",  # Checks for code that raises Exception or BaseException directly.
   "TRY300",  # Checks for return statements in try blocks.
-  "TRY301",  # Checks for raise statements within try blocks.
-  "D103",    # Missing docstring in public function
   "D100",    # Missing docstring in public module
   "D101",    # Missing docstring in public class
   "D102",    # Missing docstring in public method
+  "D103",    # Missing docstring in public function
   "D105",    # Missing docstring in magic method
+  "D107",    # Missing docstring in `__init__`
+  "FIX002",  # Checks for "TODO" comments.
+  "TD002",   # Checks that a TODO comment includes an author.
+  "TD003",   # Checks that a TODO comment is associated with a link to a relevant issue or ticket.
+  "SLF001",  # Private member accessed
+  "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+  "ARG002",  # Unused method argument
+  "ARG003",  # Unused class method argument
+  "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = [
-  "F403", # Checks for the use of wildcard imports.
-  "F405", # Checks for names that might be undefined
-]
 "tests/**" = [
-  "D100",     # Missing docstring in public module
-  "D101",     #
-  "D102",     # Missing docstring in public method
-  "D103",     # Missing docstring in public function
-  "D104",     # Missing docstring in public package
-  "N802",     # Function name {name} should be lowercase
-  "N806",     # Variable `userId` in function should be lowercase
-  "N816",     # Variable {name} in global scope should not be mixedCase
-  "S101",     # Use of assert detected
-  "S106",     # Possible hardcoded password assigned to argument: "password_file"
-  "SLF001",   # Private member accessed: {access}
-  "ANN001",
-  "ANN201",
-  "ARG001",
-  "ASYNC110",
-  "INP001",
-  "PGH003",
-  "PTH107",
-  "PTH110",
-  "PTH118",
+  "ALL",
+  "D100",   # Missing docstring in public module
+  "D101",   #
+  "D102",   # Missing docstring in public method
+  "D103",   # Missing docstring in public function
+  "D104",   # Missing docstring in public package
+  "N802",   # Function name {name} should be lowercase
+  "N806",   # Variable `userId` in function should be lowercase
+  "N816",   # Variable {name} in global scope should not be mixedCase
+  "S101",   # Use of assert detected
+  "S106",   # Possible hardcoded password assigned to argument: "password_file"
+  "SLF001", # Private member accessed
+
 ]
 
 [tool.ruff.lint.flake8-pytest-style]
@@ -178,12 +164,12 @@ case-sensitive = true
 extra-standard-library = ["typing_extensions"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 20
+max-complexity = 42
 
 [tool.ruff.lint.pylint]
 max-args = 12
-max-branches = 25
-max-statements = 70
+max-branches = 42
+max-statements = 142
 max-returns = 10
 
 # ----------------------------------- PYTEST -----------------------------------

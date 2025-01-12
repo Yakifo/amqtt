@@ -2,7 +2,7 @@ import asyncio
 from asyncio import AbstractEventLoop, Queue
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.errors import MQTTException
+from amqtt.errors import MQTTError
 from amqtt.mqtt.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
@@ -11,16 +11,15 @@ from amqtt.mqtt.connack import (
     UNACCEPTABLE_PROTOCOL_VERSION,
     ConnackPacket,
 )
-from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
+from amqtt.mqtt.connect import ConnectPacket
 from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.mqtt.packet import PacketIdVariableHeader
 from amqtt.mqtt.pingreq import PingReqPacket
 from amqtt.mqtt.pingresp import PingRespPacket
 from amqtt.mqtt.protocol.handler import ProtocolHandler
 from amqtt.mqtt.suback import SubackPacket
-from amqtt.mqtt.subscribe import SubscribePacket, SubscribePayload
+from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
-from amqtt.mqtt.unsubscribe import UnsubscribePacket, UnubscribePayload
+from amqtt.mqtt.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import Session
 from amqtt.utils import format_client_message
@@ -83,7 +82,7 @@ class BrokerProtocolHandler(ProtocolHandler):
     async def handle_connection_closed(self) -> None:
         await self.handle_disconnect(None)
 
-    async def handle_connect(self, connect: ConnectPacket) -> None:  # noqa: ARG002
+    async def handle_connect(self, connect: ConnectPacket) -> None:
         # Broker handler shouldn't receive CONNECT message during messages handling
         # as CONNECT messages are managed by the broker on client connection
         self.logger.error(
@@ -93,30 +92,27 @@ class BrokerProtocolHandler(ProtocolHandler):
         if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
             self._disconnect_waiter.set_result(None)
 
-    async def handle_pingreq(self, pingreq: PingReqPacket) -> None:  # noqa: ARG002
+    async def handle_pingreq(self, pingreq: PingReqPacket) -> None:
         await self._send_packet(PingRespPacket.build())
 
     async def handle_subscribe(self, subscribe: SubscribePacket) -> None:
-        if subscribe.variable_header is None or not isinstance(subscribe.variable_header, PacketIdVariableHeader):
-            msg = f"Invalid variable header in SUBSCRIBE packet: {subscribe.payload}. Expected a PacketIdVariableHeader."
-            raise MQTTException(msg)
-        if subscribe.payload is None or not isinstance(subscribe.payload, SubscribePayload):
-            msg = f"Invalid payload in SUBSCRIBE packet: {subscribe.payload}. Expected a SubscribePayload."
-            raise MQTTException(msg)
+        if subscribe.variable_header is None:
+            msg = "SUBSCRIBE packet: variable header not initialized."
+            raise MQTTError(msg)
+        if subscribe.payload is None:
+            msg = "SUBSCRIBE packet: payload not initialized."
+            raise MQTTError(msg)
 
         subscription: Subscription = Subscription(subscribe.variable_header.packet_id, subscribe.payload.topics)
         await self._pending_subscriptions.put(subscription)
 
     async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket) -> None:
-        if unsubscribe.variable_header is None or not isinstance(unsubscribe.variable_header, PacketIdVariableHeader):
-            msg = (
-                f"Invalid variable header in UNSUBSCRIBE packet: {unsubscribe.variable_header}."
-                "Expected a PacketIdVariableHeader."
-            )
-            raise MQTTException(msg)
-        if unsubscribe.payload is None or not isinstance(unsubscribe.payload, UnubscribePayload):
-            msg = f"Invalid payload in UNSUBSCRIBE packet: {unsubscribe.payload}. Expected a UnubscribePayload."
-            raise MQTTException(msg)
+        if unsubscribe.variable_header is None:
+            msg = "UNSUBSCRIBE packet: variable header not initialized."
+            raise MQTTError(msg)
+        if unsubscribe.payload is None:
+            msg = "UNSUBSCRIBE packet: payload not initialized."
+            raise MQTTError(msg)
         unsubscription: UnSubscription = UnSubscription(unsubscribe.variable_header.packet_id, unsubscribe.payload.topics)
         await self._pending_unsubscriptions.put(unsubscription)
 
@@ -137,7 +133,7 @@ class BrokerProtocolHandler(ProtocolHandler):
     async def mqtt_connack_authorize(self, authorize: bool) -> None:
         if self.session is None:
             msg = "Session is not initialized!"
-            raise MQTTException(msg)
+            raise MQTTError(msg)
 
         connack = ConnackPacket.build(self.session.parent, CONNECTION_ACCEPTED if authorize else NOT_AUTHORIZED)
         await self._send_packet(connack)
@@ -154,30 +150,30 @@ class BrokerProtocolHandler(ProtocolHandler):
         connect = await ConnectPacket.from_stream(reader)
         await plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=connect)
 
-        if connect.payload is None or not isinstance(connect.payload, ConnectPayload):
-            msg = f"Invalid payload in CONNECT packet: {connect.variable_header}. Expected a ConnectPayload."
-            raise MQTTException(msg)
-        if connect.variable_header is None or not isinstance(connect.variable_header, ConnectVariableHeader):
-            msg = f"Invalid variable header in CONNECT packet: {connect.variable_header}. Expected a ConnectVariableHeader."
-            raise MQTTException(msg)
+        if connect.variable_header is None:
+            msg = "CONNECT packet: variable header not initialized."
+            raise MQTTError(msg)
+        if connect.payload is None:
+            msg = "CONNECT packet: payload not initialized."
+            raise MQTTError(msg)
 
         # this shouldn't be required anymore since broker generates for each client a random client_id if not provided
         # [MQTT-3.1.3-6]
         if connect.payload.client_id is None:
             msg = "[[MQTT-3.1.3-3]] : Client identifier must be present"
-            raise MQTTException(msg)
+            raise MQTTError(msg)
 
         if connect.variable_header.will_flag and (connect.payload.will_topic is None or connect.payload.will_message is None):
             msg = "Will flag set, but will topic/message not present in payload"
-            raise MQTTException(msg)
+            raise MQTTError(msg)
 
         if connect.variable_header.reserved_flag:
             msg = "[MQTT-3.1.2-3] CONNECT reserved flag must be set to 0"
-            raise MQTTException(msg)
+            raise MQTTError(msg)
 
         if connect.proto_name != "MQTT":
             msg = f'[MQTT-3.1.2-1] Incorrect protocol name: "{connect.proto_name}"'
-            raise MQTTException(msg)
+            raise MQTTError(msg)
 
         remote_info = writer.get_peer_info()
         if remote_info is not None:
@@ -210,7 +206,7 @@ class BrokerProtocolHandler(ProtocolHandler):
                 await plugins_manager.fire_event(EVENT_MQTT_PACKET_SENT, packet=connack)
                 await connack.to_stream(writer)
                 await writer.close()
-                raise MQTTException(error_msg) from None
+                raise MQTTError(error_msg) from None
 
         incoming_session = Session()
         incoming_session.client_id = connect.client_id

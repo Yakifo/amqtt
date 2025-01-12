@@ -2,16 +2,11 @@ from abc import ABC, abstractmethod
 import asyncio
 from datetime import UTC, datetime
 from struct import unpack
-from typing import Any, Generic, Self, TypeVar
+from typing import Self
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.codecs import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
-from amqtt.errors import CodecException, MQTTException, NoDataException
-
-TVariableHeader = TypeVar("TVariableHeader", bound="MQTTVariableHeader | None", default="MQTTVariableHeader")
-TPayload = TypeVar("TPayload", bound="MQTTPayload[Any] | None", default="MQTTPayload[MQTTVariableHeader]")
-TFixedHeader = TypeVar("TFixedHeader", bound="MQTTFixedHeader", default="MQTTFixedHeader")
-
+from amqtt.codecs_a import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
+from amqtt.errors import CodecError, MQTTError, NoDataError
 
 RESERVED_0 = 0x00
 CONNECT = 0x01
@@ -63,7 +58,7 @@ class MQTTFixedHeader:
             return bytes([packet_type_flags]) + encoded_length
         except OverflowError as exc:
             msg = f"Fixed header encoding failed: {exc}"
-            raise CodecException(msg) from exc
+            raise CodecError(msg) from exc
 
     async def to_stream(self, writer: WriterAdapter) -> None:
         """Write the fixed header to the stream."""
@@ -91,7 +86,7 @@ class MQTTFixedHeader:
                 multiplier *= 128
                 if multiplier > 128**3:
                     msg = f"Invalid remaining length bytes:{bytes_to_hex_str(buffer)}, packet_type={packet_type}"
-                    raise MQTTException(msg)
+                    raise MQTTError(msg)
             return value
 
         try:
@@ -101,7 +96,7 @@ class MQTTFixedHeader:
             flags = int1 & 0x0F
             remaining_length = await decode_remaining_length()
             return cls(packet_type, flags, remaining_length)
-        except NoDataException:
+        except NoDataError:
             return None
 
     def __repr__(self) -> str:
@@ -145,7 +140,7 @@ class PacketIdVariableHeader(MQTTVariableHeader):
     async def from_stream(
         cls: type[Self],
         reader: ReaderAdapter,
-        fixed_header: MQTTFixedHeader | None = None,  # noqa: ARG003
+        fixed_header: MQTTFixedHeader | None = None,
     ) -> Self:
         packet_id = await decode_packet_id(reader)
         return cls(packet_id)
@@ -154,7 +149,7 @@ class PacketIdVariableHeader(MQTTVariableHeader):
         return f"{self.__class__.__name__}(packet_id={self.packet_id})"
 
 
-class MQTTPayload(Generic[TVariableHeader]):
+class MQTTPayload[_VH: MQTTVariableHeader](ABC):
     """Abstract base class for MQTT payloads."""
 
     async def to_stream(self, writer: asyncio.StreamWriter) -> None:
@@ -162,7 +157,7 @@ class MQTTPayload(Generic[TVariableHeader]):
         await writer.drain()
 
     @abstractmethod
-    def to_bytes(self, fixed_header: MQTTFixedHeader | None = None, variable_header: TVariableHeader | None = None) -> bytes:
+    def to_bytes(self, fixed_header: MQTTFixedHeader | None = None, variable_header: _VH | None = None) -> bytes:
         pass
 
     @classmethod
@@ -171,26 +166,21 @@ class MQTTPayload(Generic[TVariableHeader]):
         cls: type[Self],
         reader: asyncio.StreamReader | ReaderAdapter,
         fixed_header: MQTTFixedHeader | None,
-        variable_header: TVariableHeader | None,
+        variable_header: _VH | None,
     ) -> Self:
         pass
 
 
-class MQTTPacket(Generic[TVariableHeader, TPayload, TFixedHeader]):
+class MQTTPacket[_VH: MQTTVariableHeader | None, _P: MQTTPayload[MQTTVariableHeader] | None, _FH: MQTTFixedHeader]:
     """Represents an MQTT packet."""
 
     __slots__ = ("fixed_header", "payload", "protocol_ts", "variable_header")
 
-    FIXED_HEADER: type[TFixedHeader] = MQTTFixedHeader  # type: ignore [assignment]
-    VARIABLE_HEADER: type[TVariableHeader] | None = None
-    PAYLOAD: type[TPayload] | None = None
+    VARIABLE_HEADER: type[_VH] | None = None
+    PAYLOAD: type[_P] | None = None
+    FIXED_HEADER: type[_FH] = MQTTFixedHeader  # type: ignore [assignment]
 
-    def __init__(
-        self,
-        fixed: TFixedHeader | None,
-        variable_header: TVariableHeader | None = None,
-        payload: TPayload | None = None,
-    ) -> None:
+    def __init__(self, fixed: _FH, variable_header: _VH | None = None, payload: _P | None = None) -> None:
         self.fixed_header = fixed
         self.variable_header = variable_header
         self.payload = payload
@@ -204,10 +194,8 @@ class MQTTPacket(Generic[TVariableHeader, TPayload, TFixedHeader]):
 
     def to_bytes(self) -> bytes:
         """Serialize the packet into bytes."""
-        variable_header_bytes = self.variable_header.to_bytes() if isinstance(self.variable_header, MQTTVariableHeader) else b""
-        payload_bytes = (
-            self.payload.to_bytes(self.fixed_header, self.variable_header) if isinstance(self.payload, MQTTPayload) else b""
-        )
+        variable_header_bytes = self.variable_header.to_bytes() if self.variable_header is not None else b""
+        payload_bytes = self.payload.to_bytes(self.fixed_header, self.variable_header) if self.payload is not None else b""
 
         fixed_header_bytes = b""
         if self.fixed_header:
@@ -220,8 +208,8 @@ class MQTTPacket(Generic[TVariableHeader, TPayload, TFixedHeader]):
     async def from_stream(
         cls: type[Self],
         reader: ReaderAdapter,
-        fixed_header: TFixedHeader | None = None,
-        variable_header: TVariableHeader | None = None,
+        fixed_header: _FH | None = None,
+        variable_header: _VH | None = None,
     ) -> Self:
         """Decode an MQTT packet from the stream."""
         if fixed_header is None:

@@ -60,7 +60,7 @@ class TestFileAuthPlugin(unittest.TestCase):
         }
         s = Session()
         s.username = "user"
-        s.password = "test"  # noqa: S105
+        s.password = "test"
         auth_plugin = FileAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
         assert ret
@@ -75,7 +75,7 @@ class TestFileAuthPlugin(unittest.TestCase):
         }
         s = Session()
         s.username = "user"
-        s.password = "wrong password"  # noqa: S105
+        s.password = "wrong password"
         auth_plugin = FileAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
         assert not ret
@@ -90,7 +90,7 @@ class TestFileAuthPlugin(unittest.TestCase):
         }
         s = Session()
         s.username = "some user"
-        s.password = "some password"  # noqa: S105
+        s.password = "some password"
         auth_plugin = FileAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
         assert not ret

@@ -2,7 +2,7 @@ from asyncio import StreamReader
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs import (
+from amqtt.codecs_a import (
     bytes_to_int,
     decode_data_with_length,
     decode_string,
@@ -11,7 +11,7 @@ from amqtt.codecs import (
     int_to_bytes,
     read_or_raise,
 )
-from amqtt.errors import AMQTTException, NoDataException
+from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 from amqtt.utils import gen_client_id
 
@@ -50,7 +50,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
         return bool(self.flags & mask)
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader) -> Self:  # noqa: ARG003
+    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader) -> Self:
         #  protocol name
         protocol_name = await decode_string(reader)
 
@@ -176,14 +176,14 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
     async def from_stream(
         cls,
         reader: StreamReader | ReaderAdapter,
-        fixed_header: MQTTFixedHeader | None,  # noqa: ARG003
+        fixed_header: MQTTFixedHeader | None,
         variable_header: ConnectVariableHeader | None,
     ) -> Self:
         payload = cls()
         #  Client identifier
         try:
             payload.client_id = await decode_string(reader)
-        except NoDataException:
+        except NoDataError:
             payload.client_id = None
 
         if payload.client_id is None or payload.client_id == "":
@@ -198,27 +198,27 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
             try:
                 payload.will_topic = await decode_string(reader)
                 payload.will_message = await decode_data_with_length(reader)
-            except NoDataException:
+            except NoDataError:
                 payload.will_topic = None
                 payload.will_message = None
 
         if variable_header is not None and variable_header.username_flag:
             try:
                 payload.username = await decode_string(reader)
-            except NoDataException:
+            except NoDataError:
                 payload.username = None
 
         if variable_header is not None and variable_header.password_flag:
             try:
                 payload.password = await decode_string(reader)
-            except NoDataException:
+            except NoDataError:
                 payload.password = None
 
         return payload
 
     def to_bytes(
         self,
-        fixed_header: MQTTFixedHeader | None = None,  # noqa: ARG002
+        fixed_header: MQTTFixedHeader | None = None,
         variable_header: ConnectVariableHeader | None = None,
     ) -> bytes:
         out = bytearray()
@@ -241,7 +241,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         return out
 
 
-class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload]):
+class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedHeader]):  # type: ignore [type-var]
     VARIABLE_HEADER = ConnectVariableHeader
     PAYLOAD = ConnectPayload
 
@@ -256,7 +256,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload]):
         else:
             if fixed.packet_type is not CONNECT:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for ConnectPacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
         super().__init__(header)
         self.variable_header = variable_header

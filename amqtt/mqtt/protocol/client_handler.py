@@ -1,15 +1,14 @@
 import asyncio
 from typing import Any
 
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.mqtt.packet import PacketIdVariableHeader
 from amqtt.mqtt.pingreq import PingReqPacket
 from amqtt.mqtt.pingresp import PingRespPacket
 from amqtt.mqtt.protocol.handler import EVENT_MQTT_PACKET_RECEIVED, ProtocolHandler
-from amqtt.mqtt.suback import SubackPacket, SubackPayload
+from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
@@ -51,7 +50,7 @@ class ClientProtocolHandler(ProtocolHandler):
 
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         vh.keep_alive = self.session.keep_alive
         vh.clean_session_flag = self.session.clean_session if self.session.clean_session is not None else False
@@ -87,7 +86,7 @@ class ClientProtocolHandler(ProtocolHandler):
 
         if self.reader is None:
             msg = "Reader is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         connack = await ConnackPacket.from_stream(self.reader)
         await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session)
@@ -98,8 +97,12 @@ class ClientProtocolHandler(ProtocolHandler):
             if not self._ping_task:
                 self.logger.debug("Scheduling Ping")
                 self._ping_task = asyncio.create_task(self.mqtt_ping())
-        except Exception as e:
-            self.logger.debug(f"Exception ignored in ping task: {e!r}")
+        except asyncio.InvalidStateError as e:
+            self.logger.warning(f"Invalid state while scheduling ping task: {e!r}")
+        except asyncio.CancelledError as e:
+            self.logger.info(f"Ping task was cancelled: {e!r}")
+        # except Exception as e:
+        #     self.logger.debug(f"Exception ignored in ping task: {e!r}")
 
     def handle_read_timeout(self) -> None:
         pass
@@ -115,7 +118,7 @@ class ClientProtocolHandler(ProtocolHandler):
 
         if subscribe.variable_header is None:
             msg = f"Invalid variable header in SUBSCRIBE packet: {subscribe.variable_header}"
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         waiter: asyncio.Future[list[int]] = asyncio.Future()
         self._subscriptions_waiter[subscribe.variable_header.packet_id] = waiter
@@ -126,15 +129,14 @@ class ClientProtocolHandler(ProtocolHandler):
         return return_codes
 
     async def handle_suback(self, suback: SubackPacket) -> None:
-        if suback.variable_header is None or not isinstance(suback.variable_header, PacketIdVariableHeader):
-            msg = f"Invalid variable header in SUBACK packet: {suback.variable_header}"
-            raise AMQTTException(msg)
+        if suback.variable_header is None:
+            msg = "SUBACK packet: variable header not initialized."
+            raise AMQTTError(msg)
+        if suback.payload is None:
+            msg = "SUBACK packet: payload not initialized."
+            raise AMQTTError(msg)
 
         packet_id = suback.variable_header.packet_id
-
-        if suback.payload is None or not isinstance(suback.payload, SubackPayload):
-            msg = f"Invalid payload in SUBACK packet: {suback.payload}. Expected a SubackPayload."
-            raise AMQTTException(msg)
 
         waiter = self._subscriptions_waiter.get(packet_id)
         if waiter is not None:
@@ -149,9 +151,9 @@ class ClientProtocolHandler(ProtocolHandler):
         """
         unsubscribe = UnsubscribePacket.build(topics, packet_id)
 
-        if unsubscribe.variable_header is None or not isinstance(unsubscribe.variable_header, PacketIdVariableHeader):
-            msg = f"Invalid variable header in UNSUBSCRIBE packet: {unsubscribe.variable_header}"
-            raise AMQTTException(msg)
+        if unsubscribe.variable_header is None:
+            msg = "UNSUBSCRIBE packet: variable header not initialized."
+            raise AMQTTError(msg)
 
         await self._send_packet(unsubscribe)
         waiter: asyncio.Future[Any] = asyncio.Future()
@@ -162,9 +164,9 @@ class ClientProtocolHandler(ProtocolHandler):
             del self._unsubscriptions_waiter[unsubscribe.variable_header.packet_id]
 
     async def handle_unsuback(self, unsuback: UnsubackPacket) -> None:
-        if unsuback.variable_header is None or not isinstance(unsuback.variable_header, PacketIdVariableHeader):
-            msg = f"Invalid variable header in UNSUBACK packet: {unsuback.variable_header}"
-            raise AMQTTException(msg)
+        if unsuback.variable_header is None:
+            msg = "UNSUBACK packet: variable header not initialized."
+            raise AMQTTError(msg)
 
         packet_id = unsuback.variable_header.packet_id
         waiter = self._unsubscriptions_waiter.get(packet_id)

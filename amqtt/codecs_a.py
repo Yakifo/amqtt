@@ -2,7 +2,7 @@ import asyncio
 from struct import pack, unpack
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.errors import NoDataException
+from amqtt.errors import NoDataError
 
 
 def bytes_to_hex_str(data: bytes) -> str:
@@ -30,16 +30,21 @@ def int_to_bytes(int_value: int, length: int) -> bytes:
     """Convert an integer to a sequence of bytes using big endian byte ordering.
 
     :param int_value: integer value to convert
-    :param length: (optional) byte length
-    :return: byte sequence.
+    :param length: byte length (must be 1 or 2)
+    :return: byte sequence
+    :raises ValueError: if the length is unsupported
     """
-    if length == 1:
-        fmt = "!B"
-    elif length == 2:
-        fmt = "!H"
-    else:
-        msg = "Unsupported length for int to bytes conversion."
+    # Map length to the appropriate format string
+    fmt_mapping = {
+        1: "!B",  # 1 byte, unsigned char
+        2: "!H",  # 2 bytes, unsigned short
+    }
+
+    fmt = fmt_mapping.get(length)
+    if not fmt:
+        msg = "Unsupported length for int to bytes conversion. Only lengths 1 or 2 are allowed."
         raise ValueError(msg)
+
     return pack(fmt, int_value)
 
 
@@ -56,7 +61,7 @@ async def read_or_raise(reader: ReaderAdapter | asyncio.StreamReader, n: int = -
         data = None
     if not data:
         msg = "No more data"
-        raise NoDataException(msg)
+        raise NoDataError(msg)
     return data
 
 

@@ -19,7 +19,7 @@ from amqtt.broker import (
     EVENT_BROKER_PRE_START,
 )
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectException
+from amqtt.errors import ConnectError
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
@@ -176,7 +176,7 @@ async def test_client_connect_clean_session_false(broker):
     return_code = None
     try:
         await client.connect("mqtt://127.0.0.1/", cleansession=False)
-    except ConnectException as ce:
+    except ConnectError as ce:
         return_code = ce.return_code
     assert return_code == 0x02
     assert client.session is not None
@@ -361,7 +361,7 @@ async def test_client_publish_acl_forbidden(acl_broker):
         await sub_client.deliver_message(timeout_duration=1)
         msg = "Should not have worked"
         raise AssertionError(msg)
-    except Exception:  # noqa: S110
+    except Exception:
         pass
 
     await pub_client.disconnect()
@@ -396,7 +396,7 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
         await sub_client2.deliver_message(timeout_duration=1)
         msg = "Should not have worked"
         raise AssertionError(msg)
-    except Exception:  # noqa: S110
+    except Exception:
         pass
 
     await pub_client.disconnect()
@@ -575,7 +575,7 @@ async def test_client_subscribe_publish_dollar_topic_1(broker):
     message = None
     try:
         message = await sub_client.deliver_message(timeout_duration=2)
-    except Exception:  # noqa: S110
+    except Exception:
         pass
     except RuntimeError as e:
         # The loop is closed with pending tasks. Needs fine tuning.
@@ -601,7 +601,7 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
     message = None
     try:
         message = await sub_client.deliver_message(timeout_duration=2)
-    except Exception:  # noqa: S110
+    except Exception:
         pass
     except RuntimeError as e:
         # The loop is closed with pending tasks. Needs fine tuning.

@@ -1,6 +1,3 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
 import asyncio
 import unittest
 
@@ -36,7 +33,7 @@ class ConnectPacketTest(unittest.TestCase):
         assert message.payload.will_topic == "WillTopic"
         assert message.payload.will_message == b"WillMessage"
         assert message.payload.username == "user"
-        assert message.payload.password == "password"  # noqa: S105
+        assert message.payload.password == "password"
 
     def test_decode_ok_will_flag(self):
         data = b"\x10\x26\x00\x04MQTT\x04\xca\x00\x00\x00\x0a0123456789\x00\x04user\x00\x08password"
@@ -58,7 +55,7 @@ class ConnectPacketTest(unittest.TestCase):
         assert message.payload.will_topic is None
         assert message.payload.will_message is None
         assert message.payload.username == "user"
-        assert message.payload.password == "password"  # noqa: S105
+        assert message.payload.password == "password"
 
     def test_decode_fail_reserved_flag(self):
         data = (
@@ -151,5 +148,5 @@ class ConnectPacketTest(unittest.TestCase):
         assert message.will_message == b"WillMessage"
         assert message.payload.username == "user"
         assert message.username == "user"
-        assert message.payload.password == "password"  # noqa: S105
-        assert message.password == "password"  # noqa: S105
+        assert message.payload.password == "password"
+        assert message.password == "password"

@@ -71,16 +71,13 @@ class WebSocketsReader(ReaderAdapter):
         :param n: if given, feed buffer until it contains at least n bytes.
         """
         buffer = bytearray(self._stream.read())
+        message: str | bytes | None = None
         while len(buffer) < n:
-            try:
+            with suppress(ConnectionClosed):
                 message = await self._protocol.recv()
-            except ConnectionClosed:
-                message = None
             if message is None:
                 break
-            if not isinstance(message, bytes):
-                msg = "message must be bytes"
-                raise TypeError(msg)
+            message = message.encode("utf-8") if isinstance(message, str) else message
             buffer.extend(message)
         self._stream = io.BytesIO(buffer)
 

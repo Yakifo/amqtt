@@ -1,10 +1,10 @@
 from typing import Self
 
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import PUBREL, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class PubrelPacket(MQTTPacket[PacketIdVariableHeader]):
+class PubrelPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
@@ -18,7 +18,7 @@ class PubrelPacket(MQTTPacket[PacketIdVariableHeader]):
         else:
             if fixed.packet_type is not PUBREL:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for PubrelPacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
         super().__init__(header)
         self.variable_header = variable_header

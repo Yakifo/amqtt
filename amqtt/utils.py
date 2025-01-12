@@ -5,6 +5,7 @@ from pathlib import Path
 import secrets
 import string
 import typing
+from typing import Any
 
 import yaml
 
@@ -37,11 +38,12 @@ def gen_client_id() -> str:
     return gen_id
 
 
-def read_yaml_config(config_file: str | Path) -> typing.Any | dict[str, typing.Any] | None:
+def read_yaml_config(config_file: str | Path) -> dict[str, Any] | None:
     """Read a YAML configuration file."""
     try:
-        with Path(str(config_file)).open() as stream:
-            return yaml.full_load(stream)
+        with Path(str(config_file)).open(encoding="utf-8") as stream:
+            yaml_result: dict[str, Any] = yaml.full_load(stream)
+            return yaml_result
     except yaml.YAMLError:
         logger.exception(f"Invalid config_file {config_file}")
         return None

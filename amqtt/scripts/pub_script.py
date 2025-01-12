@@ -42,7 +42,7 @@ from docopt import docopt
 
 import amqtt
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectException
+from amqtt.errors import ConnectError
 from amqtt.utils import read_yaml_config
 
 logger = logging.getLogger(__name__)
@@ -64,9 +64,10 @@ def _get_qos(arguments: dict[str, Any]) -> int | None:
         return None
 
 
-def _get_extra_headers(arguments: dict[str, Any]) -> Any:
+def _get_extra_headers(arguments: dict[str, Any]) -> dict[str, Any]:
     try:
-        return json.loads(arguments["--extra-headers"])
+        extra_headers: dict[str, Any] = json.loads(arguments["--extra-headers"])
+        return extra_headers
     except (json.JSONDecodeError, TypeError):
         return {}
 
@@ -129,7 +130,7 @@ async def do_pub(client: MQTTClient, arguments: dict[str, Any]) -> None:
     except KeyboardInterrupt:
         await client.disconnect()
         logger.info(f"{client.client_id} Disconnected from broker")
-    except ConnectException as ce:
+    except ConnectError as ce:
         logger.fatal(f"Connection to '{arguments['--url']}' failed: {ce!r}")
     except asyncio.CancelledError:
         logger.fatal("Publish canceled due to previous error")

@@ -2,8 +2,8 @@ import asyncio
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs import decode_packet_id, decode_string, encode_string, int_to_bytes
-from amqtt.errors import AMQTTException, MQTTException
+from amqtt.codecs_a import decode_packet_id, decode_string, encode_string, int_to_bytes
+from amqtt.errors import AMQTTError, MQTTError
 from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 
@@ -14,7 +14,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         super().__init__()
         if "*" in topic_name:
             msg = "[MQTT-3.3.2-2] Topic name in the PUBLISH Packet MUST NOT contain wildcard characters."
-            raise MQTTException(msg)
+            raise MQTTError(msg)
         self.topic_name = topic_name
         self.packet_id = packet_id
 
@@ -36,7 +36,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         return cls(topic_name, packet_id)
 
 
-class PublishPayload(MQTTPayload):
+class PublishPayload(MQTTPayload[MQTTVariableHeader]):
     __slots__ = ("data",)
 
     def __init__(self, data: bytes | None = None) -> None:
@@ -45,8 +45,8 @@ class PublishPayload(MQTTPayload):
 
     def to_bytes(
         self,
-        fixed_header: MQTTFixedHeader | None = None,  # noqa: ARG002
-        variable_header: MQTTVariableHeader | None = None,  # noqa: ARG002
+        fixed_header: MQTTFixedHeader | None = None,
+        variable_header: MQTTVariableHeader | None = None,
     ) -> bytes:
         return self.data if self.data is not None else b""
 
@@ -74,7 +74,7 @@ class PublishPayload(MQTTPayload):
         return f"{type(self).__name__}(data={repr(self.data)!r})"
 
 
-class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload]):
+class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload, MQTTFixedHeader]):
     VARIABLE_HEADER = PublishVariableHeader
     PAYLOAD = PublishPayload
 
@@ -92,7 +92,7 @@ class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload]):
             header = MQTTFixedHeader(PUBLISH, 0x00)
         elif fixed.packet_type != PUBLISH:
             msg = f"Invalid fixed packet type {fixed.packet_type} for PublishPacket init"
-            raise AMQTTException(msg) from None
+            raise AMQTTError(msg) from None
         else:
             header = fixed
 
@@ -100,24 +100,28 @@ class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload]):
         self.variable_header = variable_header
         self.payload = payload
 
+    @classmethod
+    def build(cls, topic_name: str, message: bytes, packet_id: int | None, dup_flag: bool, qos: int | None, retain: bool) -> Self:
+        v_header = PublishVariableHeader(topic_name, packet_id)
+        payload = PublishPayload(message)
+        packet = cls(variable_header=v_header, payload=payload)
+        packet.dup_flag = dup_flag
+        packet.retain_flag = retain
+        packet.qos = qos
+        return packet
+
     def set_flags(self, dup_flag: bool = False, qos: int = 0, retain_flag: bool = False) -> None:
         self.dup_flag = dup_flag
         self.retain_flag = retain_flag
         self.qos = qos
 
     def _set_header_flag(self, val: bool, mask: int) -> None:
-        if self.fixed_header is None:
-            msg = "Fixed header is not set"
-            raise ValueError(msg)
         if val:
             self.fixed_header.flags |= mask
         else:
             self.fixed_header.flags &= ~mask
 
     def _get_header_flag(self, mask: int) -> bool:
-        if self.fixed_header is None:
-            msg = "Fixed header is not set"
-            raise ValueError(msg)
         return bool(self.fixed_header.flags & mask)
 
     @property
@@ -138,16 +142,10 @@ class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload]):
 
     @property
     def qos(self) -> int | None:
-        if self.fixed_header is None:
-            msg = "Fixed header is not set"
-            raise ValueError(msg)
         return (self.fixed_header.flags & self.QOS_FLAG) >> 1
 
     @qos.setter
     def qos(self, val: int) -> None:
-        if self.fixed_header is None:
-            msg = "Fixed header is not set"
-            raise ValueError(msg)
         self.fixed_header.flags &= 0xF9
         self.fixed_header.flags |= val << 1
 
@@ -192,13 +190,3 @@ class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload]):
             msg = "Variable header is not set"
             raise ValueError(msg)
         self.variable_header.topic_name = name
-
-    @classmethod
-    def build(cls, topic_name: str, message: bytes, packet_id: int | None, dup_flag: bool, qos: int | None, retain: bool) -> Self:
-        v_header = PublishVariableHeader(topic_name, packet_id)
-        payload = PublishPayload(message)
-        packet = cls(variable_header=v_header, payload=payload)
-        packet.dup_flag = dup_flag
-        packet.retain_flag = retain
-        packet.qos = qos
-        return packet

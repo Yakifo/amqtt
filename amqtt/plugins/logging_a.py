@@ -15,7 +15,7 @@ class EventLoggerPlugin:
     def __init__(self, context: BaseContext) -> None:
         self.context = context
 
-    async def log_event(self, *args: Any, **kwargs: Any) -> None:  # noqa: ARG002
+    async def log_event(self, *args: Any, **kwargs: Any) -> None:
         """Log the occurrence of an event."""
         event_name = kwargs["event_name"].replace("old", "")
         self.context.logger.info(f"### '{event_name}' EVENT FIRED ###")
@@ -34,7 +34,7 @@ class PacketLoggerPlugin:
     def __init__(self, context: BaseContext) -> None:
         self.context = context
 
-    async def on_mqtt_packet_received(self, *args: Any, **kwargs: Any) -> None:  # noqa: ARG002
+    async def on_mqtt_packet_received(self, *args: Any, **kwargs: Any) -> None:
         """Log an MQTT packet when it is received."""
         packet = kwargs.get("packet")
         session: Session | None = kwargs.get("session")
@@ -44,7 +44,7 @@ class PacketLoggerPlugin:
             else:
                 self.context.logger.debug(f"<-in-- {packet!r}")
 
-    async def on_mqtt_packet_sent(self, *args: Any, **kwargs: Any) -> None:  # noqa: ARG002
+    async def on_mqtt_packet_sent(self, *args: Any, **kwargs: Any) -> None:
         """Log an MQTT packet when it is sent."""
         packet = kwargs.get("packet")
         session: Session | None = kwargs.get("session")

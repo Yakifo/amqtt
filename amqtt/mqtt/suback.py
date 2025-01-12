@@ -2,12 +2,12 @@ import asyncio
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs import bytes_to_int, int_to_bytes, read_or_raise
-from amqtt.errors import AMQTTException, NoDataException
+from amqtt.codecs_a import bytes_to_int, int_to_bytes, read_or_raise
+from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.packet import SUBACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader, PacketIdVariableHeader
 
 
-class SubackPayload(MQTTPayload):
+class SubackPayload(MQTTPayload[MQTTVariableHeader]):
     __slots__ = ("return_codes",)
 
     RETURN_CODE_00 = 0x00
@@ -24,8 +24,8 @@ class SubackPayload(MQTTPayload):
 
     def to_bytes(
         self,
-        fixed_header: MQTTFixedHeader | None = None,  # noqa: ARG002
-        variable_header: MQTTVariableHeader | None = None,  # noqa: ARG002
+        fixed_header: MQTTFixedHeader | None = None,
+        variable_header: MQTTVariableHeader | None = None,
     ) -> bytes:
         out = b""
         for return_code in self.return_codes:
@@ -42,7 +42,7 @@ class SubackPayload(MQTTPayload):
         return_codes = []
         if fixed_header is None or variable_header is None:
             msg = "Fixed header or variable header cannot be None"
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         bytes_to_read = fixed_header.remaining_length - variable_header.bytes_length
         for _ in range(bytes_to_read):
@@ -50,12 +50,12 @@ class SubackPayload(MQTTPayload):
                 return_code_byte = await read_or_raise(reader, 1)
                 return_code = bytes_to_int(return_code_byte)
                 return_codes.append(return_code)
-            except NoDataException:
+            except NoDataError:
                 break
         return cls(return_codes)
 
 
-class SubackPacket(MQTTPacket[PacketIdVariableHeader, SubackPayload]):
+class SubackPacket(MQTTPacket[PacketIdVariableHeader, SubackPayload, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = SubackPayload
 
@@ -70,7 +70,7 @@ class SubackPacket(MQTTPacket[PacketIdVariableHeader, SubackPayload]):
         else:
             if fixed.packet_type is not SUBACK:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for SubackPacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
 
         super().__init__(header)

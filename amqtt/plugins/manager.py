@@ -1,6 +1,7 @@
 __all__ = ["BaseContext", "PluginManager", "get_plugin_manager"]
 
 import asyncio
+from collections.abc import Awaitable, Callable
 import contextlib
 import copy
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
@@ -118,7 +119,7 @@ class PluginManager:
         """
         return self._plugins
 
-    def _schedule_coro(self, coro: Any) -> Any:
+    def _schedule_coro(self, coro: Awaitable[str | bool | None]) -> asyncio.Future[str | bool | None]:
         return asyncio.ensure_future(coro)
 
     async def fire_event(self, event_name: str, wait: bool = False, *args: Any, **kwargs: Any) -> None:
@@ -156,7 +157,12 @@ class PluginManager:
             await asyncio.wait(tasks)
         self.logger.debug(f"Plugins len(_fired_events)={len(self._fired_events)}")
 
-    async def map(self, coro: Any, *args: Any, **kwargs: Any) -> dict[Plugin, Any]:
+    async def map(
+        self,
+        coro: Callable[[Plugin, Any], Awaitable[str | bool | None]],
+        *args: Any,
+        **kwargs: Any,
+    ) -> dict[Plugin, str | bool | None]:
         """Schedule a given coroutine call for each plugin.
 
         The coro called gets the Plugin instance as the first argument of its method call.
@@ -190,15 +196,15 @@ class PluginManager:
         return ret_dict
 
     @staticmethod
-    async def _call_coro(plugin: Plugin, coro_name: str, *args: Any, **kwargs: Any) -> Any:
+    async def _call_coro(plugin: Plugin, coro_name: str, *args: Any, **kwargs: Any) -> str | bool | None:
         if not hasattr(plugin.object, coro_name):
-            # Plugin doesn't implement coro_name
+            logging.warning("Plugin doesn't implement coro_name")
             return None
 
-        coro = getattr(plugin.object, coro_name)(*args, **kwargs)
+        coro: Awaitable[str | bool | None] = getattr(plugin.object, coro_name)(*args, **kwargs)
         return await coro
 
-    async def map_plugin_coro(self, coro_name: str, *args: Any, **kwargs: Any) -> dict[Plugin, Any]:
+    async def map_plugin_coro(self, coro_name: str, *args: Any, **kwargs: Any) -> dict[Plugin, str | bool | None]:
         """Call a plugin declared by plugin by its name.
 
         :param coro_name:

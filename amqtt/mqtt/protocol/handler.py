@@ -1,12 +1,12 @@
 import asyncio
-from asyncio import InvalidStateError
+from asyncio import InvalidStateError, QueueFull, QueueShutDown
 import collections
 import itertools
 import logging
-from typing import Any, cast
+from typing import cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.errors import AMQTTException, MQTTException, NoDataException, ProtocolHandlerException
+from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
@@ -83,7 +83,7 @@ class ProtocolHandler:
     def _init_session(self, session: Session) -> None:
         if not session:
             msg = "Session cannot be None"
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         log = logging.getLogger(__name__)
         self.session = session
         self.logger = logging.LoggerAdapter(log, {"client_id": self.session.client_id})
@@ -94,7 +94,7 @@ class ProtocolHandler:
     def attach(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> None:
         if self.session:
             msg = "Handler is already attached to a session"
-            raise ProtocolHandlerException(msg)
+            raise ProtocolHandlerError(msg)
         self._init_session(session)
         self.reader = reader
         self.writer = writer
@@ -110,7 +110,7 @@ class ProtocolHandler:
     async def start(self) -> None:
         if not self._is_attached():
             msg = "Handler is not attached to a stream"
-            raise ProtocolHandlerException(msg)
+            raise ProtocolHandlerError(msg)
         self._reader_ready = asyncio.Event()
         self._reader_task = asyncio.create_task(self._reader_loop())
         await self._reader_ready.wait()
@@ -133,8 +133,12 @@ class ProtocolHandler:
         try:
             if self.writer is not None:
                 await self.writer.close()
-        except Exception as e:
-            self.logger.debug(f"Handler writer close failed: {e}")
+        except asyncio.CancelledError:
+            self.logger.debug("Writer close was cancelled.")
+        except OSError as e:
+            self.logger.debug(f"Writer close failed due to I/O error: {e}")
+        except TimeoutError:
+            self.logger.debug("Writer close operation timed out.")
 
     def _stop_waiters(self) -> None:
         self.logger.debug(f"Stopping {len(self._puback_waiters)} puback waiters")
@@ -149,7 +153,7 @@ class ProtocolHandler:
         ):
             if not isinstance(waiter, asyncio.Future):
                 msg = "Waiter is not a asyncio.Future"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             waiter.cancel()
 
     async def _retry_deliveries(self) -> None:
@@ -158,7 +162,7 @@ class ProtocolHandler:
 
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         tasks = [
             asyncio.create_task(
@@ -196,13 +200,13 @@ class ProtocolHandler:
         """
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         if qos in (QOS_1, QOS_2):
             packet_id = self.session.next_packet_id
             if packet_id in self.session.inflight_out:
                 msg = f"A message with the same packet ID '{packet_id}' is already in flight"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
         else:
             packet_id = None
         message: OutgoingApplicationMessage = OutgoingApplicationMessage(packet_id, topic, qos, data, retain)
@@ -227,7 +231,7 @@ class ProtocolHandler:
             await self._handle_qos2_message_flow(app_message)
         else:
             msg = f"Unexpected QOS value '{app_message.qos}'"
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
     async def _handle_qos0_message_flow(self, app_message: IncomingApplicationMessage | OutgoingApplicationMessage) -> None:
         """Handle QOS_0 application message acknowledgment.
@@ -241,7 +245,7 @@ class ProtocolHandler:
             raise ValueError(msg)
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         if app_message.direction == OUTGOING:
             packet = app_message.build_publish_packet()
@@ -257,8 +261,10 @@ class ProtocolHandler:
             else:
                 try:
                     self.session.delivered_message_queue.put_nowait(app_message)
-                except Exception as e:
-                    self.logger.warning(f"Delivered messages queue full. QOS_0 message discarded: {e}")
+                except QueueShutDown as e:
+                    self.logger.warning(f"Delivered messages queue is shut down. QOS_0 message discarded: {e}")
+                except QueueFull as e:
+                    self.logger.warning(f"Delivered messages queue is full. QOS_0 message discarded: {e}")
 
     async def _handle_qos1_message_flow(self, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
         """Handle QOS_1 application message acknowledgment.
@@ -275,10 +281,10 @@ class ProtocolHandler:
             raise ValueError(msg)
         if app_message.puback_packet:
             msg = f"Message '{app_message.packet_id}' has already been acknowledged"
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         if app_message.direction == OUTGOING:
             if app_message.packet_id not in self.session.inflight_out and isinstance(app_message, OutgoingApplicationMessage):
@@ -311,7 +317,7 @@ class ProtocolHandler:
             await self._send_packet(puback)
             app_message.puback_packet = puback
 
-    async def _handle_qos2_message_flow(self, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:  # noqa: PLR0915
+    async def _handle_qos2_message_flow(self, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
         """Handle QOS_2 application message acknowledgment.
 
         For incoming messages, this method stores the message, sends PUBREC, waits for PUBREL, initiate delivery
@@ -327,19 +333,19 @@ class ProtocolHandler:
             raise ValueError(msg)
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         if app_message.direction == OUTGOING:
             if app_message.pubrel_packet and app_message.pubcomp_packet:
                 msg = f"Message '{app_message.packet_id}' has already been acknowledged"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             if not app_message.pubrel_packet:
                 # Store message
                 if app_message.publish_packet is not None:
                     # This is a retry flow, no need to store just check the message exists in session
                     if app_message.packet_id not in self.session.inflight_out:
                         msg = f"Unknown inflight message '{app_message.packet_id}' in session"
-                        raise AMQTTException(msg)
+                        raise AMQTTError(msg)
                     publish_packet = app_message.build_publish_packet(dup=True)
                 elif isinstance(app_message, OutgoingApplicationMessage):
                     # Store message in session
@@ -355,7 +361,7 @@ class ProtocolHandler:
                     # PUBREC waiter already exists for this packet ID
                     message = f"Can't add PUBREC waiter, a waiter already exists for message Id '{app_message.packet_id}'"
                     self.logger.warning(message)
-                    raise AMQTTException(message)
+                    raise AMQTTError(message)
                 waiter_pub_rec: asyncio.Future[PubrecPacket] = asyncio.Future()
                 self._pubrec_waiters[app_message.packet_id] = waiter_pub_rec
                 try:
@@ -405,13 +411,13 @@ class ProtocolHandler:
         else:
             self.logger.debug("Unknown direction!")
 
-    async def _reader_loop(self) -> None:  # noqa: C901, PLR0912, PLR0915
+    async def _reader_loop(self) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         if not self._reader_ready:
             msg = "Reader ready is not initialized."
-            raise ProtocolHandlerException(msg)
+            raise ProtocolHandlerError(msg)
 
         self.logger.debug(f"{self.session.client_id} Starting reader coro")
         running_tasks: collections.deque[asyncio.Task[None]] = collections.deque()
@@ -428,77 +434,77 @@ class ProtocolHandler:
                 fixed_header = (
                     await asyncio.wait_for(MQTTFixedHeader.from_stream(self.reader), keepalive_timeout) if self.reader else None
                 )
-                if fixed_header:
-                    if fixed_header.packet_type in (RESERVED_0, RESERVED_15):
-                        self.logger.warning(
-                            f"{self.session.client_id} Received reserved packet, which is forbidden: closing connection",
-                        )
-                        await self.handle_connection_closed()
-                    else:
-                        cls = packet_class(fixed_header)
-                        if self.reader is None:
-                            self.logger.warning("Reader is not initialized!")
-                            continue
-                        # NOTE: type => MQTTPacket
-                        packet: Any = await cls.from_stream(self.reader, fixed_header=fixed_header)
-
-                        await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=packet, session=self.session)
-                        if packet.fixed_header is None or packet.fixed_header.packet_type not in (
-                            CONNACK,
-                            SUBSCRIBE,
-                            UNSUBSCRIBE,
-                            SUBACK,
-                            UNSUBACK,
-                            PUBACK,
-                            PUBREC,
-                            PUBREL,
-                            PUBCOMP,
-                            PINGREQ,
-                            PINGRESP,
-                            PUBLISH,
-                            DISCONNECT,
-                            CONNECT,
-                        ):
-                            self.logger.warning(
-                                f"{self.session.client_id} Unhandled packet type: {packet.fixed_header.packet_type}",
-                            )
-                            continue
-
-                        task: asyncio.Task[None] | None = None
-                        if packet.fixed_header.packet_type == CONNACK:
-                            task = asyncio.create_task(self.handle_connack(packet))
-                        elif packet.fixed_header.packet_type == SUBSCRIBE:
-                            task = asyncio.create_task(self.handle_subscribe(packet))
-                        elif packet.fixed_header.packet_type == UNSUBSCRIBE:
-                            task = asyncio.create_task(self.handle_unsubscribe(packet))
-                        elif packet.fixed_header.packet_type == SUBACK:
-                            task = asyncio.create_task(self.handle_suback(packet))
-                        elif packet.fixed_header.packet_type == UNSUBACK:
-                            task = asyncio.create_task(self.handle_unsuback(packet))
-                        elif packet.fixed_header.packet_type == PUBACK:
-                            task = asyncio.create_task(self.handle_puback(packet))
-                        elif packet.fixed_header.packet_type == PUBREC:
-                            task = asyncio.create_task(self.handle_pubrec(packet))
-                        elif packet.fixed_header.packet_type == PUBREL:
-                            task = asyncio.create_task(self.handle_pubrel(packet))
-                        elif packet.fixed_header.packet_type == PUBCOMP:
-                            task = asyncio.create_task(self.handle_pubcomp(packet))
-                        elif packet.fixed_header.packet_type == PINGREQ:
-                            task = asyncio.create_task(self.handle_pingreq(packet))
-                        elif packet.fixed_header.packet_type == PINGRESP:
-                            task = asyncio.create_task(self.handle_pingresp(packet))
-                        elif packet.fixed_header.packet_type == PUBLISH:
-                            task = asyncio.create_task(self.handle_publish(packet))
-                        elif packet.fixed_header.packet_type == DISCONNECT:
-                            task = asyncio.create_task(self.handle_disconnect(packet))
-                        elif packet.fixed_header.packet_type == CONNECT:
-                            await self.handle_connect(packet)
-                        if task:
-                            running_tasks.append(task)
-                else:
+                if not fixed_header:
                     self.logger.debug(f"{self.session.client_id} No more data (EOF received), stopping reader coro")
                     break
-            except MQTTException:
+
+                if fixed_header.packet_type in (RESERVED_0, RESERVED_15):
+                    self.logger.warning(
+                        f"{self.session.client_id} Received reserved packet, which is forbidden: closing connection",
+                    )
+                    await self.handle_connection_closed()
+                    continue
+
+                cls = packet_class(fixed_header)
+                if self.reader is None:
+                    self.logger.warning("Reader is not initialized!")
+                    continue
+                packet = await cls.from_stream(self.reader, fixed_header=fixed_header)
+
+                await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=packet, session=self.session)
+                if packet.fixed_header is None or packet.fixed_header.packet_type not in (
+                    CONNACK,
+                    SUBSCRIBE,
+                    UNSUBSCRIBE,
+                    SUBACK,
+                    UNSUBACK,
+                    PUBACK,
+                    PUBREC,
+                    PUBREL,
+                    PUBCOMP,
+                    PINGREQ,
+                    PINGRESP,
+                    PUBLISH,
+                    DISCONNECT,
+                    CONNECT,
+                ):
+                    self.logger.warning(f"{self.session.client_id} Unhandled packet type: {packet.fixed_header.packet_type}")
+                    continue
+
+                task: asyncio.Task[None] | None = None
+                if packet.fixed_header.packet_type == CONNACK and isinstance(packet, ConnackPacket):
+                    task = asyncio.create_task(self.handle_connack(packet))
+                elif packet.fixed_header.packet_type == SUBSCRIBE and isinstance(packet, SubscribePacket):
+                    task = asyncio.create_task(self.handle_subscribe(packet))
+                elif packet.fixed_header.packet_type == UNSUBSCRIBE and isinstance(packet, UnsubscribePacket):
+                    task = asyncio.create_task(self.handle_unsubscribe(packet))
+                elif packet.fixed_header.packet_type == SUBACK and isinstance(packet, SubackPacket):
+                    task = asyncio.create_task(self.handle_suback(packet))
+                elif packet.fixed_header.packet_type == UNSUBACK and isinstance(packet, UnsubackPacket):
+                    task = asyncio.create_task(self.handle_unsuback(packet))
+                elif packet.fixed_header.packet_type == PUBACK and isinstance(packet, PubackPacket):
+                    task = asyncio.create_task(self.handle_puback(packet))
+                elif packet.fixed_header.packet_type == PUBREC and isinstance(packet, PubrecPacket):
+                    task = asyncio.create_task(self.handle_pubrec(packet))
+                elif packet.fixed_header.packet_type == PUBREL and isinstance(packet, PubrelPacket):
+                    task = asyncio.create_task(self.handle_pubrel(packet))
+                elif packet.fixed_header.packet_type == PUBCOMP and isinstance(packet, PubcompPacket):
+                    task = asyncio.create_task(self.handle_pubcomp(packet))
+                elif packet.fixed_header.packet_type == PINGREQ and isinstance(packet, PingReqPacket):
+                    task = asyncio.create_task(self.handle_pingreq(packet))
+                elif packet.fixed_header.packet_type == PINGRESP and isinstance(packet, PingRespPacket):
+                    task = asyncio.create_task(self.handle_pingresp(packet))
+                elif packet.fixed_header.packet_type == PUBLISH and isinstance(packet, PublishPacket):
+                    task = asyncio.create_task(self.handle_publish(packet))
+                elif packet.fixed_header.packet_type == DISCONNECT and isinstance(packet, DisconnectPacket):
+                    task = asyncio.create_task(self.handle_disconnect(packet))
+                elif packet.fixed_header.packet_type == CONNECT and isinstance(packet, ConnectPacket):
+                    # TODO: why is this not like all other inside create_task?
+                    await self.handle_connect(packet)
+                    # task = asyncio.create_task(self.handle_connect(packet))
+                if task:
+                    running_tasks.append(task)
+            except MQTTError:
                 self.logger.debug("Message discarded")
             except asyncio.CancelledError:
                 self.logger.debug("Task cancelled, reader loop ending")
@@ -506,11 +512,11 @@ class ProtocolHandler:
             except TimeoutError:
                 self.logger.debug(f"{self.session.client_id} Input stream read timeout")
                 self.handle_read_timeout()
-            except NoDataException:
+            except NoDataError:
                 self.logger.debug(f"{self.session.client_id} No data available")
-            except Exception as e:
-                self.logger.warning(f"{type(self).__name__} Unhandled exception in reader coro: {e!r}")
-                break
+            # except Exception as e:
+            #     self.logger.warning(f"{type(self).__name__} Unhandled exception in reader coro: {e!r}")
+            #     break
         while running_tasks:
             running_tasks.popleft().cancel()
         await self.handle_connection_closed()
@@ -555,7 +561,7 @@ class ProtocolHandler:
     async def mqtt_deliver_next_message(self) -> ApplicationMessage | None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
 
         if not self._is_attached():
             return None
@@ -573,73 +579,73 @@ class ProtocolHandler:
     def handle_write_timeout(self) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} write timeout unhandled")
 
     def handle_read_timeout(self) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} read timeout unhandled")
 
-    async def handle_connack(self, connack: ConnackPacket) -> None:  # noqa: ARG002
+    async def handle_connack(self, connack: ConnackPacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} CONNACK unhandled")
 
-    async def handle_connect(self, connect: ConnectPacket) -> None:  # noqa: ARG002
+    async def handle_connect(self, connect: ConnectPacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} CONNECT unhandled")
 
-    async def handle_subscribe(self, subscribe: SubscribePacket) -> None:  # noqa: ARG002
+    async def handle_subscribe(self, subscribe: SubscribePacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} SUBSCRIBE unhandled")
 
-    async def handle_unsubscribe(self, subscribe: UnsubscribePacket) -> None:  # noqa: ARG002
+    async def handle_unsubscribe(self, subscribe: UnsubscribePacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} UNSUBSCRIBE unhandled")
 
-    async def handle_suback(self, suback: SubackPacket) -> None:  # noqa: ARG002
+    async def handle_suback(self, suback: SubackPacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} SUBACK unhandled")
 
-    async def handle_unsuback(self, unsuback: UnsubackPacket) -> None:  # noqa: ARG002
+    async def handle_unsuback(self, unsuback: UnsubackPacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} UNSUBACK unhandled")
 
-    async def handle_pingresp(self, pingresp: PingRespPacket) -> None:  # noqa: ARG002
+    async def handle_pingresp(self, pingresp: PingRespPacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} PINGRESP unhandled")
 
-    async def handle_pingreq(self, pingreq: PingReqPacket) -> None:  # noqa: ARG002
+    async def handle_pingreq(self, pingreq: PingReqPacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} PINGREQ unhandled")
 
-    async def handle_disconnect(self, disconnect: DisconnectPacket) -> None:  # noqa: ARG002
+    async def handle_disconnect(self, disconnect: DisconnectPacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} DISCONNECT unhandled")
 
     async def handle_connection_closed(self) -> None:
         if self.session is None:
             msg = "Session is not initialized."
-            raise AMQTTException(msg)
+            raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} Connection closed unhandled")
 
     async def handle_puback(self, puback: PubackPacket) -> None:

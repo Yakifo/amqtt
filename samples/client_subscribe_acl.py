@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from amqtt.client import ClientException, MQTTClient
+from amqtt.client import ClientError, MQTTClient
 from amqtt.mqtt.constants import QOS_1
 
 #
@@ -34,7 +34,7 @@ async def uptime_coro() -> None:
         await C.unsubscribe(["$SYS/broker/uptime", "$SYS/broker/load/#"])
         logger.info("UnSubscribed")
         await C.disconnect()
-    except ClientException as ce:
+    except ClientError as ce:
         logger.exception(f"Client exception: {ce}")
 
 

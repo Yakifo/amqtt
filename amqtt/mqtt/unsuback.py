@@ -1,10 +1,10 @@
 from typing import Self
 
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import UNSUBACK, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class UnsubackPacket(MQTTPacket[PacketIdVariableHeader]):
+class UnsubackPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
@@ -19,7 +19,7 @@ class UnsubackPacket(MQTTPacket[PacketIdVariableHeader]):
         else:
             if fixed.packet_type is not UNSUBACK:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for UnsubackPacket init"
-                raise AMQTTException(
+                raise AMQTTError(
                     msg,
                 )
             header = fixed

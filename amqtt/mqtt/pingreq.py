@@ -1,8 +1,8 @@
-from amqtt.errors import AMQTTException
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import PINGREQ, MQTTFixedHeader, MQTTPacket
 
 
-class PingReqPacket(MQTTPacket[None, None]):
+class PingReqPacket(MQTTPacket[None, None, MQTTFixedHeader]):
     VARIABLE_HEADER = None
     PAYLOAD = None
 
@@ -12,7 +12,7 @@ class PingReqPacket(MQTTPacket[None, None]):
         else:
             if fixed.packet_type is not PINGREQ:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for PingReqPacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
         super().__init__(header)
         self.variable_header = None

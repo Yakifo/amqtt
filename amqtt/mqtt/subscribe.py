@@ -2,12 +2,12 @@ import asyncio
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs import bytes_to_int, decode_string, encode_string, int_to_bytes, read_or_raise
-from amqtt.errors import AMQTTException, NoDataException
+from amqtt.codecs_a import bytes_to_int, decode_string, encode_string, int_to_bytes, read_or_raise
+from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.packet import SUBSCRIBE, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader, PacketIdVariableHeader
 
 
-class SubscribePayload(MQTTPayload):
+class SubscribePayload(MQTTPayload[MQTTVariableHeader]):
     __slots__ = ("topics",)
 
     def __init__(self, topics: list[tuple[str, int]] | None = None) -> None:
@@ -16,8 +16,8 @@ class SubscribePayload(MQTTPayload):
 
     def to_bytes(
         self,
-        fixed_header: MQTTFixedHeader | None = None,  # noqa: ARG002
-        variable_header: MQTTVariableHeader | None = None,  # noqa: ARG002
+        fixed_header: MQTTFixedHeader | None = None,
+        variable_header: MQTTVariableHeader | None = None,
     ) -> bytes:
         out = b""
         for topic in self.topics:
@@ -46,7 +46,7 @@ class SubscribePayload(MQTTPayload):
                 qos = bytes_to_int(qos_byte)
                 topics.append((topic, qos))
                 read_bytes += 2 + len(topic.encode("utf-8")) + 1
-            except NoDataException:
+            except NoDataError:
                 break
         return cls(topics)
 
@@ -54,7 +54,7 @@ class SubscribePayload(MQTTPayload):
         return type(self).__name__ + f"(topics={self.topics!r})"
 
 
-class SubscribePacket(MQTTPacket[PacketIdVariableHeader, SubscribePayload]):
+class SubscribePacket(MQTTPacket[PacketIdVariableHeader, SubscribePayload, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = SubscribePayload
 
@@ -69,7 +69,7 @@ class SubscribePacket(MQTTPacket[PacketIdVariableHeader, SubscribePayload]):
         else:
             if fixed.packet_type is not SUBSCRIBE:
                 msg = f"Invalid fixed packet type {fixed.packet_type} for SubscribePacket init"
-                raise AMQTTException(msg)
+                raise AMQTTError(msg)
             header = fixed
 
         super().__init__(header)
