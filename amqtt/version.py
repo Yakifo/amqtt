@@ -43,25 +43,23 @@ def get_git_changeset() -> str | None:
 
     # Call git log to get the latest changeset timestamp
     try:
-        git_log = subprocess.Popen(  # noqa: S603
+        with subprocess.Popen(  # noqa: S603
             [git_path, "log", "--pretty=format:%ct", "--quiet", "-1", "HEAD"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=repo_dir,
             universal_newlines=True,
-        )
+        ) as git_log:
+            timestamp_str, stderr = git_log.communicate()
 
-        # Capture the output
-        timestamp_str, stderr = git_log.communicate()
+            if git_log.returncode != 0:
+                logger.error(f"Git command failed with error: {stderr}")
+                return None
 
-        if git_log.returncode != 0:
-            logger.error(f"Git command failed with error: {stderr}")
-            return None
-
-        # Convert the timestamp to a datetime object
-        timestamp = datetime.datetime.fromtimestamp(int(timestamp_str), tz=datetime.UTC)
-        return timestamp.strftime("%Y%m%d%H%M%S")
+            # Convert the timestamp to a datetime object
+            timestamp = datetime.datetime.fromtimestamp(int(timestamp_str), tz=datetime.UTC)
+            return timestamp.strftime("%Y%m%d%H%M%S")
 
     except Exception:
         logger.exception("An error occurred while retrieving the git changeset.")
-        return None
+    return None

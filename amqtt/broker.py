@@ -61,6 +61,7 @@ class RetainedApplicationMessage(ApplicationMessage):
     __slots__ = ("data", "qos", "source_session", "topic")
 
     def __init__(self, source_session: Session | None, topic: str, data: bytes, qos: int | None = None) -> None:
+        super().__init__(None, topic, qos, data, True)  # noqa: FBT003
         self.source_session = source_session
         self.topic = topic
         self.data = data
@@ -267,13 +268,13 @@ class Broker:
                         msg = f"'certfile' or 'keyfile' configuration parameter missing: {ke}"
                         raise BrokerError(msg) from ke
                     except FileNotFoundError as fnfe:
-                        msg = "Can't read cert files '{}' or '{}' : {}".format(listener["certfile"], listener["keyfile"], fnfe)
+                        msg = f"Can't read cert files '{listener['certfile']}' or '{listener['keyfile']}' : {fnfe}"
                         raise BrokerError(msg) from fnfe
 
                 try:
                     address, port = self._split_bindaddr_port(listener["bind"], DEFAULT_PORTS[listener["type"]])
                 except ValueError as e:
-                    msg = "Invalid port value in bind value: {}".format(listener["bind"])
+                    msg = f"Invalid port value in bind value: {listener['bind']}"
                     raise BrokerError(msg) from e
 
                 instance: asyncio.Server | websockets.asyncio.server.Server | None = None
@@ -358,34 +359,37 @@ class Broker:
         await server.acquire_connection()
 
         remote_info = writer.get_peer_info()
-        if remote_info is not None:
-            remote_address, remote_port = remote_info
-            self.logger.info(f"Connection from {remote_address}:{remote_port} on listener '{listener_name}'")
+        if remote_info is None:
+            self.logger.warning("remote info could not get from peer info")
+            return
 
-            # Wait for first packet and expect a CONNECT
-            try:
-                handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
-            except AMQTTError as exc:
-                self.logger.warning(
-                    f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"
-                    f"Can't read first packet an CONNECT: {exc}",
-                )
-                # await writer.close()
-                self.logger.debug("Connection closed")
-                server.release_connection()
-                return
-            except MQTTError:
-                self.logger.exception(
-                    f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
-                )
-                await writer.close()
-                server.release_connection()
-                self.logger.debug("Connection closed")
-                return
-            except NoDataError as ne:
-                self.logger.error(f"No data from {format_client_message(address=remote_address, port=remote_port)} : {ne}")  # noqa: TRY400 # cannot replace with exception else test fails
-                server.release_connection()
-                return
+        remote_address, remote_port = remote_info
+        self.logger.info(f"Connection from {remote_address}:{remote_port} on listener '{listener_name}'")
+
+        # Wait for first packet and expect a CONNECT
+        try:
+            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
+        except AMQTTError as exc:
+            self.logger.warning(
+                f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"
+                f"Can't read first packet an CONNECT: {exc}",
+            )
+            # await writer.close()
+            self.logger.debug("Connection closed")
+            server.release_connection()
+            return
+        except MQTTError:
+            self.logger.exception(
+                f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
+            )
+            await writer.close()
+            server.release_connection()
+            self.logger.debug("Connection closed")
+            return
+        except NoDataError as ne:
+            self.logger.error(f"No data from {format_client_message(address=remote_address, port=remote_port)} : {ne}")  # noqa: TRY400 # cannot replace with exception else test fails
+            server.release_connection()
+            return
 
         if client_session.clean_session:
             # Delete existing session and create a new one
@@ -397,7 +401,7 @@ class Broker:
         # Get session from cache
         elif client_session.client_id in self._sessions:
             self.logger.debug(f"Found old session {self._sessions[client_session.client_id]!r}")
-            (client_session, h) = self._sessions[client_session.client_id]
+            client_session, _ = self._sessions[client_session.client_id]
             client_session.parent = 1
         else:
             client_session.parent = 0
@@ -453,7 +457,7 @@ class Broker:
         connected = True
         while connected:
             try:
-                done, pending = await asyncio.wait(
+                done, _ = await asyncio.wait(
                     [
                         disconnect_waiter,
                         subscribe_waiter,
@@ -751,9 +755,9 @@ class Broker:
                     try:
                         task.result()
                     except CancelledError:
-                        self.logger.info("Task has been cancelled: %s", task)
+                        self.logger.info(f"Task has been cancelled: {task}")
                     except Exception:
-                        self.logger.exception("Task failed and will be skipped: %s", task)
+                        self.logger.exception(f"Task failed and will be skipped: {task}")
 
                 run_broadcast_task = asyncio.ensure_future(self._run_broadcast(running_tasks))
 

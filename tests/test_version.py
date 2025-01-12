@@ -39,11 +39,11 @@ class TestVersionFunctions(unittest.TestCase):
         # Mock git executable check
         mock_which.return_value = True
 
-        # Mock subprocess.Popen for git log
+        # Mock subprocess.Popen for git log with context manager behavior
         mock_process = MagicMock()
         mock_process.communicate.return_value = ("1638352940", "")
         mock_process.returncode = 0
-        mock_popen.return_value = mock_process
+        mock_popen.return_value.__enter__.return_value = mock_process
 
         # Call the function
         changeset = get_git_changeset()

@@ -106,10 +106,10 @@ repos:
         types: [python]
         require_serial: true
         exclude: ^tests/.+|^docs/.+|^samples/.+
-      # - id: pylint
-      #   name: Run Pylint in Virtualenv
-      #   entry: scripts/run-in-env.sh pylint
-      #   language: script
-      #   types: [python]
-      #   require_serial: true
-      #   exclude: ^tests/.+|^docs/.+|^samples/.+
+      - id: pylint
+        name: Run Pylint in Virtualenv
+        entry: scripts/run-in-env.sh pylint
+        language: script
+        types: [python]
+        require_serial: true
+        exclude: ^tests/.+|^docs/.+|^samples/.+

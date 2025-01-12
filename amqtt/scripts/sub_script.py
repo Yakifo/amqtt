@@ -31,7 +31,9 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 from pathlib import Path
+import socket
 import sys
 from typing import Any
 
@@ -47,9 +49,6 @@ logger = logging.getLogger(__name__)
 
 
 def _gen_client_id() -> str:
-    import os
-    import socket
-
     pid = os.getpid()
     hostname = socket.gethostname()
     return f"amqtt_sub/{pid}-{hostname}"

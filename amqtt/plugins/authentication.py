@@ -60,7 +60,7 @@ class FileAuthPlugin(BaseAuthPlugin):
             return
 
         try:
-            with Path(password_file).open("r") as file:
+            with Path(password_file).open(mode="r", encoding="utf-8") as file:
                 self.context.logger.debug(f"Reading user database from {password_file}")
                 for _line in file:
                     line = _line.strip()

@@ -35,7 +35,10 @@ from collections.abc import Generator
 import contextlib
 import json
 import logging
+import os
 from pathlib import Path
+import socket
+import sys
 from typing import Any
 
 from docopt import docopt
@@ -49,9 +52,6 @@ logger = logging.getLogger(__name__)
 
 
 def _gen_client_id() -> str:
-    import os
-    import socket
-
     pid = os.getpid()
     hostname = socket.gethostname()
     return f"amqtt_pub/{pid}-{hostname}"
@@ -79,20 +79,16 @@ def _get_message(arguments: dict[str, Any]) -> Generator[bytes | bytearray]:
         yield arguments["-m"].encode(encoding="utf-8")
     if arguments["-f"]:
         try:
-            with Path(arguments["-f"]).open() as f:
+            with Path(arguments["-f"]).open(encoding="utf-8") as f:
                 for line in f:
                     yield line.encode(encoding="utf-8")
         except Exception:
             logger.exception(f"Failed to read file '{arguments['-f']}'")
     if arguments["-l"]:
-        import sys
-
         for line in sys.stdin:
             if line:
                 yield line.encode(encoding="utf-8")
     if arguments["-s"]:
-        import sys
-
         message = bytearray()
         for line in sys.stdin:
             message.extend(line.encode(encoding="utf-8"))

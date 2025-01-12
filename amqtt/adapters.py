@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from asyncio import StreamReader, StreamWriter
 from contextlib import suppress
 import io
@@ -7,13 +8,14 @@ from websockets import ConnectionClosed
 from websockets.asyncio.connection import Connection
 
 
-class ReaderAdapter:
+class ReaderAdapter(ABC):
     """Base class for all network protocol reader adapters.
 
     Reader adapters are used to adapt read operations on the network depending on the
     protocol used.
     """
 
+    @abstractmethod
     async def read(self, n: int = -1) -> bytes:
         """Read up to n bytes. If n is not provided, or set to -1, read until EOF and return all read bytes.
 
@@ -22,30 +24,35 @@ class ReaderAdapter:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def feed_eof(self) -> None:
         """Acknowledge EOF."""
         raise NotImplementedError
 
 
-class WriterAdapter:
+class WriterAdapter(ABC):
     """Base class for all network protocol writer adapters.
 
     Writer adapters are used to adapt write operations on the network depending on
     the protocol used.
     """
 
+    @abstractmethod
     def write(self, data: bytes) -> None:
         """Write some data to the protocol layer."""
         raise NotImplementedError
 
+    @abstractmethod
     async def drain(self) -> None:
         """Let the write buffer of the underlying transport a chance to be flushed."""
         raise NotImplementedError
 
+    @abstractmethod
     def get_peer_info(self) -> tuple[str, int] | None:
         """Return peer socket info (remote address and remote port as tuple)."""
         raise NotImplementedError
 
+    @abstractmethod
     async def close(self) -> None:
         """Close the protocol connection."""
         raise NotImplementedError
@@ -80,6 +87,10 @@ class WebSocketsReader(ReaderAdapter):
             message = message.encode("utf-8") if isinstance(message, str) else message
             buffer.extend(message)
         self._stream = io.BytesIO(buffer)
+
+    def feed_eof(self) -> None:
+        # NOTE: not implemented?!
+        pass
 
 
 class WebSocketsWriter(WriterAdapter):
@@ -181,6 +192,10 @@ class BufferReader(ReaderAdapter):
 
     async def read(self, n: int = -1) -> bytes:
         return self._stream.read(n)
+
+    def feed_eof(self) -> None:
+        # NOTE: not implemented?!
+        pass
 
 
 class BufferWriter(WriterAdapter):

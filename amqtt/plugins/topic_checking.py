@@ -36,8 +36,8 @@ class TopicTabooPlugin(BaseTopicPlugin):
 
 
 class TopicAccessControlListPlugin(BaseTopicPlugin):
-    def __init__(self, context: BaseContext) -> None:
-        super().__init__(context)
+    # def __init__(self, context: BaseContext) -> None:
+    #     super().__init__(context)
 
     @staticmethod
     def topic_ac(topic_requested: str, topic_allowed: str) -> bool:
@@ -79,11 +79,10 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
         if username is None:
             username = "anonymous"
 
-        if self.topic_config is None:
-            acl: dict[str, Any] = {}
-        elif action == Action.PUBLISH:
+        acl: dict[str, Any] = {}
+        if self.topic_config is not None and action == Action.PUBLISH:
             acl = self.topic_config.get("publish-acl", {})
-        elif action == Action.SUBSCRIBE:
+        elif self.topic_config is not None and action == Action.SUBSCRIBE:
             acl = self.topic_config.get("acl", {})
 
         allowed_topics = acl.get(username, None)

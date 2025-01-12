@@ -135,10 +135,10 @@ class ProtocolHandler:
                 await self.writer.close()
         except asyncio.CancelledError:
             self.logger.debug("Writer close was cancelled.")
+        except TimeoutError as e:
+            self.logger.debug(f"Writer close operation timed out: {e}.")
         except OSError as e:
             self.logger.debug(f"Writer close failed due to I/O error: {e}")
-        except TimeoutError:
-            self.logger.debug("Writer close operation timed out.")
 
     def _stop_waiters(self) -> None:
         self.logger.debug(f"Stopping {len(self._puback_waiters)} puback waiters")
@@ -339,8 +339,10 @@ class ProtocolHandler:
             if app_message.pubrel_packet and app_message.pubcomp_packet:
                 msg = f"Message '{app_message.packet_id}' has already been acknowledged"
                 raise AMQTTError(msg)
+
             if not app_message.pubrel_packet:
                 # Store message
+                publish_packet: PublishPacket
                 if app_message.publish_packet is not None:
                     # This is a retry flow, no need to store just check the message exists in session
                     if app_message.packet_id not in self.session.inflight_out:
@@ -353,9 +355,11 @@ class ProtocolHandler:
                     publish_packet = app_message.build_publish_packet()
                 else:
                     self.logger.debug("Message can not be stored, to be checked!")
+
                 # Send PUBLISH packet
                 await self._send_packet(publish_packet)
                 app_message.publish_packet = publish_packet
+
                 # Wait PUBREC
                 if app_message.packet_id in self._pubrec_waiters:
                     # PUBREC waiter already exists for this packet ID
@@ -369,6 +373,7 @@ class ProtocolHandler:
                 finally:
                     self._pubrec_waiters.pop(app_message.packet_id, None)
                     self.session.inflight_out.pop(app_message.packet_id, None)
+
             if not app_message.pubcomp_packet:
                 # Send pubrel
                 app_message.pubrel_packet = PubrelPacket.build(app_message.packet_id)
@@ -552,8 +557,9 @@ class ProtocolHandler:
             await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_SENT, packet=packet, session=self.session)
         except (ConnectionResetError, BrokenPipeError):
             await self.handle_connection_closed()
-        except asyncio.CancelledError:
-            raise
+        except asyncio.CancelledError as e:
+            msg = "Packet handling was cancelled"
+            raise ProtocolHandlerError(msg) from e
         except Exception as e:
             self.logger.warning(f"Unhandled exception: {e}")
             raise
@@ -606,7 +612,7 @@ class ProtocolHandler:
             raise AMQTTError(msg)
         self.logger.debug(f"{self.session.client_id} SUBSCRIBE unhandled")
 
-    async def handle_unsubscribe(self, subscribe: UnsubscribePacket) -> None:
+    async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket) -> None:
         if self.session is None:
             msg = "Session is not initialized."
             raise AMQTTError(msg)
