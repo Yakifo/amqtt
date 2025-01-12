@@ -25,7 +25,7 @@ jobs:
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -47,7 +47,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.12"
+          # - "3.12"
           - "3.13"
 
     steps:
@@ -57,7 +57,7 @@ jobs:
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
