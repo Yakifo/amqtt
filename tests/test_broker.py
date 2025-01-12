@@ -17,6 +17,7 @@ from amqtt.broker import (
     EVENT_BROKER_POST_START,
     EVENT_BROKER_PRE_SHUTDOWN,
     EVENT_BROKER_PRE_START,
+    Broker,
 )
 from amqtt.client import MQTTClient
 from amqtt.errors import ConnectError
@@ -42,6 +43,23 @@ async def async_magic():
 
 
 MagicMock.__await__ = lambda _: async_magic().__await__()
+
+
+@pytest.mark.parametrize(
+    "input_str, output_addr, output_port",
+    [
+        ("1234", None, 1234),
+        (":1234", None, 1234),
+        ("0.0.0.0:1234", "0.0.0.0", 1234),
+        ("[::]:1234", "[::]", 1234),
+        ("0.0.0.0", "0.0.0.0", 5678),
+        ("[::]", "[::]", 5678),
+        ("localhost", "localhost", 5678),
+        ("localhost:1234", "localhost", 1234),
+    ],
+)
+def test_split_bindaddr_port(input_str, output_addr, output_port):
+    assert Broker._split_bindaddr_port(input_str, 5678) == (output_addr, output_port)
 
 
 @pytest.mark.asyncio
