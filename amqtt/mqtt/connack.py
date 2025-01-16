@@ -1,7 +1,7 @@
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs_a import bytes_to_int, read_or_raise
+from amqtt.codecs_amqtt import bytes_to_int, read_or_raise
 from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 

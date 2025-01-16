@@ -5,7 +5,7 @@ from struct import unpack
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.codecs_a import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
+from amqtt.codecs_amqtt import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
 from amqtt.errors import CodecError, MQTTError, NoDataError
 
 RESERVED_0 = 0x00

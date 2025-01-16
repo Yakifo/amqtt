@@ -6,7 +6,7 @@ from typing import SupportsIndex, SupportsInt
 
 import amqtt
 from amqtt.broker import BrokerContext
-from amqtt.codecs_a import int_to_bytes_str
+from amqtt.codecs_amqtt import int_to_bytes_str
 from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 from amqtt.mqtt.subscribe import SubscribePayload
 

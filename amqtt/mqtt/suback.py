@@ -2,7 +2,7 @@ import asyncio
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs_a import bytes_to_int, int_to_bytes, read_or_raise
+from amqtt.codecs_amqtt import bytes_to_int, int_to_bytes, read_or_raise
 from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.packet import SUBACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader, PacketIdVariableHeader
 

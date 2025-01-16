@@ -2,7 +2,7 @@ from asyncio import StreamReader
 from typing import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs_a import decode_string, encode_string
+from amqtt.codecs_amqtt import decode_string, encode_string
 from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.packet import UNSUBSCRIBE, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader, PacketIdVariableHeader
 

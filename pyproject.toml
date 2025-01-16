@@ -77,11 +77,11 @@ source = "vcs"
 [project.entry-points."amqtt.test.plugins"]
 test_plugin = "tests.plugins.test_manager:EmptyTestPlugin"
 event_plugin = "tests.plugins.test_manager:EventTestPlugin"
-packet_logger_plugin = "amqtt.plugins.logging:PacketLoggerPlugin"
+packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
 
 [project.entry-points."amqtt.broker.plugins"]
-event_logger_plugin = "amqtt.plugins.logging:EventLoggerPlugin"
-packet_logger_plugin = "amqtt.plugins.logging:PacketLoggerPlugin"
+event_logger_plugin = "amqtt.plugins.logging_amqtt:EventLoggerPlugin"
+packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
 auth_anonymous = "amqtt.plugins.authentication:AnonymousAuthPlugin"
 auth_file = "amqtt.plugins.authentication:FileAuthPlugin"
 topic_taboo = "amqtt.plugins.topic_checking:TopicTabooPlugin"
@@ -89,7 +89,7 @@ topic_acl = "amqtt.plugins.topic_checking:TopicAccessControlListPlugin"
 broker_sys = "amqtt.plugins.sys.broker:BrokerSysPlugin"
 
 [project.entry-points."amqtt.client.plugins"]
-packet_logger_plugin = "amqtt.plugins.logging:PacketLoggerPlugin"
+packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
 
 # ____________________________________ RUFF ____________________________________
 # https://docs.astral.sh/ruff/settings/
