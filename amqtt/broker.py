@@ -181,6 +181,8 @@ class Broker:
         self._broadcast_task: asyncio.Task[Any] | None = None
         self._broadcast_shutdown_waiter: asyncio.Future[Any] = futures.Future()
 
+        self._tasks_queue: deque[asyncio.Task[OutgoingApplicationMessage]] = deque()
+
         # Init plugins manager
         context = BrokerContext(self)
         context.config = self.config
@@ -747,7 +749,7 @@ class Broker:
         return bool(match_pattern.fullmatch(topic))
 
     async def _broadcast_loop(self) -> None:
-        running_tasks: deque[asyncio.Task[OutgoingApplicationMessage]] = deque()
+        running_tasks: deque[asyncio.Task[OutgoingApplicationMessage]] = self._tasks_queue
         try:
             while True:
                 while running_tasks and running_tasks[0].done():

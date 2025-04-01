@@ -2,14 +2,14 @@ from pathlib import Path
 
 from passlib.apps import custom_app_context as pwd_context
 
-from amqtt.plugins.manager import BaseContext
+from amqtt.broker import BrokerContext
 from amqtt.session import Session
 
 
 class BaseAuthPlugin:
     """Base class for authentication plugins."""
 
-    def __init__(self, context: BaseContext) -> None:
+    def __init__(self, context: BrokerContext) -> None:
         self.context = context
         self.auth_config = self.context.config.get("auth") if self.context.config else None
         if not self.auth_config:
@@ -31,7 +31,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
         authenticated = await super().authenticate(*args, **kwargs)
         if authenticated:
             # Default to allowing anonymous
-            allow_anonymous = self.auth_config.get("allow-anonymous", True) if self.auth_config is not None else True
+            allow_anonymous = self.auth_config.get("allow-anonymous", True) if isinstance(self.auth_config, dict) else True
             if allow_anonymous:
                 self.context.logger.debug("Authentication success: config allows anonymous")
                 return True
@@ -47,14 +47,14 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
 class FileAuthPlugin(BaseAuthPlugin):
     """Authentication plugin based on a file-stored user database."""
 
-    def __init__(self, context: BaseContext) -> None:
+    def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
         self._users: dict[str, str] = {}
         self._read_password_file()
 
     def _read_password_file(self) -> None:
         """Read the password file and populates the user dictionary."""
-        password_file = self.auth_config.get("password-file") if self.auth_config is not None else None
+        password_file = self.auth_config.get("password-file") if isinstance(self.auth_config, dict) else None
         if not password_file:
             self.context.logger.warning("Configuration parameter 'password-file' not found")
             return

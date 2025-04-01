@@ -218,6 +218,8 @@ class BrokerProtocolHandler(ProtocolHandler):
         incoming_session.will_message = connect.will_message
         incoming_session.username = connect.username
         incoming_session.password = connect.password
+        incoming_session.remote_address = remote_address
+        incoming_session.remote_port = remote_port
         incoming_session.keep_alive = max(connect.keep_alive, 0)
 
         handler = cls(plugins_manager, loop=loop)
