@@ -81,7 +81,7 @@ def mqtt_connected(func: _F) -> _F:
                 raise ClientError(msg)
         return await func(self, *args, **kwargs)
 
-    return cast(_F, wrapper)
+    return cast("_F", wrapper)
 
 
 class MQTTClient:

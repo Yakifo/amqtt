@@ -8,6 +8,8 @@ from importlib.metadata import EntryPoint, EntryPoints, entry_points
 import logging
 from typing import Any, NamedTuple
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class Plugin(NamedTuple):
     name: str
@@ -27,7 +29,7 @@ class BaseContext:
         self.loop: asyncio.AbstractEventLoop | None = None
         # TODO: change this usage
         # self.logger: logging.Logger | None = None
-        self.logger: logging.Logger = logging.getLogger(__name__)
+        self.logger: logging.Logger = _LOGGER
         self.config: dict[str, Any] | None = None
 
 
@@ -198,7 +200,7 @@ class PluginManager:
     @staticmethod
     async def _call_coro(plugin: Plugin, coro_name: str, *args: Any, **kwargs: Any) -> str | bool | None:
         if not hasattr(plugin.object, coro_name):
-            logging.warning("Plugin doesn't implement coro_name")
+            _LOGGER.warning("Plugin doesn't implement coro_name")
             return None
 
         coro: Awaitable[str | bool | None] = getattr(plugin.object, coro_name)(*args, **kwargs)

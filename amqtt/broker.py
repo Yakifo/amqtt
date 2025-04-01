@@ -176,8 +176,8 @@ class Broker:
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
-        self._broadcast_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
 
+        self._broadcast_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self._broadcast_task: asyncio.Task[Any] | None = None
         self._broadcast_shutdown_waiter: asyncio.Future[Any] = futures.Future()
 

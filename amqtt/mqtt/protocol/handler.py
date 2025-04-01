@@ -167,7 +167,7 @@ class ProtocolHandler:
         tasks = [
             asyncio.create_task(
                 asyncio.wait_for(
-                    self._handle_message_flow(cast(IncomingApplicationMessage | OutgoingApplicationMessage, message)),
+                    self._handle_message_flow(cast("IncomingApplicationMessage | OutgoingApplicationMessage", message)),
                     10,
                 ),
             )
