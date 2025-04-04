@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 # @pytest.mark.asyncio
 # async def test_connect_tcp_secure(ca_file_fixture):
 #     client = MQTTClient(config={"check_hostname": False})
-#     await client.connect("mqtts://test.mosquitto.org/", cafile=ca_file_fixture)
+#     await client.connect("mqtts://test.mosquitto.org:8883/", cafile=ca_file_fixture)
 #     assert client.session is not None
 #     await client.disconnect()
 
@@ -157,7 +157,7 @@ async def test_deliver_timeout(broker_fixture):
 
 @pytest.mark.asyncio
 async def test_cancel_publish_qos1(broker_fixture):
-    """Tests that timeouts on published messages will clean up in flight messages."""
+    """Tests that timeouts on published messages will clean up in-flight messages."""
     data = b"data"
     client_pub = MQTTClient()
     await client_pub.connect("mqtt://127.0.0.1/")
@@ -168,7 +168,7 @@ async def test_cancel_publish_qos1(broker_fixture):
     assert client_pub.session.inflight_out_count == 0
     fut = asyncio.create_task(client_pub.publish("test_topic", data, QOS_1))
     assert len(client_pub._handler._puback_waiters) == 0
-    while len(client_pub._handler._puback_waiters) == 0 or fut.done():
+    while len(client_pub._handler._puback_waiters) == 0 and not fut.done():
         await asyncio.sleep(0)
     assert len(client_pub._handler._puback_waiters) == 1
     assert client_pub.session.inflight_out_count == 1
@@ -176,12 +176,14 @@ async def test_cancel_publish_qos1(broker_fixture):
     await asyncio.wait([fut])
     assert len(client_pub._handler._puback_waiters) == 0
     assert client_pub.session.inflight_out_count == 0
+
+    await asyncio.sleep(0.1)
     await client_pub.disconnect()
 
 
 @pytest.mark.asyncio
 async def test_cancel_publish_qos2_pubrec(broker_fixture):
-    """Tests that timeouts on published messages will clean up in flight messages."""
+    """Tests that timeouts on published messages will clean up in-flight messages."""
     data = b"data"
     client_pub = MQTTClient()
     await client_pub.connect("mqtt://127.0.0.1/")
@@ -201,12 +203,14 @@ async def test_cancel_publish_qos2_pubrec(broker_fixture):
     await asyncio.wait([fut])
     assert len(client_pub._handler._pubrec_waiters) == 0
     assert client_pub.session.inflight_out_count == 0
+
+    await asyncio.sleep(0.1)
     await client_pub.disconnect()
 
 
 @pytest.mark.asyncio
 async def test_cancel_publish_qos2_pubcomp(broker_fixture):
-    """Tests that timeouts on published messages will clean up in flight messages."""
+    """Tests that timeouts on published messages will clean up in-flight messages."""
     data = b"data"
     client_pub = MQTTClient()
     await client_pub.connect("mqtt://127.0.0.1/")
@@ -217,11 +221,13 @@ async def test_cancel_publish_qos2_pubcomp(broker_fixture):
     assert client_pub.session.inflight_out_count == 0
     fut = asyncio.create_task(client_pub.publish("test_topic", data, QOS_2))
     assert len(client_pub._handler._pubcomp_waiters) == 0
-    while len(client_pub._handler._pubcomp_waiters) == 0 or fut.done():
+    while len(client_pub._handler._pubcomp_waiters) == 0 and not fut.done():
         await asyncio.sleep(0)
     assert len(client_pub._handler._pubcomp_waiters) == 1
     fut.cancel()
     await asyncio.wait([fut])
     assert len(client_pub._handler._pubcomp_waiters) == 0
     assert client_pub.session.inflight_out_count == 0
+
+    await asyncio.sleep(0.1)
     await client_pub.disconnect()

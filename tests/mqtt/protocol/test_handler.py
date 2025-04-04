@@ -13,11 +13,7 @@
 # from amqtt.mqtt.pubrec import PubrecPacket
 # from amqtt.mqtt.pubrel import PubrelPacket
 # from amqtt.plugins.manager import PluginManager
-# from amqtt.session import (
-#     IncomingApplicationMessage,
-#     OutgoingApplicationMessage,
-#     Session,
-# )
+# from amqtt.session import IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 # formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 # logging.basicConfig(level=logging.DEBUG, format=formatter)

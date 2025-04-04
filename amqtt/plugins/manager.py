@@ -103,15 +103,11 @@ class PluginManager:
         return None
 
     async def close(self) -> None:
-        """Free PluginManager resources and cancel pending event methods.
-
-        This method calls a close() coroutine for each plugin, allowing plugins to close
-        and free resources
-        :return:
-        """
+        """Free PluginManager resources and cancel pending event methods."""
         await self.map_plugin_coro("close")
         for task in self._fired_events:
             task.cancel()
+        self._fired_events.clear()
 
     @property
     def plugins(self) -> list[Plugin]:

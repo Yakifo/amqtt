@@ -211,6 +211,13 @@ class Session:
         self.retained_messages = Queue()
         self.delivered_message_queue = Queue()
 
+    def clear_queues(self) -> None:
+        """Clear all message queues associated with the session."""
+        while not self.retained_messages.empty():
+            self.retained_messages.get_nowait()
+        while not self.delivered_message_queue.empty():
+            self.delivered_message_queue.get_nowait()
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Session):
             return False

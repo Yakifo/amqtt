@@ -53,15 +53,24 @@ class BrokerProtocolHandler(ProtocolHandler):
 
     async def start(self) -> None:
         await super().start()
-        if self._disconnect_waiter is None:
+        # Ensure the disconnect waiter is reset
+        if self._disconnect_waiter is None or self._disconnect_waiter.done():
             self._disconnect_waiter = asyncio.Future()
 
     async def stop(self) -> None:
+        """Stop the protocol handler and reset the disconnect waiter."""
         await super().stop()
         if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
             self._disconnect_waiter.set_result(None)
+        self._disconnect_waiter = None  # Reset the disconnect waiter
+        # Clear pending subscriptions and unsubscriptions
+        while not self._pending_subscriptions.empty():
+            self._pending_subscriptions.get_nowait()
+        while not self._pending_unsubscriptions.empty():
+            self._pending_unsubscriptions.get_nowait()
 
     async def wait_disconnect(self) -> DisconnectPacket | None:
+        """Wait for a disconnect packet or connection closure."""
         if self._disconnect_waiter is not None:
             return await self._disconnect_waiter
         return None
@@ -70,16 +79,18 @@ class BrokerProtocolHandler(ProtocolHandler):
         pass
 
     def handle_read_timeout(self) -> None:
-        if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
-            self._disconnect_waiter.set_result(None)
+        pass
 
     async def handle_disconnect(self, disconnect: DisconnectPacket | None) -> None:
+        """Handle a disconnect packet and notify the disconnect waiter."""
         self.logger.debug("Client disconnecting")
         if self._disconnect_waiter and not self._disconnect_waiter.done():
-            self.logger.debug(f"Setting waiter result to {disconnect!r}")
+            self.logger.debug(f"Setting disconnect waiter result to {disconnect!r}")
             self._disconnect_waiter.set_result(disconnect)
+        self._disconnect_waiter = None  # Reset the disconnect waiter to avoid reuse
 
     async def handle_connection_closed(self) -> None:
+        """Handle connection closure and notify the disconnect waiter."""
         await self.handle_disconnect(None)
 
     async def handle_connect(self, connect: ConnectPacket) -> None:
