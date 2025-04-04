@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 version = "0.11.0-beta4"
-requires-python = ">=3.12.0"
+requires-python = ">=3.13.0"
 readme = "README.rst"
 license = { text = "MIT" }
 

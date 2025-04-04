@@ -8,49 +8,42 @@ The following is a set of guidelines for contributing to aMQTT on GitHub. These 
 
 ### Requirements
 
-1. python installed (at least one version, for developers it might be helpful to have multiple versions, e.g. 3.7 and 3.9 installed for testing purposes)
-2. [poetry](https://python-poetry.org/docs/#installation) installed
+1. python installed (at least one version, for developers it might be helpful to have multiple versions, e.g. 3.13 installed for testing purposes)
+2. [uv](https://docs.astral.sh/uv/guides/install-python/) installed
 
 ### Testing the newest development version
 
-Poetry will create a virtual environment for you
+Create virtual environment with `UV`
+
+```sh
+uv venv --python 3.13.0
+```
 
 Install:
 
 ```sh
-poetry install --no-dev
+uv sync --no-dev
 ```
 
 Usage:
 
 ```sh
-poetry run amqtt
-poetry run amqtt_pub
-poetry run amqtt_sub
+uv run amqtt
+uv run amqtt_pub
+uv run amqtt_sub
 ```
-
-Or you can enter the virtual environment via:
-
-```sh
-poetry shell
-```
-
-And then run the commands without prefixing them with `poetry run`
 
 ### Setup development tools
 
 Install with:
 
 ```sh
-poetry install
+uv sync
 ```
 
 This will install all dependencies needed for development.
-A virtual environment will be created and can be entered with `poetry shell`.
 
 Afterwards you can use `pytest` etc.
-
-If you have multiple python installations you can choose which one to use with poetry with `poetry env`, this is helpful for switching between python versions for testing.
 
 ## Testing
 
@@ -59,4 +52,4 @@ If you encounter a bug when using aMQTT which you then resolve, please reproduce
 
 ## Style and linting
 
-We use `black` at default settings along with `flake8`. To avoid repeated pushes to satisfy our CI linter, you can use [pre-commit](https://pre-commit.com). Install the necessary hooks with `pre-commit install`.
+We use `ruff` at default settings. To avoid repeated pushes to satisfy our CI linter, you can use [pre-commit](https://pre-commit.com). Install the necessary hooks with `pre-commit install`.
