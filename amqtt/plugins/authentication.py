@@ -5,6 +5,8 @@ from passlib.apps import custom_app_context as pwd_context
 from amqtt.broker import BrokerContext
 from amqtt.session import Session
 
+_PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
+
 
 class BaseAuthPlugin:
     """Base class for authentication plugins."""
@@ -66,7 +68,7 @@ class FileAuthPlugin(BaseAuthPlugin):
                     line = _line.strip()
                     if line and not line.startswith("#"):  # Skip empty lines and comments
                         parts = line.split(":", maxsplit=1)
-                        if len(parts) == 2:
+                        if len(parts) == _PARTS_EXPECTED_LENGTH:
                             username, pwd_hash = parts
                             self._users[username] = pwd_hash
                             self.context.logger.debug(f"User '{username}' loaded")

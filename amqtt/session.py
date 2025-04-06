@@ -33,7 +33,9 @@ class ApplicationMessage:
 
     def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
         self.packet_id: int | None = packet_id
-        """ Publish message packet identifier <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718025>_"""
+        """ Publish message packet identifier
+            <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718025>_
+        """
 
         self.topic: str = topic
         """ Publish message topic"""
@@ -81,6 +83,12 @@ class ApplicationMessage:
         return PublishPacket.build(self.topic, self.data, self.packet_id, dup, self.qos, self.retain)
 
     def __eq__(self, other: object) -> bool:
+        """Compare two ApplicationMessage instances based on their packet_id.
+
+        This method is used to check if two messages are the same based on their packet_id.
+        :param other: The other ApplicationMessage instance to compare with.
+        :return: True if the packet_id of both messages are equal, False otherwise.
+        """
         if not isinstance(other, ApplicationMessage):
             return False
         return self.packet_id == other.packet_id
@@ -196,17 +204,32 @@ class Session:
         return self.retained_messages.qsize()
 
     def __repr__(self) -> str:
+        """Return a string representation of the session.
+
+        This method is used for debugging and logging purposes.
+        It includes the client ID and the current state of the session.
+        """
         return type(self).__name__ + f"(clientId={self.client_id}, state={self.transitions.state})"
 
     def __getstate__(self) -> dict[str, Any]:
+        """Return the state of the session for pickling.
+
+        This method is called when pickling the session object.
+        It returns a dictionary containing the session's state, excluding
+        unpicklable entries.
+        """
         state = self.__dict__.copy()
         # Remove the unpicklable entries.
-        # del state['transitions']
         del state["retained_messages"]
         del state["delivered_message_queue"]
         return state
 
     def __setstate__(self, state: dict[str, Any]) -> None:
+        """Restore the session from its state.
+
+        This method is called when unpickling the session object.
+        It restores the session's state and reinitializes the queues.
+        """
         self.__dict__.update(state)
         self.retained_messages = Queue()
         self.delivered_message_queue = Queue()
@@ -219,6 +242,7 @@ class Session:
             self.delivered_message_queue.get_nowait()
 
     def __eq__(self, other: object) -> bool:
+        """Compare two Session instances based on their client_id."""
         if not isinstance(other, Session):
             return False
         return self.client_id == other.client_id

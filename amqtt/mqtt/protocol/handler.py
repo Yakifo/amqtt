@@ -506,8 +506,7 @@ class ProtocolHandler:
                     task = asyncio.create_task(self.handle_disconnect(packet))
                 elif packet.fixed_header.packet_type == CONNECT and isinstance(packet, ConnectPacket):
                     # TODO: why is this not like all other inside create_task?
-                    await self.handle_connect(packet)
-                    # task = asyncio.create_task(self.handle_connect(packet))
+                    await self.handle_connect(packet)  # task = asyncio.create_task(self.handle_connect(packet))
                 if task:
                     running_tasks.append(task)
             except MQTTError:

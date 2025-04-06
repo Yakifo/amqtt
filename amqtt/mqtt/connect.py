@@ -35,6 +35,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
         self.keep_alive = keep_alive
 
     def __repr__(self) -> str:
+        """Return a string representation of the ConnectVariableHeader object."""
         return (
             f"ConnectVariableHeader(proto_name={self.proto_name}, proto_level={self.proto_level},"
             f" flags={hex(self.flags)}, keepalive={self.keep_alive})"
@@ -50,7 +51,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
         return bool(self.flags & mask)
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader) -> Self:
+    async def from_stream(cls, reader: ReaderAdapter, _: MQTTFixedHeader) -> Self:
         #  protocol name
         protocol_name = await decode_string(reader)
 
@@ -167,6 +168,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         self.password = password
 
     def __repr__(self) -> str:
+        """Return a string representation of the ConnectPayload object."""
         return (
             f"ConnectVariableHeader(client_id={self.client_id}, will_topic={self.will_topic},"
             f"will_message={self.will_message!r}, username={self.username}, password={self.password})"
@@ -176,7 +178,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
     async def from_stream(
         cls,
         reader: StreamReader | ReaderAdapter,
-        fixed_header: MQTTFixedHeader | None,
+        _: MQTTFixedHeader | None,
         variable_header: ConnectVariableHeader | None,
     ) -> Self:
         payload = cls()

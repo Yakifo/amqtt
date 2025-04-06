@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    """Run the MQTT broker."""
     arguments = docopt(__doc__, version=amqtt.__version__)
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 

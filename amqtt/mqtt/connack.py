@@ -22,7 +22,7 @@ class ConnackVariableHeader(MQTTVariableHeader):
         self.return_code = return_code
 
     @classmethod
-    async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader | None) -> Self:
+    async def from_stream(cls, reader: ReaderAdapter, _: MQTTFixedHeader | None) -> Self:
         data = await read_or_raise(reader, 2)
         session_parent = data[0] & 0x01
         return_code = bytes_to_int(data[1])
@@ -37,6 +37,7 @@ class ConnackVariableHeader(MQTTVariableHeader):
         return out
 
     def __repr__(self) -> str:
+        """Return a string representation of the ConnackVariableHeader object."""
         return f"{type(self).__name__}(session_parent={hex(self.session_parent or 0)}, return_code={hex(self.return_code or 0)})"
 
 

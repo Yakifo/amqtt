@@ -20,6 +20,7 @@ def format_client_message(
     address: str | None = None,
     port: int | None = None,
 ) -> str:
+    """Format a client message for logging."""
     if session:
         return f"(client id={session.client_id})"
     if address is not None and port is not None:

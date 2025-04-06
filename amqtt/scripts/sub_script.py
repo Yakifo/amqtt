@@ -64,12 +64,13 @@ def _get_qos(arguments: dict[str, Any]) -> int:
 def _get_extra_headers(arguments: dict[str, Any]) -> dict[str, Any]:
     try:
         extra_headers: dict[str, Any] = json.loads(arguments["--extra-headers"])
-        return extra_headers
     except (json.JSONDecodeError, TypeError):
         return {}
+    return extra_headers
 
 
 async def do_sub(client: MQTTClient, arguments: dict[str, Any]) -> None:
+    """Perform the subscription."""
     try:
         logger.info(f"{client.client_id} Connecting to broker")
 
@@ -112,6 +113,7 @@ async def do_sub(client: MQTTClient, arguments: dict[str, Any]) -> None:
 
 
 def main() -> None:
+    """Run the MQTT subscriber."""
     arguments = docopt(__doc__, version=amqtt.__version__)
 
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"

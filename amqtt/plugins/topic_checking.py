@@ -36,9 +36,6 @@ class TopicTabooPlugin(BaseTopicPlugin):
 
 
 class TopicAccessControlListPlugin(BaseTopicPlugin):
-    # def __init__(self, context: BaseContext) -> None:
-    #     super().__init__(context)
-
     @staticmethod
     def topic_ac(topic_requested: str, topic_allowed: str) -> bool:
         req_split = topic_requested.split("/")

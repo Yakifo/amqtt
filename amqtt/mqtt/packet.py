@@ -100,6 +100,7 @@ class MQTTFixedHeader:
             return None
 
     def __repr__(self) -> str:
+        """Return a string representation of the MQTTFixedHeader object."""
         return f"{self.__class__.__name__}(packet_type={self.packet_type}, flags={self.flags}, length={self.remaining_length})"
 
 
@@ -140,12 +141,13 @@ class PacketIdVariableHeader(MQTTVariableHeader):
     async def from_stream(
         cls: type[Self],
         reader: ReaderAdapter,
-        fixed_header: MQTTFixedHeader | None = None,
+        _: MQTTFixedHeader | None = None,
     ) -> Self:
         packet_id = await decode_packet_id(reader)
         return cls(packet_id)
 
     def __repr__(self) -> str:
+        """Return a string representation of the PacketIdVariableHeader object."""
         return f"{self.__class__.__name__}(packet_id={self.packet_id})"
 
 
@@ -237,6 +239,7 @@ class MQTTPacket[_VH: MQTTVariableHeader | None, _P: MQTTPayload[MQTTVariableHea
         return len(self.to_bytes())
 
     def __repr__(self) -> str:
+        """Return a string representation of the packet."""
         return (
             f"{self.__class__.__name__}(ts={self.protocol_ts}, "
             f"fixed={self.fixed_header}, variable={self.variable_header}, payload={self.payload})"

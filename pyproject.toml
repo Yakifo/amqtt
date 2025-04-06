@@ -102,25 +102,18 @@ extend-select = [
 ]
 
 ignore = [
-  "ERA001",  # Checks for commented-out Python code.
-  "FBT001",  # Checks for the use of boolean positional arguments in function definitions.
-  "FBT002",  # Checks for the use of boolean positional arguments in function definitions.
-  "G004",    # Logging statement uses f-string
-  "TRY300",  # Checks for return statements in try blocks.
-  "D100",    # Missing docstring in public module
-  "D101",    # Missing docstring in public class
-  "D102",    # Missing docstring in public method
-  "D103",    # Missing docstring in public function
-  "D105",    # Missing docstring in magic method
-  "D107",    # Missing docstring in `__init__`
-  "FIX002",  # Checks for "TODO" comments.
-  "TD002",   # Checks that a TODO comment includes an author.
-  "TD003",   # Checks that a TODO comment is associated with a link to a relevant issue or ticket.
-  "SLF001",  # Private member accessed
-  "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
-  "ARG002",  # Unused method argument
-  "ARG003",  # Unused class method argument
-  "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
+  "FBT001", # Checks for the use of boolean positional arguments in function definitions.
+  "FBT002", # Checks for the use of boolean positional arguments in function definitions.
+  "G004",   # Logging statement uses f-string
+  "D100",   # Missing docstring in public module
+  "D101",   # Missing docstring in public class
+  "D102",   # Missing docstring in public method
+  "D107",   # Missing docstring in `__init__`
+  "FIX002", # Checks for "TODO" comments.
+  "TD002",  # TODO Missing author.
+  "TD003",  # TODO Missing issue link for this TODO.
+  "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+  "ARG002", # Unused method argument
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -194,29 +187,21 @@ good-names = ["i", "j", "k", "e", "ex", "f", "_", "T", "x", "y", "id", "tg"]
 # duplicate-code - unavoidable
 # too-many-* - are not enforced for the sake of readability
 disable = [
+  "broad-exception-caught",        # TODO: improve later
   "duplicate-code",
+  "fixme",
+  "invalid-name",
+  "line-too-long",
+  "logging-fstring-interpolation",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+  "protected-access",
+  "redefined-slots-in-subclass",
   "too-few-public-methods",
   "too-many-arguments",
   "too-many-instance-attributes",
-  "too-many-locals",
-  "too-many-ancestors",
-  "logging-fstring-interpolation",
-  "broad-exception-caught",
-  "broad-exception-raised",
-  "fixme",
-  "import-error",
-  "missing-module-docstring",
-  "missing-function-docstring",
-  "missing-class-docstring",
   "unused-argument",
-  "protected-access",
-  "line-too-long",
-  "too-many-branches",
-  "too-many-statements",
-  "too-many-nested-blocks",
-  "too-many-public-methods",
-  "invalid-name",
-  "redefined-slots-in-subclass",
 ]
 
 [tool.pylint.REPORTS]
@@ -233,12 +218,14 @@ max-nested-blocks = 5
 never-returning-functions = ["sys.exit", "argparse.parse_error"]
 
 [tool.pylint.DESIGN]
-max-branches = 20             # too-many-branches
+max-branches = 32             # too-many-branches
+max-locals = 20               # too-many-locals
+max-module-lines = 1500       # too-many-lines
 max-parents = 10              # too-many-parents
 max-positional-arguments = 10 # too-many-positional-arguments
+max-public-methods = 25       # too-many-public-methods
 max-returns = 7               # too-many-returns
-max-statements = 61           # too-many-statements
-max-module-lines = 1500       # too-many-lines
+max-statements = 90           # too-many-statements
 
 # ---------------------------------- COVERAGE ----------------------------------
 [tool.coverage.run]

@@ -95,12 +95,22 @@ async def decode_data_with_length(reader: ReaderAdapter | asyncio.StreamReader) 
 
 
 def encode_string(string: str) -> bytes:
+    """Encode a string with its length as prefix.
+
+    :param string: string to encode
+    :return: string with length prefix.
+    """
     data = string.encode(encoding="utf-8")
     data_length = len(data)
     return int_to_bytes(data_length, 2) + data
 
 
 def encode_data_with_length(data: bytes) -> bytes:
+    """Encode data with its length as prefix.
+
+    :param data: data to encode
+    :return: data with length prefix.
+    """
     data_length = len(data)
     return int_to_bytes(data_length, 2) + data
 

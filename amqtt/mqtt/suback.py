@@ -20,6 +20,7 @@ class SubackPayload(MQTTPayload[MQTTVariableHeader]):
         self.return_codes = return_codes or []
 
     def __repr__(self) -> str:
+        """Return a string representation of the SubackPayload object."""
         return f"{type(self).__name__}(return_codes={self.return_codes!r})"
 
     def to_bytes(

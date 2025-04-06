@@ -101,8 +101,6 @@ class ClientProtocolHandler(ProtocolHandler):
             self.logger.warning(f"Invalid state while scheduling ping task: {e!r}")
         except asyncio.CancelledError as e:
             self.logger.info(f"Ping task was cancelled: {e!r}")
-        # except Exception as e:
-        #     self.logger.debug(f"Exception ignored in ping task: {e!r}")
 
     def handle_read_timeout(self) -> None:
         pass

@@ -26,6 +26,8 @@ from amqtt.utils import format_client_message
 
 from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
+_MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
+
 
 class Subscription:
     def __init__(self, packet_id: int, topics: list[tuple[str, int]]) -> None:
@@ -191,7 +193,7 @@ class BrokerProtocolHandler(ProtocolHandler):
             remote_address, remote_port = remote_info
             connack = None
             error_msg = None
-            if connect.proto_level != 4:
+            if connect.proto_level != _MQTT_PROTOCOL_LEVEL_SUPPORTED:
                 # only MQTT 3.1.1 supported
                 error_msg = (
                     f"Invalid protocol from {format_client_message(address=remote_address, port=remote_port)}:"

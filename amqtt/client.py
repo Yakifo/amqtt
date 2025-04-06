@@ -219,8 +219,6 @@ class MQTTClient:
         reconnect_retries = self.config.get("reconnect_retries", 5)
         nb_attempt = 1
 
-        # await asyncio.sleep(1)
-
         while True:
             try:
                 self.logger.debug(f"Reconnect attempt {nb_attempt}...")
@@ -383,7 +381,6 @@ class MQTTClient:
         done, _ = await asyncio.wait(
             [deliver_task],
             return_when=asyncio.FIRST_EXCEPTION,
-            # return_when=asyncio.FIRST_COMPLETED,
             timeout=timeout_duration,
         )
 
@@ -505,12 +502,12 @@ class MQTTClient:
             self.session.transitions.connect()
             self._connected_state.set()
             self.logger.debug(f"Connected to {self.session.remote_address}:{self.session.remote_port}")
-            return return_code
 
         except (InvalidURI, InvalidHandshake, ProtocolHandlerError, ConnectionError, OSError) as e:
             self.logger.warning(f"Connection failed : {self.session.broker_uri} : {e}")
             self.session.transitions.disconnect()
             raise ConnectError(e) from e
+        return return_code
 
     async def handle_connection_close(self) -> None:
         """Handle disconnection from the broker."""

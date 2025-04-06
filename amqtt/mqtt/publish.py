@@ -19,6 +19,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         self.packet_id = packet_id
 
     def __repr__(self) -> str:
+        """Return a string representation of the PublishVariableHeader object."""
         return f"{type(self).__name__}(topic={self.topic_name}, packet_id={self.packet_id})"
 
     def to_bytes(self) -> bytearray:
@@ -71,6 +72,7 @@ class PublishPayload(MQTTPayload[MQTTVariableHeader]):
         return cls(data)
 
     def __repr__(self) -> str:
+        """Return a string representation of the PublishPayload object."""
         return f"{type(self).__name__}(data={repr(self.data)!r})"
 
 

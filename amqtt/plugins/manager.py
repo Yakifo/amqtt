@@ -21,6 +21,11 @@ plugins_manager: dict[str, "PluginManager"] = {}
 
 
 def get_plugin_manager(namespace: str) -> "PluginManager | None":
+    """Get the plugin manager for a given namespace.
+
+    :param namespace: The namespace of the plugin manager to retrieve.
+    :return: The plugin manager for the given namespace, or None if it doesn't exist.
+    """
     return plugins_manager.get(namespace)
 
 

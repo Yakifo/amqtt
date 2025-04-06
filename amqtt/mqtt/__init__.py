@@ -56,9 +56,19 @@ packet_dict: dict[int, type[_P]] = {
 }
 
 
-def packet_class(
-    fixed_header: MQTTFixedHeader,
-) -> type[_P]:
+def packet_class(fixed_header: MQTTFixedHeader) -> type[_P]:
+    """Return the packet class for a given fixed header.
+
+    :param fixed_header: The fixed header of the packet.
+    :type
+        fixed_header: MQTTFixedHeader
+    :return: The packet class for the given fixed header.
+    :rtype: type[MQTTPacket]
+    :raises AMQTTError: If the packet type is not recognized.
+    """
+    if fixed_header.packet_type not in packet_dict:
+        msg = f"Unexpected packet Type '{fixed_header.packet_type}'"
+        raise AMQTTError(msg)
     try:
         return packet_dict[fixed_header.packet_type]
     except KeyError as e:

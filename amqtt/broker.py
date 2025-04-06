@@ -124,16 +124,16 @@ class BrokerContext(BaseContext):
 
     @property
     def sessions(self) -> Generator[Session]:
-        for session in self._broker_instance._sessions.values():
+        for session in self._broker_instance.sessions.values():
             yield session[0]
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
-        return self._broker_instance._retained_messages
+        return self._broker_instance.retained_messages
 
     @property
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
-        return self._broker_instance._subscriptions
+        return self._broker_instance.subscriptions
 
 
 class Broker:
@@ -274,44 +274,6 @@ class Broker:
 
             self.logger.info(f"Listener '{listener_name}' bind to {listener['bind']} (max_connections={max_connections})")
 
-    @classmethod
-    def _split_bindaddr_port(cls, port_str: str, default_port: int) -> tuple[str | None, int]:
-        """Split an address:port pair into separate IP address and port. with IPv6 special-case handling.
-
-        - Address can be specified using one of the following methods:
-        - empty string      - all interfaces default port
-        - 1883              - Port number only (listen all interfaces)
-        - :1883             - Port number only (listen all interfaces)
-        - 0.0.0.0:1883      - IPv4 address
-        - [::]:1883         - IPv6 address
-        """
-
-        def _parse_port(port_str: str) -> int:
-            port_str = port_str.removeprefix(":")
-
-            if not port_str:
-                return default_port
-
-            return int(port_str)
-
-        if port_str.startswith("["):  # IPv6 literal
-            try:
-                addr_end = port_str.index("]")
-            except ValueError as e:
-                msg = "Expecting '[' to be followed by ']'"
-                raise ValueError(msg) from e
-
-            return (port_str[0 : addr_end + 1], _parse_port(port_str[addr_end + 1 :]))
-
-        if ":" in port_str:
-            address, port_str = port_str.rsplit(":", 1)
-            return (address or None, _parse_port(port_str))
-
-        try:
-            return (None, _parse_port(port_str))
-        except ValueError:
-            return (port_str, default_port)
-
     def _create_ssl_context(self, listener: dict[str, Any]) -> ssl.SSLContext:
         """Create an SSL context for a listener."""
         try:
@@ -323,13 +285,13 @@ class Broker:
             )
             ssl_context.load_cert_chain(listener["certfile"], listener["keyfile"])
             ssl_context.verify_mode = ssl.CERT_OPTIONAL
-            return ssl_context
         except KeyError as ke:
             msg = f"'certfile' or 'keyfile' configuration parameter missing: {ke}"
             raise BrokerError(msg) from ke
         except FileNotFoundError as fnfe:
             msg = f"Can't read cert files '{listener['certfile']}' or '{listener['keyfile']}' : {fnfe}"
             raise BrokerError(msg) from fnfe
+        return ssl_context
 
     async def _create_server_instance(
         self,
@@ -466,7 +428,9 @@ class Broker:
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:
-            self.logger.error(f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}")  # noqa: TRY400 # cannot replace with exception else pytest fails
+            self.logger.error(  # noqa: TRY400 # cannot replace with exception else pytest fails
+                f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}",
+            )
             raise NoDataError(exc) from exc
 
         if client_session.clean_session:
@@ -697,11 +661,12 @@ class Broker:
                 self.retain_message(client_session, app_message.topic, app_message.data, app_message.qos)
         return True
 
-    # async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
-    #     """Create a BrokerProtocolHandler and attach to a session."""
-    #     handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop)
-    #     handler.attach(session, reader, writer)
-    #     return handler
+    # TODO: Remove this method, not found it used
+    async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
+        """Create a BrokerProtocolHandler and attach to a session."""
+        handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop)
+        handler.attach(session, reader, writer)
+        return handler
 
     async def _stop_handler(self, handler: BrokerProtocolHandler) -> None:
         """Stop a running handler and detach if from the session."""
@@ -1030,3 +995,53 @@ class Broker:
         if client_id:
             return self._sessions.get(client_id, (None, None))[1]
         return None
+
+    @classmethod
+    def _split_bindaddr_port(cls, port_str: str, default_port: int) -> tuple[str | None, int]:
+        """Split an address:port pair into separate IP address and port. with IPv6 special-case handling.
+
+        - Address can be specified using one of the following methods:
+        - empty string      - all interfaces default port
+        - 1883              - Port number only (listen all interfaces)
+        - :1883             - Port number only (listen all interfaces)
+        - 0.0.0.0:1883      - IPv4 address
+        - [::]:1883         - IPv6 address
+        """
+
+        def _parse_port(port_str: str) -> int:
+            port_str = port_str.removeprefix(":")
+
+            if not port_str:
+                return default_port
+
+            return int(port_str)
+
+        if port_str.startswith("["):  # IPv6 literal
+            try:
+                addr_end = port_str.index("]")
+            except ValueError as e:
+                msg = "Expecting '[' to be followed by ']'"
+                raise ValueError(msg) from e
+
+            return (port_str[0 : addr_end + 1], _parse_port(port_str[addr_end + 1 :]))
+
+        if ":" in port_str:
+            address, port_str = port_str.rsplit(":", 1)
+            return (address or None, _parse_port(port_str))
+
+        try:
+            return (None, _parse_port(port_str))
+        except ValueError:
+            return (port_str, default_port)
+
+    @property
+    def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
+        return self._subscriptions
+
+    @property
+    def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
+        return self._retained_messages
+
+    @property
+    def sessions(self) -> dict[str, tuple[Session, BrokerProtocolHandler]]:
+        return self._sessions

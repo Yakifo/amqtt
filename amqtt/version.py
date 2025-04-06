@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 def get_version() -> str:
+    """Return the version of the amqtt package.
+
+    This function is deprecated. Use amqtt.__version__ instead.
+    """
     warnings.warn(
         "amqtt.version.get_version() is deprecated, use amqtt.__version__ instead",
         stacklevel=3,  # Adjusted stack level to better reflect the caller

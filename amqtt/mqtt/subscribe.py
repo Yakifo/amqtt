@@ -51,6 +51,7 @@ class SubscribePayload(MQTTPayload[MQTTVariableHeader]):
         return cls(topics)
 
     def __repr__(self) -> str:
+        """Return a string representation of the SubscribePayload object."""
         return type(self).__name__ + f"(topics={self.topics!r})"
 
 
