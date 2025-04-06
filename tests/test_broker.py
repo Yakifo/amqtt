@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import socket
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import psutil
 import pytest
@@ -25,6 +25,7 @@ from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.disconnect import DisconnectPacket
+from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.mqtt.pubcomp import PubcompPacket
 from amqtt.mqtt.publish import PublishPacket
 from amqtt.mqtt.pubrec import PubrecPacket
@@ -677,7 +678,7 @@ def test_matches_multi_level_wildcard(broker):
         "sport/tennis",
         "sport/tennis/",
     ]:
-        assert not broker.matches(bad_topic, test_filter)
+        assert not broker._matches(bad_topic, test_filter)
 
     for good_topic in [
         "sport/tennis/player1",
@@ -685,7 +686,7 @@ def test_matches_multi_level_wildcard(broker):
         "sport/tennis/player1/ranking",
         "sport/tennis/player1/score/wimbledon",
     ]:
-        assert broker.matches(good_topic, test_filter)
+        assert broker._matches(good_topic, test_filter)
 
 
 def test_matches_single_level_wildcard(broker):
@@ -696,37 +697,36 @@ def test_matches_single_level_wildcard(broker):
         "sport/tennis/player1/",
         "sport/tennis/player1/ranking",
     ]:
-        assert not broker.matches(bad_topic, test_filter)
+        assert not broker._matches(bad_topic, test_filter)
 
     for good_topic in [
         "sport/tennis/",
         "sport/tennis/player1",
         "sport/tennis/player2",
     ]:
-        assert broker.matches(good_topic, test_filter)
+        assert broker._matches(good_topic, test_filter)
 
 
-# @pytest.mark.asyncio
-# async def test_broker_broadcast_cancellation(broker):
-#     topic = "test"
-#     data = b"data"
-#     qos = QOS_0
+@pytest.mark.asyncio
+async def test_broker_broadcast_cancellation(broker):
+    topic = "test"
+    data = b"data"
+    qos = QOS_0
 
-#     sub_client = MQTTClient()
-#     await sub_client.connect("mqtt://127.0.0.1")
-#     await sub_client.subscribe([(topic, qos)])
+    sub_client = MQTTClient()
+    await sub_client.connect("mqtt://127.0.0.1")
+    await sub_client.subscribe([(topic, qos)])
 
-#     with patch.object(BrokerProtocolHandler, "mqtt_publish", side_effect=asyncio.CancelledError) as mocked_mqtt_publish:
-#         await _client_publish(topic, data, qos)
+    with patch.object(BrokerProtocolHandler, "mqtt_publish", side_effect=asyncio.CancelledError) as mocked_mqtt_publish:
+        await _client_publish(topic, data, qos)
 
-#         # Second publish triggers the awaiting of first `mqtt_publish` task
-#         await _client_publish(topic, data, qos)
-#         await asyncio.sleep(0.01)
+        # Second publish triggers the awaiting of first `mqtt_publish` task
+        await _client_publish(topic, data, qos)
+        await asyncio.sleep(0.01)
 
-#         # `assert_awaited` does not exist in Python before `3.8`
-#         mocked_mqtt_publish.assert_awaited()
+        mocked_mqtt_publish.assert_awaited()
 
-#     # Ensure broadcast loop is still functional and can deliver the message
-#     await _client_publish(topic, data, qos)
-#     message = await asyncio.wait_for(sub_client.deliver_message(), timeout_duration=1)
-#     assert message
+    # Ensure broadcast loop is still functional and can deliver the message
+    await _client_publish(topic, data, qos)
+    message = await asyncio.wait_for(sub_client.deliver_message(), timeout=1)
+    assert message

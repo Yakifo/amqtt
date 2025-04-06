@@ -27,8 +27,6 @@ def get_plugin_manager(namespace: str) -> "PluginManager | None":
 class BaseContext:
     def __init__(self) -> None:
         self.loop: asyncio.AbstractEventLoop | None = None
-        # TODO: change this usage
-        # self.logger: logging.Logger | None = None
         self.logger: logging.Logger = _LOGGER
         self.config: dict[str, Any] | None = None
 
@@ -41,16 +39,11 @@ class PluginManager:
     """
 
     def __init__(self, namespace: str, context: BaseContext | None, loop: asyncio.AbstractEventLoop | None = None) -> None:
-        # TODO: check how to update loop usage best
-        # self._loop = loop if loop is not None else asyncio.get_event_loop_policy().get_event_loop()
-        if loop is None:
-            try:
-                self._loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self._loop = asyncio.new_event_loop()
-                # asyncio.set_event_loop(self._loop)
-        else:
-            self._loop = loop
+        try:
+            self._loop = loop if loop is not None else asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
 
         self.logger = logging.getLogger(namespace)
         self.context = context if context is not None else BaseContext()

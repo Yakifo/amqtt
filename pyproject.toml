@@ -158,7 +158,6 @@ timeout = 10
 
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]
-# mypy_path = "amqtt"
 exclude = ["^tests/.*", "^docs/.*", "^samples/.*"]
 follow_imports = "silent"
 show_error_codes = true
@@ -235,10 +234,11 @@ never-returning-functions = ["sys.exit", "argparse.parse_error"]
 
 [tool.pylint.DESIGN]
 max-branches = 20             # too-many-branches
-max-parents = 10
+max-parents = 10              # too-many-parents
 max-positional-arguments = 10 # too-many-positional-arguments
-max-returns = 7
+max-returns = 7               # too-many-returns
 max-statements = 61           # too-many-statements
+max-module-lines = 1500       # too-many-lines
 
 # ---------------------------------- COVERAGE ----------------------------------
 [tool.coverage.run]

@@ -67,15 +67,11 @@ class ProtocolHandler:
         self.writer: WriterAdapter | None = None
         self.plugins_manager: PluginManager = plugins_manager
 
-        # TODO: check how to update loop usage best
-        self._loop = loop if loop is not None else asyncio.get_event_loop_policy().get_event_loop()
-        # try:
-        #     # Use the currently running loop if available
-        #     self._loop = loop if loop is not None else asyncio.get_running_loop()
-        # except RuntimeError:
-        #     # If no running loop is found, create a new one
-        #     self._loop = asyncio.new_event_loop()
-        #     asyncio.set_event_loop(self._loop)
+        try:
+            self._loop = loop if loop is not None else asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
 
         self._reader_task: asyncio.Task[None] | None = None
         self._keepalive_task: asyncio.TimerHandle | None = None
