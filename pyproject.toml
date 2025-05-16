@@ -109,6 +109,8 @@ ignore = [
   "D101",   # Missing docstring in public class
   "D102",   # Missing docstring in public method
   "D107",   # Missing docstring in `__init__`
+  "D203",   # Incorrect blank line before class (mutually exclusive D211)
+  "D213",   # Multi-line summary second line (mutually exclusive D212)
   "FIX002", # Checks for "TODO" comments.
   "TD002",  # TODO Missing author.
   "TD003",  # TODO Missing issue link for this TODO.

@@ -93,6 +93,7 @@ class PluginManager:
 
     def get_plugin(self, name: str) -> Plugin | None:
         """Get a plugin by its name from the plugins loaded for the current namespace.
+
         :param name:
         :return:
         """
