@@ -823,6 +823,7 @@ class Broker:
                     break
         except KeyError:
             self.logger.debug(f"Unsubscription on topic '{a_filter}' for client {format_client_message(session=session)}")
+
         return deleted
 
     async def _broadcast_loop(self) -> None:

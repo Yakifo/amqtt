@@ -88,7 +88,8 @@ class PluginManager:
             return Plugin(ep.name, ep, obj)
         except ImportError as ie:
             self.logger.warning(f"Plugin {ep!r} import failed: {ie}")
-            return None
+
+        return None
 
     def get_plugin(self, name: str) -> Plugin | None:
         """Get a plugin by its name from the plugins loaded for the current namespace.
