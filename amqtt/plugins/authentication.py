@@ -13,7 +13,7 @@ class BaseAuthPlugin:
 
     def __init__(self, context: BrokerContext) -> None:
         self.context = context
-        self.auth_config = self.context.config.get("auth") if self.context.config else None
+        self.auth_config = self.context.config.get("auth", None) if self.context.config else None
         if not self.auth_config:
             self.context.logger.warning("'auth' section not found in context configuration")
 

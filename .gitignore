@@ -30,7 +30,6 @@
 # PROJECT
 
 !pyproject.toml
-!.python-version
 !uv.lock
 
 !amqtt/

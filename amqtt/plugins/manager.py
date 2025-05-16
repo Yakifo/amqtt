@@ -81,6 +81,7 @@ class PluginManager:
             self.logger.debug(f" Loading plugin {ep!s}")
             plugin = ep.load()
             self.logger.debug(f" Initializing plugin {ep!s}")
+
             plugin_context = copy.copy(self.app_context)
             plugin_context.logger = self.logger.getChild(ep.name)
             obj = plugin(plugin_context)
