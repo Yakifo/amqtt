@@ -1,4 +1,9 @@
-import datetime
+try:
+    from datetime import datetime, UTC
+except ImportError:
+    from datetime import datetime, timezone
+    UTC = timezone.utc
+
 import logging
 from pathlib import Path
 import shutil
@@ -61,7 +66,7 @@ def get_git_changeset() -> str | None:
                 return None
 
             # Convert the timestamp to a datetime object
-            timestamp = datetime.datetime.fromtimestamp(int(timestamp_str), tz=datetime.UTC)
+            timestamp = datetime.fromtimestamp(int(timestamp_str), tz=UTC)
             return timestamp.strftime("%Y%m%d%H%M%S")
 
     except Exception:

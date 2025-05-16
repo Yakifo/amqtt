@@ -7,7 +7,7 @@ from functools import partial
 import logging
 import re
 import ssl
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeAlias
 
 from transitions import Machine, MachineError
 import websockets.asyncio.server
@@ -28,8 +28,8 @@ from amqtt.utils import format_client_message, gen_client_id
 
 from .plugins.manager import BaseContext, PluginManager
 
-type _CONFIG_LISTENER = dict[str, int | bool | dict[str, Any]]
-type _BROADCAST = dict[str, Session | str | bytes | int | None]
+_CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
+_BROADCAST: TypeAlias = dict[str, Session | str | bytes | int | None]
 
 _defaults: _CONFIG_LISTENER = {
     "timeout-disconnect-delay": 2,

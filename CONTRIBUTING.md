@@ -1,4 +1,4 @@
-# Contributing to aMQTT
+    \# Contributing to aMQTT
 
 :+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
 

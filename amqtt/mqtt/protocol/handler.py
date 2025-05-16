@@ -1,5 +1,18 @@
 import asyncio
-from asyncio import InvalidStateError, QueueFull, QueueShutDown
+try:
+    from asyncio import InvalidStateError, QueueFull, QueueShutDown
+except ImportError:
+    """Fallback for Python < 3.12"""
+    class InvalidStateError(Exception):
+        pass
+
+    class QueueFull(Exception):
+        pass
+
+    class QueueShutDown(Exception):
+        pass
+
+
 import collections
 import itertools
 import logging

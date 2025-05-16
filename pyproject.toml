@@ -15,8 +15,8 @@ classifiers = [
   "Topic :: Internet",
 ]
 
-version = "0.11.0-rc"
-requires-python = ">=3.13.0"
+version = "0.11.0-rc1"
+requires-python = ">=3.10.0"
 readme = "README.rst"
 license = { text = "MIT" }
 

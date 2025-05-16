@@ -1,7 +1,20 @@
 import asyncio
 from collections import deque
-from collections.abc import Buffer
-from datetime import UTC, datetime
+
+try:
+    from collections.abc import Buffer
+except ImportError:
+    from typing import Protocol, runtime_checkable
+    @runtime_checkable
+    class Buffer(Protocol):
+        def __buffer__(self, flags: int = ...) -> memoryview: ...
+
+try:
+    from datetime import datetime, UTC
+except ImportError:
+    from datetime import datetime, timezone
+    UTC = timezone.utc
+
 from typing import SupportsIndex, SupportsInt
 
 import amqtt

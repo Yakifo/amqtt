@@ -1,5 +1,4 @@
-from typing import Self
-
+from typing_extensions import Self
 from amqtt.errors import AMQTTError
 from amqtt.mqtt.packet import PUBREC, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
