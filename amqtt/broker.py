@@ -7,7 +7,7 @@ from functools import partial
 import logging
 import re
 import ssl
-from typing import Any, ClassVar, TypeAlias
+from typing import Any, ClassVar
 
 from transitions import Machine, MachineError
 import websockets.asyncio.server
@@ -824,20 +824,6 @@ class Broker:
         except KeyError:
             self.logger.debug(f"Unsubscription on topic '{a_filter}' for client {format_client_message(session=session)}")
         return deleted
-
-    def matches(self, topic, a_filter):
-        if "#" not in a_filter and "+" not in a_filter:
-            # if filter doesn't contain wildcard, return exact match
-            return a_filter == topic
-        else:
-            # else use regex
-            match_pattern = re.compile(
-                re.escape(a_filter)
-                .replace("\\#", "?.*")
-                .replace("\\+", "[^/]*")
-                .lstrip("?")
-            )
-            return match_pattern.fullmatch(topic)
 
     async def _broadcast_loop(self) -> None:
         """Run the main loop to broadcast messages."""
