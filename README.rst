@@ -28,11 +28,11 @@
     :target: https://pypi.org/project/amqtt/
     :alt: PyPI
 
-NOTE
-======
-
 
 WORK IN PROGRESS.
+=======
+`!!! MAINTAINERS WANTED !!! <https://github.com/Yakifo/amqtt/issues/163>`_ 
+
 
 aMQTT
 ======
