@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
 import asyncio
+
 try:
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 except ImportError:
     from datetime import datetime, timezone
     UTC = timezone.utc
 
 from struct import unpack
-from typing_extensions import TypeVar, Union, Generic, Self
+from typing import Generic
+from typing_extensions import Self, TypeVar
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.codecs_amqtt import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
@@ -159,7 +161,7 @@ class PacketIdVariableHeader(MQTTVariableHeader):
         return f"{self.__class__.__name__}(packet_id={self.packet_id})"
 
 
-_VH = TypeVar("_VH", bound=Union[MQTTVariableHeader, None])
+_VH = TypeVar("_VH", bound=MQTTVariableHeader | None)
 
 
 class MQTTPayload(Generic[_VH], ABC):
@@ -184,7 +186,7 @@ class MQTTPayload(Generic[_VH], ABC):
         pass
 
 
-_P = TypeVar("_P", bound=Union[MQTTPayload[MQTTVariableHeader], None])
+_P = TypeVar("_P", bound=MQTTPayload[MQTTVariableHeader] | None)
 
 
 class MQTTPacket(Generic[_VH, _P, _FH]):

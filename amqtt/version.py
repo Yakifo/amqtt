@@ -1,5 +1,5 @@
 try:
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 except ImportError:
     from datetime import datetime, timezone
     UTC = timezone.utc
