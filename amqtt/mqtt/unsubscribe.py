@@ -1,5 +1,6 @@
 from asyncio import StreamReader
 from typing_extensions import Self
+
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import decode_string, encode_string
 from amqtt.errors import AMQTTError, NoDataError

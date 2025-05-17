@@ -1,5 +1,6 @@
 import asyncio
 from typing_extensions import Self
+
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import bytes_to_int, int_to_bytes, read_or_raise
 from amqtt.errors import AMQTTError, NoDataError

@@ -1,15 +1,16 @@
 import asyncio
+
 try:
     from asyncio import InvalidStateError, QueueFull, QueueShutDown
 except ImportError:
     """Fallback for Python < 3.12"""
-    class InvalidStateError(Exception):
+    class InvalidStateError(Exception):  #  type: ignore[no-redef]
         pass
 
-    class QueueFull(Exception):
+    class QueueFull(Exception):  #  type: ignore[no-redef]  # noqa : N818
         pass
 
-    class QueueShutDown(Exception):
+    class QueueShutDown(Exception):  #  type: ignore[no-redef]  # noqa : N818
         pass
 
 

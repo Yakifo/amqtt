@@ -6,7 +6,7 @@ import copy
 from functools import wraps
 import logging
 import ssl
-from typing import TYPE_CHECKING, Any, cast, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 from urllib.parse import urlparse, urlunparse
 
 import websockets
