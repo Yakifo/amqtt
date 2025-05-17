@@ -233,7 +233,13 @@ class BrokerProtocolHandler(ProtocolHandler):
         incoming_session.password = connect.password
         incoming_session.remote_address = remote_address
         incoming_session.remote_port = remote_port
+
         incoming_session.keep_alive = max(connect.keep_alive, 0)
+
+        if connect.keep_alive > 0:
+            incoming_session.keep_alive = connect.keep_alive
+        else:
+            incoming_session.keep_alive = 0
 
         handler = cls(plugins_manager, loop=loop)
         return handler, incoming_session

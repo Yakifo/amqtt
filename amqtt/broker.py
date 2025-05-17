@@ -184,6 +184,7 @@ class Broker:
         self._tasks_queue: deque[asyncio.Task[OutgoingApplicationMessage]] = deque()
 
         # Initialize plugins manager
+
         context = BrokerContext(self)
         context.config = self.config
         namespace = plugin_namespace or "amqtt.broker.plugins"
@@ -822,11 +823,13 @@ class Broker:
                     break
         except KeyError:
             self.logger.debug(f"Unsubscription on topic '{a_filter}' for client {format_client_message(session=session)}")
+
         return deleted
 
     async def _broadcast_loop(self) -> None:
         """Run the main loop to broadcast messages."""
         running_tasks: deque[asyncio.Task[OutgoingApplicationMessage]] = self._tasks_queue
+
         try:
             while True:
                 while running_tasks and running_tasks[0].done():

@@ -81,13 +81,15 @@ class PluginManager:
             self.logger.debug(f" Loading plugin {ep!s}")
             plugin = ep.load()
             self.logger.debug(f" Initializing plugin {ep!s}")
+
             plugin_context = copy.copy(self.app_context)
             plugin_context.logger = self.logger.getChild(ep.name)
             obj = plugin(plugin_context)
             return Plugin(ep.name, ep, obj)
         except ImportError as ie:
             self.logger.warning(f"Plugin {ep!r} import failed: {ie}")
-            return None
+
+        return None
 
     def get_plugin(self, name: str) -> Plugin | None:
         """Get a plugin by its name from the plugins loaded for the current namespace.
