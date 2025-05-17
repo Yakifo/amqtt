@@ -31,7 +31,7 @@
 
 WORK IN PROGRESS.
 =======
-`!!! MAINTAINERS WANTED !!! <https://github.com/Yakifo/amqtt/issues/163>`_ 
+`!!! MAINTAINERS WANTED !!! <https://github.com/Yakifo/amqtt/issues/163>`_
 
 
 aMQTT
