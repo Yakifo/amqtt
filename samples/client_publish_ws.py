@@ -1,9 +1,8 @@
-import logging
 import asyncio
+import logging
 
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
-
 
 #
 # This sample shows how to publish messages to broker using different QOS
@@ -25,7 +24,7 @@ C = MQTTClient(config=config)
 # C = MQTTClient()
 
 
-async def test_coro():
+async def test_coro() -> None:
     await C.connect("wss://test.mosquitto.org:8081/", cafile="mosquitto.org.crt")
     tasks = [
         asyncio.ensure_future(C.publish("a/b", b"TEST MESSAGE WITH QOS_0")),

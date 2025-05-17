@@ -1,40 +1,44 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
-from amqtt.errors import AMQTTException
+"""INIT."""
+
+from typing import Any
+
+from amqtt.errors import AMQTTError
+from amqtt.mqtt.connack import ConnackPacket
+from amqtt.mqtt.connect import ConnectPacket
+from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.packet import (
-    CONNECT,
     CONNACK,
-    PUBLISH,
-    PUBACK,
-    PUBREC,
-    PUBREL,
-    PUBCOMP,
-    SUBSCRIBE,
-    SUBACK,
-    UNSUBSCRIBE,
-    UNSUBACK,
+    CONNECT,
+    DISCONNECT,
     PINGREQ,
     PINGRESP,
-    DISCONNECT,
+    PUBACK,
+    PUBCOMP,
+    PUBLISH,
+    PUBREC,
+    PUBREL,
+    SUBACK,
+    SUBSCRIBE,
+    UNSUBACK,
+    UNSUBSCRIBE,
     MQTTFixedHeader,
+    MQTTPacket,
 )
-from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.connack import ConnackPacket
-from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.pingreq import PingReqPacket
 from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.publish import PublishPacket
 from amqtt.mqtt.puback import PubackPacket
+from amqtt.mqtt.pubcomp import PubcompPacket
+from amqtt.mqtt.publish import PublishPacket
 from amqtt.mqtt.pubrec import PubrecPacket
 from amqtt.mqtt.pubrel import PubrelPacket
-from amqtt.mqtt.pubcomp import PubcompPacket
-from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.suback import SubackPacket
-from amqtt.mqtt.unsubscribe import UnsubscribePacket
+from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
+from amqtt.mqtt.unsubscribe import UnsubscribePacket
 
-packet_dict = {
+type _P = MQTTPacket[Any, Any, Any]
+
+packet_dict: dict[int, type[_P]] = {
     CONNECT: ConnectPacket,
     CONNACK: ConnackPacket,
     PUBLISH: PublishPacket,
@@ -52,9 +56,21 @@ packet_dict = {
 }
 
 
-def packet_class(fixed_header: MQTTFixedHeader):
+def packet_class(fixed_header: MQTTFixedHeader) -> type[_P]:
+    """Return the packet class for a given fixed header.
+
+    :param fixed_header: The fixed header of the packet.
+    :type
+        fixed_header: MQTTFixedHeader
+    :return: The packet class for the given fixed header.
+    :rtype: type[MQTTPacket]
+    :raises AMQTTError: If the packet type is not recognized.
+    """
+    if fixed_header.packet_type not in packet_dict:
+        msg = f"Unexpected packet Type '{fixed_header.packet_type}'"
+        raise AMQTTError(msg)
     try:
-        cls = packet_dict[fixed_header.packet_type]
-        return cls
-    except KeyError:
-        raise AMQTTException("Unexpected packet Type '%s'" % fixed_header.packet_type)
+        return packet_dict[fixed_header.packet_type]
+    except KeyError as e:
+        msg = f"Unexpected packet Type '{fixed_header.packet_type}'"
+        raise AMQTTError(msg) from e

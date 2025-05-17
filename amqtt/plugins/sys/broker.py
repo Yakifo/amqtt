@@ -1,14 +1,14 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
-from datetime import datetime
-from collections import deque
 import asyncio
+from collections import deque
+from collections.abc import Buffer
+from datetime import UTC, datetime
+from typing import SupportsIndex, SupportsInt
 
 import amqtt
-from amqtt.mqtt.packet import PUBLISH
-from amqtt.codecs import int_to_bytes_str
-
+from amqtt.broker import BrokerContext
+from amqtt.codecs_amqtt import int_to_bytes_str
+from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
+from amqtt.mqtt.subscribe import SubscribePayload
 
 DOLLAR_SYS_ROOT = "$SYS/broker/"
 STAT_BYTES_SENT = "bytes_sent"
@@ -24,16 +24,14 @@ STAT_CLIENTS_DISCONNECTED = "clients_disconnected"
 
 
 class BrokerSysPlugin:
-    def __init__(self, context):
+    def __init__(self, context: BrokerContext) -> None:
         self.context = context
         # Broker statistics initialization
-        self._stats = dict()
-        self._sys_handle = None
+        self._stats: dict[str, int] = {}
+        self._sys_handle: asyncio.Handle | None = None
 
-    def _clear_stats(self):
-        """
-        Initializes broker statistics data structures
-        """
+    def _clear_stats(self) -> None:
+        """Initialize broker statistics data structures."""
         for stat in (
             STAT_BYTES_RECEIVED,
             STAT_BYTES_SENT,
@@ -47,52 +45,55 @@ class BrokerSysPlugin:
         ):
             self._stats[stat] = 0
 
-    async def _broadcast_sys_topic(self, topic_basename, data):
-        return await self.context.broadcast_message(topic_basename, data)
+    async def _broadcast_sys_topic(self, topic_basename: str, data: bytes) -> None:
+        """Broadcast a system topic."""
+        await self.context.broadcast_message(topic_basename, data)
 
-    def schedule_broadcast_sys_topic(self, topic_basename, data):
+    def schedule_broadcast_sys_topic(self, topic_basename: str, data: bytes) -> asyncio.Task[None]:
+        """Schedule broadcasting of system topics."""
         return asyncio.ensure_future(
             self._broadcast_sys_topic(DOLLAR_SYS_ROOT + topic_basename, data),
             loop=self.context.loop,
         )
 
-    async def on_broker_pre_start(self, *args, **kwargs):
+    async def on_broker_pre_start(self, *args: None, **kwargs: None) -> None:
+        """Clear statistics before broker start."""
         self._clear_stats()
 
-    async def on_broker_post_start(self, *args, **kwargs):
-        self._stats[STAT_START_TIME] = datetime.now()
+    async def on_broker_post_start(self, *args: None, **kwargs: None) -> None:
+        """Initialize statistics and start $SYS broadcasting."""
+        self._stats[STAT_START_TIME] = int(datetime.now(tz=UTC).timestamp())
         version = f"HBMQTT version {amqtt.__version__}"
         self.context.retain_message(DOLLAR_SYS_ROOT + "version", version.encode())
 
         # Start $SYS topics management
         try:
-            sys_interval = int(self.context.config.get("sys_interval", 0))
+            sys_interval: int = 0
+            x = self.context.config.get("sys_interval") if self.context.config is not None else None
+            if isinstance(x, str | Buffer | SupportsInt | SupportsIndex):
+                sys_interval = int(x)
             if sys_interval > 0:
-                self.context.logger.debug(
-                    "Setup $SYS broadcasting every %d seconds" % sys_interval
-                )
-                self.sys_handle = self.context.loop.call_later(
-                    sys_interval, self.broadcast_dollar_sys_topics
+                self.context.logger.debug(f"Setup $SYS broadcasting every {sys_interval} seconds")
+                self._sys_handle = (
+                    self.context.loop.call_later(sys_interval, self.broadcast_dollar_sys_topics)
+                    if self.context.loop is not None
+                    else None
                 )
             else:
                 self.context.logger.debug("$SYS disabled")
         except KeyError:
             pass
-            # 'sys_internal' config parameter not found
+            # 'sys_interval' config parameter not found
 
-    async def on_broker_pre_stop(self, *args, **kwargs):
-        # Stop $SYS topics broadcasting
-        if self.sys_handle:
-            self.sys_handle.cancel()
+    async def on_broker_pre_stop(self, *args: None, **kwargs: None) -> None:
+        """Stop $SYS topics broadcasting."""
+        if self._sys_handle:
+            self._sys_handle.cancel()
 
-    def broadcast_dollar_sys_topics(self):
-        """
-        Broadcast dynamic $SYS topics updates and reschedule next execution depending on 'sys_interval' config
-        parameter.
-        """
-
+    def broadcast_dollar_sys_topics(self) -> None:
+        """Broadcast dynamic $SYS topics updates and reschedule next execution."""
         # Update stats
-        uptime = datetime.now() - self._stats[STAT_START_TIME]
+        uptime = int(datetime.now(tz=UTC).timestamp()) - self._stats[STAT_START_TIME]
         client_connected = self._stats[STAT_CLIENTS_CONNECTED]
         client_disconnected = self._stats[STAT_CLIENTS_DISCONNECTED]
         inflight_in = 0
@@ -103,124 +104,59 @@ class BrokerSysPlugin:
             inflight_out += session.inflight_out_count
             messages_stored += session.retained_messages_count
         messages_stored += len(self.context.retained_messages)
-        subscriptions_count = 0
-        for topic in self.context.subscriptions:
-            subscriptions_count += len(self.context.subscriptions[topic])
+        subscriptions_count = sum(len(sub) for sub in self.context.subscriptions.values())
 
         # Broadcast updates
-        tasks = deque()
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "load/bytes/received",
-                int_to_bytes_str(self._stats[STAT_BYTES_RECEIVED]),
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "load/bytes/sent", int_to_bytes_str(self._stats[STAT_BYTES_SENT])
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/received", int_to_bytes_str(self._stats[STAT_MSG_RECEIVED])
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/sent", int_to_bytes_str(self._stats[STAT_MSG_SENT])
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "time", str(datetime.now()).encode("utf-8")
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "uptime", int_to_bytes_str(int(uptime.total_seconds()))
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "uptime/formated", str(uptime).encode("utf-8")
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "clients/connected", int_to_bytes_str(client_connected)
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "clients/disconnected", int_to_bytes_str(client_disconnected)
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "clients/maximum", int_to_bytes_str(self._stats[STAT_CLIENTS_MAXIMUM])
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "clients/total",
-                int_to_bytes_str(client_connected + client_disconnected),
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/inflight", int_to_bytes_str(inflight_in + inflight_out)
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/inflight/in", int_to_bytes_str(inflight_in)
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/inflight/out", int_to_bytes_str(inflight_out)
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/inflight/stored", int_to_bytes_str(messages_stored)
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/publish/received",
-                int_to_bytes_str(self._stats[STAT_PUBLISH_RECEIVED]),
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/publish/sent",
-                int_to_bytes_str(self._stats[STAT_PUBLISH_SENT]),
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/retained/count",
-                int_to_bytes_str(len(self.context.retained_messages)),
-            )
-        )
-        tasks.append(
-            self.schedule_broadcast_sys_topic(
-                "messages/subscriptions/count", int_to_bytes_str(subscriptions_count)
-            )
-        )
+        tasks: deque[asyncio.Task[None]] = deque()
+        stats: dict[str, int | str] = {
+            "load/bytes/received": self._stats[STAT_BYTES_RECEIVED],
+            "load/bytes/sent": self._stats[STAT_BYTES_SENT],
+            "messages/received": self._stats[STAT_MSG_RECEIVED],
+            "messages/sent": self._stats[STAT_MSG_SENT],
+            "time": int(datetime.now(tz=UTC).timestamp()),
+            "uptime": str(datetime.fromtimestamp(uptime, UTC)),
+            "uptime/formatted": str(uptime),
+            "clients/connected": client_connected,
+            "clients/disconnected": client_disconnected,
+            "clients/maximum": self._stats[STAT_CLIENTS_MAXIMUM],
+            "clients/total": client_connected + client_disconnected,
+            "messages/inflight": inflight_in + inflight_out,
+            "messages/inflight/in": inflight_in,
+            "messages/inflight/out": inflight_out,
+            "messages/inflight/stored": messages_stored,
+            "messages/publish/received": self._stats[STAT_PUBLISH_RECEIVED],
+            "messages/publish/sent": self._stats[STAT_PUBLISH_SENT],
+            "messages/retained/count": len(self.context.retained_messages),
+            "messages/subscriptions/count": subscriptions_count,
+        }
+        for stat_name, stat_value in stats.items():
+            data: bytes = int_to_bytes_str(stat_value) if isinstance(stat_value, int) else stat_value.encode("utf-8")
+            tasks.append(self.schedule_broadcast_sys_topic(stat_name, data))
 
         # Wait until broadcasting tasks end
         while tasks and tasks[0].done():
             tasks.popleft()
+
         # Reschedule
-        sys_interval = int(self.context.config["sys_interval"])
+        sys_interval: int = 0
+        x = self.context.config.get("sys_interval") if self.context.config is not None else None
+        if isinstance(x, str | Buffer | SupportsInt | SupportsIndex):
+            sys_interval = int(x)
         self.context.logger.debug("Broadcasting $SYS topics")
-        self.sys_handle = self.context.loop.call_later(
-            sys_interval, self.broadcast_dollar_sys_topics
+
+        self.context.logger.debug(f"Setup $SYS broadcasting every {sys_interval} seconds")
+        self._sys_handle = (
+            self.context.loop.call_later(sys_interval, self.broadcast_dollar_sys_topics)
+            if self.context.loop is not None
+            else None
         )
 
-    async def on_mqtt_packet_received(self, *args, **kwargs):
+    async def on_mqtt_packet_received(
+        self,
+        *args: None,
+        **kwargs: MQTTPacket[PacketIdVariableHeader, SubscribePayload, MQTTFixedHeader],
+    ) -> None:
+        """Handle incoming MQTT packets."""
         packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
@@ -229,7 +165,12 @@ class BrokerSysPlugin:
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_RECEIVED] += 1
 
-    async def on_mqtt_packet_sent(self, *args, **kwargs):
+    async def on_mqtt_packet_sent(
+        self,
+        *args: None,
+        **kwargs: MQTTPacket[PacketIdVariableHeader, SubscribePayload, MQTTFixedHeader],
+    ) -> None:
+        """Handle sent MQTT packets."""
         packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
@@ -238,12 +179,15 @@ class BrokerSysPlugin:
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_SENT] += 1
 
-    async def on_broker_client_connected(self, *args, **kwargs):
+    async def on_broker_client_connected(self, *args: None, **kwargs: None) -> None:
+        """Handle broker client connection."""
         self._stats[STAT_CLIENTS_CONNECTED] += 1
         self._stats[STAT_CLIENTS_MAXIMUM] = max(
-            self._stats[STAT_CLIENTS_MAXIMUM], self._stats[STAT_CLIENTS_CONNECTED]
+            self._stats[STAT_CLIENTS_MAXIMUM],
+            self._stats[STAT_CLIENTS_CONNECTED],
         )
 
-    async def on_broker_client_disconnected(self, *args, **kwargs):
+    async def on_broker_client_disconnected(self, *args: None, **kwargs: None) -> None:
+        """Handle broker client disconnection."""
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1

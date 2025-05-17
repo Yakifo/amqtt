@@ -1,16 +1,115 @@
-fail_fast: false
-repos:
-- repo: local
-  hooks:
-  - id: flake8
-    name: flake8
-    entry: flake8
-    language: system
-    types: [python]
+---
+# Pre-commit configuration
+# For details, visit: https://pre-commit.com/hooks.html
 
-  - id: black
-    name: Black
-    entry: black
-    args: [--check]
-    language: system
-    types: [python]
+ci:
+  autofix_prs: false
+  skip:
+    # These steps run in the CI workflow. Keep in sync.
+    - mypy
+    - pylint
+
+repos:
+  # Codespell for spelling corrections
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        args:
+          - --ignore-words-list=ihs,ro,fo,assertIn,astroid,formated
+          - --skip="./.*,*.csv,*.json"
+          - --quiet-level=2
+        exclude_types:
+          - csv
+          - json
+
+  # General pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+        exclude: tests/_test_files/certs/
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: check-case-conflict
+      # - id: no-commit-to-branch
+      #   args: [--branch, main]
+      - id: check-executables-have-shebangs
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        description: This hook trims trailing whitespace.
+        entry: trailing-whitespace-fixer
+        language: python
+        types: [text]
+        args: [--markdown-linebreak-ext=md]
+      - id: check-toml
+      - id: check-json
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: mixed-line-ending
+
+  # Prettier for code formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        additional_dependencies:
+          - prettier@3.2.5
+          - prettier-plugin-sort-json@3.1.0
+        exclude_types:
+          - python
+
+  # Secret detection
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args:
+          - --exclude-files=tests/*
+          - --exclude-files=samples/client_subscribe_acl.py
+          - --exclude-files=docs/quickstart.rst
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.26.0
+    hooks:
+      - id: gitleaks
+
+  # YAML Linting
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+
+  # Python-specific hooks ######################################################
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.10
+    hooks:
+      - id: ruff
+        args:
+          - --fix
+          - --unsafe-fixes
+          - --line-length=130
+          - --exit-non-zero-on-fix
+      - id: ruff-format
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.19.1
+    hooks:
+      - id: pyupgrade
+        args: [--py313-plus]
+
+  # Local hooks for mypy and pylint
+  - repo: local
+    hooks:
+      - id: mypy
+        name: Run Mypy in Virtualenv
+        entry: scripts/run-in-env.sh mypy
+        language: script
+        types: [python]
+        require_serial: true
+        exclude: ^tests/.+|^docs/.+|^samples/.+
+      - id: pylint
+        name: Run Pylint in Virtualenv
+        entry: scripts/run-in-env.sh pylint
+        language: script
+        types: [python]
+        require_serial: true
+        exclude: ^tests/.+|^docs/.+|^samples/.+

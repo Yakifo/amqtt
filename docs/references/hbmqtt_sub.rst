@@ -23,7 +23,7 @@ Options
 --version           amqtt version information
 -h, --help          Display ``amqtt_sub`` usage help
 -c                  Set the YAML configuration file to read and pass to the client runtime.
--d                  Enable debugging informations.
+-d                  Enable debugging information.
 --ca-file           Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-path           Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-data           Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication.
@@ -32,7 +32,7 @@ Options
 -k                  Set the CONNECT keep alive timeout.
 -n                  Number of messages to read before ending. Read forever if not given.
 -q, --qos           Specify the quality of service to use for receiving messages. This QoS is sent in the subscribe request.
--t                  Topic filters to subcribe.
+-t                  Topic filters to subscribe.
 --url               Broker connection URL, conforming to `MQTT URL scheme`_.
 --will-topic        The topic on which to send a Will, in the event that the client disconnects unexpectedly.
 --will-message      Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. This must be used in conjunction with ``--will-topic``.

@@ -47,7 +47,7 @@ Broker API
 Broker configuration
 ....................
 
-The :class:`~amqtt.broker.Broker` ``__init__`` method accepts a ``config`` parameter which allow to setup some behaviour and defaults settings. This argument must be a Python dict object. For convinience, it is presented below as a YAML file [1]_.
+The :class:`~amqtt.broker.Broker` ``__init__`` method accepts a ``config`` parameter which allow to setup some behaviour and defaults settings. This argument must be a Python dict object. For convenience, it is presented below as a YAML file [1]_.
 
 .. code-block:: python
 

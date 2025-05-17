@@ -21,14 +21,18 @@
 .. |python_versions| image:: https://img.shields.io/pypi/pyversions/amqtt?style=flat-square
     :alt: Python Version
 
-.. |python_wheel| image:: https://img.shields.io/pypi/wheel/amqtt?style=flat-square 
+.. |python_wheel| image:: https://img.shields.io/pypi/wheel/amqtt?style=flat-square
     :alt: supports python wheel
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/amqtt?style=flat-square
     :target: https://pypi.org/project/amqtt/
     :alt: PyPI
 
-`!!! MAINTAINERS WANTED !!! <https://github.com/Yakifo/amqtt/issues/163>`_ 
+
+WORK IN PROGRESS.
+=======
+`!!! MAINTAINERS WANTED !!! <https://github.com/Yakifo/amqtt/issues/163>`_
+
 
 aMQTT
 ======

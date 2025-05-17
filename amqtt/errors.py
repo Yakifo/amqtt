@@ -1,35 +1,32 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
+class AMQTTError(Exception):
+    """aMQTT base exception."""
 
 
-class AMQTTException(Exception):
-    """
-    aMQTT base exception
-    """
-
-    pass
+class MQTTError(Exception):
+    """Base class for all errors referring to MQTT specifications."""
 
 
-class MQTTException(Exception):
-    """
-    Base class for all errors referring to MQTT specifications
-    """
-
-    pass
+class CodecError(Exception):
+    """Exceptions thrown by packet encode/decode functions."""
 
 
-class CodecException(Exception):
-    """
-    Exceptions thrown by packet encode/decode functions
-    """
-
-    pass
+class NoDataError(Exception):
+    """Exceptions thrown by packet encode/decode functions."""
 
 
-class NoDataException(Exception):
-    """
-    Exceptions thrown by packet encode/decode functions
-    """
+class BrokerError(Exception):
+    """Exceptions thrown by broker."""
 
-    pass
+
+class ClientError(Exception):
+    """Exceptions thrown by client."""
+
+
+class ConnectError(ClientError):
+    """Exceptions thrown by client connect."""
+
+    return_code: int | None = None
+
+
+class ProtocolHandlerError(Exception):
+    """Exceptions thrown by protocol handle."""

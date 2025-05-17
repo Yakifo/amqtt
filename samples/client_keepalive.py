@@ -1,8 +1,7 @@
-import logging
 import asyncio
+import logging
 
 from amqtt.client import MQTTClient
-
 
 #
 # This sample shows a client running idle.
@@ -19,7 +18,7 @@ config = {
 C = MQTTClient(config=config)
 
 
-async def test_coro():
+async def test_coro() -> None:
     await C.connect("mqtt://test.mosquitto.org:1883/")
     await asyncio.sleep(18)
 

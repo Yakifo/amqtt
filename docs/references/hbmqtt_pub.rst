@@ -26,7 +26,7 @@ Options
 --version           amqtt version information
 -h, --help          Display ``amqtt_pub`` usage help
 -c                  Set the YAML configuration file to read and pass to the client runtime.
--d                  Enable debugging informations.
+-d                  Enable debugging information.
 --ca-file           Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-path           Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
 --ca-data           Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication.
@@ -102,4 +102,3 @@ Publish temperature information to localhost with QoS 1 over mqtt encapsulated i
 
 
 .. _mosquitto_pub : http://mosquitto.org/man/mosquitto_pub-1.html
-

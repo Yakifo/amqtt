@@ -1,26 +1,26 @@
 import inspect
 from logging import getLogger
-from os.path import join, dirname, isfile
+from pathlib import Path
+from types import ModuleType
+from typing import Any
 
 import pytest
 
 import amqtt.plugins
-from glob import glob
-
 from amqtt.plugins.manager import BaseContext
 
-_INVALID_METHOD = "invalid_foo"
-_PLUGIN = "Plugin"
+_INVALID_METHOD: str = "invalid_foo"
+_PLUGIN: str = "Plugin"
 
 
 class _TestContext(BaseContext):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.config = {"auth": {}}
-        self.logger = getLogger(__file__)
+        self.config: dict[str, Any] = {"auth": {}}
+        self.logger = getLogger(__name__)
 
 
-def _verify_module(module, plugin_module_name):
+def _verify_module(module: ModuleType, plugin_module_name: str) -> None:
     if not module.__name__.startswith(plugin_module_name):
         return
 
@@ -36,25 +36,25 @@ def _verify_module(module, plugin_module_name):
             getattr(obj, _INVALID_METHOD)
         assert hasattr(obj, _INVALID_METHOD) is False
 
-    for name, obj in inspect.getmembers(module, inspect.ismodule):
+    for _, obj in inspect.getmembers(module, inspect.ismodule):
         _verify_module(obj, plugin_module_name)
 
 
 def removesuffix(self: str, suffix: str) -> str:
-    # compatibility for pre 3.9
+    """Compatibility for Python versions prior to 3.9."""
     if suffix and self.endswith(suffix):
         return self[: -len(suffix)]
-    else:
-        return self[:]
+    return self[:]
 
 
-def test_plugins_correct_has_attr():
+def test_plugins_correct_has_attr() -> None:
+    """Test plugins to ensure they correctly handle the 'has_attr' check."""
     module = amqtt.plugins
-    for file in glob(join(dirname(module.__file__), "**/*.py"), recursive=True):
-        if not isfile(file):
+    for file in Path(module.__file__).parent.rglob("*.py"):
+        if not Path(file).is_file():
             continue
 
-        name = file.replace("/", ".")
+        name = file.as_posix().replace("/", ".")
         name = name[name.find(module.__name__) : -3]
         name = removesuffix(name, ".__init__")
 
