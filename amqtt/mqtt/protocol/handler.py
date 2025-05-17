@@ -3,7 +3,7 @@ import asyncio
 try:
     from asyncio import InvalidStateError, QueueFull, QueueShutDown
 except ImportError:
-    """Fallback for Python < 3.12"""
+    # Fallback for Python < 3.12
     class InvalidStateError(Exception):  #  type: ignore[no-redef]
         pass
 
