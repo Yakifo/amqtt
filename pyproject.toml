@@ -27,8 +27,8 @@ dependencies = [
   "transitions==0.9.2", # https://pypi.org/project/transitions
   "websockets==15.0.1", # https://pypi.org/project/websockets
   "passlib==1.7.4",     # https://pypi.org/project/passlib
-  "docopt==0.6.2",      # https://pypi.org/project/docopt
   "PyYAML==6.0.2",      # https://pypi.org/project/PyYAML
+  "typer==0.15.4"
 ]
 
 [dependency-groups]

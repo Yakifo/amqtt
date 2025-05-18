@@ -122,9 +122,10 @@ def main() -> None:
     typer.run(publisher)
 
 
-def _version() -> None:
-    typer.echo(f"{amqtt_version}")
-    raise typer.Exit(code=0)
+def _version(v: bool) -> None:
+    if v:
+        typer.echo(f"{amqtt_version}")
+        raise typer.Exit(code=0)
 
 
 def publisher(  # pylint: disable=R0914,R0917  # noqa : PLR0913
