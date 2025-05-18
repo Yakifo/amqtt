@@ -1,5 +1,6 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs", "uv-dynamic-versioning"]
+
 build-backend = "hatchling.build"
 
 [project]
@@ -117,11 +118,13 @@ ignore = [
   "TD003",  # TODO Missing issue link for this TODO.
   "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
   "ARG002", # Unused method argument
-  "PERF203" # try-except penalty within loops (3.10 only)
+  "PERF203",# try-except penalty within loops (3.10 only),
+  "COM812"  # rule causes conflicts when used with the formatter
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ALL"]
+"amqtt/scripts/pub_script.py" = ["FBT003"]
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
