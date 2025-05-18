@@ -119,7 +119,7 @@ async def do_pub(
 
 def main() -> None:
     """Entry point for the amqtt publisher."""
-    typer.run(publisher)
+    typer.run(publisher_main)
 
 
 def _version(v: bool) -> None:
@@ -128,7 +128,7 @@ def _version(v: bool) -> None:
         raise typer.Exit(code=0)
 
 
-def publisher(  # pylint: disable=R0914,R0917  # noqa : PLR0913
+def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     url: str = typer.Option(
         ..., "--url", help="Broker connection URL (must conform to MQTT URI scheme: mqtt://<username:password>@HOST:port)"
     ),

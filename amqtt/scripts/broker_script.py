@@ -16,9 +16,10 @@ import asyncio
 import logging
 from pathlib import Path
 
-from docopt import docopt
+import typer
 
 import amqtt
+from amqtt import __version__ as amqtt_version
 from amqtt.broker import Broker
 from amqtt.utils import read_yaml_config
 
@@ -43,15 +44,34 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Run the MQTT broker."""
-    arguments = docopt(__doc__, version=amqtt.__version__)
+    typer.run(broker_main)
+
+
+def _version(v:bool) -> None:
+    if v:
+        typer.echo(f"{amqtt_version}")
+        raise typer.Exit(code=0)
+
+
+def broker_main(
+        config_file: str | None = typer.Option(None, "-c", help="Broker configuration file (YAML format)"),
+        debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
+        version: bool = typer.Option(  # noqa : ARG001
+            False,
+            "--version",
+            callback=_version,
+            is_eager=True,
+            help="Show version and exit",
+        ),
+) -> None:
+
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
-    level = logging.DEBUG if arguments["-d"] else logging.INFO
+    level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)
 
-    config = None
-    if arguments["-c"]:
-        config = read_yaml_config(arguments["-c"])
+    if config_file:
+        config = read_yaml_config(config_file)
     else:
         config = read_yaml_config(Path(__file__).parent / "default_broker.yaml")
         logger.debug("Using default configuration")

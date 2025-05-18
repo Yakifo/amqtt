@@ -91,7 +91,7 @@ async def do_sub(client: MQTTClient,
 
 
 def main() -> None:
-    typer.run(subscribe)
+    typer.run(subscribe_main)
 
 
 def _version(v:bool) -> None:
@@ -100,7 +100,7 @@ def _version(v:bool) -> None:
         raise typer.Exit(code=0)
 
 
-def subscribe(  # pylint: disable=R0914,R0917  # noqa : PLR0913
+def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     url: str = typer.Option(..., help="Broker connection URL (must conform to MQTT URI scheme)", show_default=False),
     config_file: str | None = typer.Option(None, "-c", help="Broker configuration file (YAML format)"),
     client_id: str | None = typer.Option(None, "-i", help="Id to use as client ID"),
