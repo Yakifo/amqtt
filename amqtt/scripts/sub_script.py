@@ -13,7 +13,7 @@ import typer
 
 from amqtt import __version__ as amqtt_version
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectError, MQTTError
+from amqtt.errors import ClientError, ConnectError, MQTTError
 from amqtt.mqtt.constants import QOS_0
 from amqtt.utils import read_yaml_config
 
@@ -84,10 +84,12 @@ async def do_sub(client: MQTTClient,
     except KeyboardInterrupt:
         await client.disconnect()
         logger.info(f"{client.client_id} Disconnected from broker")
-    except ConnectError as ce:
-        logger.fatal(f"Connection to '{url}' failed: {ce!r}")
-    except asyncio.CancelledError:
+    except ConnectError as exc:
+        logger.fatal(f"Connection to '{url}' failed: {exc!r}")
+        raise ConnectError from exc
+    except asyncio.CancelledError as exc:
         logger.fatal("Publish canceled due to previous error")
+        raise asyncio.CancelledError from exc
 
 
 def main() -> None:
@@ -166,15 +168,19 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
         ca_data=ca_data,
     )
     with contextlib.suppress(KeyboardInterrupt):
-        loop.run_until_complete(do_sub(client,
-                                       url=url,
-                                       topics=topics,
-                                       ca_info=ca_info,
-                                       extra_headers_json=extra_headers_json,
-                                       qos=qos or QOS_0,
-                                       max_count=max_count,
-                                       clean_session=clean_session,
-                                       ))
+        try:
+            loop.run_until_complete(do_sub(client,
+                                           url=url,
+                                           topics=topics,
+                                           ca_info=ca_info,
+                                           extra_headers_json=extra_headers_json,
+                                           qos=qos or QOS_0,
+                                           max_count=max_count,
+                                           clean_session=clean_session,
+                                           ))
+        except (ClientError, ConnectError) as exc:
+            typer.echo("❌ Connection failed", err=True)
+            raise typer.Exit(code=1) from exc
     loop.close()
 
 

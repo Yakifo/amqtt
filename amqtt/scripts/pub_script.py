@@ -113,8 +113,10 @@ async def do_pub(
         logger.info(f"{client.client_id} Disconnected from broker")
     except ConnectError as ce:
         logger.fatal(f"Connection to '{url}' failed: {ce!r}")
-    except asyncio.CancelledError:
+        raise ConnectError from ce
+    except asyncio.CancelledError as ce:
         logger.fatal("Publish canceled due to previous error")
+        raise asyncio.CancelledError from ce
 
 
 def main() -> None:
@@ -228,8 +230,10 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
                     qos=qos,
                 )
             )
-        except (ClientError, ConnectError) as ce:
-            typer.echo(f"❌ Connection failed: {ce}", err=True)
+        except (ClientError, ConnectError) as exc:
+            typer.echo("❌ Connection failed", err=True)
+            raise typer.Exit(code=1) from exc
+
     loop.close()
 
 
