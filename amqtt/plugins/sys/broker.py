@@ -1,4 +1,5 @@
 import asyncio
+from collections import deque  # pylint: disable=C0412
 from typing import SupportsIndex, SupportsInt  # pylint: disable=C0412
 
 try:
