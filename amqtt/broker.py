@@ -432,7 +432,7 @@ class Broker:
             self.logger.error(  # noqa: TRY400
                 f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}",
             )
-            raise AMQTTError(f"No data was received, first packet must be CONNECT: {exc}") from exc
+            raise AMQTTError(exc) from exc
 
         if client_session.clean_session:
             # Delete existing session and create a new one

@@ -1,7 +1,7 @@
 import asyncio
+from collections import deque  # pylint: disable=C0412
 from typing import SupportsIndex, SupportsInt  # pylint: disable=C0412
 
-from collections import deque
 try:
     from collections.abc import Buffer
 except ImportError:
