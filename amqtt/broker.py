@@ -429,10 +429,10 @@ class Broker:
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:
-            self.logger.error(  # noqa: TRY400 # cannot replace with exception else pytest fails
+            self.logger.error(  # noqa: TRY400
                 f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}",
             )
-            raise NoDataError(exc) from exc
+            raise AMQTTError(f"No data was received, first packet must be CONNECT: {exc}") from exc
 
         if client_session.clean_session:
             # Delete existing session and create a new one
