@@ -1,13 +1,13 @@
 import asyncio
 import contextlib
+from dataclasses import dataclass
 import json
 import logging
 import os
-from dataclasses import dataclass
 from pathlib import Path
 import socket
 import sys
-from typing import Any, List
+from typing import Any
 
 import typer
 
@@ -43,7 +43,7 @@ class CAInfo:
 
 async def do_sub(client: MQTTClient,
                  url: str,
-                 topics: List[str],
+                 topics: list[str],
                  ca_info: CAInfo,
                  max_count: int | None = None,
                  clean_session: bool = False,
@@ -91,6 +91,7 @@ async def do_sub(client: MQTTClient,
 
 
 def main() -> None:
+    """Entry point for the amqtt subscriber."""
     typer.run(subscribe_main)
 
 
@@ -106,7 +107,7 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     client_id: str | None = typer.Option(None, "-i", help="Id to use as client ID"),
     max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
-    topics: List[str] = typer.Option(..., "-t", help="Topic filter to subscribe"),
+    topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe"),  # noqa: B008
     keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout in seconds"),
     clean_session: bool = typer.Option(False, help="Clean session on connect (defaults to False)"),
     ca_file: str | None = typer.Option(None, "--ca-file", help="CA file"),
@@ -127,7 +128,6 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     ),
 ) -> None:
     """Run the MQTT subscriber."""
-
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)

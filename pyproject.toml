@@ -124,7 +124,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ALL"]
-"amqtt/scripts/pub_script.py" = ["FBT003"]
+"amqtt/scripts/*_script.py" = ["FBT003"]
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false

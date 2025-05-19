@@ -18,7 +18,6 @@ from pathlib import Path
 
 import typer
 
-import amqtt
 from amqtt import __version__ as amqtt_version
 from amqtt.broker import Broker
 from amqtt.utils import read_yaml_config
@@ -64,7 +63,7 @@ def broker_main(
             help="Show version and exit",
         ),
 ) -> None:
-
+    """Run the MQTT broker."""
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     level = logging.DEBUG if debug else logging.INFO
