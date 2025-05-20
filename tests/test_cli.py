@@ -56,21 +56,18 @@ async def broker(config_file):
 
 def test_cli_help_messages():
     """Test that help messages are displayed correctly."""
-    env = os.environ.copy()
-    env['NO_COLOR'] = "1"
-
     amqtt_path = "amqtt"
-    output = subprocess.check_output([amqtt_path, "--help"], env=env)
+    output = subprocess.check_output([amqtt_path, "--help"])
     assert "Usage: amqtt" in output.decode("utf-8")
 
 
     amqtt_sub_path = "amqtt_sub"
-    output = subprocess.check_output([amqtt_sub_path, "--help"], env=env)
+    output = subprocess.check_output([amqtt_sub_path, "--help"])
     assert "Usage: amqtt_sub" in output.decode("utf-8")
 
 
     amqtt_pub_path = "amqtt_pub"
-    output = subprocess.check_output([amqtt_pub_path, "--help"], env=env)
+    output = subprocess.check_output([amqtt_pub_path, "--help"])
     assert "Usage: amqtt_pub" in output.decode("utf-8")
 
 

@@ -43,9 +43,12 @@ default_config = {
 logger = logging.getLogger(__name__)
 
 
+app = typer.Typer(rich_markup_mode=None)
+
+
 def main() -> None:
     """Run the MQTT broker."""
-    typer.run(broker_main)
+    app()
 
 
 def _version(v:bool) -> None:
@@ -54,6 +57,7 @@ def _version(v:bool) -> None:
         raise typer.Exit(code=0)
 
 
+@app.command()
 def broker_main(
         config_file: str | None = typer.Option(None, "-c", help="Broker configuration file (YAML format)"),
         debug: bool = typer.Option(False, "-d", help="Enable debug messages"),

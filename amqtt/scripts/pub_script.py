@@ -118,10 +118,12 @@ async def do_pub(
         logger.fatal("Publish canceled due to previous error")
         raise asyncio.CancelledError from ce
 
+app = typer.Typer(rich_markup_mode=None)
+
 
 def main() -> None:
     """Entry point for the amqtt publisher."""
-    typer.run(publisher_main)
+    app()
 
 
 def _version(v: bool) -> None:
@@ -129,7 +131,7 @@ def _version(v: bool) -> None:
         typer.echo(f"{amqtt_version}")
         raise typer.Exit(code=0)
 
-
+@app.command()
 def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     url: str = typer.Option(
         ..., "--url", help="Broker connection URL (must conform to MQTT URI scheme: mqtt://<username:password>@HOST:port)"
