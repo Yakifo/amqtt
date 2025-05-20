@@ -151,7 +151,7 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     ca_data: str | None = typer.Option(None, "--ca-data", help="CA data"),
     will_topic: str | None = typer.Option(None, "--will-topic", help="Last will topic"),
     will_message: str | None = typer.Option(None, "--will-message", help="Last will message"),
-    will_qos: int | None = typer.Option(None, "--will-qos", help="Last will QoS"),
+    will_qos: int | None = typer.Option(0, "--will-qos", help="Last will QoS"),
     will_retain: bool = typer.Option(False, "--will-retain", help="Set retain flag for last will message"),
     extra_headers_json: str | None = typer.Option(
         None, "--extra-headers", help="JSON object with key-value headers for websocket connections"
@@ -169,6 +169,14 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     provided = [bool(message), bool(file), stdin, lines, no_message]
     if sum(provided) != 1:
         typer.echo("❌ You must provide exactly one of --config, --file, or --stdin.", err=True)
+        raise typer.Exit(code=1)
+
+    if bool(will_message) != bool(will_topic):
+        typer.echo("❌ must specify both 'will_message' and 'will_topic' ")
+        raise typer.Exit(code=1)
+
+    if will_retain and not (will_message and will_topic):
+        typer.echo("❌ 'will-retain' only valid if 'will_message' and 'will_topic' are specified.", err=True)
         raise typer.Exit(code=1)
 
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
@@ -194,11 +202,12 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     if keep_alive:
         config["keep_alive"] = int(keep_alive)
 
-    if will_topic and will_message and will_qos:
+
+    if will_topic and will_message and will_qos is not None and will_retain:
         config["will"] = {
             "topic": will_topic,
-            "message": will_message.encode("utf-8"),
-            "qos": int(will_qos),
+            "message": will_message.encode(),
+            "qos": will_qos,
             "retain": will_retain,
         }
 

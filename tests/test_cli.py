@@ -158,8 +158,10 @@ async def test_pub_sub_options(broker):
         [
             "amqtt_pub",
             "--url", "mqtt://127.0.0.1:1884",
-            "-t", "test/retain",
-            "-m", "retained message",
+            "-t", "topic/test",
+            "-m", "standard message",
+            "--will-topic", "topic/retain",
+            "--will-message", "last will message",
             "--will-retain",
         ],
         capture_output=True,
@@ -171,13 +173,13 @@ async def test_pub_sub_options(broker):
         [
             "amqtt_sub",
             "--url", "mqtt://127.0.0.1:1884",
-            "-t", "test/retain",
+            "-t", "topic/retain",
             "-n", "1",
         ],
         capture_output=True,
     )
     assert sub_proc.returncode == 0, "subscriber error code"
-    assert "retained message" in str(sub_proc.stdout)
+    assert "last will message" in str(sub_proc.stdout)
 
 
 @pytest.mark.asyncio

@@ -9,7 +9,7 @@ except ImportError:
     UTC = timezone.utc
 
 from struct import unpack
-from typing import Generic, Self, TypeVar
+from typing_extensions import Generic, Self, TypeVar
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.codecs_amqtt import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
