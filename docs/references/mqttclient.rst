@@ -163,6 +163,7 @@ The :class:`~amqtt.client.MQTTClient` ``__init__`` method accepts a ``config`` p
 * ``auto_reconnect``: enable or disable auto-reconnect feature (defaults to ``True``).
 * ``reconnect_max_interval``: maximum interval (in seconds) to wait before two connection retries (defaults to ``10``).
 * ``reconnect_retries``: maximum number of connect retries (defaults to ``2``). Negative value will cause client to reconnect infinietly.
+
 Default QoS and default retain can also be overridden by adding a ``topics`` with may contain QoS and retain values for specific topics. See the following example:
 
 .. code-block:: python

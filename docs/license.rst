@@ -1,4 +1,4 @@
 License
 -------
 
-.. literalinclude:: ../license.txt
+.. literalinclude:: ../LICENSE.md
