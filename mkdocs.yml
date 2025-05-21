@@ -1,8 +1,8 @@
 site_name: ""
 site_description: "Automatic documentation from sources, for MkDocs."
 site_url: http://github.com
-repo_url: http://github.com/abc/amqtt
-repo_name: abc/amqtt
+repo_url: https://github.com/Yakifo/amqtt
+repo_name: Yakifo/amqtt
 site_dir: "site"
 watch: [mkdocs.yml, README.md, CONTRIBUTING.md, docs, amqtt]
 copyright: TBD
@@ -17,11 +17,11 @@ nav:
 - Home:
   - Overview: index.md
   - Quickstart: quickstart.md
-  - Usage:
+  - CLI Usage:
       - Broker: references/amqtt.md
       - Publisher: references/amqtt_pub.md
       - Subscriber: references/amqtt_sub.md
-  - API:
+  - API Usage:
       - Broker: references/broker.md
       - Client: references/client.md
 #  - Changelog: changelog.md

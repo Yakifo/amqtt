@@ -39,47 +39,49 @@ Using the `-c` argument allows for configuration with a YAML structured file. Th
 
 ## Field Descriptions
 
-### listeners (mapping)
+### `listeners`
 
-Defines network listeners for the MQTT server.
+Defines network listeners for the MQTT server (list).
 
-#### <interface name> (mapping)
-`default` for parameters to be used across all specified interfaces or user-specified name for the specific interface.
-The listener configuration.
+#### `<interface name>`
+`default` for parameters used across all interfaces _or_ name for the specific interface (mapping).
 
-- **bind** (*string*, required)  
+Each entry supports these parameters:
+
+- `bind` (string, *required*)  
   Address and port to bind to, in the form `host:port` (e.g., `0.0.0.0:1883`).
 
-- **type** (*string*, optional)  
+- `type` (string, *required*)  
   Protocol type. Typically `"tcp"` or `"ws"`.
 
-- **max-connections** (*integer*, optional)  
+- `max-connections` (integer, *required*)  
   Maximum number of clients that can connect to this interface
 
-- **ssl** (*string*, default: `off`)  
-  Enable (on) or disable (off) SSL. One of `cafile`, `capath`, `cadata` or `certfile`/`keyfile`.
+- `ssl` (string, *optional, default: `off`*)  
+  Disable (`off`) SSL/TLS or enable (`on`) with one of `cafile`, `capath`, `cadata` or `certfile`/`keyfile`.
 
-- **cafile** (*string*, optional)  
+- `cafile` (string, *optional*)  
   Path to a file of concatenated CA certificates in PEM format. See [Certificates](https://docs.python.org/3/library/ssl.html#ssl-certificates) for more info.
 
-- **capath** (*string*, optional)  
+- `capath` (string, *optional*)  
   Path to a directory containing several CA certificates in PEM format, following an [OpenSSL specific layout](https://docs.openssl.org/master/man3/SSL_CTX_load_verify_locations/).
 
-- **cadata** (*string*, optional)  
+- `cadata` (string, *optional*)  
   Either an ASCII string of one or more PEM-encoded certificates or a bytes-like object of DER-encoded certificates
 
-- **certfile** (*string*, optional)  
+- `certfile` (string, *optional*)  
   Path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the certificate's authenticity
 
-- **keyfile** (*string*, optional)  
+- `keyfile` (string, *optional*)  
   A file containing the private key. Otherwise the private key will be taken from certfile as well
 
-### timeout-disconnect-delay (*integer*, optional)
+### timeout-disconnect-delay
 
-Client disconnect timeout without a keep-alive
+Client disconnect timeout without a keep-alive  (integer, *optional*)
 
-### plugins (*list of strings*)
-A list of plugin names to load. Common values include:
+### plugins 
+
+Entry points for optional functionality (*list of strings*); included plugins are:
 
 - `auth_file` – Enables file-based authentication
 - `auth_anonymous` – Enables anonymous access
@@ -89,15 +91,15 @@ A list of plugin names to load. Common values include:
 - `topic_acl`
 - `broker_sys`
 
-### auth (mapping)
+### auth
 
-Authentication and authorization settings.
+Authentication and authorization settings (mapping).
 
-- **allow-anonymous** (*boolean*)  
-  Whether to allow anonymous clients to connect (`true` or `false`).
+- `allow-anonymous` (boolean, *optional for `auth_anonymous` plugin*)  
+  Allow (`true`) or prevent (`false`) anonymous client to connections.
 
-- **password-file** (*string*, required for `auth_file` plugin)  
-  Lines of `username:password` combination where the password is sha-512 encoded using `mkpasswd -m sha-512` or:
+- `password-file` (string, *required for `auth_file` plugin*)  
+  Path to file which includes `username:password` pair, one per line. The password should be encoded using sha-512 with `mkpasswd -m sha-512` or:
 
 ```python
 import sys
@@ -108,9 +110,9 @@ passwd = input() if not sys.stdin.isatty() else getpass()
 print(sha512_crypt.hash(passwd))
 ```
 
-### sys-interval (*integer*, optional for `broker_sys` plugin, defaults to TBD)
+### sys-interval 
 
-Interval in seconds to publish system statistics to `$SYS` topics.
+Interval in seconds to publish system statistics to `$SYS` topics (integer, *optional for `broker_sys` plugin, defaults to TBD*).
 
 ## Configuration example
 
