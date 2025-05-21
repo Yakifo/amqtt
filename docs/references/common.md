@@ -1,21 +1,21 @@
-Common API
-==========
+# Common API
 
-This document describes ``aMQTT`` common API both used by :doc:`mqttclient` and :doc:`broker`.
+This document describes `aMQTT` common API both used by [MQTT Client](mqttclient.md) and [Broker](broker.md).
 
-Reference
----------
+## Reference
 
-ApplicationMessage
-..................
+### ApplicationMessage
 
-.. automodule:: amqtt.session
+The `amqtt.session` module provides the following message classes:
 
-    .. autoclass:: ApplicationMessage
-        :members:
+#### ApplicationMessage
 
-    .. autoclass:: IncomingApplicationMessage
-        :show-inheritance:
+Base class for MQTT application messages.
 
-    .. autoclass:: OutgoingApplicationMessage
-        :show-inheritance:
+#### IncomingApplicationMessage
+
+Inherits from ApplicationMessage. Represents messages received from MQTT clients.
+
+#### OutgoingApplicationMessage
+
+Inherits from ApplicationMessage. Represents messages to be sent to MQTT clients.

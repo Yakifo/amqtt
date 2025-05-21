@@ -19,6 +19,11 @@ nav:
   - Quickstart: quickstart.md
   - Usage:
       - Broker: references/amqtt.md
+      - Publisher: references/amqtt_pub.md
+      - Subscriber: references/amqtt_sub.md
+  - API:
+      - Broker: references/broker.md
+      - Client: references/client.md
 #  - Changelog: changelog.md
 #  - Credits: credits.md
 #  - License: license.md
