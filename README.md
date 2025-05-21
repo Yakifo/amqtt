@@ -7,8 +7,7 @@
 ![Python Wheel](https://img.shields.io/pypi/wheel/amqtt?style=flat-square)
 [![PyPI](https://img.shields.io/pypi/v/amqtt?style=flat-square)](https://pypi.org/project/amqtt/)
 
-# WORK IN PROGRESS
-[!!! MAINTAINERS WANTED !!!](https://github.com/Yakifo/amqtt/issues/163)
+![docs/assets/amqtt.svg](docs/assets/amqtt.svg)
 
 # aMQTT
 
@@ -53,3 +52,7 @@ $ pip install amqtt
 Documentation is available on [Read the Docs](http://amqtt.readthedocs.org/).
 
 Bug reports, patches and suggestions welcome! Just [open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [gitter community](https://gitter.im/amqtt/community).
+
+
+
+

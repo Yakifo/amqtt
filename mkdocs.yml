@@ -1,4 +1,4 @@
-site_name: aMQTT
+site_name: ""
 site_description: "Automatic documentation from sources, for MkDocs."
 site_url: http://github.com
 repo_url: http://github.com/abc/amqtt
@@ -56,7 +56,7 @@ nav:
 
 theme:
   name: material
-  logo: logo.svg
+  logo: assets/amqtt_bw.svg
   features:
   - announce.dismiss
   - content.action.edit
@@ -75,26 +75,21 @@ theme:
   - search.suggest
   - toc.follow
   palette:
-  - media: "(prefers-color-scheme)"
-    toggle:
-      icon: material/brightness-auto
-      name: Switch to light mode
-  - media: "(prefers-color-scheme: light)"
-    scheme: default
-    primary: teal
-    accent: purple
-    toggle:
-      icon: material/weather-sunny
-      name: Switch to dark mode
-  - media: "(prefers-color-scheme: dark)"
-    scheme: slate
-    primary: black
-    accent: lime
-    toggle:
-      icon: material/weather-night
-      name: Switch to system preference
 
-#extra_css:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+extra_css:
+  - assets/extra.css
 #- css/style.css
 #- css/material.css
 #- css/mkdocstrings.css
@@ -117,7 +112,7 @@ markdown_extensions:
     pygments_lang_class: true
 - pymdownx.magiclink
 - pymdownx.snippets:
-    base_path: [!relative $config_dir]
+    base_path: !relative $config_dir
     check_paths: true
 - pymdownx.superfences
 - pymdownx.tabbed:
