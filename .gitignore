@@ -22,10 +22,12 @@
 !README.rst
 !MANIFEST.in
 
+!mkdocs.yml
 !.pre-commit-config.yaml
 !.gitleaks.toml
 !.prettierrc.yml
 !.yamllint
+
 
 # PROJECT
 
