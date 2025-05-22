@@ -1,34 +1,48 @@
 # Existing Plugins
 
-## Plugin: Anonymous Authentication
+With the aMQTT Broker plugins framework, one can add additional functionality without
+having to rewrite core logic. The list of plugins that get loaded are specified in `pyproject.toml`;
+each plugin can then check the configuration to determine how to behave (including disabling).
 
-plugin which allows clients to connect without credentials
+```toml
+[project.entry-points."amqtt.broker.plugins"]
+plugin_alias = "module.submodule.file:ClassName"
+```
 
-### Config Options
+## auth_anonymous (Auth Plugin)
+
+`amqtt.plugins.authentication:AnonymousAuthPlugin`
+
+
+**Config Options**
 
 ```yaml
-
 auth:
+  plugins:
+    - auth_anonymous
   allow-anonymous: true # or false
 
 ```
 
-## Plugin: Password Authentication from File
+## auth_file (Auth Plugin)
+
+`amqtt.plugins.authentication:FileAuthPlugin`
 
 clients are authorized by providing username and password, compared against file
 
-### Config Options
+**Config Options**
 
 ```yaml
 
 auth:
+  plugins:
+    - auth_file
   password-file: /path/to/password_file
 
 ```
 
-### File Format
+**File Format**
 
-  
 The file includes `username:password` pairs, one per line.
 
 The password should be encoded using sha-512 with `mkpasswd -m sha-512` or:
@@ -41,11 +55,45 @@ from passlib.hash import sha512_crypt
 passwd = input() if not sys.stdin.isatty() else getpass()
 print(sha512_crypt.hash(passwd))
 ```
+
+## Taboo (Topic Plugin)
+
+Prevents using topics named: `prohibited`, `top-secret`, and `data/classified`
+
+**Configuration**
+
+```yaml
+topic-check:
+  enabled: true
+  plugins:
+    - topic_taboo
+```
+
+## ACL (Topic Plugin)
+
+**Configuration**
+
+```yaml
+topic-check:
+  enabled: true
+  plugins:
+    - topic_acl
+  publish-acl: True # or False
+  acl:
+    - username: ["list", "of", "allowed", "topics"]
+    - .
+```
+
+
+
+
+
+
 ## Plugin: $SYS
 
 Publishes, on a periodic basis, statistics about the broker
 
-### Config Options
+**Config Options**
 
 - `sys_interval` - int, seconds between updates
 

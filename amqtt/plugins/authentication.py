@@ -18,7 +18,20 @@ class BaseAuthPlugin:
             self.context.logger.warning("'auth' section not found in context configuration")
 
     async def authenticate(self, *args: None, **kwargs: Session) -> bool | None:
-        """Logic for base Authentication. Returns True if auth config exists."""
+        """
+        Logic for session authentication.
+
+        Args:
+            *args: positional arguments (not used)
+            **kwargs: payload from broker
+                ```
+                session: amqtt.session.Session
+                ```
+
+        Returns:
+            - `True` if user is authentication succeed, `False` if user authentication fails
+            - `None` if authentication can't be achieved (then plugin result is then ignored)
+        """
         if not self.auth_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")
