@@ -1,4 +1,3 @@
-
 /*
  https://coolors.co/568e83-f5fbef-84c318-9684a1-161925
  https://coolors.co/2ec0f9-67aaf9-9bbdf9-c4e0f9-b95f89
@@ -9,9 +8,20 @@ https://coolors.co/e6c229-f17105-d11149-6610f2-1a8fe3
  */
 
 .md-header {
-    background: #D11149
+  background: #d11149;
 }
 
 nav.md-tabs {
-    display: none;
+  display: none;
 }
+
+
+h2.doc-heading-parameter {
+  font-size: 16px;
+}
+
+.doc-md-description {
+  font-size: 16px;
+  display: block;
+}
+

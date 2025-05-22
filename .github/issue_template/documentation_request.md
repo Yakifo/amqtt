@@ -1,10 +1,9 @@
 ---
 name: Documentation request
 about: Suggest documentation for this project
-title: ''
+title: ""
 labels: documentation
-assignees: ''
-
+assignees: ""
 ---
 
 **Describe the documentation you'd like**

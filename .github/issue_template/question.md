@@ -1,16 +1,15 @@
 ---
 name: Bug
 about: Describe this issue template's purpose here.
-title: ''
+title: ""
 labels: bug
-assignees: ''
-
+assignees: ""
 ---
 
 When your issue is related to code that isn't working as expected, please
 enable debug logs:
 
-``` python
+```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
 ```

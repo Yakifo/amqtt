@@ -43,29 +43,32 @@ Note that for simplicity, `amqtt_sub` uses mostly the same argument syntax as [m
 
 If `-c` argument is given, `amqtt_sub` will read specific MQTT settings for the given configuration file. This file must be a valid [YAML](http://yaml.org/) file which may contain the following configuration elements:
 
-* `keep_alive`: Keep-alive timeout sent to the broker. Defaults to `10` seconds.
-* `ping_delay`: Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to `0` will disable to 0 and may lead to broker disconnection.
-* `default_qos`: Default QoS for messages published. Defaults to 0.
-* `default_retain`: Default retain value to messages published. Defaults to `false`.
-* `auto_reconnect`: Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
-* `reconnect_retries`: Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
-* `reconnect_max_interval`: Maximum interval between 2 connection retry. Defaults to `10`.
+- `keep_alive`: Keep-alive timeout sent to the broker. Defaults to `10` seconds.
+- `ping_delay`: Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to `0` will disable to 0 and may lead to broker disconnection.
+- `default_qos`: Default QoS for messages published. Defaults to 0.
+- `default_retain`: Default retain value to messages published. Defaults to `false`.
+- `auto_reconnect`: Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
+- `reconnect_retries`: Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
+- `reconnect_max_interval`: Maximum interval between 2 connection retry. Defaults to `10`.
 
 ## Examples
 
 Examples below are adapted from [mosquitto_sub](http://mosquitto.org/man/mosquitto_sub-1.html) documentation.
 
 Subscribe with QoS 0 to all messages published under $SYS/:
+
 ```bash
 amqtt_sub --url mqtt://localhost -t '$SYS/#' -q 0
 ```
 
 Subscribe to 10 messages with QoS 2 from /#:
+
 ```bash
 amqtt_sub --url mqtt://localhost -t # -q 2 -n 10
 ```
 
 Subscribe with QoS 0 to all messages published under $SYS/ over mqtt encapsulated in a websocket connection and additional headers:
+
 ```bash
 amqtt_sub --url wss://localhost -t '$SYS/#' -q 0 --extra-headers '{"Authorization": "Bearer <token>"}'
 ```

@@ -48,34 +48,38 @@ Note that for simplicity, `amqtt_pub` uses mostly the same argument syntax as [m
 
 If `-c` argument is given, `amqtt_pub` will read specific MQTT settings for the given configuration file. This file must be a valid [YAML](http://yaml.org/) file which may contain the following configuration elements:
 
-* `keep_alive`: Keep-alive timeout sent to the broker. Defaults to `10` seconds.
-* `ping_delay`: Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to `0` will disable to 0 and may lead to broker disconnection.
-* `default_qos`: Default QoS for messages published. Defaults to 0.
-* `default_retain`: Default retain value to messages published. Defaults to `false`.
-* `auto_reconnect`: Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
-* `reconnect_retries`: Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
-* `reconnect_max_interval`: Maximum interval between 2 connection retry. Defaults to `10`.
+- `keep_alive`: Keep-alive timeout sent to the broker. Defaults to `10` seconds.
+- `ping_delay`: Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to `0` will disable to 0 and may lead to broker disconnection.
+- `default_qos`: Default QoS for messages published. Defaults to 0.
+- `default_retain`: Default retain value to messages published. Defaults to `false`.
+- `auto_reconnect`: Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
+- `reconnect_retries`: Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
+- `reconnect_max_interval`: Maximum interval between 2 connection retry. Defaults to `10`.
 
 ## Examples
 
 Examples below are adapted from [mosquitto_pub](http://mosquitto.org/man/mosquitto_pub-1.html) documentation.
 
 Publish temperature information to localhost with QoS 1:
+
 ```bash
 amqtt_pub --url mqtt://localhost -t sensors/temperature -m 32 -q 1
 ```
 
 Publish timestamp and temperature information to a remote host on a non-standard port and QoS 0:
+
 ```bash
 amqtt_pub --url mqtt://192.168.1.1:1885 -t sensors/temperature -m "1266193804 32"
 ```
 
 Publish light switch status. Message is set to retained because there may be a long period of time between light switch events:
+
 ```bash
 amqtt_pub --url mqtt://localhost -r -t switches/kitchen_lights/status -m "on"
 ```
 
 Send the contents of a file in two ways:
+
 ```bash
 amqtt_pub --url mqtt://localhost -t my/topic -f ./data
 
@@ -83,6 +87,7 @@ amqtt_pub --url mqtt://localhost -t my/topic -s < ./data
 ```
 
 Publish temperature information to localhost with QoS 1 over mqtt encapsulated in a websocket connection and additional headers:
+
 ```bash
 amqtt_pub --url wss://localhost -t sensors/temperature -m 32 -q 1 --extra-headers '{"Authorization": "Bearer <token>"}'
 ```

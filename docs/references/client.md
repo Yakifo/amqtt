@@ -104,6 +104,7 @@ Both do the same job. `test_coro()` publishes 3 messages in sequence. `test_coro
 The difference appears when looking at the sequence of MQTT messages sent.
 
 `test_coro()` achieves:
+
 ```
 amqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.843901, fixed=MQTTFixedHeader(length=28, flags=0x0), variable=PublishVariableHeader(topic=a/b, packet_id=None), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_0'"))
 amqtt/YDYY;NNRpYQSy3?o -out-> PublishPacket(ts=2015-11-11 21:54:48.844152, fixed=MQTTFixedHeader(length=30, flags=0x2), variable=PublishVariableHeader(topic=a/b, packet_id=1), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_1'"))
@@ -115,6 +116,7 @@ amqtt/YDYY;NNRpYQSy3?o <-in-- PubcompPacket(ts=2015-11-11 21:54:49.092514, fixed
 ```
 
 while `test_coro2()` runs:
+
 ```
 amqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466123, fixed=MQTTFixedHeader(length=28, flags=0x0), variable=PublishVariableHeader(topic=a/b, packet_id=None), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_0'"))
 amqtt/LYRf52W[56SOjW04 -out-> PublishPacket(ts=2015-11-11 21:54:48.466432, fixed=MQTTFixedHeader(length=30, flags=0x2), variable=PublishVariableHeader(topic=a/b, packet_id=1), payload=PublishPayload(data="b'TEST MESSAGE WITH QOS_1'"))
@@ -127,54 +129,4 @@ amqtt/LYRf52W[56SOjW04 <-in-- PubcompPacket(ts=2015-11-11 21:54:48.713107, fixed
 
 Both coroutines have the same results except that `test_coro2()` manages messages flow in parallel which may be more efficient.
 
-## Reference
-
-### MQTTClient API
-
-The `amqtt.client` module provides the following methods in the `MQTTClient` class:
-
-- `connect()`: Connect to a remote broker
-- `disconnect()`: Disconnect from the broker
-- `reconnect()`: Reconnect to the broker
-- `ping()`: Send a PING request to the broker
-- `publish()`: Publish a message to the broker
-- `subscribe()`: Subscribe to one or more topics
-- `unsubscribe()`: Unsubscribe from one or more topics
-- `deliver_message()`: Receive the next message from the broker
-
-### MQTTClient configuration
-
-The `MQTTClient` `__init__` method accepts a `config` parameter which allows setup of behavior and default settings. This argument must be a Python dict object which may contain the following entries:
-
-* `keep_alive`: keep alive (in seconds) to send when connecting to the broker (defaults to `10` seconds). `MQTTClient` will *auto-ping* the broker if no message is sent within the keep-alive interval. This avoids disconnection from the broker.
-* `ping_delay`: *auto-ping* delay before keep-alive times out (defaults to `1` seconds).
-* `default_qos`: Default QoS (`0`) used by `publish()` if `qos` argument is not given.
-* `default_retain`: Default retain (`False`) used by `publish()` if `qos` argument is not given.
-* `auto_reconnect`: enable or disable auto-reconnect feature (defaults to `True`).
-* `reconnect_max_interval`: maximum interval (in seconds) to wait before two connection retries (defaults to `10`).
-* `reconnect_retries`: maximum number of connect retries (defaults to `2`). Negative value will cause client to reconnect infinitely.
-
-Default QoS and default retain can also be overridden by adding a `topics` with may contain QoS and retain values for specific topics. See the following example:
-
-```python
-config = {
-    'keep_alive': 10,
-    'ping_delay': 1,
-    'default_qos': 0,
-    'default_retain': False,
-    'auto_reconnect': True,
-    'reconnect_max_interval': 5,
-    'reconnect_retries': 10,
-    'topics': {
-        'test': { 'qos': 1 },
-        'some_topic': { 'qos': 2, 'retain': True }
-    }
-}
-```
-
-With this setting any message published will be set with QOS_0 and retain flag unset except for:
-
-* messages sent to `test` topic: they will be sent with QOS_1
-* messages sent to `some_topic` topic: they will be sent with QOS_2 and retain flag set
-
-In any case, the `qos` and `retain` argument values passed to method `publish()` will override these settings.
+::: amqtt.client.MQTTClient

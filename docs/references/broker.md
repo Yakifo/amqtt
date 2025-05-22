@@ -80,25 +80,28 @@ topic-check:
 
 The `listeners` section allows defining network listeners which must be started by the `Broker`. Several listeners can be setup. `default` subsection defines common attributes for all listeners. Each listener can have the following settings:
 
-* `bind`: IP address and port binding.
-* `max-connections`: Set maximum number of active connection for the listener. `0` means no limit.
-* `type`: transport protocol type; can be `tcp` for classic TCP listener or `ws` for MQTT over websocket.
-* `ssl`: enables (`on`) or disable secured connection over the transport protocol.
-* `cafile`, `cadata`, `certfile` and `keyfile`: mandatory parameters for SSL secured connections.
+- `bind`: IP address and port binding.
+- `max-connections`: Set maximum number of active connection for the listener. `0` means no limit.
+- `type`: transport protocol type; can be `tcp` for classic TCP listener or `ws` for MQTT over websocket.
+- `ssl`: enables (`on`) or disable secured connection over the transport protocol.
+- `cafile`, `cadata`, `certfile` and `keyfile`: mandatory parameters for SSL secured connections.
 
 The `auth` section setup authentication behaviour:
 
-* `plugins`: defines the list of activated plugins. Note the plugins must be defined in the `amqtt.broker.plugins` [entry point](https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins).
-* `allow-anonymous`: used by the internal `amqtt.plugins.authentication.AnonymousAuthPlugin` plugin. This parameter enables (`on`) or disable anonymous connection, i.e. connection without username.
-* `password-file`: used by the internal `amqtt.plugins.authentication.FileAuthPlugin` plugin. This parameter gives to path of the password file to load for authenticating users.
+- `plugins`: defines the list of activated plugins. Note the plugins must be defined in the `amqtt.broker.plugins` [entry point](https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins).
+- `allow-anonymous`: used by the internal `amqtt.plugins.authentication.AnonymousAuthPlugin` plugin. This parameter enables (`on`) or disable anonymous connection, i.e. connection without username.
+- `password-file`: used by the internal `amqtt.plugins.authentication.FileAuthPlugin` plugin. This parameter gives to path of the password file to load for authenticating users.
 
 The `topic-check` section setup access control policies for publishing and subscribing to topics:
 
-* `enabled`: set to true if you want to impose an access control policy. Otherwise, set it to false.
-* `plugins`: defines the list of activated plugins. Note the plugins must be defined in the `amqtt.broker.plugins` [entry point](https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins).
-* additional parameters: depending on the plugin used for access control, additional parameters should be added.
-    * In case of `topic_acl` plugin, the Access Control List (ACL) must be defined in the parameter `acl`.
-        * For each username, a list with the allowed topics must be defined.
-        * If the client logs in anonymously, the `anonymous` entry within the ACL is used in order to grant/deny subscriptions.
+- `enabled`: set to true if you want to impose an access control policy. Otherwise, set it to false.
+- `plugins`: defines the list of activated plugins. Note the plugins must be defined in the `amqtt.broker.plugins` [entry point](https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins).
+- additional parameters: depending on the plugin used for access control, additional parameters should be added.
+  - In case of `topic_acl` plugin, the Access Control List (ACL) must be defined in the parameter `acl`.
+    - For each username, a list with the allowed topics must be defined.
+    - If the client logs in anonymously, the `anonymous` entry within the ACL is used in order to grant/deny subscriptions.
+
+
+::: amqtt.broker.Broker
 
 [^1]: See [PyYAML](http://pyyaml.org/wiki/PyYAMLDocumentation) for loading YAML files as Python dict.

@@ -2,9 +2,9 @@
 
 `aMQTT` is an open source `MQTT` client and broker implementation; these can be integrated into other projects using the appropriate APIs. To get started, three command-line scripts are also installed along with the package:
 
-* `amqtt` - the MQTT broker
-* `amqtt_pub` - an MQTT client to publish messages
-* `amqtt_sub` - an MQTT client to listen for messages
+- `amqtt` - the MQTT broker
+- `amqtt_pub` - an MQTT client to publish messages
+- `amqtt_sub` - an MQTT client to listen for messages
 
 To install the `aMQTT` package:
 
