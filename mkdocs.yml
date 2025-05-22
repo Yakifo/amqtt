@@ -24,6 +24,8 @@ nav:
       - API Usage:
           - Broker: references/broker.md
           - Client: references/client.md
+      - Plugins:
+          - $SYS: plugins/sys_broker.md
       - Reference:
           - Contributing: contributing.md
           - Code of Conduct: code_of_conduct.md
