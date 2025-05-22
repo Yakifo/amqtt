@@ -63,7 +63,7 @@ class BrokerSysPlugin:
     async def on_broker_post_start(self, *args: None, **kwargs: None) -> None:
         """Initialize statistics and start $SYS broadcasting."""
         self._stats[STAT_START_TIME] = int(datetime.now(tz=UTC).timestamp())
-        version = f"HBMQTT version {amqtt.__version__}"
+        version = f"aMQTT version {amqtt.__version__}"
         self.context.retain_message(DOLLAR_SYS_ROOT + "version", version.encode())
 
         # Start $SYS topics management
@@ -114,8 +114,8 @@ class BrokerSysPlugin:
             "messages/received": self._stats[STAT_MSG_RECEIVED],
             "messages/sent": self._stats[STAT_MSG_SENT],
             "time": int(datetime.now(tz=UTC).timestamp()),
-            "uptime": str(datetime.fromtimestamp(uptime, UTC)),
-            "uptime/formatted": str(uptime),
+            "uptime": str(uptime),
+            "uptime/formatted": str(datetime.fromtimestamp(self._stats[STAT_START_TIME], UTC)),
             "clients/connected": client_connected,
             "clients/disconnected": client_disconnected,
             "clients/maximum": self._stats[STAT_CLIENTS_MAXIMUM],
