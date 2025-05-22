@@ -1,6 +1,6 @@
 # Common API
 
-This document describes `aMQTT` common API both used by [MQTT Client](mqttclient.md) and [Broker](broker.md).
+This document describes `aMQTT` common API both used by [MQTT Client](client.md) and [Broker](broker.md).
 
 ## Reference
 

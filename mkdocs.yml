@@ -17,17 +17,21 @@ nav:
   - Home:
       - Overview: index.md
       - Quickstart: quickstart.md
-      - CLI Usage:
+      - Console scripts:
           - Broker: references/amqtt.md
           - Publisher: references/amqtt_pub.md
           - Subscriber: references/amqtt_sub.md
-      - API Usage:
+      - Programming API:
           - Broker: references/broker.md
           - Client: references/client.md
+          - Common: references/common.md
       - Plugins:
-          - $SYS: plugins/sys_broker.md
+          - Existing: plugins.md
+          - Custom: custom.md
       - Reference:
           - Contributing: contributing.md
+          - Change log: changelog.md
+          - Coverage: coverage.md
           - Code of Conduct: code_of_conduct.md
           - Security: security.md
           - License: license.md

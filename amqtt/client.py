@@ -176,7 +176,7 @@ class MQTTClient:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
 
         Raises:
-            `amqtt.client.ConnectException` if connection fails
+            amqtt.client.ConnectException: if connection fails
         """
         additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)
@@ -240,7 +240,7 @@ class MQTTClient:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033) return code
 
         Raises:
-            `amqtt.client.ConnectException` if re-connection fails after max retries.
+            amqtt.client.ConnectException: if re-connection fails after max retries.
         """
         if self.session and self.session.transitions.is_connected():
             self.logger.warning("Client already connected")
@@ -404,7 +404,7 @@ class MQTTClient:
             instance of `amqtt.session.ApplicationMessage` containing received message information flow.
 
         Raises:
-            `asyncio.TimeoutError` if timeout occurs before a message is delivered
+            asyncio.TimeoutError: if timeout occurs before a message is delivered
         """
         if self._handler is None:
             msg = "Handler is not initialized."
