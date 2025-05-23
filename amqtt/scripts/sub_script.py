@@ -110,20 +110,20 @@ def _version(v:bool) -> None:
 def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     url: str = typer.Option(..., help="Broker connection URL (must conform to MQTT URI scheme)", show_default=False),
     config_file: str | None = typer.Option(None, "-c", help="Broker configuration file (YAML format)"),
-    client_id: str | None = typer.Option(None, "-i", help="Id to use as client ID"),
-    max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending"),
+    client_id: str | None = typer.Option(None, "-i", help="Id to use as client ID. [default: process id and the hostname of the client.]"),
+    max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending (optional) [default: read indefinitely]"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
     topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe"),  # noqa: B008
     keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout in seconds"),
     clean_session: bool = typer.Option(False, help="Clean session on connect (defaults to False)"),
-    ca_file: str | None = typer.Option(None, "--ca-file", help="CA file"),
-    ca_path: str | None = typer.Option(None, "--ca-path", help="CA path"),
-    ca_data: str | None = typer.Option(None, "--ca-data", help="CA data"),
-    will_topic: str | None = typer.Option(None, "--will-topic"),
-    will_message: str | None = typer.Option(None, "--will-message"),
-    will_qos: int | None = typer.Option(None, "--will-qos"),
-    will_retain: bool = typer.Option(False, "--will-retain", help="Will retain flag"),
-    extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="JSON string of extra websocket headers"),
+    ca_file: str | None = typer.Option(None, "--ca-file", help="Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    ca_path: str | None = typer.Option(None, "--ca-path", help="Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    ca_data: str | None = typer.Option(None, "--ca-data", help="Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    will_topic: str | None = typer.Option(None, "--will-topic", help="The topic on which to send a Will, in the event that the client disconnects unexpectedly."),
+    will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. [required if `--will-topic` is specified]."),
+    will_qos: int | None = typer.Option(None, "--will-qos", help="The QoS to use for the Will. [default: 0, only valid if `--will-topic` is specified]."),
+    will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. [optional, only valid if `--will-topic` is specified]."),
+    extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection (websocket connections only)."),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
     version: bool = typer.Option(  # noqa : ARG001
         False,
@@ -133,7 +133,23 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
         help="Show version and exit",
     ),
 ) -> None:
-    """Run the MQTT subscriber."""
+    """Run the MQTT subscriber.
+
+    Examples:
+        \n
+        Subscribe with QoS 0 to all messages published under $SYS/:
+
+        `amqtt_sub --url mqtt://localhost -t '$SYS/#' -q 0`
+
+        Subscribe to 10 messages with QoS 2 from /#:
+
+        `amqtt_sub --url mqtt://localhost -t # -q 2 -n 10`
+
+        Subscribe with QoS 0 to all messages published under $SYS/ over mqtt encapsulated in a websocket connection and additional headers:
+
+        `amqtt_sub --url wss://localhost -t '$SYS/#' -q 0 --extra-headers '{"Authorization": "Bearer <token>"}'`
+
+    """
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)

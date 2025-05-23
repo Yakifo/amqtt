@@ -133,9 +133,7 @@ def _version(v: bool) -> None:
 
 @app.command()
 def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
-    url: str = typer.Option(
-        ..., "--url", help="Broker connection URL (must conform to MQTT URI scheme: mqtt://<username:password>@HOST:port)"
-    ),
+    url: str = typer.Option(..., "--url", help="Broker connection URL (must conform to MQTT URI scheme: mqtt://<username:password>@HOST:port)"),
     config_file: str | None = typer.Option(None, "-c", "--config-file", help="Broker configuration file (YAML format)"),
     client_id: str | None = typer.Option(None, "-i", "--client-id", help="Client ID to use for the connection"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
@@ -148,15 +146,15 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     no_message: bool = typer.Option(False, "-n", help="Publish an empty message"),
     keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout in seconds"),
     clean_session: bool = typer.Option(False, "--clean-session", help="Clean session on connect (defaults to False)"),
-    ca_file: str | None = typer.Option(None, "--ca-file", help="CA file"),
-    ca_path: str | None = typer.Option(None, "--ca-path", help="CA path"),
-    ca_data: str | None = typer.Option(None, "--ca-data", help="CA data"),
-    will_topic: str | None = typer.Option(None, "--will-topic", help="Last will topic"),
-    will_message: str | None = typer.Option(None, "--will-message", help="Last will message"),
-    will_qos: int | None = typer.Option(0, "--will-qos", help="Last will QoS"),
-    will_retain: bool = typer.Option(False, "--will-retain", help="Set retain flag for last will message"),
+    ca_file: str | None = typer.Option(None, "--ca-file", help="Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    ca_path: str | None = typer.Option(None, "--ca-path", help="Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    ca_data: str | None = typer.Option(None, "--ca-data", help="Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    will_topic: str | None = typer.Option(None, "--will-topic", help="The topic on which to send a Will, in the event that the client disconnects unexpectedly."),
+    will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. [required if `--will-topic` is specified]."),
+    will_qos: int | None = typer.Option(0, "--will-qos", help="The QoS to use for the Will. [default: 0, only valid if `--will-topic` is specified]."),
+    will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. [optional, only valid if `--will-topic` is specified]."),
     extra_headers_json: str | None = typer.Option(
-        None, "--extra-headers", help="JSON object with key-value headers for websocket connections"
+        None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection (websocket connections only)."
     ),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
     version: bool | None = typer.Option(  # noqa : ARG001
