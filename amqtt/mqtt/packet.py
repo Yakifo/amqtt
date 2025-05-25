@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 import asyncio
 
@@ -31,6 +32,9 @@ PINGREQ = 0x0C
 PINGRESP = 0x0D
 DISCONNECT = 0x0E
 RESERVED_15 = 0x0F
+
+
+logger = logging.getLogger(__name__)
 
 
 class MQTTFixedHeader:
@@ -206,6 +210,7 @@ class MQTTPacket(Generic[_VH, _P, _FH]):
 
     async def to_stream(self, writer: WriterAdapter) -> None:
         """Write the entire packet to the stream."""
+        logger.debug(f">> writing packet to stream: {self}")
         writer.write(self.to_bytes())
         await writer.drain()
         self.protocol_ts = datetime.now(UTC)
@@ -248,6 +253,7 @@ class MQTTPacket(Generic[_VH, _P, _FH]):
         else:
             instance = cls(fixed_header, variable_header, payload)
         instance.protocol_ts = datetime.now(UTC)
+        logger.debug(f">> read packet from stream: {instance!r}")
         return instance
 
     @property
