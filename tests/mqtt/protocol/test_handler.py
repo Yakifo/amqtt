@@ -38,11 +38,23 @@ class ProtocolHandlerTest(unittest.TestCase):
         self.loop.close()
 
     def test_init_handler(self):
-        Session()
-        handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
-        assert handler.session is None
-        assert handler._loop is self.loop
-        self.check_empty_waiters(handler)
+
+        async def test_coro() -> None:
+            try:
+                Session()
+                handler = ProtocolHandler(self.plugin_manager)
+                assert handler.session is None
+                assert handler._loop is self.loop
+                self.check_empty_waiters(handler)
+                future.set_result(True)
+            except Exception as ae:
+                future.set_exception(ae)
+
+        future: asyncio.Future[Any] = asyncio.Future()
+        self.loop.run_until_complete(test_coro())
+        exception = future.exception()
+        if exception:
+            raise exception
 
     def test_start_stop(self):
         async def server_mock(reader, writer) -> None:
