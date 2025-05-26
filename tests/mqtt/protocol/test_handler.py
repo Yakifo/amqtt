@@ -46,7 +46,8 @@ class ProtocolHandlerTest(unittest.TestCase):
 
     def test_start_stop(self):
         async def server_mock(reader, writer) -> None:
-            pass
+            writer.close()  # python 3.12 requires an explicit close
+            await writer.wait_closed()
 
         async def test_coro() -> None:
             try:
@@ -78,6 +79,9 @@ class ProtocolHandlerTest(unittest.TestCase):
                 assert packet.variable_header.topic_name == "/topic"
                 assert packet.qos == QOS_0
                 assert packet.packet_id is None
+                writer.close()  # python 3.12 requires an explicit close
+                await writer.wait_closed()
+
             except Exception as ae:
                 future.set_exception(ae)
 
@@ -130,6 +134,8 @@ class ProtocolHandlerTest(unittest.TestCase):
                 assert packet.packet_id in self.handler._puback_waiters
                 puback = PubackPacket.build(packet.packet_id)
                 await puback.to_stream(writer)
+                writer.close()  # python 3.12 requires an explicit close
+                await writer.wait_closed()
             except Exception as ae:
                 future.set_exception(ae)
 
@@ -188,6 +194,8 @@ class ProtocolHandlerTest(unittest.TestCase):
                 assert packet.packet_id in self.handler._pubcomp_waiters
                 pubcomp = PubcompPacket.build(packet.packet_id)
                 await pubcomp.to_stream(writer)
+                writer.close()  # python 3.12 requires an explicit close
+                await writer.wait_closed()
             except Exception as ae:
                 future.set_exception(ae)
 
@@ -240,6 +248,8 @@ class ProtocolHandlerTest(unittest.TestCase):
                 False,
             )
             await packet.to_stream(writer)
+            writer.close()  # python 3.12 requires an explicit close
+            await writer.wait_closed()
 
         async def test_coro() -> None:
             try:
@@ -257,6 +267,7 @@ class ProtocolHandlerTest(unittest.TestCase):
                 assert message.pubcomp_packet is None
                 await self.stop_handler(self.handler, self.session)
                 future.set_result(True)
+
             except Exception as ae:
                 future.set_exception(ae)
 
@@ -287,6 +298,8 @@ class ProtocolHandlerTest(unittest.TestCase):
                 puback = await PubackPacket.from_stream(reader)
                 assert puback is not None
                 assert packet.packet_id == puback.packet_id
+                writer.close()  # python 3.12 requires an explicit close
+                await writer.wait_closed()
             except Exception as ae:
                 future.set_exception(ae)
 
@@ -344,6 +357,8 @@ class ProtocolHandlerTest(unittest.TestCase):
                 pubcomp = await PubcompPacket.from_stream(reader)
                 assert pubcomp is not None
                 assert packet.packet_id == pubcomp.packet_id
+                writer.close()  # python 3.12 requires an explicit close
+                await writer.wait_closed()
             except Exception as ae:
                 future.set_exception(ae)
 
@@ -412,6 +427,8 @@ class ProtocolHandlerTest(unittest.TestCase):
                 assert packet.packet_id in self.handler._puback_waiters
                 puback = PubackPacket.build(packet.packet_id)
                 await puback.to_stream(writer)
+                writer.close()  # python 3.12 requires an explicit close
+                await writer.wait_closed()
             except Exception as ae:
                 future.set_exception(ae)
 
@@ -468,6 +485,9 @@ class ProtocolHandlerTest(unittest.TestCase):
                 assert packet.packet_id in self.handler._pubcomp_waiters
                 pubcomp = PubcompPacket.build(packet.packet_id)
                 await pubcomp.to_stream(writer)
+                writer.close()  # python 3.12 requires an explicit close
+                await writer.wait_closed()
+
             except Exception as ae:
                 future.set_exception(ae)
 
