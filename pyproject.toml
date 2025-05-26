@@ -32,20 +32,21 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "hypothesis>=6.130.8",               # https://pypi.org/project/hypothesis
-  "mypy>=1.15.0",                      # https://pypi.org/project/mypy
-  "pre-commit>=4.2.0",                 # https://pypi.org/project/pre-commit
-  "psutil>=7.0.0",                     # https://pypi.org/project/psutil
-  "pylint>=3.3.6",                     # https://pypi.org/project/pylint
-  "pytest-asyncio>=0.26.0",            # https://pypi.org/project/pytest-asyncio
-  "pytest-cov>=6.1.0",                 # https://pypi.org/project/pytest-cov
-  "pytest-logdog>=0.1.0",              # https://pypi.org/project/pytest-logdog
-  "pytest-timeout>=2.3.1",             # https://pypi.org/project/pytest-timeout
-  "pytest>=8.3.5",                     # https://pypi.org/project/pytest
-  "ruff>=0.11.3",                      # https://pypi.org/project/ruff
-  "setuptools>=78.1.0",                # https://pypi.org/project/setuptools
-  "types-mock>=5.2.0.20250306",        # https://pypi.org/project/types-mock
-  "types-PyYAML>=6.0.12.20250402",     # https://pypi.org/project/types-PyYAML
+  "hypothesis>=6.130.8", # https://pypi.org/project/hypothesis
+  "mypy>=1.15.0", # https://pypi.org/project/mypy
+  "paho-mqtt>=2.1.0",
+  "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
+  "psutil>=7.0.0", # https://pypi.org/project/psutil
+  "pylint>=3.3.6", # https://pypi.org/project/pylint
+  "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
+  "pytest-cov>=6.1.0", # https://pypi.org/project/pytest-cov
+  "pytest-logdog>=0.1.0", # https://pypi.org/project/pytest-logdog
+  "pytest-timeout>=2.3.1", # https://pypi.org/project/pytest-timeout
+  "pytest>=8.3.5", # https://pypi.org/project/pytest
+  "ruff>=0.11.3", # https://pypi.org/project/ruff
+  "setuptools>=78.1.0", # https://pypi.org/project/setuptools
+  "types-mock>=5.2.0.20250306", # https://pypi.org/project/types-mock
+  "types-PyYAML>=6.0.12.20250402", # https://pypi.org/project/types-PyYAML
   "types-setuptools>=78.1.0.20250329", # https://pypi.org/project/types-setuptools
 ]
 
