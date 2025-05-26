@@ -38,8 +38,8 @@ The example below shows how to write a simple MQTT client which subscribes a top
                 print("%d:  %s => %s" % (i, packet.variable_header.topic_name, str(packet.payload.data)))
             await C.unsubscribe(['$SYS/broker/uptime', '$SYS/broker/load/#'])
             await C.disconnect()
-        except ClientException as ce:
-            logger.error("Client exception: %s" % ce)
+        except ClientException:
+            logger.error("Client exception", exc_info=True)
 
     if __name__ == '__main__':
         formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

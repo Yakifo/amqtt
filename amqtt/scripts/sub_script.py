@@ -106,8 +106,8 @@ async def do_sub(client: MQTTClient, arguments: dict[str, Any]) -> None:
     except KeyboardInterrupt:
         await client.disconnect()
         logger.info(f"{client.client_id} Disconnected from broker")
-    except ConnectError as ce:
-        logger.fatal(f"Connection to '{arguments['--url']}' failed: {ce!r}")
+    except ConnectError:
+        logger.fatal(f"Connection to '{arguments['--url']}' failed.", exc_info=True)
     except asyncio.CancelledError:
         logger.fatal("Publish canceled due to previous error")
 
