@@ -39,7 +39,7 @@ class ProtocolHandlerTest(unittest.TestCase):
 
     def test_init_handler(self):
         Session()
-        handler = ProtocolHandler(self.plugin_manager)
+        handler = ProtocolHandler(self.plugin_manager, loop=self.loop)
         assert handler.session is None
         assert handler._loop is self.loop
         self.check_empty_waiters(handler)
