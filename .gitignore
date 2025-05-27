@@ -1,7 +1,8 @@
-#------- Package Files -------
+#------- Package & Cache Files -------
 *.egg-info
 __pycache__
 node_modules
+.vite
 
 #------- Environment Files -------
 .python-version

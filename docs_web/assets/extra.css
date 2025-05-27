@@ -1,0 +1,22 @@
+/*
+ https://coolors.co/e6c229-f17105-d11149-6610f2-1a8fe3
+*/
+
+.md-header {
+  background: #d11149;
+}
+
+nav.md-tabs {
+  display: none;
+}
+
+
+h2.doc-heading-parameter {
+  font-size: 16px;
+}
+
+.doc-md-description {
+  font-size: 16px;
+  display: block;
+}
+
