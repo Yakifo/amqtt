@@ -4,6 +4,10 @@
   text-align: center;
 }
 
+.fil0, .fil1 {
+  fill: #ffffff;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

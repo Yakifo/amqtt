@@ -14,11 +14,6 @@ validation:
   absolute_links: warn
   unrecognized_links: warn
 
-nav:
-  - "":
-    - Overview: index.md
-    - SomeOtherPage: dashboard.md
-
 theme:
   name: material
   logo: assets/amqtt_bw.svg
