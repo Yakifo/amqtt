@@ -1,16 +1,11 @@
-import type {} from '@mui/x-date-pickers/themeAugmentation';
-import type {} from '@mui/x-charts/themeAugmentation';
-import type {} from '@mui/x-tree-view/themeAugmentation';
 import { alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 
 import MainGrid from './components/MainGrid';
-
 import AppTheme from '../shared-theme/AppTheme';
-
-import OtherLogo from './amqtt_bw.svg';
+import AmqttLogo from './amqtt_bw.svg';
 
 import {
   chartsCustomizations,
@@ -31,7 +26,7 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
       <AppBar position="static" elevation={6}>
         <Toolbar>
           <img
-            src={OtherLogo}
+            src={AmqttLogo}
             style={{width: 150}}
             alt="website logo"
           />
