@@ -5,7 +5,6 @@ import { alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import AppNavbar from './components/AppNavbar';
 
 import MainGrid from './components/MainGrid';
 
@@ -19,7 +18,6 @@ import {
 } from './theme/customizations';
 import AppBar from "@mui/material/AppBar";
 import {Toolbar} from "@mui/material";
-import Typography from "@mui/material/Typography";
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -41,7 +39,7 @@ export default function Dashboard(props: { disableCustomTheme?: boolean }) {
         </Toolbar>
       </AppBar>
       <Box sx={{display: 'flex'}}>
-        <AppNavbar/>
+
         {/* Main content */}
         <Box
           component="main"
