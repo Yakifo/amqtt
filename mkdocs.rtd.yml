@@ -1,10 +1,12 @@
+# MKDocs configuration file for generating RTD (readthedocs) documentation
+
 site_name: ""
 site_description: "MQTT broker and client natively implemented with Python's asyncio"
 site_url: http://github.com
 repo_url: https://github.com/Yakifo/amqtt
 repo_name: Yakifo/amqtt
 site_dir: "site"
-watch: [mkdocs.yml, README.md, CONTRIBUTING.md, docs, amqtt]
+watch: [mkdocs.rtd.yml, README.md, CONTRIBUTING.md, SUPPORT.md, SECURITY.md, CODE_OF_CONDUCT.md, CONTRIBUTING.md, docs, amqtt]
 copyright: TBD
 edit_uri: edit/main/docs/
 
@@ -29,6 +31,7 @@ nav:
           - Packaged: packaged_plugins.md
           - Custom: custom_plugins.md
       - Reference:
+          - Support: support.md
           - Contributing: contributing.md
           - Change log: changelog.md
           - Coverage: coverage.md

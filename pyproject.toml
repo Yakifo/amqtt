@@ -32,8 +32,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "hatch>=1.14.1",
   "hypothesis>=6.130.8", # https://pypi.org/project/hypothesis
   "mypy>=1.15.0",
+  "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
   "psutil>=7.0.0", # https://pypi.org/project/psutil
   "pylint>=3.3.6", # https://pypi.org/project/pylint
@@ -81,6 +83,11 @@ include = ["/amqtt"]
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.poe.tasks]
+rtd = "mkdocs serve -f mkdocs.rtd.yml"
+test = "pytest"
+docs = "mkdocs build"
 
 # ___________________________________ PLUGINS __________________________________
 [project.entry-points."amqtt.test.plugins"]

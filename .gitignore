@@ -21,8 +21,10 @@
 !README.md
 !README.rst
 !MANIFEST.in
+!SUPPORT.md
 
-!mkdocs.yml
+!mkdocs.rtd.yml
+!mkdocs.web.yml
 !.pre-commit-config.yaml
 !.gitleaks.toml
 !.prettierrc.yml
