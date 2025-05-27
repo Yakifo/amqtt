@@ -5,6 +5,8 @@ from amqtt.plugins.manager import BaseContext
 
 
 class BaseTopicPlugin:
+    """Base class for topic plugins."""
+
     def __init__(self, context: BaseContext) -> None:
         self.context = context
         self.topic_config: dict[str, Any] | None = self.context.config.get("topic-check", None) if self.context.config else None
@@ -12,6 +14,22 @@ class BaseTopicPlugin:
             self.context.logger.warning("'topic-check' section not found in context configuration")
 
     async def topic_filtering(self, *args: Any, **kwargs: Any) -> bool:
+        """
+        Logic for filtering out topics.
+
+        Args:
+            *args: positional arguments (not used)
+
+            **kwargs: payload from broker
+                ```
+                session: amqtt.session.Session
+                topic: str
+                action: amqtt.broker.Action
+                ```
+
+        Returns:
+            bool: `True` if topic is allowed, `False` otherwise
+            """
         if not self.topic_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")

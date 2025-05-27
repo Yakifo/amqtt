@@ -8,48 +8,56 @@ The following is a set of guidelines for contributing to aMQTT on GitHub. These 
 
 ### Requirements
 
-1. python installed (at least one version, for developers it might be helpful to have multiple versions, e.g. 3.13 installed for testing purposes)
-2. [uv](https://docs.astral.sh/uv/guides/install-python/) installed
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+2. Use `uv python install <version>` to install [3.10, 3.11, 3.12 or 3.13](https://docs.astral.sh/uv/guides/install-python/)
+3. Fork repository (if you intend to open a pull request)
+4. Clone repo `git clone git@github.com:<username>/amqtt.git`
+5. Add repo to receive latest updates `git add upstream git@github.com:Yakio/amqtt.git`
 
-### Testing the newest development version
+### Installation
 
-Create virtual environment with `UV`
+Create and start virtual environment with `UV`
 
-```sh
-uv venv --python 3.13.0
+```shell
+uv venv .venv --python 3.13.0
+source .venv/bin/activate
 ```
 
-Install:
+Install the package with development (and doc) dependencies:
 
-```sh
-uv sync --no-dev
+```shell
+uv pip install -e . --group dev --group doc
 ```
 
-Usage:
+Add git pre-commit checks (which parallel the CI checks):
 
-```sh
+```shell
+pre-commit install
+```
+
+### Run
+
+Run CLI commands:
+
+```shell
 uv run amqtt
 uv run amqtt_pub
 uv run amqtt_sub
 ```
 
-### Setup development tools
+Run the test case suite:
 
-Install with:
-
-```sh
-uv sync
+```shell
+pytest
 ```
 
-This will install all dependencies needed for development.
+Run the type checker and linters manually:
 
-Afterwards you can use `pytest` etc.
+```shell
+pre-commit run --all-files
+```
 
 ## Testing
 
-When adding a new feature please add a test along with the feature. The testing coverage should not decrease.
+When adding a new feature, please add corollary tests. The testing coverage should not decrease.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
-
-## Style and linting
-
-We use `ruff` at default settings. To avoid repeated pushes to satisfy our CI linter, you can use [pre-commit](https://pre-commit.com). Install the necessary hooks with `pre-commit install`.

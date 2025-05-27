@@ -1,6 +1,7 @@
 The MIT License (MIT)
 
 Copyright (c) 2015 Nicolas JOUANIN
+
 Copyright (c) 2021 aMQTT Contributors (https://github.com/Yakifo/amqtt/graphs/contributors)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

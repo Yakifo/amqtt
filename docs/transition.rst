@@ -1,4 +1,4 @@
-Transitioning from HBMQTT to aMQTT
+HBMQTT Transition
 ==================================
 
 This document is for those porting from HBMQTT to aMQTT.
@@ -32,4 +32,6 @@ During the transition plugins with ``hbmqtt`` entrypoint should keep working for
 CLI tools
 ---------
 
-Will also be renamed.
+* Renamed `hbmqtt` to `amqtt`
+* Renamed `hbmqtt_pub` to `amqtt_pub`
+* Renamed `hbmqtt_sub` to `amqtt_pub`

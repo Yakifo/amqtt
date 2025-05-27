@@ -28,10 +28,10 @@ from amqtt.utils import format_client_message, gen_client_id
 
 from .plugins.manager import BaseContext, PluginManager
 
-type _CONFIG_LISTENER = dict[str, int | bool | dict[str, Any]]
+type CONFIG_LISTENER = dict[str, int | bool | dict[str, Any]]
 type _BROADCAST = dict[str, Session | str | bytes | int | None]
 
-_defaults: _CONFIG_LISTENER = {
+_defaults: CONFIG_LISTENER = {
     "timeout-disconnect-delay": 2,
     "auth": {"allow-anonymous": True, "password-file": None},
 }
@@ -113,7 +113,7 @@ class BrokerContext(BaseContext):
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
-        self.config: _CONFIG_LISTENER | None = None
+        self.config: CONFIG_LISTENER | None = None
         self._broker_instance = broker
 
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
@@ -139,9 +139,10 @@ class BrokerContext(BaseContext):
 class Broker:
     """MQTT 3.1.1 compliant broker implementation.
 
-    :param config: Example Yaml config
-    :param loop: asyncio loop to use. Defaults to ``asyncio.get_event_loop()``.
-    :param plugin_namespace: Plugin namespace to use when loading plugin entry_points. Defaults to ``amqtt.broker.plugins``
+    Args:
+        config: dictionary of configuration options (see config yaml format)
+        loop: asyncio loop. defaults to `asyncio.get_event_loop()`.
+        plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
     """
 
@@ -157,7 +158,7 @@ class Broker:
 
     def __init__(
         self,
-        config: _CONFIG_LISTENER | None = None,
+        config: CONFIG_LISTENER | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         plugin_namespace: str | None = None,
     ) -> None:
@@ -190,7 +191,7 @@ class Broker:
         namespace = plugin_namespace or "amqtt.broker.plugins"
         self.plugins_manager = PluginManager(namespace, context, self._loop)
 
-    def _build_listeners_config(self, broker_config: _CONFIG_LISTENER) -> None:
+    def _build_listeners_config(self, broker_config: CONFIG_LISTENER) -> None:
         self.listeners_config = {}
         try:
             listeners_config = broker_config.get("listeners")
@@ -227,7 +228,6 @@ class Broker:
         """Start the broker to serve with the given configuration.
 
         Start method opens network sockets and will start listening for incoming connections.
-        This method is a *coroutine*.
         """
         try:
             self._sessions.clear()
