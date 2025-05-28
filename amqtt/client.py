@@ -6,6 +6,7 @@ import copy
 from functools import wraps
 import logging
 import ssl
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse, urlunparse
 
@@ -24,21 +25,12 @@ from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
 from amqtt.plugins.manager import BaseContext, PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
-from amqtt.utils import gen_client_id
+from amqtt.utils import gen_client_id, read_yaml_config
 
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-_defaults: dict[str, Any] = {
-    "keep_alive": 10,
-    "ping_delay": 1,
-    "default_qos": 0,
-    "default_retain": False,
-    "auto_reconnect": True,
-    "reconnect_max_interval": 10,
-    "reconnect_retries": 2,
-}
-
+_defaults: dict[str, Any] | None = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
 
 class ClientContext(BaseContext):
     """ClientContext is used as the context passed to plugins interacting with the client.
@@ -91,45 +83,13 @@ class MQTTClient:
 
     Args:
         client_id: MQTT client ID to use when connecting to the broker. If none, it will be generated randomly by `amqtt.utils.gen_client_id`
-        config: Client configuration with the following keys:
-
-            `keep_alive`: keep alive (in seconds) to send when connecting to the broker (defaults to `10` seconds). `MQTTClient` will _auto-ping_ the broker if no message is sent within the keep-alive interval. This avoids disconnection from the broker.
-
-            `ping_delay`: _auto-ping_ delay before keep-alive times out (defaults to `1` seconds).
-
-            `default_qos`: Default QoS (`0`) used by `publish()` if `qos` argument is not given.
-
-            `default_retain`: Default retain (`False`) used by `publish()` if `qos` argument is not given.
-
-            `auto_reconnect`: enable or disable auto-reconnect feature (defaults to `True`).
-
-            `reconnect_max_interval`: maximum interval (in seconds) to wait before two connection retries (defaults to `10`).
-
-            `reconnect_retries`: maximum number of connect retries (defaults to `2`). Negative value will cause client to reconnect infinitely.
-
-            Example:
-
-            ```python
-            config = {
-                'keep_alive': 10,
-                'ping_delay': 1,
-                'default_qos': 0,
-                'default_retain': False,
-                'auto_reconnect': True,
-                'reconnect_max_interval': 5,
-                'reconnect_retries': 10,
-                'topics': {
-                    'test': { 'qos': 1 },
-                    'some_topic': { 'qos': 2, 'retain': True }
-                }
-            }
-            ```
+        config: dictionary of configuration options (see [client configuration](client_config.md)).
 
     """
 
     def __init__(self, client_id: str | None = None, config: dict[str, Any] | None = None) -> None:
         self.logger = logging.getLogger(__name__)
-        self.config = copy.deepcopy(_defaults)
+        self.config = copy.deepcopy(_defaults or {})
         if config is not None:
             self.config.update(config)
         self.client_id = client_id if client_id is not None else gen_client_id()

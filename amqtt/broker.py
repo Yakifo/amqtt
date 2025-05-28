@@ -1,4 +1,5 @@
 import asyncio
+import copy
 from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
@@ -7,6 +8,7 @@ from functools import partial
 import logging
 import re
 import ssl
+from pathlib import Path
 from typing import Any, ClassVar
 
 from transitions import Machine, MachineError
@@ -24,17 +26,16 @@ from amqtt.adapters import (
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
-from amqtt.utils import format_client_message, gen_client_id
+from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .plugins.manager import BaseContext, PluginManager
 
-type CONFIG_LISTENER = dict[str, int | bool | dict[str, Any]]
+type CONFIG_LISTENER = dict[str, Any]
 type _BROADCAST = dict[str, Session | str | bytes | int | None]
 
-_defaults: CONFIG_LISTENER = {
-    "timeout-disconnect-delay": 2,
-    "auth": {"allow-anonymous": True, "password-file": None},
-}
+
+_defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
+
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
@@ -140,7 +141,7 @@ class Broker:
     """MQTT 3.1.1 compliant broker implementation.
 
     Args:
-        config: dictionary of configuration options (see config yaml format)
+        config: dictionary of configuration options (see [broker configuration](broker_config.md)).
         loop: asyncio loop. defaults to `asyncio.get_event_loop()`.
         plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
@@ -164,7 +165,7 @@ class Broker:
     ) -> None:
         """Initialize the broker."""
         self.logger = logging.getLogger(__name__)
-        self.config = _defaults.copy()
+        self.config = copy.deepcopy(_defaults or {})
         if config is not None:
             self.config.update(config)
         self._build_listeners_config(self.config)

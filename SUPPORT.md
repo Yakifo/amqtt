@@ -4,7 +4,7 @@ This article explains where to get help with this aMQTT project.
 Please read through the following guidelines.
 
 > 👉 **Note**: before participating in our community, please read our
-> [code of conduct][coc].
+> [code of conduct](code_of_conduct.md).
 > By interacting with this repository, organization, or community you agree to
 > abide by its terms.
 
@@ -32,4 +32,4 @@ Here are some tips:
 
 ## Contributions
 
-See [`contributing.md`][contributing] on how to contribute.
+See [contributing](contributing.md) on how to contribute.

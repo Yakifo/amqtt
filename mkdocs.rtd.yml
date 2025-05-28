@@ -6,7 +6,17 @@ site_url: http://github.com
 repo_url: https://github.com/Yakifo/amqtt
 repo_name: Yakifo/amqtt
 site_dir: "site"
-watch: [mkdocs.rtd.yml, README.md, CONTRIBUTING.md, SUPPORT.md, SECURITY.md, CODE_OF_CONDUCT.md, CONTRIBUTING.md, docs, amqtt]
+watch:
+  - mkdocs.rtd.yml
+  - README.md
+  - CONTRIBUTING.md
+  - SUPPORT.md
+  - SECURITY.md
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTING.md
+  - docs
+  - amqtt
+  - samples
 copyright: TBD
 edit_uri: edit/main/docs/
 
@@ -30,6 +40,9 @@ nav:
       - Plugins:
           - Packaged: packaged_plugins.md
           - Custom: custom_plugins.md
+      - Configuration:
+          - Broker: references/broker_config.md
+          - Client: references/client_config.md
       - Reference:
           - Support: support.md
           - Contributing: contributing.md
