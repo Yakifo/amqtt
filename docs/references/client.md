@@ -136,14 +136,8 @@ The `MQTTClient` class's `__init__` method accepts a `config` parameter which al
 
 Details on the `config` parameter structure is a dictionary whose structure is identical to yaml formatted file[^1]
 used by the included broker script: [client configuration](client_config.md)
-  
 
-
-::: amqtt.broker.Broker
+::: amqtt.client.MQTTClient
 
 [^1]: See [PyYAML](http://pyyaml.org/wiki/PyYAMLDocumentation) for loading YAML files as Python dict.
 
-
-
-
-::: amqtt.client.MQTTClient

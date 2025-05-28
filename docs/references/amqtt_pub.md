@@ -44,7 +44,7 @@ Note that for simplicity, `amqtt_pub` uses mostly the same argument syntax as [m
 - `--will-retain` - If given, if the client disconnects unexpectedly the message sent out will be treated as a retained message. This must be used in conjunction with `--will-topic`.
 - `--extra-headers` - Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection, but only when using a websocket connection
 
-## Configuration
+## Default Configuration
 
 Without the `-c` argument, the broker will run with the following, default configuration:
 
@@ -56,8 +56,6 @@ Using the `-c` argument allows for configuration with a YAML structured file; se
 
 
 ## Examples
-
-Examples below are adapted from [mosquitto_pub](http://mosquitto.org/man/mosquitto_pub-1.html) documentation.
 
 Publish temperature information to localhost with QoS 1:
 
