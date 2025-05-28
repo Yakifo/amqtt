@@ -20,3 +20,13 @@ h2.doc-heading-parameter {
   display: block;
 }
 
+.md-nav__item--section>.md-nav__link[for],
+.md-nav--lifted>.md-nav__list>.md-nav__item>[for],
+.md-nav__title {
+  font-size: 14px;
+  color: #840b2d !important;
+}
+
+.md-nav__link--active {
+  color: #f15581 !important;
+}

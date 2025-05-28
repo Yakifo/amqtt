@@ -22,22 +22,6 @@ import amqtt
 from amqtt.broker import Broker
 from amqtt.utils import read_yaml_config
 
-default_config = {
-    "listeners": {
-        "default": {
-            "type": "tcp",
-            "bind": "0.0.0.0:1883",
-        },
-    },
-    "sys_interval": 10,
-    "auth": {
-        "allow-anonymous": True,
-        "password-file": Path(__file__).parent / "passwd",
-        "plugins": ["auth_file", "auth_anonymous"],
-    },
-    "topic-check": {"enabled": False},
-}
-
 logger = logging.getLogger(__name__)
 
 

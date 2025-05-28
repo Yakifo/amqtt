@@ -44,21 +44,18 @@ Note that for simplicity, `amqtt_pub` uses mostly the same argument syntax as [m
 - `--will-retain` - If given, if the client disconnects unexpectedly the message sent out will be treated as a retained message. This must be used in conjunction with `--will-topic`.
 - `--extra-headers` - Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection, but only when using a websocket connection
 
-## Configuration
+## Default Configuration
 
-If `-c` argument is given, `amqtt_pub` will read specific MQTT settings for the given configuration file. This file must be a valid [YAML](http://yaml.org/) file which may contain the following configuration elements:
+Without the `-c` argument, the broker will run with the following, default configuration:
 
-- `keep_alive`: Keep-alive timeout sent to the broker. Defaults to `10` seconds.
-- `ping_delay`: Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to `0` will disable to 0 and may lead to broker disconnection.
-- `default_qos`: Default QoS for messages published. Defaults to 0.
-- `default_retain`: Default retain value to messages published. Defaults to `false`.
-- `auto_reconnect`: Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
-- `reconnect_retries`: Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
-- `reconnect_max_interval`: Maximum interval between 2 connection retry. Defaults to `10`.
+```yaml
+--8<-- "../amqtt/amqtt/scripts/default_client.yaml"
+```
+
+Using the `-c` argument allows for configuration with a YAML structured file; see [client configuration](client_config.md). 
+
 
 ## Examples
-
-Examples below are adapted from [mosquitto_pub](http://mosquitto.org/man/mosquitto_pub-1.html) documentation.
 
 Publish temperature information to localhost with QoS 1:
 

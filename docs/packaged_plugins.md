@@ -20,9 +20,13 @@ plugin_alias = "module.submodule.file:ClassName"
 auth:
   plugins:
     - auth_anonymous
-  allow-anonymous: true # or false
+  allow-anonymous: true # if false, providing a username will allow access
 
 ```
+
+!!! danger
+    even if `allow-anonymous` is set to `false`, the plugin will still allow access if a username is provided by the client
+
 
 ## auth_file (Auth Plugin)
 
@@ -58,6 +62,9 @@ print(sha512_crypt.hash(passwd))
 
 ## Taboo (Topic Plugin)
 
+`amqtt.plugins.topic_checking:TopicTabooPlugin`
+
+
 Prevents using topics named: `prohibited`, `top-secret`, and `data/classified`
 
 **Configuration**
@@ -71,6 +78,8 @@ topic-check:
 
 ## ACL (Topic Plugin)
 
+`amqtt.plugins.topic_checking:TopicAccessControlListPlugin`
+
 **Configuration**
 
 ```yaml
@@ -78,9 +87,11 @@ topic-check:
   enabled: true
   plugins:
     - topic_acl
-  publish-acl: True # or False
+  publish-acl:
+    - username: ["list", "of", "allowed", "topics", "for", "publishing"]
+    - .
   acl:
-    - username: ["list", "of", "allowed", "topics"]
+    - username: ["list", "of", "allowed", "topics", "for", "subscribing"]
     - .
 ```
 

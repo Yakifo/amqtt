@@ -5,6 +5,7 @@ import contextlib
 import copy
 from functools import wraps
 import logging
+from pathlib import Path
 import ssl
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse, urlunparse
@@ -24,20 +25,12 @@ from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
 from amqtt.plugins.manager import BaseContext, PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
-from amqtt.utils import gen_client_id
+from amqtt.utils import gen_client_id, read_yaml_config
 
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-_defaults: dict[str, Any] = {
-    "keep_alive": 10,
-    "ping_delay": 1,
-    "default_qos": 0,
-    "default_retain": False,
-    "auto_reconnect": True,
-    "reconnect_max_interval": 10,
-    "reconnect_retries": 2,
-}
+_defaults: dict[str, Any] | None = read_yaml_config(Path(__file__).parent / "scripts/default_client.yaml")
 
 
 class ClientContext(BaseContext):
@@ -87,49 +80,19 @@ def mqtt_connected(func: _F) -> _F:
 class MQTTClient:
     """MQTT client implementation.
 
-    MQTTClient instances provides API for connecting to a broker and send/receive messages using the MQTT protocol.
+    MQTTClient instances provides API for connecting to a broker and send/receive
+     messages using the MQTT protocol.
 
     Args:
-        client_id: MQTT client ID to use when connecting to the broker. If none, it will be generated randomly by `amqtt.utils.gen_client_id`
-        config: Client configuration with the following keys:
-
-            `keep_alive`: keep alive (in seconds) to send when connecting to the broker (defaults to `10` seconds). `MQTTClient` will _auto-ping_ the broker if no message is sent within the keep-alive interval. This avoids disconnection from the broker.
-
-            `ping_delay`: _auto-ping_ delay before keep-alive times out (defaults to `1` seconds).
-
-            `default_qos`: Default QoS (`0`) used by `publish()` if `qos` argument is not given.
-
-            `default_retain`: Default retain (`False`) used by `publish()` if `qos` argument is not given.
-
-            `auto_reconnect`: enable or disable auto-reconnect feature (defaults to `True`).
-
-            `reconnect_max_interval`: maximum interval (in seconds) to wait before two connection retries (defaults to `10`).
-
-            `reconnect_retries`: maximum number of connect retries (defaults to `2`). Negative value will cause client to reconnect infinitely.
-
-            Example:
-
-            ```python
-            config = {
-                'keep_alive': 10,
-                'ping_delay': 1,
-                'default_qos': 0,
-                'default_retain': False,
-                'auto_reconnect': True,
-                'reconnect_max_interval': 5,
-                'reconnect_retries': 10,
-                'topics': {
-                    'test': { 'qos': 1 },
-                    'some_topic': { 'qos': 2, 'retain': True }
-                }
-            }
-            ```
+        client_id: MQTT client ID to use when connecting to the broker. If none,
+            it will be generated randomly by `amqtt.utils.gen_client_id`
+        config: dictionary of configuration options (see [client configuration](client_config.md)).
 
     """
 
     def __init__(self, client_id: str | None = None, config: dict[str, Any] | None = None) -> None:
         self.logger = logging.getLogger(__name__)
-        self.config = copy.deepcopy(_defaults)
+        self.config = copy.deepcopy(_defaults or {})
         if config is not None:
             self.config.update(config)
         self.client_id = client_id if client_id is not None else gen_client_id()
@@ -165,18 +128,22 @@ class MQTTClient:
         message is sent with the requested information.
 
         Args:
-            uri: Broker URI connection, conforming to [MQTT URI scheme](https://github.com/mqtt/mqtt.github.io/wiki/URI-Scheme). default, ``uri`` config attribute.
+            uri: Broker URI connection, conforming to
+                [MQTT URI scheme](https://github.com/mqtt/mqtt.github.io/wiki/URI-Scheme). default,
+                will be taken from the ``uri`` config attribute.
             cleansession: MQTT CONNECT clean session flag
             cafile: server certificate authority file (optional, used for secured connection)
             capath: server certificate authority path (optional, used for secured connection)
             cadata: server certificate authority data (optional, used for secured connection)
-            additional_headers: a dictionary with additional http headers that should be sent on the initial connection (optional, used only with websocket connections)
+            additional_headers: a dictionary with additional http headers that should be sent on the
+                initial connection (optional, used only with websocket connections)
 
         Returns:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
 
         Raises:
             amqtt.client.ConnectException: if connection fails
+
         """
         additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)
@@ -241,6 +208,7 @@ class MQTTClient:
 
         Raises:
             amqtt.client.ConnectException: if re-connection fails after max retries.
+
         """
         if self.session and self.session.transitions.is_connected():
             self.logger.warning("Client already connected")
@@ -311,7 +279,8 @@ class MQTTClient:
         Args:
             topic: topic name to which message data is published
             message: payload message (as bytes) to send.
-            qos: requested publish quality of service : QOS_0, QOS_1 or QOS_2. Defaults to `default_qos` config parameter or QOS_0.
+            qos: requested publish quality of service : QOS_0, QOS_1 or QOS_2. Defaults to `default_qos`
+                config parameter or QOS_0.
             retain: retain flag. Defaults to ``default_retain`` config parameter or False.
             ack_timeout: duration to wait for connection acknowledgment from broker.
 
@@ -387,6 +356,7 @@ class MQTTClient:
                 ```
                 ["$SYS/broker/uptime", "$SYS/broker/load/#"]
                 ```
+
         """
         if self._handler and self.session:
             await self._handler.mqtt_unsubscribe(topics, self.session.next_packet_id)
@@ -405,6 +375,7 @@ class MQTTClient:
 
         Raises:
             asyncio.TimeoutError: if timeout occurs before a message is delivered
+
         """
         if self._handler is None:
             msg = "Handler is not initialized."
