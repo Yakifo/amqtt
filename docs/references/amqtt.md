@@ -1,4 +1,4 @@
-# broker
+# amqtt
 
 `amqtt` is a command-line script for running a MQTT 3.1.1 broker.
 
