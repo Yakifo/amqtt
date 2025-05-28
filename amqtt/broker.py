@@ -1,14 +1,14 @@
 import asyncio
-import copy
 from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
+import copy
 from enum import Enum
 from functools import partial
 import logging
+from pathlib import Path
 import re
 import ssl
-from pathlib import Path
 from typing import Any, ClassVar
 
 from transitions import Machine, MachineError

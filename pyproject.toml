@@ -169,7 +169,7 @@ max-returns = 10
 
 # ----------------------------------- PYTEST -----------------------------------
 [tool.pytest.ini_options]
-addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=xml"]
+addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 10

@@ -5,8 +5,8 @@ import contextlib
 import copy
 from functools import wraps
 import logging
-import ssl
 from pathlib import Path
+import ssl
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse, urlunparse
 
@@ -30,7 +30,8 @@ from amqtt.utils import gen_client_id, read_yaml_config
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-_defaults: dict[str, Any] | None = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
+_defaults: dict[str, Any] | None = read_yaml_config(Path(__file__).parent / "scripts/default_client.yaml")
+
 
 class ClientContext(BaseContext):
     """ClientContext is used as the context passed to plugins interacting with the client.
@@ -79,10 +80,12 @@ def mqtt_connected(func: _F) -> _F:
 class MQTTClient:
     """MQTT client implementation.
 
-    MQTTClient instances provides API for connecting to a broker and send/receive messages using the MQTT protocol.
+    MQTTClient instances provides API for connecting to a broker and send/receive
+     messages using the MQTT protocol.
 
     Args:
-        client_id: MQTT client ID to use when connecting to the broker. If none, it will be generated randomly by `amqtt.utils.gen_client_id`
+        client_id: MQTT client ID to use when connecting to the broker. If none,
+            it will be generated randomly by `amqtt.utils.gen_client_id`
         config: dictionary of configuration options (see [client configuration](client_config.md)).
 
     """
@@ -125,18 +128,22 @@ class MQTTClient:
         message is sent with the requested information.
 
         Args:
-            uri: Broker URI connection, conforming to [MQTT URI scheme](https://github.com/mqtt/mqtt.github.io/wiki/URI-Scheme). default, ``uri`` config attribute.
+            uri: Broker URI connection, conforming to
+                [MQTT URI scheme](https://github.com/mqtt/mqtt.github.io/wiki/URI-Scheme). default,
+                will be taken from the ``uri`` config attribute.
             cleansession: MQTT CONNECT clean session flag
             cafile: server certificate authority file (optional, used for secured connection)
             capath: server certificate authority path (optional, used for secured connection)
             cadata: server certificate authority data (optional, used for secured connection)
-            additional_headers: a dictionary with additional http headers that should be sent on the initial connection (optional, used only with websocket connections)
+            additional_headers: a dictionary with additional http headers that should be sent on the
+                initial connection (optional, used only with websocket connections)
 
         Returns:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
 
         Raises:
             amqtt.client.ConnectException: if connection fails
+
         """
         additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)
@@ -201,6 +208,7 @@ class MQTTClient:
 
         Raises:
             amqtt.client.ConnectException: if re-connection fails after max retries.
+
         """
         if self.session and self.session.transitions.is_connected():
             self.logger.warning("Client already connected")
@@ -271,7 +279,8 @@ class MQTTClient:
         Args:
             topic: topic name to which message data is published
             message: payload message (as bytes) to send.
-            qos: requested publish quality of service : QOS_0, QOS_1 or QOS_2. Defaults to `default_qos` config parameter or QOS_0.
+            qos: requested publish quality of service : QOS_0, QOS_1 or QOS_2. Defaults to `default_qos`
+                config parameter or QOS_0.
             retain: retain flag. Defaults to ``default_retain`` config parameter or False.
             ack_timeout: duration to wait for connection acknowledgment from broker.
 
@@ -347,6 +356,7 @@ class MQTTClient:
                 ```
                 ["$SYS/broker/uptime", "$SYS/broker/load/#"]
                 ```
+
         """
         if self._handler and self.session:
             await self._handler.mqtt_unsubscribe(topics, self.session.next_packet_id)
@@ -365,6 +375,7 @@ class MQTTClient:
 
         Raises:
             asyncio.TimeoutError: if timeout occurs before a message is delivered
+
         """
         if self._handler is None:
             msg = "Handler is not initialized."

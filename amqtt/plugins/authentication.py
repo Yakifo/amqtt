@@ -18,8 +18,7 @@ class BaseAuthPlugin:
             self.context.logger.warning("'auth' section not found in context configuration")
 
     async def authenticate(self, *args: None, **kwargs: Session) -> bool | None:
-        """
-        Logic for session authentication.
+        """Logic for session authentication.
 
         Args:
             *args: positional arguments (not used)
@@ -31,6 +30,7 @@ class BaseAuthPlugin:
         Returns:
             - `True` if user is authentication succeed, `False` if user authentication fails
             - `None` if authentication can't be achieved (then plugin result is then ignored)
+
         """
         if not self.auth_config:
             # auth config section not found
