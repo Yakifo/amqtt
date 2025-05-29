@@ -6,6 +6,30 @@
   background: #d11149;
 }
 
+
+body > div.md-container > main > div > div.md-content > article > a:nth-child(2),
+body > div.md-container > main > div > div.md-content > article > a:nth-child(1),
+body > div.md-container > main > div > div.md-sidebar.md-sidebar--primary > div,
+body > div.md-container > main > div > div.md-sidebar.md-sidebar--secondary > div,
+#home
+{
+  display: none;
+  height: 0;
+}
+
+.md-footer-meta__inner {
+  display: block;
+  height: 50px;
+}
+
+.md-copyright {
+  display: none;
+}
+
+.md-footer-meta__inner {
+  color: #000 !important;
+}
+
 nav.md-tabs {
   display: none;
 }

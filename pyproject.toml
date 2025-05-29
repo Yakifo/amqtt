@@ -87,8 +87,9 @@ source = "vcs"
 
 [tool.poe.tasks]
 rtd = "mkdocs serve -f mkdocs.rtd.yml"
-test = "pytest"
-docs = "mkdocs build"
+web = "mkdocs serve -f mkdocs.web.yml"
+lint = "uv run ruff check amqtt"
+test = "uv run pytest"
 
 # ___________________________________ PLUGINS __________________________________
 [project.entry-points."amqtt.test.plugins"]

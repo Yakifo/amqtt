@@ -1,0 +1,15 @@
+---
+listeners:
+  default:
+    type: tcp
+    bind: 0.0.0.0:1883
+  ws-1:
+    type: ws
+    bind: 0.0.0.0:9001
+sys_interval: 2
+auth:
+  plugins:
+    - auth_anonymous
+  allow-anonymous: true
+topic-check:
+  enabled: False

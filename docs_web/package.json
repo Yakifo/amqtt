@@ -20,7 +20,9 @@
     "@mui/x-tree-view": "^8.4.0",
     "@react-spring/web": "^10.0.1",
     "dayjs": "^1.11.13",
+    "mqtt": "^5.13.0",
     "react": "^19.1.0",
+    "react-countup": "^6.5.3",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {

@@ -6,7 +6,7 @@ repo_name: Yakifo/amqtt
 site_dir: "site_web"
 docs_dir: docs_web
 watch: [mkdocs.web.yml, docs_web]
-copyright: TBD
+copyright: copyright 2025
 edit_uri: edit/main/docs/
 
 validation:
@@ -61,9 +61,6 @@ markdown_extensions:
       strip_period: false
   - footnotes
   - pymdownx.details
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       pygments_lang_class: true
   - pymdownx.magiclink
@@ -83,7 +80,6 @@ markdown_extensions:
       permalink: "¤"
 
 plugins:
-  - search
   - autorefs
   - markdown-exec
   - section-index
@@ -109,15 +105,3 @@ plugins:
       plugins:
         - typeset
 
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/pawamoy
-    - icon: fontawesome/brands/mastodon
-      link: https://fosstodon.org/@pawamoy
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/pawamoy
-    - icon: fontawesome/brands/gitter
-      link: https://gitter.im/mkdocstrings/community
-    - icon: fontawesome/brands/python
-      link: https://pypi.org/project/mkdocstrings/
