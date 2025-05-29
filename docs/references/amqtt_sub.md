@@ -1,47 +1,13 @@
-# amqtt_sub
+#
 
-`amqtt_sub` is a command line MQTT client that subscribes to some topics and output data received from messages published.
-
-## Usage
-
-`amqtt_sub` usage:
-
-```
-amqtt_sub --version
-amqtt_sub (-h | --help)
-amqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d]
-           [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA]
-           [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ]
-           [--extra-headers HEADER]
-```
-
-Note that for simplicity, `amqtt_sub` uses mostly the same argument syntax as [mosquitto_sub](http://mosquitto.org/man/mosquitto_sub-1.html).
-
-## Options
-
-- `--version` - amqtt version information
-- `-h, --help` - Display `amqtt_sub` usage help
-- `-c` - Set the YAML configuration file to read and pass to the client runtime.
-- `-d` - Enable debugging information.
-- `--ca-file` - Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
-- `--ca-path` - Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication.
-- `--ca-data` - Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication.
-- `--clean-session` - If given, set the CONNECT clean session flag to True.
-- `-i` - The id to use for this client. If not given, defaults to `amqtt_sub/` appended with the process id and the hostname of the client.
-- `-k` - Set the CONNECT keep alive timeout.
-- `-n` - Number of messages to read before ending. Read forever if not given.
-- `-q, --qos` - Specify the quality of service to use for receiving messages. This QoS is sent in the subscribe request.
-- `-t` - Topic filters to subscribe.
-- `--url` - Broker connection URL, conforming to [MQTT URL scheme](https://github.com/mqtt/mqtt.github.io/wiki/URI-Scheme).
-- `--will-topic` - The topic on which to send a Will, in the event that the client disconnects unexpectedly.
-- `--will-message` - Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. This must be used in conjunction with `--will-topic`.
-- `--will-qos` - The QoS to use for the Will. Defaults to 0. This must be used in conjunction with `--will-topic`.
-- `--will-retain` - If given, if the client disconnects unexpectedly the message sent out will be treated as a retained message. This must be used in conjunction with `--will-topic`.
-- `--extra-headers` - Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection, but only when using a websocket connection
+::: mkdocs-typer2
+    :module: amqtt.scripts.sub_script
+    :name: amqtt_pub
+    :pretty: true
 
 ## Default Configuration
 
-Without the `-c` argument, the broker will run with the following, default configuration:
+Without the `-c` argument, the client will run with the following, default configuration:
 
 ```yaml
 --8<-- "../amqtt/amqtt/scripts/default_client.yaml"

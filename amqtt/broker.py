@@ -159,7 +159,7 @@ class Broker:
 
     def __init__(
         self,
-        config: CONFIG_LISTENER | None = None,
+        config: _CONFIG_LISTENER | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         plugin_namespace: str | None = None,
     ) -> None:
@@ -192,7 +192,7 @@ class Broker:
         namespace = plugin_namespace or "amqtt.broker.plugins"
         self.plugins_manager = PluginManager(namespace, context, self._loop)
 
-    def _build_listeners_config(self, broker_config: CONFIG_LISTENER) -> None:
+    def _build_listeners_config(self, broker_config: _CONFIG_LISTENER) -> None:
         self.listeners_config = {}
         try:
             listeners_config = broker_config.get("listeners")
