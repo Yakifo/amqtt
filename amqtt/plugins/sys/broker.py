@@ -1,8 +1,22 @@
 import asyncio
-from collections import deque
-from collections.abc import Buffer
-from datetime import UTC, datetime
-from typing import SupportsIndex, SupportsInt
+from collections import deque  # pylint: disable=C0412
+from typing import SupportsIndex, SupportsInt  # pylint: disable=C0412
+
+try:
+    from collections.abc import Buffer
+except ImportError:
+    from typing import Protocol, runtime_checkable
+    @runtime_checkable
+    class Buffer(Protocol):  #  type: ignore[no-redef]
+        def __buffer__(self, flags: int = ...) -> memoryview:
+            """Mimic the behavior of `collections.abc.Buffer` for python 3.10-3.12."""
+
+try:
+    from datetime import UTC, datetime
+except ImportError:
+    from datetime import datetime, timezone
+    UTC = timezone.utc
+
 
 import amqtt
 from amqtt.broker import BrokerContext

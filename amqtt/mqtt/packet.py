@@ -1,8 +1,15 @@
 from abc import ABC, abstractmethod
 import asyncio
-from datetime import UTC, datetime
+
+try:
+    from datetime import UTC, datetime
+except ImportError:
+    from datetime import datetime, timezone
+    UTC = timezone.utc
+
 from struct import unpack
-from typing import Self
+from typing import Generic
+from typing_extensions import Self, TypeVar
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.codecs_amqtt import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
@@ -104,6 +111,9 @@ class MQTTFixedHeader:
         return f"{self.__class__.__name__}(packet_type={self.packet_type}, flags={self.flags}, length={self.remaining_length})"
 
 
+_FH = TypeVar("_FH", bound=MQTTFixedHeader)
+
+
 class MQTTVariableHeader(ABC):
     """Abstract base class for MQTT variable headers."""
 
@@ -151,7 +161,10 @@ class PacketIdVariableHeader(MQTTVariableHeader):
         return f"{self.__class__.__name__}(packet_id={self.packet_id})"
 
 
-class MQTTPayload[_VH: MQTTVariableHeader](ABC):
+_VH = TypeVar("_VH", bound=MQTTVariableHeader | None)
+
+
+class MQTTPayload(Generic[_VH], ABC):
     """Abstract base class for MQTT payloads."""
 
     async def to_stream(self, writer: asyncio.StreamWriter) -> None:
@@ -173,7 +186,10 @@ class MQTTPayload[_VH: MQTTVariableHeader](ABC):
         pass
 
 
-class MQTTPacket[_VH: MQTTVariableHeader | None, _P: MQTTPayload[MQTTVariableHeader] | None, _FH: MQTTFixedHeader]:
+_P = TypeVar("_P", bound=MQTTPayload[MQTTVariableHeader] | None)
+
+
+class MQTTPacket(Generic[_VH, _P, _FH]):
     """Represents an MQTT packet."""
 
     __slots__ = ("fixed_header", "payload", "protocol_ts", "variable_header")

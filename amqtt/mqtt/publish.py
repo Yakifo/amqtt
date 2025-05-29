@@ -1,5 +1,5 @@
 import asyncio
-from typing import Self
+from typing_extensions import Self
 
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import decode_packet_id, decode_string, encode_string, int_to_bytes

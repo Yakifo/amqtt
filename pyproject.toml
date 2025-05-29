@@ -15,8 +15,8 @@ classifiers = [
   "Topic :: Internet",
 ]
 
-version = "0.11.0-rc"
-requires-python = ">=3.13.0"
+version = "0.11.0-rc1"
+requires-python = ">=3.10.0"
 readme = "README.rst"
 license = { text = "MIT" }
 
@@ -89,6 +89,7 @@ line-length = 130
 fix = true
 extend-exclude = ["docs/", "samples/"]
 
+
 [tool.ruff.format]
 indent-style = "space"
 docstring-code-format = true
@@ -116,6 +117,7 @@ ignore = [
   "TD003",  # TODO Missing issue link for this TODO.
   "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
   "ARG002", # Unused method argument
+  "PERF203" # try-except penalty within loops (3.10 only)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -148,6 +150,7 @@ addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=xml"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 10
+asyncio_default_fixture_loop_scope = "function"
 # log_cli = true
 # log_level = "INFO"
 
