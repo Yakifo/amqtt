@@ -121,13 +121,21 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     ca_data: str | None = typer.Option(None, "--ca-data", help="Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
     will_topic: str | None = typer.Option(None, "--will-topic", help="The topic on which to send a Will, in the event that the client disconnects unexpectedly."),
     will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. *required if `--will-topic` is specified*."),
-    will_qos: int | None = typer.Option(None, "--will-qos", help="The QoS to use for the Will. *default: 0, only valid if `--will-topic` is specified*"),
+    will_qos: int = typer.Option(0, "--will-qos", help="The QoS to use for the Will. *default: 0, only valid if `--will-topic` is specified*"),
     will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. *only valid, if `--will-topic` is specified*"),
     extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
     version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"),  # noqa : ARG001
 ) -> None:
     """Command line MQTT client to subscribe to one or more topics and display any messages received."""
+    if bool(will_message) != bool(will_topic):
+        typer.echo("❌ must specify both 'will_message' and 'will_topic' ")
+        raise typer.Exit(code=1)
+
+    if will_retain and not (will_message and will_topic):
+        typer.echo("❌ 'will-retain' only valid if 'will_message' and 'will_topic' are specified.", err=True)
+        raise typer.Exit(code=1)
+
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)
@@ -151,7 +159,7 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     if keep_alive:
         config["keep_alive"] = keep_alive
 
-    if will_topic and will_message and will_qos:
+    if will_topic and will_message:
         config["will"] = {
             "topic": will_topic,
             "message": will_message.encode("utf-8"),

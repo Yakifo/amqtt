@@ -151,7 +151,7 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     ca_data: str | None = typer.Option(None, "--ca-data", help="Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
     will_topic: str | None = typer.Option(None, "--will-topic", help="The topic on which to send a Will, in the event that the client disconnects unexpectedly."),
     will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. *required if `--will-topic` is specified*."),
-    will_qos: int | None = typer.Option(None, "--will-qos", help="The QoS to use for the Will. *default: 0, only valid if `--will-topic` is specified*"),
+    will_qos: int = typer.Option(0, "--will-qos", help="The QoS to use for the Will. *default: 0, only valid if `--will-topic` is specified*"),
     will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. *only valid, if `--will-topic` is specified*"),
     extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
@@ -194,8 +194,7 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     if keep_alive:
         config["keep_alive"] = int(keep_alive)
 
-
-    if will_topic and will_message and will_qos is not None and will_retain:
+    if will_topic and will_message:
         config["will"] = {
             "topic": will_topic,
             "message": will_message.encode(),
