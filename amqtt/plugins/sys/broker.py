@@ -6,15 +6,18 @@ try:
     from collections.abc import Buffer
 except ImportError:
     from typing import Protocol, runtime_checkable
+
     @runtime_checkable
     class Buffer(Protocol):  #  type: ignore[no-redef]
         def __buffer__(self, flags: int = ...) -> memoryview:
             """Mimic the behavior of `collections.abc.Buffer` for python 3.10-3.12."""
 
+
 try:
     from datetime import UTC, datetime
 except ImportError:
     from datetime import datetime, timezone
+
     UTC = timezone.utc
 
 
