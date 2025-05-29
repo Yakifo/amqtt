@@ -153,17 +153,9 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. *required if `--will-topic` is specified*."),
     will_qos: int | None = typer.Option(None, "--will-qos", help="The QoS to use for the Will. *default: 0, only valid if `--will-topic` is specified*"),
     will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. *only valid, if `--will-topic` is specified*"),
-    extra_headers_json: str | None = typer.Option(
-        None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."
-    ),
+    extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
-    version: bool | None = typer.Option(  # noqa : ARG001
-        None,
-        "--version",
-        callback=_version,
-        is_eager=True,
-        help="Show version and exit",
-    ),
+    version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"), # noqa : ARG001
 ) -> None:
     """Command-line MQTT client for publishing simple messages."""
     provided = [bool(message), bool(file), stdin, lines, no_message]

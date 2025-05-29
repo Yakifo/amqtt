@@ -39,7 +39,7 @@ def broker_main(
             help="Show version and exit",
         ),
 ) -> None:
-    """Command-line script for running a MQTT 3.1.1 broker"""
+    """Command-line script for running a MQTT 3.1.1 broker."""
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
 
     level = logging.DEBUG if debug else logging.INFO
