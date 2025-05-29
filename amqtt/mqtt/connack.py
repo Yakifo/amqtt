@@ -1,4 +1,4 @@
-from typing import Self
+from typing_extensions import Self
 
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import bytes_to_int, read_or_raise

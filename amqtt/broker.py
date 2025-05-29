@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 import re
 import ssl
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeAlias
 
 from transitions import Machine, MachineError
 import websockets.asyncio.server
@@ -30,8 +30,8 @@ from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .plugins.manager import BaseContext, PluginManager
 
-type CONFIG_LISTENER = dict[str, Any]
-type _BROADCAST = dict[str, Session | str | bytes | int | None]
+_CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
+_BROADCAST: TypeAlias = dict[str, Session | str | bytes | int | None]
 
 
 _defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
@@ -114,7 +114,7 @@ class BrokerContext(BaseContext):
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
-        self.config: CONFIG_LISTENER | None = None
+        self.config: _CONFIG_LISTENER | None = None
         self._broker_instance = broker
 
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
@@ -430,10 +430,10 @@ class Broker:
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:
-            self.logger.error(  # noqa: TRY400 # cannot replace with exception else pytest fails
+            self.logger.error(  # noqa: TRY400
                 f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}",
             )
-            raise NoDataError(exc) from exc
+            raise AMQTTError(exc) from exc
 
         if client_session.clean_session:
             # Delete existing session and create a new one
