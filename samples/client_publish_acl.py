@@ -27,7 +27,7 @@ async def test_coro() -> None:
         logger.info("messages published")
         await C.disconnect()
     except ConnectError as ce:
-        logger.exception(f"Connection failed: {ce}")
+        logger.exception("Connection failed")
         asyncio.get_event_loop().stop()
 
 
