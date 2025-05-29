@@ -114,12 +114,20 @@ async def test_client_connect(broker, mock_plugin_manager):
 async def test_connect_tcp(broker):
     process = psutil.Process()
     connections_number = 10
-    sockets = [socket.create_connection(("127.0.0.1", 1883)) for _ in range(connections_number)]
+
+    # mqtt 3.1 requires a connect packet, otherwise the socket connection is rejected
+    static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-123'
+
+    sockets = []
+    for i in range(connections_number):
+        s = socket.create_connection(("127.0.0.1", 1883))
+        s.send(static_connect_packet)
+        sockets.append(s)
 
     # Wait for a brief moment to ensure connections are established
     await asyncio.sleep(0.1)
 
-    # Get the current number of TCP connections
+    # # Get the current number of TCP connections
     connections = process.net_connections()
 
     # max number of connections on the TCP listener is 10
@@ -151,6 +159,8 @@ async def test_connect_tcp(broker):
 
     # Add one more connection to the TCP listener
     s = socket.create_connection(("127.0.0.1", 1883))
+    s.send(static_connect_packet)
+
     open_connections = []
     open_connections = [conn for conn in process.net_connections() if conn.status == "ESTABLISHED"]
 

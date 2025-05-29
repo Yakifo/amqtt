@@ -196,7 +196,7 @@ class PluginManager:
     @staticmethod
     async def _call_coro(plugin: Plugin, coro_name: str, *args: Any, **kwargs: Any) -> str | bool | None:
         if not hasattr(plugin.object, coro_name):
-            _LOGGER.warning("Plugin doesn't implement coro_name")
+            _LOGGER.warning(f"Plugin doesn't implement coro_name '{coro_name}': {plugin.name}")
             return None
 
         coro: Awaitable[str | bool | None] = getattr(plugin.object, coro_name)(*args, **kwargs)

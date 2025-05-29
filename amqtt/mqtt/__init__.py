@@ -1,6 +1,6 @@
 """INIT."""
 
-from typing import Any
+from typing import Any, TypeAlias
 
 from amqtt.errors import AMQTTError
 from amqtt.mqtt.connack import ConnackPacket
@@ -36,7 +36,7 @@ from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
 
-type _P = MQTTPacket[Any, Any, Any]
+_P: TypeAlias = MQTTPacket[Any, Any, Any]
 
 packet_dict: dict[int, type[_P]] = {
     CONNECT: ConnectPacket,
