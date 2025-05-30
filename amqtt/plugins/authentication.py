@@ -3,35 +3,34 @@ from pathlib import Path
 from passlib.apps import custom_app_context as pwd_context
 
 from amqtt.broker import BrokerContext
+from amqtt.plugins.manager import BaseContext, BasePlugin
 from amqtt.session import Session
 
 _PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
 
 
-class BaseAuthPlugin:
+class BaseAuthPlugin(BasePlugin):
     """Base class for authentication plugins."""
 
-    def __init__(self, context: BrokerContext) -> None:
-        self.context = context
+    def __init__(self, context: BaseContext) -> None:
+        super().__init__(context)
+
         self.auth_config = self.context.config.get("auth", None) if self.context.config else None
         if not self.auth_config:
             self.context.logger.warning("'auth' section not found in context configuration")
 
-    async def authenticate(self, *args: None, **kwargs: Session) -> bool | None:
+    async def authenticate(self, *, session: Session) -> bool | None:
         """Logic for session authentication.
 
         Args:
-            *args: positional arguments (not used)
-            **kwargs: payload from broker
-                ```
-                session: amqtt.session.Session
-                ```
+            session: amqtt.session.Session
 
         Returns:
             - `True` if user is authentication succeed, `False` if user authentication fails
             - `None` if authentication can't be achieved (then plugin result is then ignored)
 
         """
+
         if not self.auth_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")
@@ -42,8 +41,8 @@ class BaseAuthPlugin:
 class AnonymousAuthPlugin(BaseAuthPlugin):
     """Authentication plugin allowing anonymous access."""
 
-    async def authenticate(self, *args: None, **kwargs: Session) -> bool:
-        authenticated = await super().authenticate(*args, **kwargs)
+    async def authenticate(self, *, session: Session) -> bool:
+        authenticated = await super().authenticate(session=session)
         if authenticated:
             # Default to allowing anonymous
             allow_anonymous = self.auth_config.get("allow-anonymous", True) if isinstance(self.auth_config, dict) else True
@@ -51,7 +50,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
                 self.context.logger.debug("Authentication success: config allows anonymous")
                 return True
 
-            session: Session | None = kwargs.get("session")
+            session: Session | None = session
             if session and session.username:
                 self.context.logger.debug(f"Authentication success: session has username '{session.username}'")
                 return True
@@ -62,7 +61,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
 class FileAuthPlugin(BaseAuthPlugin):
     """Authentication plugin based on a file-stored user database."""
 
-    def __init__(self, context: BrokerContext) -> None:
+    def __init__(self, context: BaseContext) -> None:
         super().__init__(context)
         self._users: dict[str, str] = {}
         self._read_password_file()
@@ -95,11 +94,11 @@ class FileAuthPlugin(BaseAuthPlugin):
         except Exception:
             self.context.logger.exception(f"Unexpected error reading password file '{password_file}'")
 
-    async def authenticate(self, *args: None, **kwargs: Session) -> bool | None:
+    async def authenticate(self, *, session: Session) -> bool | None:
         """Authenticate users based on the file-stored user database."""
-        authenticated = await super().authenticate(*args, **kwargs)
+        authenticated = await super().authenticate(session=session)
         if authenticated:
-            session = kwargs.get("session")
+
             if not session:
                 self.context.logger.debug("Authentication failure: no session provided")
                 return False

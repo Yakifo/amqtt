@@ -1,30 +1,27 @@
 from typing import Any
 
 from amqtt.broker import Action
-from amqtt.plugins.manager import BaseContext
+from amqtt.plugins.manager import BaseContext, BasePlugin
+from amqtt.session import Session
 
 
-class BaseTopicPlugin:
+class BaseTopicPlugin(BasePlugin):
     """Base class for topic plugins."""
 
     def __init__(self, context: BaseContext) -> None:
-        self.context = context
+        super().__init__(context)
+
         self.topic_config: dict[str, Any] | None = self.context.config.get("topic-check", None) if self.context.config else None
         if self.topic_config is None:
             self.context.logger.warning("'topic-check' section not found in context configuration")
 
-    async def topic_filtering(self, *args: Any, **kwargs: Any) -> bool:
+    async def topic_filtering(self, *, session: Session = None, topic: str = None, action: Action = None) -> bool:
         """Logic for filtering out topics.
 
         Args:
-            *args: positional arguments (not used)
-
-            **kwargs: payload from broker
-                ```
-                session: amqtt.session.Session
-                topic: str
-                action: amqtt.broker.Action
-                ```
+            session: amqtt.session.Session
+            topic: str
+            action: amqtt.broker.Action
 
         Returns:
             bool: `True` if topic is allowed, `False` otherwise
@@ -32,7 +29,7 @@ class BaseTopicPlugin:
         """
         if not self.topic_config:
             # auth config section not found
-            self.context.logger.warning("'auth' section not found in context configuration")
+            self.context.logger.warning("'topic-check' section not found in context configuration")
             return False
         return True
 
@@ -42,11 +39,9 @@ class TopicTabooPlugin(BaseTopicPlugin):
         super().__init__(context)
         self._taboo: list[str] = ["prohibited", "top-secret", "data/classified"]
 
-    async def topic_filtering(self, *args: Any, **kwargs: Any) -> bool:
-        filter_result = await super().topic_filtering(*args, **kwargs)
+    async def topic_filtering(self, *, session: Session = None, topic: str = None, action: Action = None) -> bool:
+        filter_result = await super().topic_filtering(session=session, topic=topic, action=action)
         if filter_result:
-            session = kwargs.get("session")
-            topic = kwargs.get("topic")
             if session and session.username == "admin":
                 return True
             return not (topic and topic in self._taboo)
@@ -74,22 +69,20 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
             break
         return ret
 
-    async def topic_filtering(self, *args: Any, **kwargs: Any) -> bool:
-        filter_result = await super().topic_filtering(*args, **kwargs)
+    async def topic_filtering(self, *, session: Session = None, topic: str = None, action: Action = None) -> bool:
+        filter_result = await super().topic_filtering(session=session, topic=topic, action=action)
         if not filter_result:
             return False
 
         # hbmqtt and older amqtt do not support publish filtering
-        action = kwargs.get("action")
         if action == Action.PUBLISH and self.topic_config is not None and "publish-acl" not in self.topic_config:
             # maintain backward compatibility, assume permitted
             return True
 
-        req_topic = kwargs.get("topic")
+        req_topic = topic
         if not req_topic:
             return False
 
-        session = kwargs.get("session")
         username = session.username if session else None
         if username is None:
             username = "anonymous"
@@ -100,7 +93,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
         elif self.topic_config is not None and action == Action.SUBSCRIBE:
             acl = self.topic_config.get("acl", {})
 
-        allowed_topics = acl.get(username, None)
+        allowed_topics = acl.get(username, [])
         if not allowed_topics:
             return False
 

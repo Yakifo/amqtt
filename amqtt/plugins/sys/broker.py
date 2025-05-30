@@ -2,6 +2,8 @@ import asyncio
 from collections import deque  # pylint: disable=C0412
 from typing import SupportsIndex, SupportsInt  # pylint: disable=C0412
 
+from amqtt.plugins.manager import BasePlugin
+
 try:
     from collections.abc import Buffer
 except ImportError:
@@ -40,9 +42,9 @@ STAT_CLIENTS_CONNECTED = "clients_connected"
 STAT_CLIENTS_DISCONNECTED = "clients_disconnected"
 
 
-class BrokerSysPlugin:
+class BrokerSysPlugin(BasePlugin):
     def __init__(self, context: BrokerContext) -> None:
-        self.context = context
+        super().__init__(context)
         # Broker statistics initialization
         self._stats: dict[str, int] = {}
         self._sys_handle: asyncio.Handle | None = None
