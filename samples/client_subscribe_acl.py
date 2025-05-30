@@ -35,7 +35,7 @@ async def uptime_coro() -> None:
         logger.info("UnSubscribed")
         await C.disconnect()
     except ClientError as ce:
-        logger.exception(f"Client exception: {ce}")
+        logger.exception("Client exception")
 
 
 if __name__ == "__main__":
