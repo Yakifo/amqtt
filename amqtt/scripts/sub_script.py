@@ -92,7 +92,7 @@ async def do_sub(client: MQTTClient,
         raise asyncio.CancelledError from exc
 
 
-app = typer.Typer(add_completion=False)
+app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
 
 def main() -> None:

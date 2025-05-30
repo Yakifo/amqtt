@@ -13,7 +13,7 @@ from amqtt.utils import read_yaml_config
 logger = logging.getLogger(__name__)
 
 
-app = typer.Typer(add_completion=False)
+app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
 
 def main() -> None:

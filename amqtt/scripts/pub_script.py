@@ -118,7 +118,7 @@ async def do_pub(
         logger.fatal("Publish canceled due to previous error")
         raise asyncio.CancelledError from ce
 
-app = typer.Typer(add_completion=False)
+app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
 
 def main() -> None:
