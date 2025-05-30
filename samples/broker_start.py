@@ -45,3 +45,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format=formatter)
     asyncio.get_event_loop().run_until_complete(test_coro())
     asyncio.get_event_loop().run_forever()
+

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import subprocess
 import tempfile
@@ -7,6 +8,11 @@ from pathlib import Path
 
 import pytest
 import yaml
+
+formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+logging.basicConfig(level=logging.DEBUG, format=formatter)
+logger = logging.getLogger(__name__)
+
 
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
@@ -56,19 +62,22 @@ async def broker(config_file):
 
 def test_cli_help_messages():
     """Test that help messages are displayed correctly."""
+    env = os.environ.copy()
+    env["NO_COLOR"] = '1'
+
     amqtt_path = "amqtt"
-    output = subprocess.check_output([amqtt_path, "--help"])
-    assert "Usage: amqtt" in output.decode("utf-8")
+    output = subprocess.check_output([amqtt_path, "--help"], env=env, text=True)
+    assert "Usage: amqtt" in output
 
 
     amqtt_sub_path = "amqtt_sub"
-    output = subprocess.check_output([amqtt_sub_path, "--help"])
-    assert "Usage: amqtt_sub" in output.decode("utf-8")
+    output = subprocess.check_output([amqtt_sub_path, "--help"], env=env, text=True)
+    assert "Usage: amqtt_sub" in output
 
 
     amqtt_pub_path = "amqtt_pub"
-    output = subprocess.check_output([amqtt_pub_path, "--help"])
-    assert "Usage: amqtt_pub" in output.decode("utf-8")
+    output = subprocess.check_output([amqtt_pub_path, "--help"], env=env, text=True)
+    assert "Usage: amqtt_pub" in output
 
 
 def test_broker_version():
@@ -151,8 +160,8 @@ async def test_publish_subscribe(broker):
 
 
 @pytest.mark.asyncio
-async def test_pub_sub_options(broker):
-    """Test various pub/sub options."""
+async def test_pub_sub_retain(broker):
+    """Test various pub/sub will retain options."""
     # Test publishing with retain flag
     pub_proc = subprocess.run(
         [
@@ -166,8 +175,8 @@ async def test_pub_sub_options(broker):
         ],
         capture_output=True,
     )
-    assert pub_proc.returncode == 0, "publisher error code"
-
+    assert pub_proc.returncode == 0, f"publisher error code: {pub_proc.returncode}\n{pub_proc.stderr}"
+    logger.debug("publisher succeeded")
     # Verify retained message is received by new subscriber
     sub_proc = subprocess.run(
         [
@@ -178,26 +187,29 @@ async def test_pub_sub_options(broker):
         ],
         capture_output=True,
     )
-    assert sub_proc.returncode == 0, "subscriber error code"
+    assert sub_proc.returncode == 0, f"subscriber error code: {sub_proc.returncode}\n{sub_proc.stderr}"
     assert "last will message" in str(sub_proc.stdout)
 
 
 @pytest.mark.asyncio
-async def test_pub_sub_errors():
+async def test_pub_errors():
     """Test error handling in pub/sub tools."""
     # Test connection to non-existent broker
     pub_proc = subprocess.run(
         [
             "amqtt_pub",
-            "--url", "mqtt://127.0.0.1:1885",  # Wrong port
+            "--url", "mqtt://127.0.0.1:9999",  # Wrong port
             "-t", "test/topic",
             "-m", "test",
         ],
         capture_output=True,
     )
-    assert pub_proc.returncode != 0, f"publisher error code {pub_proc.returncode} != 0"
+    assert pub_proc.returncode != 0, f"publisher error code: {pub_proc.returncode}"
     assert "Connection failed" in str(pub_proc.stderr)
 
+
+@pytest.mark.asyncio
+async def test_sub_errors():
     # Test invalid URL format
     sub_proc = subprocess.run(
         [
@@ -207,4 +219,4 @@ async def test_pub_sub_errors():
         ],
         capture_output=True,
     )
-    assert sub_proc.returncode != 0, f"subscriber error code {sub_proc.returncode} != 0"
+    assert sub_proc.returncode != 0, f"subscriber error code: {sub_proc.returncode}"

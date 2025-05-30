@@ -92,7 +92,7 @@ async def do_sub(client: MQTTClient,
         raise asyncio.CancelledError from exc
 
 
-app = typer.Typer(rich_markup_mode=None)
+app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
 
 def main() -> None:
@@ -108,48 +108,34 @@ def _version(v:bool) -> None:
 
 @app.command()
 def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
-    url: str = typer.Option(..., help="Broker connection URL (must conform to MQTT URI scheme)", show_default=False),
-    config_file: str | None = typer.Option(None, "-c", help="Broker configuration file (YAML format)"),
-    client_id: str | None = typer.Option(None, "-i", help="Id to use as client ID. [default: process id and the hostname of the client.]"),
-    max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending (optional) [default: read indefinitely]"),
+    url: str = typer.Option(..., help="Broker connection URL, *must conform to MQTT URI scheme: `mqtt://<username:password>@HOST:port`*", show_default=False),
+    config_file: str | None = typer.Option(None, "-c", help="Client configuration file"),
+    client_id: str | None = typer.Option(None, "-i", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),
+    max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending *default: read indefinitely*"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
-    topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe"),  # noqa: B008
+    topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe, can be used multiple times."),  # noqa: B008
     keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout in seconds"),
-    clean_session: bool = typer.Option(False, help="Clean session on connect (defaults to False)"),
+    clean_session: bool = typer.Option(False, "--clean-session", help="Clean session on connect. *default: False*"),
     ca_file: str | None = typer.Option(None, "--ca-file", help="Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
     ca_path: str | None = typer.Option(None, "--ca-path", help="Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
     ca_data: str | None = typer.Option(None, "--ca-data", help="Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
     will_topic: str | None = typer.Option(None, "--will-topic", help="The topic on which to send a Will, in the event that the client disconnects unexpectedly."),
-    will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. [required if `--will-topic` is specified]."),
-    will_qos: int | None = typer.Option(None, "--will-qos", help="The QoS to use for the Will. [default: 0, only valid if `--will-topic` is specified]."),
-    will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. [optional, only valid if `--will-topic` is specified]."),
-    extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection (websocket connections only)."),
+    will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. *required if `--will-topic` is specified*."),
+    will_qos: int = typer.Option(0, "--will-qos", help="The QoS to use for the Will. *default: 0, only valid if `--will-topic` is specified*"),
+    will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. *only valid, if `--will-topic` is specified*"),
+    extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
-    version: bool = typer.Option(  # noqa : ARG001
-        False,
-        "--version",
-        callback=_version,
-        is_eager=True,
-        help="Show version and exit",
-    ),
+    version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"),  # noqa : ARG001
 ) -> None:
-    """Run the MQTT subscriber.
+    """Command line MQTT client to subscribe to one or more topics and display any messages received."""
+    if bool(will_message) != bool(will_topic):
+        typer.echo("❌ must specify both 'will_message' and 'will_topic' ")
+        raise typer.Exit(code=1)
 
-    Examples:
-        \n
-        Subscribe with QoS 0 to all messages published under $SYS/:
+    if will_retain and not (will_message and will_topic):
+        typer.echo("❌ 'will-retain' only valid if 'will_message' and 'will_topic' are specified.", err=True)
+        raise typer.Exit(code=1)
 
-        `amqtt_sub --url mqtt://localhost -t '$SYS/#' -q 0`
-
-        Subscribe to 10 messages with QoS 2 from /#:
-
-        `amqtt_sub --url mqtt://localhost -t # -q 2 -n 10`
-
-        Subscribe with QoS 0 to all messages published under $SYS/ over mqtt encapsulated in a websocket connection and additional headers:
-
-        `amqtt_sub --url wss://localhost -t '$SYS/#' -q 0 --extra-headers '{"Authorization": "Bearer <token>"}'`
-
-    """
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)
@@ -173,7 +159,7 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     if keep_alive:
         config["keep_alive"] = keep_alive
 
-    if will_topic and will_message and will_qos:
+    if will_topic and will_message:
         config["will"] = {
             "topic": will_topic,
             "message": will_message.encode("utf-8"),
