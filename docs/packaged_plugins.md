@@ -110,8 +110,8 @@ Publishes, on a periodic basis, statistics about the broker
 
 ### Supported Topics
 
-- `$SYS/broker/load/bytes/received` - payload: 'data` - payload: `data`,  int
-- `$SYS/broker/load/bytes/sent` - payload: 'data` - payload: `data`,  int
+- `$SYS/broker/load/bytes/received` - payload: `data`,  int
+- `$SYS/broker/load/bytes/sent` - payload: `data`,  int
 - `$SYS/broker/messages/received` - payload: `data`, int
 - `$SYS/broker/messages/sent` - payload: `data`, int
 - `$SYS/broker/time` - payload: `data`,  int (current time, epoch seconds)
