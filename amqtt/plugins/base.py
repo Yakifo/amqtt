@@ -10,7 +10,7 @@ class BasePlugin:
         self.context = context
 
     def _get_config_section(self, name: str) -> dict[str, Any] | None:
-        if not self.context.config or not hasattr(self.context.config, name):
+        if not self.context.config or not self.context.config.get(name, None):
             return None
         section_config: int | dict[str, Any] | None = self.context.config.get(name, None)
         # mypy has difficulty excluding int from `config`'s type, unless isinstance` is its own check

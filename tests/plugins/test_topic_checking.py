@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from amqtt.broker import Action
+from amqtt.broker import Action, BrokerContext, Broker
 from amqtt.plugins.manager import BaseContext
 from amqtt.plugins.topic_checking import BaseTopicPlugin, TopicAccessControlListPlugin, TopicTabooPlugin
 from amqtt.session import Session
@@ -37,7 +37,8 @@ async def test_base_no_config(logdog):
 async def test_base_empty_config(logdog):
     """Check BaseTopicPlugin returns false if topic-check is empty."""
     with logdog() as pile:
-        context = BaseContext()
+        broker = Broker()
+        context = BrokerContext(broker)
         context.logger = logging.getLogger("testlog")
         context.config = {"topic-check": {}}
 
@@ -47,9 +48,12 @@ async def test_base_empty_config(logdog):
 
     # Should have printed just one warning
     log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 1
+    assert len(log_records) == 2
     assert log_records[0].levelno == logging.WARNING
     assert log_records[0].message == "'topic-check' section not found in context configuration"
+
+    assert log_records[1].levelno == logging.WARNING
+    assert log_records[1].message == "'topic-check' section not found in context configuration"
 
 
 @pytest.mark.asyncio
