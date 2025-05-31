@@ -20,7 +20,6 @@ repos:
           - --unsafe-fixes
           - --line-length=130
           - --exit-non-zero-on-fix
-      - id: ruff-format
 
   # Local hooks for mypy and pylint
   - repo: local
