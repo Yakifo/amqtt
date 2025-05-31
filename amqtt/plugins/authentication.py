@@ -1,9 +1,10 @@
 from pathlib import Path
+from typing import Any
 
 from passlib.apps import custom_app_context as pwd_context
 
 from amqtt.broker import BrokerContext
-from amqtt.plugins.manager import BaseContext, BasePlugin
+from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
 
 _PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
@@ -12,10 +13,10 @@ _PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
 class BaseAuthPlugin(BasePlugin):
     """Base class for authentication plugins."""
 
-    def __init__(self, context: BaseContext) -> None:
+    def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
-        self.auth_config = self.context.config.get("auth", None) if self.context.config else None
+        self.auth_config: dict[str, Any] | None = self._get_config_section("auth")
         if not self.auth_config:
             self.context.logger.warning("'auth' section not found in context configuration")
 
@@ -30,7 +31,6 @@ class BaseAuthPlugin(BasePlugin):
             - `None` if authentication can't be achieved (then plugin result is then ignored)
 
         """
-
         if not self.auth_config:
             # auth config section not found
             self.context.logger.warning("'auth' section not found in context configuration")
@@ -50,7 +50,6 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
                 self.context.logger.debug("Authentication success: config allows anonymous")
                 return True
 
-            session: Session | None = session
             if session and session.username:
                 self.context.logger.debug(f"Authentication success: session has username '{session.username}'")
                 return True
@@ -61,7 +60,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
 class FileAuthPlugin(BaseAuthPlugin):
     """Authentication plugin based on a file-stored user database."""
 
-    def __init__(self, context: BaseContext) -> None:
+    def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
         self._users: dict[str, str] = {}
         self._read_password_file()
@@ -98,7 +97,6 @@ class FileAuthPlugin(BaseAuthPlugin):
         """Authenticate users based on the file-stored user database."""
         authenticated = await super().authenticate(session=session)
         if authenticated:
-
             if not session:
                 self.context.logger.debug("Authentication failure: no session provided")
                 return False

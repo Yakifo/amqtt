@@ -1,4 +1,4 @@
-__all__ = ["BaseContext", "PluginManager", "get_plugin_manager", "BasePlugin"]
+__all__ = ["BaseContext", "PluginManager", "get_plugin_manager"]
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -34,11 +34,6 @@ class BaseContext:
         self.loop: asyncio.AbstractEventLoop | None = None
         self.logger: logging.Logger = _LOGGER
         self.config: dict[str, Any] | None = None
-
-class BasePlugin:
-    def __init__(self, context: BaseContext) -> None:
-        self.context = context
-
 
 
 class PluginManager:

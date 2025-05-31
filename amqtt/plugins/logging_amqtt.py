@@ -3,8 +3,7 @@ from functools import partial
 import logging
 from typing import TYPE_CHECKING, Any
 
-from amqtt.plugins.manager import BasePlugin
-
+from amqtt.plugins.base import BasePlugin
 
 if TYPE_CHECKING:
     from amqtt.session import Session
