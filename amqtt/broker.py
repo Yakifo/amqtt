@@ -2,9 +2,11 @@ import asyncio
 from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
+import copy
 from enum import Enum
 from functools import partial
 import logging
+from pathlib import Path
 import re
 import ssl
 from typing import Any, ClassVar, TypeAlias
@@ -24,17 +26,16 @@ from amqtt.adapters import (
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
-from amqtt.utils import format_client_message, gen_client_id
+from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .plugins.manager import BaseContext, PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | int | None]
 
-_defaults: _CONFIG_LISTENER = {
-    "timeout-disconnect-delay": 2,
-    "auth": {"allow-anonymous": True, "password-file": None},
-}
+
+_defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
+
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
@@ -139,9 +140,10 @@ class BrokerContext(BaseContext):
 class Broker:
     """MQTT 3.1.1 compliant broker implementation.
 
-    :param config: Example Yaml config
-    :param loop: asyncio loop to use. Defaults to ``asyncio.get_event_loop()``.
-    :param plugin_namespace: Plugin namespace to use when loading plugin entry_points. Defaults to ``amqtt.broker.plugins``
+    Args:
+        config: dictionary of configuration options (see [broker configuration](broker_config.md)).
+        loop: asyncio loop. defaults to `asyncio.get_event_loop()`.
+        plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
     """
 
@@ -163,7 +165,7 @@ class Broker:
     ) -> None:
         """Initialize the broker."""
         self.logger = logging.getLogger(__name__)
-        self.config = _defaults.copy()
+        self.config = copy.deepcopy(_defaults or {})
         if config is not None:
             self.config.update(config)
         self._build_listeners_config(self.config)
@@ -227,7 +229,6 @@ class Broker:
         """Start the broker to serve with the given configuration.
 
         Start method opens network sockets and will start listening for incoming connections.
-        This method is a *coroutine*.
         """
         try:
             self._sessions.clear()

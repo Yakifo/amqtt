@@ -69,19 +69,19 @@ repos:
           - --exclude-files=samples/client_subscribe_acl.py
           - --exclude-files=docs/quickstart.rst
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.2
+    rev: v8.26.0
     hooks:
       - id: gitleaks
 
   # YAML Linting
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.0
+    rev: v1.37.1
     hooks:
       - id: yamllint
 
   # Python-specific hooks ######################################################
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.4
+    rev: v0.11.10
     hooks:
       - id: ruff
         args:

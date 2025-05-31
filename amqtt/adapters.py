@@ -75,7 +75,7 @@ class WebSocketsReader(ReaderAdapter):
     async def _feed_buffer(self, n: int = 1) -> None:
         """Feed the data buffer by reading a WebSocket message.
 
-        :param n: if given, feed buffer until it contains at least n bytes.
+        :param n: Optional; feed buffer until it contains at least n bytes. Defaults to 1.
         """
         buffer = bytearray(self._stream.read())
         message: str | bytes | None = None
