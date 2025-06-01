@@ -21,7 +21,7 @@ broker = Broker(plugin_namespace='mypackage.mymodule.plugins')
 Each plugin has access to the full configuration file through the provided `BaseContext` and can define
 its own variables to configure its behavior.
 
-::: amqtt.plugins.manager.BasePlugin
+::: amqtt.plugins.base.BasePlugin
 
 Plugins that are defined in the`project.entry-points` are loaded and notified of events by when the subclass 
 implements one or more of these methods:
