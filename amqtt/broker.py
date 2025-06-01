@@ -31,7 +31,7 @@ from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 from .plugins.manager import BaseContext, PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
-_BROADCAST: TypeAlias = dict[str, Session | str | bytes | int | None]
+_BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
 
 
 _defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
@@ -60,7 +60,7 @@ class Action(Enum):
 class RetainedApplicationMessage(ApplicationMessage):
     __slots__ = ("data", "qos", "source_session", "topic")
 
-    def __init__(self, source_session: Session | None, topic: str, data: bytes, qos: int | None = None) -> None:
+    def __init__(self, source_session: Session | None, topic: str, data: bytes | bytearray, qos: int | None = None) -> None:
         super().__init__(None, topic, qos, data, retain=True)
         self.source_session = source_session
         self.topic = topic
@@ -934,7 +934,7 @@ class Broker:
         self,
         session: Session | None,
         topic: str | None,
-        data: bytes | None,
+        data: bytes | bytearray | None,
         force_qos: int | None = None,
     ) -> None:
         broadcast: _BROADCAST = {"session": session, "topic": topic, "data": data}

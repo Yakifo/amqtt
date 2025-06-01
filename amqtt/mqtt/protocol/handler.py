@@ -198,7 +198,7 @@ class ProtocolHandler:
     async def mqtt_publish(
         self,
         topic: str,
-        data: bytes,
+        data: bytes | bytearray ,
         qos: int | None,
         retain: bool,
         ack_timeout: int | None = None,

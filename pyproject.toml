@@ -35,7 +35,7 @@ dependencies = [
 dev = [
   "hatch>=1.14.1",
   "hypothesis>=6.130.8",
-  "mypy<1.15.0",
+  "mypy>=1.15.0",
   "paho-mqtt>=2.1.0",
   "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
@@ -97,6 +97,7 @@ test_plugin = "tests.plugins.test_manager:EmptyTestPlugin"
 event_plugin = "tests.plugins.test_manager:EventTestPlugin"
 packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
 
+# --8<-- [start:included]
 [project.entry-points."amqtt.broker.plugins"]
 event_logger_plugin = "amqtt.plugins.logging_amqtt:EventLoggerPlugin"
 packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
@@ -105,6 +106,8 @@ auth_file = "amqtt.plugins.authentication:FileAuthPlugin"
 topic_taboo = "amqtt.plugins.topic_checking:TopicTabooPlugin"
 topic_acl = "amqtt.plugins.topic_checking:TopicAccessControlListPlugin"
 broker_sys = "amqtt.plugins.sys.broker:BrokerSysPlugin"
+# --8<-- [end:included]
+
 
 [project.entry-points."amqtt.client.plugins"]
 packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
