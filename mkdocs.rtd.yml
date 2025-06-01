@@ -88,7 +88,6 @@ theme:
 extra_css:
   - assets/extra.css
 
-
 #extra_javascript:
 #- assets/extra.js
 
@@ -116,7 +115,6 @@ markdown_extensions:
   - pymdownx.tilde
   - toc:
       permalink: "¤"
-
 
 plugins:
   - search
