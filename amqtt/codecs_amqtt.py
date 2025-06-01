@@ -5,7 +5,7 @@ from amqtt.adapters import ReaderAdapter
 from amqtt.errors import NoDataError
 
 
-def bytes_to_hex_str(data: bytes) -> str:
+def bytes_to_hex_str(data: bytes | bytearray) -> str:
     """Convert a sequence of bytes into its displayable hex representation, ie: 0x??????.
 
     :param data: byte sequence
@@ -105,7 +105,7 @@ def encode_string(string: str) -> bytes:
     return int_to_bytes(data_length, 2) + data
 
 
-def encode_data_with_length(data: bytes) -> bytes:
+def encode_data_with_length(data: bytes | bytearray) -> bytes:
     """Encode data with its length as prefix.
 
     :param data: data to encode

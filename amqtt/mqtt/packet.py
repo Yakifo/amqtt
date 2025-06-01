@@ -82,6 +82,8 @@ class MQTTFixedHeader:
 
         async def decode_remaining_length() -> int:
             """Decode the remaining length from the stream."""
+            multiplier: int
+            value: int
             multiplier, value = 1, 0
             buffer = bytearray()
             while True:
@@ -123,7 +125,7 @@ class MQTTVariableHeader(ABC):
         await writer.drain()
 
     @abstractmethod
-    def to_bytes(self) -> bytes:
+    def to_bytes(self) -> bytes | bytearray:
         """Serialize the variable header to bytes."""
 
     @property
@@ -173,7 +175,7 @@ class MQTTPayload(Generic[_VH], ABC):
         await writer.drain()
 
     @abstractmethod
-    def to_bytes(self, fixed_header: MQTTFixedHeader | None = None, variable_header: _VH | None = None) -> bytes:
+    def to_bytes(self, fixed_header: MQTTFixedHeader | None = None, variable_header: _VH | None = None) -> bytes | bytearray:
         pass
 
     @classmethod
