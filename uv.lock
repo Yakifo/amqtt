@@ -29,6 +29,7 @@ dev = [
     { name = "hatch" },
     { name = "hypothesis" },
     { name = "mypy" },
+    { name = "paho-mqtt" },
     { name = "poethepoet" },
     { name = "pre-commit" },
     { name = "psutil" },
@@ -76,6 +77,7 @@ dev = [
     { name = "hatch", specifier = ">=1.14.1" },
     { name = "hypothesis", specifier = ">=6.130.8" },
     { name = "mypy", specifier = ">=1.15.0" },
+    { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "poethepoet", specifier = ">=0.34.0" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "psutil", specifier = ">=7.0.0" },
@@ -1262,6 +1264,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ec/46/68dde5b6bc00c1296ec6466ab27dddede6aec9af1b99090e1107091b3b84/paginate-0.5.7.tar.gz", hash = "sha256:22bd083ab41e1a8b4f3690544afb2c60c25e5c9a63a30fa2f483f6c60c8e5945", size = 19252, upload-time = "2024-08-25T14:17:24.139Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/90/96/04b8e52da071d28f5e21a805b19cb9390aa17a47462ac87f5e2696b9566d/paginate-0.5.7-py2.py3-none-any.whl", hash = "sha256:b885e2af73abcf01d9559fd5216b57ef722f8c42affbb63942377668e35c7591", size = 13746, upload-time = "2024-08-25T14:17:22.55Z" },
+]
+
+[[package]]
+name = "paho-mqtt"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/15/0a6214e76d4d32e7f663b109cf71fb22561c2be0f701d67f93950cd40542/paho_mqtt-2.1.0.tar.gz", hash = "sha256:12d6e7511d4137555a3f6ea167ae846af2c7357b10bc6fa4f7c3968fc1723834", size = 148848, upload-time = "2024-04-29T19:52:55.591Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/cb/00451c3cf31790287768bb12c6bec834f5d292eaf3022afc88e14b8afc94/paho_mqtt-2.1.0-py3-none-any.whl", hash = "sha256:6db9ba9b34ed5bc6b6e3812718c7e06e2fd7444540df2455d2c51bd58808feee", size = 67219, upload-time = "2024-04-29T19:52:48.345Z" },
 ]
 
 [[package]]

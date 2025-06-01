@@ -36,6 +36,7 @@ dev = [
   "hatch>=1.14.1",
   "hypothesis>=6.130.8",
   "mypy>=1.15.0",
+  "paho-mqtt>=2.1.0",
   "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
   "psutil>=7.0.0", # https://pypi.org/project/psutil
