@@ -1,5 +1,6 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "hatch-vcs", "uv-dynamic-versioning"]
+
 build-backend = "hatchling.build"
 
 [project]
@@ -15,8 +16,8 @@ classifiers = [
   "Topic :: Internet",
 ]
 
-version = "0.11.0-rc"
-requires-python = ">=3.13.0"
+version = "0.11.0-rc1"
+requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }
 
@@ -26,16 +27,16 @@ dependencies = [
   "transitions==0.9.2", # https://pypi.org/project/transitions
   "websockets==15.0.1", # https://pypi.org/project/websockets
   "passlib==1.7.4", # https://pypi.org/project/passlib
-  "docopt==0.6.2", # https://pypi.org/project/docopt
   "PyYAML==6.0.2", # https://pypi.org/project/PyYAML
-  "mkdocs-exclude>=1.0.2",
+  "typer==0.15.4"
 ]
 
 [dependency-groups]
 dev = [
   "hatch>=1.14.1",
-  "hypothesis>=6.130.8", # https://pypi.org/project/hypothesis
+  "hypothesis>=6.130.8",
   "mypy>=1.15.0",
+  "paho-mqtt>=2.1.0",
   "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
   "psutil>=7.0.0", # https://pypi.org/project/psutil
@@ -47,7 +48,6 @@ dev = [
   "pytest>=8.3.5", # https://pypi.org/project/pytest
   "ruff>=0.11.3", # https://pypi.org/project/ruff
   "setuptools>=78.1.0",
-  "sphinx>=8.2.3",
   "types-mock>=5.2.0.20250306", # https://pypi.org/project/types-mock
   "types-PyYAML>=6.0.12.20250402", # https://pypi.org/project/types-PyYAML
   "types-setuptools>=78.1.0.20250329", # https://pypi.org/project/types-setuptools
@@ -67,6 +67,7 @@ docs = [
     "mkdocstrings-python>=1.16.2",
     # YORE: EOL 3.10: Remove line.
     "tomli>=2.0; python_version < '3.11'",
+    "mkdocs-typer2>=0.1.4"
 ]
 
 [project.optional-dependencies]
@@ -87,9 +88,8 @@ source = "vcs"
 
 [tool.poe.tasks]
 rtd = "mkdocs serve -f mkdocs.rtd.yml"
-web = "mkdocs serve -f mkdocs.web.yml"
-lint = "uv run ruff check amqtt"
-test = "uv run pytest"
+test = "pytest"
+docs = "mkdocs build"
 
 # ___________________________________ PLUGINS __________________________________
 [project.entry-points."amqtt.test.plugins"]
@@ -97,6 +97,7 @@ test_plugin = "tests.plugins.test_manager:EmptyTestPlugin"
 event_plugin = "tests.plugins.test_manager:EventTestPlugin"
 packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
 
+# --8<-- [start:included]
 [project.entry-points."amqtt.broker.plugins"]
 event_logger_plugin = "amqtt.plugins.logging_amqtt:EventLoggerPlugin"
 packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
@@ -105,6 +106,8 @@ auth_file = "amqtt.plugins.authentication:FileAuthPlugin"
 topic_taboo = "amqtt.plugins.topic_checking:TopicTabooPlugin"
 topic_acl = "amqtt.plugins.topic_checking:TopicAccessControlListPlugin"
 broker_sys = "amqtt.plugins.sys.broker:BrokerSysPlugin"
+# --8<-- [end:included]
+
 
 [project.entry-points."amqtt.client.plugins"]
 packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
@@ -115,6 +118,7 @@ packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
 line-length = 130
 fix = true
 extend-exclude = ["docs/", "samples/"]
+
 
 [tool.ruff.format]
 indent-style = "space"
@@ -143,10 +147,13 @@ ignore = [
   "TD003",  # TODO Missing issue link for this TODO.
   "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
   "ARG002", # Unused method argument
+  "PERF203",# try-except penalty within loops (3.10 only),
+  "COM812"  # rule causes conflicts when used with the formatter
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ALL"]
+"amqtt/scripts/*_script.py" = ["FBT003", "E501"]
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
@@ -175,8 +182,10 @@ addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 10
-# log_cli = true
-# log_level = "INFO"
+asyncio_default_fixture_loop_scope = "function"
+#addopts = ["--tb=short", "--capture=tee-sys"]
+#log_cli = true
+#log_level = "DEBUG"
 
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]

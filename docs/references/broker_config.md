@@ -33,9 +33,30 @@ Client disconnect timeout without a keep-alive
 
 Configuration for authentication behaviour:
 
-- `plugins` *(list[string])*: defines the list of plugins which are activated as authentication plugins. Note the plugins must be defined in the `amqtt.broker.plugins` [entry point](https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-package-metadata).
-- `allow-anonymous` *(bool)*: used by the internal `amqtt.plugins.authentication.AnonymousAuthPlugin` plugin. This parameter enables (`on`) or disable anonymous connection, i.e. connection without username.
-- `password-file` *(string)*: used by the internal `amqtt.plugins.authentication.FileAuthPlugin` plugin. Path to file which includes `username:password` pair, one per line. The password should be encoded using sha-512 with `mkpasswd -m sha-512` or:
+- `plugins` *(list[string])*: defines the list of plugins which are activated as authentication plugins.
+
+    !!! note "Entry points"
+        Plugins used here must first be defined in the `amqtt.broker.plugins` [entry point](https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-package-metadata).
+
+
+    !!! danger "Legacy behavior"
+        if `plugins` is omitted from the `auth` section, all plugins listed in the `amqtt.broker.plugins` entrypoint will be enabled
+        for authentication, *including allowing anonymous login.*
+
+        `plugins: []` will deny connections from all clients.
+
+- `allow-anonymous` *(bool)*: `True` will allow anonymous connections.
+
+      *Used by the internal `amqtt.plugins.authentication.AnonymousAuthPlugin` plugin* 
+    
+    !!! danger "Username only connections"
+          `False` does not disable the `auth_anonymous` plugin; connections will still be allowed as long as a username is provided.
+
+           If security is required, do not include `auth_anonymous` in the `plugins` list.
+
+
+
+- `password-file` *(string)*: Path to file which includes `username:password` pair, one per line. The password should be encoded using sha-512 with `mkpasswd -m sha-512` or:
   ```python
   import sys
   from getpass import getpass
@@ -44,6 +65,8 @@ Configuration for authentication behaviour:
   passwd = input() if not sys.stdin.isatty() else getpass()
   print(sha512_crypt.hash(passwd))
   ```
+  
+      *Used by the internal `amqtt.plugins.authentication.FileAuthPlugin` plugin.*
 
 ### `topic-check` *(mapping)*
 
@@ -51,12 +74,23 @@ Configuration for access control policies for publishing and subscribing to topi
 
 - `enabled` *(bool)*: Enable access control policies (`true`). `false` will allow clients to publish and subscribe to any topic.
 - `plugins` *(list[string])*: defines the list of plugins which are activated as access control plugins. Note the plugins must be defined in the `amqtt.broker.plugins` [entry point](https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins).
-- `acl` *(list)*: used by the internal `amqtt.plugins.topic_acl.TopicAclPlugin` plugin to determine subscription access. This parameter defines the list of access control rules; each item is a key-value pair, where:
+
+- `acl` *(list)*: plugin to determine subscription access; if `publish-acl` is not specified, determine both publish and subscription access.
+   The list should be a key-value pair, where:
 `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
-use `anonymous` username for the list of allowed topics if using the `auth_anonymous` plugin.
-- `publish-acl` *(list)*: used by the internal `amqtt.plugins.topic_acl.TopicAclPlugin` plugin to determine publish access. This parameter defines the list of access control rules; each item is a key-value pair, where:
+
+    *used by the `amqtt.plugins.topic_acl.TopicAclPlugin`*
+
+- `publish-acl` *(list)*: plugin to determine publish access. This parameter defines the list of access control rules; each item is a key-value pair, where:
 `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
-use `anonymous` username for the list of allowed topics if using the `auth_anonymous` plugin.
+
+    !!! info "Reserved usernames"
+
+        - The username `admin` is allowed access to all topic.
+        - The username `anonymous` will control allowed topics if using the `auth_anonymous` plugin.
+
+
+    *used by the `amqtt.plugins.topic_acl.TopicAclPlugin`*
 
 
 

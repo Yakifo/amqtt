@@ -1,4 +1,4 @@
-from typing import Self
+from typing_extensions import Self
 
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import bytes_to_int, read_or_raise
@@ -28,7 +28,7 @@ class ConnackVariableHeader(MQTTVariableHeader):
         return_code = bytes_to_int(data[1])
         return cls(session_parent, return_code)
 
-    def to_bytes(self) -> bytearray:
+    def to_bytes(self) -> bytes | bytearray:
         out = bytearray(2)
         # Connect acknowledge flags
         out[0] = 1 if self.session_parent else 0

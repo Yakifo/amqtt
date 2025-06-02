@@ -1,5 +1,5 @@
 import asyncio
-from typing import Self
+from typing_extensions import Self
 
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import decode_packet_id, decode_string, encode_string, int_to_bytes
@@ -22,7 +22,7 @@ class PublishVariableHeader(MQTTVariableHeader):
         """Return a string representation of the PublishVariableHeader object."""
         return f"{type(self).__name__}(topic={self.topic_name}, packet_id={self.packet_id})"
 
-    def to_bytes(self) -> bytearray:
+    def to_bytes(self) -> bytes | bytearray:
         out = bytearray()
         out.extend(encode_string(self.topic_name))
         if self.packet_id is not None:
@@ -69,7 +69,7 @@ class PublishPayload(MQTTPayload[MQTTVariableHeader]):
             buffer = await reader.read(data_length - length_read)
             data.extend(buffer)
             length_read = len(data)
-        return cls(data)
+        return cls(bytes(data))
 
     def __repr__(self) -> str:
         """Return a string representation of the PublishPayload object."""
@@ -109,7 +109,7 @@ class PublishPacket(MQTTPacket[PublishVariableHeader, PublishPayload, MQTTFixedH
         packet = cls(variable_header=v_header, payload=payload)
         packet.dup_flag = dup_flag
         packet.retain_flag = retain
-        packet.qos = qos
+        packet.qos = qos or 0
         return packet
 
     def set_flags(self, dup_flag: bool = False, qos: int = 0, retain_flag: bool = False) -> None:

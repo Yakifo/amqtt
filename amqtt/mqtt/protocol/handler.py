@@ -1,5 +1,19 @@
 import asyncio
-from asyncio import InvalidStateError, QueueFull, QueueShutDown
+
+try:
+    from asyncio import InvalidStateError, QueueFull, QueueShutDown
+except ImportError:
+    # Fallback for Python < 3.12
+    class InvalidStateError(Exception):  #  type: ignore[no-redef]
+        pass
+
+    class QueueFull(Exception):  #  type: ignore[no-redef]  # noqa : N818
+        pass
+
+    class QueueShutDown(Exception):  #  type: ignore[no-redef]  # noqa : N818
+        pass
+
+
 import collections
 import itertools
 import logging
@@ -138,11 +152,11 @@ class ProtocolHandler:
             if self.writer is not None:
                 await self.writer.close()
         except asyncio.CancelledError:
-            self.logger.debug("Writer close was cancelled.")
-        except TimeoutError as e:
-            self.logger.debug(f"Writer close operation timed out: {e}.")
-        except OSError as e:
-            self.logger.debug(f"Writer close failed due to I/O error: {e}")
+            self.logger.debug("Writer close was cancelled.", exc_info=True)
+        except TimeoutError:
+            self.logger.debug("Writer close operation timed out.", exc_info=True)
+        except OSError:
+            self.logger.debug("Writer close failed due to I/O error.", exc_info=True)
 
     def _stop_waiters(self) -> None:
         self.logger.debug(f"Stopping {len(self._puback_waiters)} puback waiters")
@@ -184,7 +198,7 @@ class ProtocolHandler:
     async def mqtt_publish(
         self,
         topic: str,
-        data: bytes,
+        data: bytes | bytearray ,
         qos: int | None,
         retain: bool,
         ack_timeout: int | None = None,

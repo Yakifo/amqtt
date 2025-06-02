@@ -1,12 +1,10 @@
 # Existing Plugins
 
 With the aMQTT Broker plugins framework, one can add additional functionality without
-having to rewrite core logic. The list of plugins that get loaded are specified in `pyproject.toml`;
-each plugin can then check the configuration to determine how to behave (including disabling).
+having to rewrite core logic. Plugins loaded by default are specified in `pyproject.toml`:
 
-```toml
-[project.entry-points."amqtt.broker.plugins"]
-plugin_alias = "module.submodule.file:ClassName"
+```yaml
+--8<-- "pyproject.toml:included"
 ```
 
 ## auth_anonymous (Auth Plugin)
@@ -14,7 +12,7 @@ plugin_alias = "module.submodule.file:ClassName"
 `amqtt.plugins.authentication:AnonymousAuthPlugin`
 
 
-**Config Options**
+**Configuration**
 
 ```yaml
 auth:
@@ -34,7 +32,7 @@ auth:
 
 clients are authorized by providing username and password, compared against file
 
-**Config Options**
+**Configuration**
 
 ```yaml
 
@@ -64,7 +62,6 @@ print(sha512_crypt.hash(passwd))
 
 `amqtt.plugins.topic_checking:TopicTabooPlugin`
 
-
 Prevents using topics named: `prohibited`, `top-secret`, and `data/classified`
 
 **Configuration**
@@ -82,6 +79,19 @@ topic-check:
 
 **Configuration**
 
+- `acl` *(list)*: determines subscription access; if `publish-acl` is not specified, determine both publish and subscription access.
+   The list should be a key-value pair, where:
+`<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+
+
+- `publish-acl` *(list)*: determines publish access. This parameter defines the list of access control rules; each item is a key-value pair, where:
+`<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+
+    !!! info "Reserved usernames"
+
+        - The username `admin` is allowed access to all topics.
+        - The username `anonymous` will control allowed topics, if using the `auth_anonymous` plugin.
+
 ```yaml
 topic-check:
   enabled: true
@@ -95,23 +105,20 @@ topic-check:
     - .
 ```
 
-
-
-
-
-
 ## Plugin: $SYS
+
+`amqtt.plugins.sys.broker:BrokerSysPlugin`
 
 Publishes, on a periodic basis, statistics about the broker
 
-**Config Options**
+**Configuration**
 
 - `sys_interval` - int, seconds between updates
 
-### Supported Topics
+**Supported Topics**
 
-- `$SYS/broker/load/bytes/received` - payload: 'data` - payload: `data`,  int
-- `$SYS/broker/load/bytes/sent` - payload: 'data` - payload: `data`,  int
+- `$SYS/broker/load/bytes/received` - payload: `data`,  int
+- `$SYS/broker/load/bytes/sent` - payload: `data`,  int
 - `$SYS/broker/messages/received` - payload: `data`, int
 - `$SYS/broker/messages/sent` - payload: `data`, int
 - `$SYS/broker/time` - payload: `data`,  int (current time, epoch seconds)

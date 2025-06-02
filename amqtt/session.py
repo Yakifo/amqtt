@@ -31,7 +31,7 @@ class ApplicationMessage:
         "topic",
     )
 
-    def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
+    def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes | bytearray, retain: bool) -> None:
         self.packet_id: int | None = packet_id
         """ Publish message packet identifier
             <http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718025>_
@@ -80,7 +80,7 @@ class ApplicationMessage:
         :param dup: force dup flag
         :return: :class:`amqtt.mqtt.publish.PublishPacket` built from ApplicationMessage instance attributes
         """
-        return PublishPacket.build(self.topic, self.data, self.packet_id, dup, self.qos, self.retain)
+        return PublishPacket.build(self.topic, bytes(self.data), self.packet_id, dup, self.qos, self.retain)
 
     def __eq__(self, other: object) -> bool:
         """Compare two ApplicationMessage instances based on their packet_id.
@@ -109,7 +109,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
     __slots__ = ("direction",)
 
-    def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes, retain: bool) -> None:
+    def __init__(self, packet_id: int | None, topic: str, qos: int | None, data: bytes | bytearray, retain: bool) -> None:
         super().__init__(packet_id, topic, qos, data, retain)
         self.direction: int = OUTGOING
 

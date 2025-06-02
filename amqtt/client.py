@@ -7,7 +7,7 @@ from functools import wraps
 import logging
 from pathlib import Path
 import ssl
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 from urllib.parse import urlparse, urlunparse
 
 import websockets
@@ -46,7 +46,7 @@ class ClientContext(BaseContext):
 
 base_logger = logging.getLogger(__name__)
 
-type _F = Callable[..., Coroutine[Any, Any, Any]]
+_F: TypeAlias = Callable[..., Coroutine[Any, Any, Any]]
 
 
 def mqtt_connected(func: _F) -> _F:
@@ -403,7 +403,7 @@ class MQTTClient:
         # timeout occurred before message received
         deliver_task.cancel()
         msg = "Timeout waiting for message"
-        raise TimeoutError(msg)
+        raise asyncio.TimeoutError(msg)
 
     async def _connect_coro(self) -> int:
         """Perform the core connection logic."""

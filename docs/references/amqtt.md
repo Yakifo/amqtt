@@ -1,22 +1,9 @@
-# amqtt
+#
 
-`amqtt` is a command-line script for running a MQTT 3.1.1 broker.
-
-## Usage
-
-`amqtt` usage:
-
-```
-amqtt --version
-amqtt (-h | --help)
-amqtt [-c <config_file> ] [-d]
-```
-
-## Options
-
-- `--version` - amqtt version information
-- `-h, --help` - Display `amqtt_sub` usage help
-- `-c` - Set the YAML configuration file to read and pass to the client runtime.
+::: mkdocs-typer2
+    :module: amqtt.scripts.broker_script
+    :name: amqtt
+    :pretty: true
 
 ## Configuration
 

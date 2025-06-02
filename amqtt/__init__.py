@@ -1,3 +1,3 @@
 """INIT."""
 
-__version__ = "0.11.0-beta4"
+__version__ = "0.11.0-rc"

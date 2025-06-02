@@ -1,5 +1,5 @@
 from asyncio import StreamReader
-from typing import Self
+from typing_extensions import Self
 
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import (
@@ -69,7 +69,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
         return cls(flags, keep_alive, protocol_name, protocol_level)
 
-    def to_bytes(self) -> bytearray:
+    def to_bytes(self) -> bytes | bytearray:
         out = bytearray()
 
         # Protocol name
@@ -222,7 +222,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         self,
         fixed_header: MQTTFixedHeader | None = None,
         variable_header: ConnectVariableHeader | None = None,
-    ) -> bytes:
+    ) -> bytes | bytearray:
         out = bytearray()
         # Client identifier
         if self.client_id is not None:
