@@ -6,6 +6,8 @@ import Stack from '@mui/material/Stack';
 import { LineChart } from '@mui/x-charts/LineChart';
 import CountUp from 'react-countup';
 import type { DataPoint } from '../../assets/helpers.jsx';
+import React from "react";
+import {CircularProgress} from "@mui/material";
 
 const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -32,10 +34,29 @@ function AreaGradient({ color, id }: { color: string; id: string }) {
   );
 }
 
-export default function SessionsChart(props: any) {
+function NoDataDisplay(props: any) {
+  return <>
+    {!props.isConnected ? <div style={{height: 250, width: 600, paddingTop: 50}}>
+        <Typography component="h2" variant="subtitle2" gutterBottom>
+          Connecting...
+        </Typography>
+      <CircularProgress size={60}/>
+      </div> :
+      <div style={{height: 250, width: 600, paddingTop: 50}}>
+        <Typography component="h2" variant="subtitle2" gutterBottom>
+          Connected, waiting for data...
+        </Typography>
+        <CircularProgress size={60}/>
+      </div>}
+  </>
+
+}
+
+function LinearChart(props: any) {
+
   const theme = useTheme();
 
-  const colorPalette = [
+    const colorPalette = [
     theme.palette.primary.light,
     theme.palette.primary.main,
     theme.palette.primary.dark,
@@ -43,31 +64,9 @@ export default function SessionsChart(props: any) {
 
   const label: string = props.label || '--';
 
-  return (
-    <Card variant="outlined" sx={{ width: '100%' }}>
-      <CardContent>
-        <Typography component="h2" variant="subtitle2" gutterBottom>
-          {props.title}
-        </Typography>
-        <Stack sx={{ justifyContent: 'space-between' }}>
-          <Stack
-            direction="row"
-            sx={{
-              alignContent: { xs: 'center', sm: 'flex-start' },
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <Typography variant="h4" component="p">
-              { props.data.length < 2 ? "" :
-              <CountUp
-                start={props.data[props.data.length - 2].value}
-                end={props.data[props.data.length - 1].value}
-                duration={5}/>}
-            </Typography>
-          </Stack>
-        </Stack>
-        <LineChart
+
+
+  return <LineChart
           colors={colorPalette}
           xAxis={[
             {
@@ -90,7 +89,7 @@ export default function SessionsChart(props: any) {
               data: props.data.map( (dp:DataPoint) => dp.value),
             }
           ]}
-          height={250}
+          height={175}
           margin={{ left: 50, right: 20, top: 20, bottom: 20 }}
           grid={{ horizontal: true }}
           sx={{
@@ -110,8 +109,41 @@ export default function SessionsChart(props: any) {
             },
           }}
         >
+
           <AreaGradient color={theme.palette.primary.main} id="direct" />
         </LineChart>
+}
+
+export default function SessionsChart(props: any) {
+
+  return (
+    <Card variant="outlined" sx={{ width: '100%' }}>
+      <CardContent>
+        <Typography component="h1" variant="subtitle1" gutterBottom>
+          {props.title}
+        </Typography>
+        <Stack sx={{ justifyContent: 'space-between' }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignContent: { xs: 'center', sm: 'flex-start' },
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <Typography variant="h4" component="p">
+
+              { props.data.length < 2 ? "" :
+              <CountUp
+                start={props.data[props.data.length - 2].value}
+                end={props.data[props.data.length - 1].value}
+                duration={5}/>}
+            </Typography>
+          </Stack>
+        </Stack>
+        { props.data.length < 2 ? <NoDataDisplay isConnected={props.isConnected}/> :
+          <LinearChart {...props} /> }
+
       </CardContent>
     </Card>
   );
