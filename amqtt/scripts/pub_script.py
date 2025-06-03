@@ -112,7 +112,7 @@ async def do_pub(
         await client.disconnect()
         logger.info(f"{client.client_id} Disconnected from broker")
     except ConnectError as ce:
-        logger.fatal(f"Connection to '{url}' failed: {ce!r}")
+        logger.fatal(f"Connection to '{client.session.broker_uri if client.session else url}' failed")
         raise ConnectError from ce
     except asyncio.CancelledError as ce:
         logger.fatal("Publish canceled due to previous error")
