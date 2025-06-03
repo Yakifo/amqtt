@@ -59,6 +59,7 @@ async def broker(broker_config_file):
     proc.wait()
 
 
+@pytest.mark.timeout(12)
 def test_cli_help_messages():
     """Test that help messages are displayed correctly."""
     env = os.environ.copy()
@@ -78,7 +79,7 @@ def test_cli_help_messages():
     output = subprocess.check_output([amqtt_pub_path, "--help"], env=env, text=True)
     assert "Usage: amqtt_pub" in output
 
-
+@pytest.mark.timeout(12)
 def test_broker_version():
     """Test broker version command."""
     output = subprocess.check_output(["amqtt", "--version"])
@@ -86,6 +87,7 @@ def test_broker_version():
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_broker_start_stop(broker_config_file):
     """Test broker start and stop with config file."""
     proc = subprocess.Popen(
@@ -107,6 +109,7 @@ async def test_broker_start_stop(broker_config_file):
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_publish_subscribe(broker):
     """Test pub/sub CLI tools with running broker."""
 
@@ -159,6 +162,7 @@ async def test_publish_subscribe(broker):
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_pub_sub_retain(broker):
     """Test various pub/sub will retain options."""
     # Test publishing with retain flag
@@ -191,6 +195,7 @@ async def test_pub_sub_retain(broker):
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_pub_errors():
     """Test error handling in pub/sub tools."""
     # Test connection to non-existent broker
@@ -208,6 +213,7 @@ async def test_pub_errors():
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_sub_errors():
     # Test invalid URL format
     sub_proc = subprocess.run(
@@ -260,6 +266,7 @@ def client_config_file(client_config, tmp_path):
     return str(config_path)
 
 
+@pytest.mark.timeout(12)
 def test_pub_client_config(broker, client_config_file):
     pub_proc = subprocess.run(
         [
@@ -274,6 +281,7 @@ def test_pub_client_config(broker, client_config_file):
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_pub_client_config_will(broker, client_config, client_config_file):
 
     # verifying client script functionality of will topic (publisher)
@@ -302,6 +310,7 @@ async def test_pub_client_config_will(broker, client_config, client_config_file)
     await client1.disconnect()
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_sub_client_config_will(broker, client_config_file):
 
     # verifying client script functionality of will topic (subscriber)

@@ -264,6 +264,8 @@ def client_config():
     }
 
 
+@pytest.mark.asyncio
+@pytest.mark.timeout(12)
 async def test_client_publish_will_with_retain(broker_fixture, client_config):
 
     # verifying client functionality of will topic
