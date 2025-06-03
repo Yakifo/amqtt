@@ -1,11 +1,6 @@
 import asyncio
-import inspect
 import logging
 from importlib.metadata import EntryPoint
-from logging import getLogger
-from pathlib import Path
-from types import ModuleType
-from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -55,7 +50,7 @@ async def test_broker_sys_plugin() -> None:
                 message = await client.deliver_message(timeout_duration=0.5)
                 if '$SYS' in message.topic:
                     sys_msg_count += 1
-        except TimeoutError:
+        except asyncio.TimeoutError:
             pass
 
         logger.warning(f">>> sys message: {message.topic} - {message.data}")
