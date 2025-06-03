@@ -133,7 +133,7 @@ def _version(v: bool) -> None:
 
 @app.command()
 def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
-    url: str | None = typer.Option(None, "--url", help="Broker connection URL, *must conform to MQTT URI scheme: `mqtt://<username:password>@HOST:port`*"),
+    url: str | None = typer.Option(None, "--url", help="Broker connection URL, *must conform to MQTT or URI scheme: `[mqtt(s)|ws(s)]://<username:password>@HOST:port`*"),
     config_file: str | None = typer.Option(None, "-c", "--config-file", help="Client configuration file"),
     client_id: str | None = typer.Option(None, "-i", "--client-id", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
