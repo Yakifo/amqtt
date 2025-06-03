@@ -4,7 +4,6 @@ import os
 import signal
 import subprocess
 import tempfile
-from asyncio import timeout
 
 import pytest
 import yaml
