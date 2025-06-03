@@ -446,7 +446,7 @@ class ProtocolHandler:
         self.logger.debug(f"{self.session.client_id} Starting reader coro")
         running_tasks: collections.deque[asyncio.Task[None]] = collections.deque()
         keepalive_timeout: int | None = self.session.keep_alive
-        if keepalive_timeout and keepalive_timeout <= 0:
+        if keepalive_timeout is not None and keepalive_timeout <= 0:
             keepalive_timeout = None
         while True:
             try:
