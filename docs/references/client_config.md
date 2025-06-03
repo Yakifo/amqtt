@@ -60,9 +60,9 @@ auto_reconnect: true
 reconnect_max_interval: 5,
 reconnect_retries: 10
 topics:
-   - test:
-       qos: 0
-   - some_topic:
-       qos: 2
-       retain: true
+   test:
+    qos: 0
+   some_topic:
+     qos: 2
+     retain: true
 ```

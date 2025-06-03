@@ -148,7 +148,7 @@ class MQTTClient:
         additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)
         self.additional_headers = additional_headers
-        self.logger.debug(f"Connecting to: {uri}")
+        self.logger.debug(f"Connecting to: {self.session.broker_uri}")
 
         try:
             return await self._do_connect()
@@ -230,7 +230,7 @@ class MQTTClient:
                 msg = "Future or Task was cancelled"
                 raise ConnectError(msg) from e
             except Exception as e:
-                self.logger.warning(f"Reconnection attempt failed: {e}")
+                self.logger.warning(f"Reconnection attempt failed: {e}", exc_info=True)
                 if reconnect_retries < nb_attempt:  # reconnect_retries >= 0 and
                     self.logger.exception("Maximum connection attempts reached. Reconnection aborted.")
                     msg = "Too many failed attempts"
@@ -594,7 +594,7 @@ class MQTTClient:
             session.will_flag = True
             session.will_retain = self.config["will"]["retain"]
             session.will_topic = self.config["will"]["topic"]
-            session.will_message = self.config["will"]["message"]
+            session.will_message = self.config["will"]["message"].encode()
             session.will_qos = self.config["will"]["qos"]
 
         return session

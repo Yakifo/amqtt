@@ -74,10 +74,10 @@ class CAInfo:
 
 async def do_pub(
     client: MQTTClient,
-    url: str,
     topic: str,
     message_input: MessageInput,
     ca_info: CAInfo,
+    url: str | None = None,
     clean_session: bool = False,
     retain: bool = False,
     extra_headers_json: str | None = None,
@@ -133,7 +133,7 @@ def _version(v: bool) -> None:
 
 @app.command()
 def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
-    url: str = typer.Option(..., "--url", help="Broker connection URL, *must conform to MQTT URI scheme: `mqtt://<username:password>@HOST:port`*"),
+    url: str | None = typer.Option(None, "--url", help="Broker connection URL, *must conform to MQTT URI scheme: `mqtt://<username:password>@HOST:port`*"),
     config_file: str | None = typer.Option(None, "-c", "--config-file", help="Client configuration file"),
     client_id: str | None = typer.Option(None, "-i", "--client-id", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
@@ -143,7 +143,7 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     file: str | None = typer.Option(None, "-f", "--file", help="Path to file, will publish each line as a separate message."),
     stdin: bool = typer.Option(False, "-s", "--stdin", help="Read from standard input, all content read is sent as a single message."),
     lines: bool = typer.Option(False, "-l", "--lines", help="Read from stdin, will publish message for each line."),
-    no_message: bool = typer.Option(False, "-n", help="Publish an empty (null, zero length) message"),
+    no_message: bool = typer.Option(False, "-n", "--no-message", help="Publish an empty (null, zero length) message"),
     keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout, in seconds."),
     clean_session: bool = typer.Option(False, "--clean-session", help="Clean session on connect. *default: False*"),
     ca_file: str | None = typer.Option(None, "--ca-file", help="Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
@@ -160,7 +160,7 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     """Command-line MQTT client for publishing simple messages."""
     provided = [bool(message), bool(file), stdin, lines, no_message]
     if sum(provided) != 1:
-        typer.echo("❌ You must provide exactly one of --config, --file, or --stdin.", err=True)
+        typer.echo("❌ You must provide exactly one of --message, --file, --stdin, --lines or --no-message", err=True)
         raise typer.Exit(code=1)
 
     if bool(will_message) != bool(will_topic):
@@ -197,8 +197,8 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     if will_topic and will_message:
         config["will"] = {
             "topic": will_topic,
-            "message": will_message.encode(),
-            "qos": will_qos,
+            "message": will_message,
+            "qos": int(will_qos),
             "retain": will_retain,
         }
 

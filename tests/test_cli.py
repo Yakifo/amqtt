@@ -1,22 +1,22 @@
 import asyncio
-import json
 import logging
 import os
+import signal
 import subprocess
 import tempfile
-from pathlib import Path
+from asyncio import timeout
 
 import pytest
 import yaml
+
+from amqtt.mqtt.constants import QOS_0
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 logger = logging.getLogger(__name__)
 
 
-from amqtt.broker import Broker
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_1
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def broker_config():
 
 
 @pytest.fixture
-def config_file(broker_config, tmp_path):
+def broker_config_file(broker_config, tmp_path):
     config_path = tmp_path / "config.yaml"
     with config_path.open("w") as f:
         yaml.dump(broker_config, f)
@@ -46,10 +46,10 @@ def config_file(broker_config, tmp_path):
 
 
 @pytest.fixture
-async def broker(config_file):
+async def broker(broker_config_file):
 
     proc = subprocess.Popen(
-        ["amqtt", "-c", config_file],
+        ["amqtt", "-c", broker_config_file],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -87,10 +87,10 @@ def test_broker_version():
 
 
 @pytest.mark.asyncio
-async def test_broker_start_stop(config_file):
+async def test_broker_start_stop(broker_config_file):
     """Test broker start and stop with config file."""
     proc = subprocess.Popen(
-        ["amqtt", "-c", config_file],
+        ["amqtt", "-c", broker_config_file],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -220,3 +220,117 @@ async def test_sub_errors():
         capture_output=True,
     )
     assert sub_proc.returncode != 0, f"subscriber error code: {sub_proc.returncode}"
+
+
+@pytest.fixture
+def client_config():
+    return {
+        "keep_alive": 10,
+        "ping_delay": 1,
+        "default_qos": 0,
+        "default_retain": False,
+        "auto_reconnect": True,
+        "reconnect_max_interval": 5,
+        "reconnect_retries": 10,
+        "topics": {
+            "test": {
+                "qos": 0
+            },
+            "some_topic": {
+                "qos": 2,
+                "retain": True
+            }
+        },
+        "will": {
+            "topic": "test/will/topic",
+            "message": "client ABC has disconnected",
+            "qos": 0,
+            "retain": False
+        },
+        "broker": {
+            "uri": "mqtt://localhost:1884"
+        }
+    }
+
+
+@pytest.fixture
+def client_config_file(client_config, tmp_path):
+    config_path = tmp_path / "config.yaml"
+    with config_path.open("w") as f:
+        yaml.dump(client_config, f)
+    return str(config_path)
+
+
+def test_pub_client_config(broker, client_config_file):
+    pub_proc = subprocess.run(
+        [
+            "amqtt_pub",
+            "-t", "test/topic",
+            "-m", "test",
+            "-c", client_config_file
+        ],
+        capture_output=True,
+    )
+    assert pub_proc.returncode == 0, f"publisher error code: {pub_proc.returncode}"
+
+
+@pytest.mark.asyncio
+async def test_pub_client_config_will(broker, client_config, client_config_file):
+
+    # verifying client script functionality of will topic (publisher)
+    # https://github.com/Yakifo/amqtt/issues/159
+
+    client1 = MQTTClient(client_id="client1")
+    await client1.connect('mqtt://localhost:1884')
+    await  client1.subscribe([
+        ("test/will/topic", QOS_0)
+        ])
+
+    pub_proc = subprocess.run(
+        [
+            "amqtt_pub",
+            "-t", "test/topic",
+            "-m", "test of regular topic",
+            "-c", client_config_file
+        ],
+        capture_output=True,
+    )
+    assert pub_proc.returncode == 0, f"publisher error code: {pub_proc.returncode}"
+
+    message = await client1.deliver_message(timeout_duration=1)
+    assert message.topic == 'test/will/topic'
+    assert message.data == b'client ABC has disconnected'
+    await client1.disconnect()
+
+@pytest.mark.asyncio
+async def test_sub_client_config_will(broker, client_config_file):
+
+    # verifying client script functionality of will topic (subscriber)
+    # https://github.com/Yakifo/amqtt/issues/159
+
+    client1 = MQTTClient(client_id="client1")
+    await client1.connect('mqtt://localhost:1884')
+    await  client1.subscribe([
+        ("test/will/topic", QOS_0)
+        ])
+
+    sub_proc = subprocess.Popen(
+        [
+            "amqtt_sub",
+            "-t", "test/topic",
+            "-c", client_config_file
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    await asyncio.sleep(0.5)
+    sub_proc.send_signal(signal.SIGINT)
+    _, _ = sub_proc.communicate()
+
+    assert sub_proc.returncode == 0, f"subscriber error code: {sub_proc.returncode}"
+
+    message = await client1.deliver_message(timeout_duration=3)
+    assert message.topic == 'test/will/topic'
+    assert message.data == b'client ABC has disconnected'
+    await client1.disconnect()
