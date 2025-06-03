@@ -182,8 +182,6 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
         logger.debug(f"Using default configuration from {default_config_path}")
         config = read_yaml_config(default_config_path)
 
-    loop = asyncio.get_event_loop()
-
     if not client_id:
         client_id = _gen_client_id()
 
@@ -217,7 +215,7 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     )
     with contextlib.suppress(KeyboardInterrupt):
         try:
-            loop.run_until_complete(
+            asyncio.run(
                 do_pub(
                     client=client,
                     message_input=message_input,
@@ -233,8 +231,6 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
         except (ClientError, ConnectError) as exc:
             typer.echo("❌ Connection failed", err=True)
             raise typer.Exit(code=1) from exc
-
-    loop.close()
 
 
 if __name__ == "__main__":
