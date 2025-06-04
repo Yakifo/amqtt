@@ -9,7 +9,7 @@ class BasePlugin:
     def __init__(self, context: BrokerContext) -> None:
         self.context = context
 
-    def _get_config_section(self, name: str) -> dict[str, Any] | None:
+    def _get_config_section(self, name: str = "") -> dict[str, Any] | None:
         if not self.context.config or not self.context.config.get(name, None):
             return None
         section_config: int | dict[str, Any] | None = self.context.config.get(name, None)
