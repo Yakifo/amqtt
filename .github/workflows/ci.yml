@@ -39,6 +39,8 @@ jobs:
         run: uv run --frozen mypy ${{ env.PROJECT_PATH }}/
       - name: Pylint review
         run: uv run --frozen pylint ${{ env.PROJECT_PATH }}/
+      - name: Ruff check
+        run: uv run --frozen ruff check ${{ env.PROJECT_PATH }}/
 
   tests:
     name: Run tests
