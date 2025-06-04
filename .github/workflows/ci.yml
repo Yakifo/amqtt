@@ -70,7 +70,7 @@ jobs:
         run: uv sync --locked --dev
 
       - name: Run pytest
-        run: uv run --frozen pytest tests --cov=./ --cov-report=xml --junitxml=pytest-report.xml
+        run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
 
       # https://github.com/actions/upload-artifact
       - name: Upload test report

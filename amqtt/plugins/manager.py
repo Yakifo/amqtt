@@ -87,7 +87,8 @@ class PluginManager:
             obj = plugin(plugin_context)
             return Plugin(ep.name, ep, obj)
         except ImportError:
-            self.logger.warning(f"Plugin {ep!r} import failed", exc_info=True)
+            self.logger.warning(f"Plugin {ep!r} import failed")
+            self.logger.debug("", exc_info=True)
 
         return None
 

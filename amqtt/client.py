@@ -148,7 +148,7 @@ class MQTTClient:
         additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)
         self.additional_headers = additional_headers
-        self.logger.debug(f"Connecting to: {uri}")
+        self.logger.debug(f"Connecting to: {self.session.broker_uri}")
 
         try:
             return await self._do_connect()
@@ -156,7 +156,7 @@ class MQTTClient:
             msg = "Future or Task was cancelled"
             raise ConnectError(msg) from e
         except Exception as e:
-            self.logger.warning(f"Connection failed: {e}")
+            self.logger.warning(f"Connection failed: {e!r}")
             if not self.config.get("auto_reconnect", False):
                 raise
             return await self.reconnect()
@@ -230,9 +230,11 @@ class MQTTClient:
                 msg = "Future or Task was cancelled"
                 raise ConnectError(msg) from e
             except Exception as e:
-                self.logger.warning(f"Reconnection attempt failed: {e}")
+                self.logger.warning(f"Reconnection attempt failed: {e!r}")
+                self.logger.debug("", exc_info=True)
                 if reconnect_retries < nb_attempt:  # reconnect_retries >= 0 and
                     self.logger.exception("Maximum connection attempts reached. Reconnection aborted.")
+                    self.logger.debug("", exc_info=True)
                     msg = "Too many failed attempts"
                     raise ConnectError(msg) from e
                 delay = min(reconnect_max_interval, 2**nb_attempt)
@@ -475,6 +477,7 @@ class MQTTClient:
                     self.session.remote_port,
                     **kwargs,
                 )
+
                 reader = StreamReaderAdapter(conn_reader)
                 writer = StreamWriterAdapter(conn_writer)
             elif scheme in ("ws", "wss") and self.session.broker_uri:
@@ -511,7 +514,7 @@ class MQTTClient:
             self.logger.debug(f"Connected to {self.session.remote_address}:{self.session.remote_port}")
 
         except (InvalidURI, InvalidHandshake, ProtocolHandlerError, ConnectionError, OSError) as e:
-            self.logger.warning(f"Connection failed : {self.session.broker_uri} : {e}")
+            self.logger.debug(f"Connection failed : {self.session.broker_uri} [{e!r}]")
             self.session.transitions.disconnect()
             raise ConnectError(e) from e
         return return_code
@@ -594,7 +597,7 @@ class MQTTClient:
             session.will_flag = True
             session.will_retain = self.config["will"]["retain"]
             session.will_topic = self.config["will"]["topic"]
-            session.will_message = self.config["will"]["message"]
+            session.will_message = self.config["will"]["message"].encode()
             session.will_qos = self.config["will"]["qos"]
 
         return session
