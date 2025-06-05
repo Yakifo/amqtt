@@ -19,14 +19,12 @@ export default function MainGrid() {
   const [received, setReceived] = useState<DataPoint[]>([]);
   const [bytesIn, setBytesIn] = useState<DataPoint[]>([]);
   const [bytesOut, setBytesOut] = useState<DataPoint[]>([]);
-  const [serverStart, setServerStart] = useState<string>("");
 
   function getRandomInt(min:number, max:number) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-
 
 
   const mqtt_settings = {
