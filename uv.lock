@@ -50,6 +50,7 @@ docs = [
     { name = "markdown-exec" },
     { name = "mkdocs" },
     { name = "mkdocs-coverage" },
+    { name = "mkdocs-exclude" },
     { name = "mkdocs-git-revision-date-localized-plugin" },
     { name = "mkdocs-llmstxt" },
     { name = "mkdocs-material" },
@@ -98,6 +99,7 @@ docs = [
     { name = "markdown-exec", specifier = ">=1.8" },
     { name = "mkdocs", specifier = ">=1.6" },
     { name = "mkdocs-coverage", specifier = ">=1.0" },
+    { name = "mkdocs-exclude", specifier = ">=1.0.2" },
     { name = "mkdocs-git-revision-date-localized-plugin", specifier = ">=1.2" },
     { name = "mkdocs-llmstxt", specifier = ">=0.1" },
     { name = "mkdocs-material", specifier = ">=9.5" },
@@ -1022,6 +1024,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/93/64/a9fe7d953d6b02944
 wheels = [
     { url = "https://files.pythonhosted.org/packages/eb/f0/96851f1d9809e1cbd1f1545948d3c4bde7abfa3af5965b7ba8d88ec37c11/mkdocs_coverage-1.1.0-py3-none-any.whl", hash = "sha256:168ca4ebc35ba48309c1f734d0cab0359cd95b205d0d18030d27e73b6a4590d9", size = 6853, upload-time = "2024-06-11T18:47:20.649Z" },
 ]
+
+[[package]]
+name = "mkdocs-exclude"
+version = "1.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mkdocs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/54/b5/3a8e289282c9e8d7003f8a2f53d673d4fdaa81d493dc6966092d9985b6fc/mkdocs-exclude-1.0.2.tar.gz", hash = "sha256:ba6fab3c80ddbe3fd31d3e579861fd3124513708271180a5f81846da8c7e2a51", size = 6751, upload-time = "2019-02-20T23:34:12.81Z" }
 
 [[package]]
 name = "mkdocs-get-deps"

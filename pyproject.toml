@@ -67,7 +67,8 @@ docs = [
     "mkdocstrings-python>=1.16.2",
     # YORE: EOL 3.10: Remove line.
     "tomli>=2.0; python_version < '3.11'",
-    "mkdocs-typer2>=0.1.4"
+    "mkdocs-typer2>=0.1.4",
+    "mkdocs-exclude>=1.0.2",
 ]
 
 [project.optional-dependencies]

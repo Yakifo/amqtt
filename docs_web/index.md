@@ -14,15 +14,15 @@
 
 ## Installation
 
-`amqtt` is available on [PyPI](https://pypi.python.org/pypi/amqtt)
+`amqtt` is available on ![pypi](assets/python.svg) [PyPI](https://pypi.python.org/pypi/amqtt)
 
 ## Documentation
 
-`amqtt` docs are available on [Read the Docs](http://amqtt.readthedocs.org/).
+`amqtt` docs are available on ![readthedocs](assets/readthedocs.svg) [Read the Docs](http://amqtt.readthedocs.org/).
 
 
 ## Support
 
-Bug reports, patches and suggestions welcome!
+`amqtt` development is available on ![github](assets/github.svg) [GitHub](https://github.com/Yakifo/amqtt). Bug reports, patches and suggestions welcome!
 
-Just [open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [gitter community](https://gitter.im/amqtt/community).
+[Open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [gitter community](https://gitter.im/amqtt/community).

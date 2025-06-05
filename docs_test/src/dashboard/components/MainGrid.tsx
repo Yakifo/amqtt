@@ -161,12 +161,12 @@ export default function MainGrid() {
             </Table>
           </TableContainer>
           <p style={{textAlign: 'left'}}>
-            The purpose of this free MQTT broker is to learn about and test the MQTT protocol,
-            it must not be used in Production, Dev, Staging or UAT environments. Please note that this
-            MQTT broker can be used by anyone, therefore it is strongly advised not to feed any sensitive
-            information or personal data into the system. Any illegal use of this MQTT broker is strictly
-            forbidden. By using this MQTT broker you warrant that you are not a sanctioned person nor
-            are you located in a country that is subject to sanctions.
+            The purpose of this free MQTT broker at <strong>test.amqtt.io</strong> is to learn about and test the MQTT
+            protocol. It
+            should not be used in production, development, staging or uat environments. Do not to use it to send any
+            sensitive information or personal data into the system as all topics are public. Any illegal use of this
+            MQTT broker is strictly forbidden. By using this MQTT broker located at <strong>test.amqtt.io</strong> you
+            warrant that you are not a sanctioned person nor are you located in a country that is subject to sanctions.
           </p>
         </Grid>
       </Grid>
