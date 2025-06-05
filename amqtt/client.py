@@ -533,7 +533,7 @@ class MQTTClient:
             while self.client_tasks:
                 task = self.client_tasks.popleft()
                 if not task.done():
-                    task.cancel()
+                    task.cancel(msg="Connection closed.")
 
         self.logger.debug("Monitoring broker disconnection")
         # Wait for disconnection from broker (like connection lost)
