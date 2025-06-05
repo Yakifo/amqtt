@@ -231,3 +231,67 @@ async def test_cancel_publish_qos2_pubcomp(broker_fixture):
 
     await asyncio.sleep(0.1)
     await client_pub.disconnect()
+
+
+@pytest.fixture
+def client_config():
+    return {
+        "default_retain": False,
+        "topics": {
+                "test": {
+                    "qos": 0
+                },
+                "some_topic": {
+                    "retain": True,
+                    "qos": 2
+                }
+        },
+        "keep_alive": 10,
+        "broker": {
+            "uri": "mqtt://localhost:1884"
+        },
+        "reconnect_max_interval": 5,
+        "will": {
+            "topic": "test/will/topic",
+            "retain": True,
+            "message": "client ABC has disconnected",
+            "qos": 1
+        },
+        "ping_delay": 1,
+        "default_qos": 0,
+        "auto_reconnect": True,
+        "reconnect_retries": 10
+    }
+
+
+@pytest.mark.asyncio
+async def test_client_publish_will_with_retain(broker_fixture, client_config):
+
+    # verifying client functionality of will topic
+    # https://github.com/Yakifo/amqtt/issues/159
+
+    client1 = MQTTClient(client_id="client1")
+    await client1.connect('mqtt://localhost:1883')
+    await  client1.subscribe([
+        ("test/will/topic", QOS_0)
+        ])
+
+    client2 = MQTTClient(client_id="client2", config=client_config)
+    await client2.connect('mqtt://localhost:1883')
+    await client2.publish('my/topic', b'my message')
+    await client2.disconnect()
+
+    message = await client1.deliver_message(timeout_duration=1)
+    assert message.topic == 'test/will/topic'
+    assert message.data == b'client ABC has disconnected'
+    await client1.disconnect()
+
+    client3 = MQTTClient(client_id="client3")
+    await client3.connect('mqtt://localhost:1883')
+    await client3.subscribe([
+        ("test/will/topic", QOS_0)
+    ])
+    message3 = await client3.deliver_message(timeout_duration=1)
+    assert message3.topic == 'test/will/topic'
+    assert message3.data == b'client ABC has disconnected'
+    await client3.disconnect()

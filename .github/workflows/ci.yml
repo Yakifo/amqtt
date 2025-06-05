@@ -39,6 +39,8 @@ jobs:
         run: uv run --frozen mypy ${{ env.PROJECT_PATH }}/
       - name: Pylint review
         run: uv run --frozen pylint ${{ env.PROJECT_PATH }}/
+      - name: Ruff check
+        run: uv run --frozen ruff check ${{ env.PROJECT_PATH }}/
 
   tests:
     name: Run tests
@@ -70,7 +72,7 @@ jobs:
         run: uv sync --locked --dev
 
       - name: Run pytest
-        run: uv run --frozen pytest tests --cov=./ --cov-report=xml --junitxml=pytest-report.xml
+        run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
 
       # https://github.com/actions/upload-artifact
       - name: Upload test report

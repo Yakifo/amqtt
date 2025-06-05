@@ -108,7 +108,7 @@ def _version(v:bool) -> None:
 
 @app.command()
 def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
-    url: str = typer.Option(..., help="Broker connection URL, *must conform to MQTT URI scheme: `mqtt://<username:password>@HOST:port`*", show_default=False),
+    url: str = typer.Option(None, help="Broker connection URL, *must conform to MQTT or URI scheme: `[mqtt(s)|ws(s)]://<username:password>@HOST:port`*", show_default=False),
     config_file: str | None = typer.Option(None, "-c", help="Client configuration file"),
     client_id: str | None = typer.Option(None, "-i", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),
     max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending *default: read indefinitely*"),
@@ -162,7 +162,7 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     if will_topic and will_message:
         config["will"] = {
             "topic": will_topic,
-            "message": will_message.encode("utf-8"),
+            "message": will_message,
             "qos": int(will_qos),
             "retain": will_retain,
         }
