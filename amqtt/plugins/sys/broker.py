@@ -104,7 +104,7 @@ class BrokerSysPlugin(BasePlugin):
             pass
             # 'sys_interval' config parameter not found
 
-    async def on_broker_pre_stop(self, *args: None, **kwargs: None) -> None:
+    async def on_broker_pre_shutdown(self, *args: None, **kwargs: None) -> None:
         """Stop $SYS topics broadcasting."""
         if self._sys_handle:
             self._sys_handle.cancel()
