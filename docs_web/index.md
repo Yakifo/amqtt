@@ -20,9 +20,17 @@
 
 `amqtt` docs are available on ![readthedocs](assets/readthedocs.svg) [Read the Docs](http://amqtt.readthedocs.org/).
 
-
 ## Support
 
 `amqtt` development is available on ![github](assets/github.svg) [GitHub](https://github.com/Yakifo/amqtt). Bug reports, patches and suggestions welcome!
 
 [Open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [gitter community](https://gitter.im/amqtt/community).
+
+## Testing
+
+The `amqtt` project runs a test MQTT server at [test.amqtt.io](https://test.amqtt.io) which supports:
+
+- MQTT
+- MQTT over TLS
+- websockets
+- secure websockets
