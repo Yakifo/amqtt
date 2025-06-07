@@ -295,3 +295,35 @@ async def test_client_publish_will_with_retain(broker_fixture, client_config):
     assert message3.topic == 'test/will/topic'
     assert message3.data == b'client ABC has disconnected'
     await client3.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_with_will_empty_message(broker_fixture):
+    client_config = {
+        "broker": {
+            "uri": "mqtt://localhost:1883"
+        },
+        "reconnect_max_interval": 5,
+        "will": {
+            "topic": "test/will/topic",
+            "retain": True,
+            "message": "",
+            "qos": 0
+        },
+    }
+    client1 = MQTTClient(client_id="client1", config=client_config)
+    await client1.connect()
+
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect('mqtt://localhost:1883')
+    await client2.subscribe([
+        ("test/will/topic", QOS_0)
+    ])
+
+    await client1.disconnect()
+
+    message = await client2.deliver_message(timeout_duration=1)
+    assert message.topic == 'test/will/topic'
+    assert message.data == b''
+
+    await client2.disconnect()
