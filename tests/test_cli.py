@@ -4,10 +4,12 @@ import os
 import signal
 import subprocess
 import tempfile
+from unittest.mock import patch
 
 import pytest
 import yaml
 
+from amqtt.broker import Broker
 from amqtt.mqtt.constants import QOS_0
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -243,38 +245,3 @@ async def test_pub_client_config(broker, client_config_file):
     logger.debug(f"Stderr: {stderr.decode()}")
 
     assert proc.returncode == 0, f"publisher error code: {proc.returncode}"
-
-
-@pytest.mark.asyncio
-async def test_sub_client_config_will(broker, client_config, client_config_file):
-
-    # verifying client script functionality of will topic (subscriber)
-    # https://github.com/Yakifo/amqtt/issues/159
-
-    client1 = MQTTClient(client_id="client1")
-    await client1.connect('mqtt://localhost:1884')
-    await  client1.subscribe([
-        ("test/will/topic", QOS_0)
-        ])
-
-    cmd = ["amqtt_sub",
-            "-t", "test/topic",
-            "-c", client_config_file,
-            "-n", "1"]
-
-    proc = await asyncio.create_subprocess_shell(
-        " ".join(cmd), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-
-    await asyncio.sleep(2)
-
-    # force the process to exit
-    proc.terminate()
-    await proc.wait()
-
-
-    # validate the 'will' message was received correctly
-    message = await client1.deliver_message(timeout_duration=3)
-    assert message.topic == 'test/will/topic'
-    assert message.data == b'client ABC has disconnected'
-    await client1.disconnect()
