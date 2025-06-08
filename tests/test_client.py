@@ -295,3 +295,10 @@ async def test_client_publish_will_with_retain(broker_fixture, client_config):
     assert message3.topic == 'test/will/topic'
     assert message3.data == b'client ABC has disconnected'
     await client3.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_connect_broken_uri():
+    config = {"auto_reconnect": False}
+    client = MQTTClient(config=config)
+    await client.connect('"mqtt://someplace')
