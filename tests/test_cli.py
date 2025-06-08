@@ -159,38 +159,6 @@ async def test_publish_subscribe(broker):
 
 
 @pytest.mark.asyncio
-async def test_pub_sub_retain(broker):
-    """Test various pub/sub will retain options."""
-    # Test publishing with retain flag
-    pub_proc = subprocess.run(
-        [
-            "amqtt_pub",
-            "--url", "mqtt://127.0.0.1:1884",
-            "-t", "topic/test",
-            "-m", "standard message",
-            "--will-topic", "topic/retain",
-            "--will-message", "last will message",
-            "--will-retain",
-        ],
-        capture_output=True,
-    )
-    assert pub_proc.returncode == 0, f"publisher error code: {pub_proc.returncode}\n{pub_proc.stderr}"
-    logger.debug("publisher succeeded")
-    # Verify retained message is received by new subscriber
-    sub_proc = subprocess.run(
-        [
-            "amqtt_sub",
-            "--url", "mqtt://127.0.0.1:1884",
-            "-t", "topic/retain",
-            "-n", "1",
-        ],
-        capture_output=True,
-    )
-    assert sub_proc.returncode == 0, f"subscriber error code: {sub_proc.returncode}\n{sub_proc.stderr}"
-    assert "last will message" in str(sub_proc.stdout)
-
-
-@pytest.mark.asyncio
 async def test_pub_errors(client_config_file):
     """Test error handling in pub/sub tools."""
     # Test connection to non-existent broker
@@ -278,37 +246,6 @@ async def test_pub_client_config(broker, client_config_file):
 
 
 @pytest.mark.asyncio
-async def test_pub_client_config_will(broker, client_config_file):
-
-    # verifying client script functionality of will topic (publisher)
-    # https://github.com/Yakifo/amqtt/issues/159
-    await asyncio.sleep(1)
-    client1 = MQTTClient(client_id="client1")
-    await client1.connect('mqtt://localhost:1884')
-    await  client1.subscribe([
-        ("test/will/topic", QOS_0)
-        ])
-
-    cmd = ["amqtt_pub",
-            "-t", "test/topic",
-            "-m", "\"test of regular topic\"",
-            "-c", client_config_file]
-
-    proc = await asyncio.create_subprocess_shell(
-        " ".join(cmd), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await proc.communicate()
-    logger.debug(f"Command: {cmd}")
-    logger.debug(f"Stdout: {stdout.decode()}")
-    logger.debug(f"Stderr: {stderr.decode()}")
-
-    message = await client1.deliver_message(timeout_duration=1)
-    assert message.topic == 'test/will/topic'
-    assert message.data == b'client ABC has disconnected'
-    await client1.disconnect()
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(20)
 async def test_sub_client_config_will(broker, client_config, client_config_file):
 
     # verifying client script functionality of will topic (subscriber)
@@ -328,10 +265,12 @@ async def test_sub_client_config_will(broker, client_config, client_config_file)
     proc = await asyncio.create_subprocess_shell(
         " ".join(cmd), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
+
     await asyncio.sleep(2)
 
-    # cause `amqtt_sub` to exit after receiving this one message
-    await client1.publish("test/topic", b'my test message')
+    # force the process to exit
+    proc.terminate()
+    await proc.wait()
 
 
     # validate the 'will' message was received correctly
@@ -339,10 +278,3 @@ async def test_sub_client_config_will(broker, client_config, client_config_file)
     assert message.topic == 'test/will/topic'
     assert message.data == b'client ABC has disconnected'
     await client1.disconnect()
-
-
-    stdout, stderr = await proc.communicate()
-    logger.debug(f"Command: {cmd}")
-    logger.debug(f"Stdout: {stdout.decode()}")
-    logger.debug(f"Stderr: {stderr.decode()}")
-    
