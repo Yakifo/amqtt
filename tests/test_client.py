@@ -4,7 +4,7 @@ import logging
 import pytest
 
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectError
+from amqtt.errors import ClientError, ConnectError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -301,4 +301,14 @@ async def test_client_publish_will_with_retain(broker_fixture, client_config):
 async def test_connect_broken_uri():
     config = {"auto_reconnect": False}
     client = MQTTClient(config=config)
-    await client.connect('"mqtt://someplace')
+    with pytest.raises(ClientError):
+        await client.connect('"mqtt://someplace')
+
+
+@pytest.mark.asyncio
+async def test_connect_incorrect_scheme():
+    config = {"auto_reconnect": False}
+    client = MQTTClient(config=config)
+    with pytest.raises(ClientError):
+        await client.connect('"mq://someplace')
+
