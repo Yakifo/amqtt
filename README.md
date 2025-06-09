@@ -33,6 +33,14 @@ $ pip install amqtt
 
 Available on [Read the Docs](http://amqtt.readthedocs.org/).
 
+## Containerization
+
+Launch from [DockerHub](https://hub.docker.com/repository/docker/amqtt/amqtt)
+
+```shell
+$ docker run -d -p 1883:1883 amqtt/amqtt:latest
+```
+
 ## Support
 
 Bug reports, patches and suggestions welcome! Just [open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [gitter community](https://gitter.im/amqtt/community).

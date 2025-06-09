@@ -7,7 +7,7 @@ The `amqtt.broker.Broker` class provides a complete MQTT 3.1.1 broker implementa
 The following example shows how to start a broker using the default configuration:
 
 ```python
---8<-- "../amqtt/samples/broker_simple.py"
+--8<-- "samples/broker_simple.py"
 ```
 
 This will start the broker and let it run until it is shutdown by `^c`.

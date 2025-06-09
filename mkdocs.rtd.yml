@@ -17,7 +17,7 @@ watch:
   - docs
   - amqtt
   - samples
-copyright: TBD
+copyright: '2025'
 edit_uri: edit/main/docs/
 
 validation:
@@ -44,6 +44,7 @@ nav:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
       - Reference:
+          - Containerization: docker.md
           - Support: support.md
           - Contributing: contributing.md
           - Change log: changelog.md
@@ -119,6 +120,7 @@ markdown_extensions:
 plugins:
   - search
   - autorefs
+  - open-in-new-tab
   - markdown-exec
   - section-index
   - coverage
