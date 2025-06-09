@@ -54,6 +54,7 @@ docs = [
     { name = "mkdocs-llmstxt" },
     { name = "mkdocs-material" },
     { name = "mkdocs-minify-plugin" },
+    { name = "mkdocs-open-in-new-tab" },
     { name = "mkdocs-redirects" },
     { name = "mkdocs-section-index" },
     { name = "mkdocs-typer2" },
@@ -102,6 +103,7 @@ docs = [
     { name = "mkdocs-llmstxt", specifier = ">=0.1" },
     { name = "mkdocs-material", specifier = ">=9.5" },
     { name = "mkdocs-minify-plugin", specifier = ">=0.8" },
+    { name = "mkdocs-open-in-new-tab", specifier = ">=1.0.8" },
     { name = "mkdocs-redirects", specifier = ">=1.2.1" },
     { name = "mkdocs-section-index", specifier = ">=0.3" },
     { name = "mkdocs-typer2", specifier = ">=0.1.4" },
@@ -1110,6 +1112,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/52/67/fe4b77e7a8ae7628392e28b14122588beaf6078b53eb91c7ed000fd158ac/mkdocs-minify-plugin-0.8.0.tar.gz", hash = "sha256:bc11b78b8120d79e817308e2b11539d790d21445eb63df831e393f76e52e753d", size = 8366, upload-time = "2024-01-29T16:11:32.982Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1b/cd/2e8d0d92421916e2ea4ff97f10a544a9bd5588eb747556701c983581df13/mkdocs_minify_plugin-0.8.0-py3-none-any.whl", hash = "sha256:5fba1a3f7bd9a2142c9954a6559a57e946587b21f133165ece30ea145c66aee6", size = 6723, upload-time = "2024-01-29T16:11:31.851Z" },
+]
+
+[[package]]
+name = "mkdocs-open-in-new-tab"
+version = "1.0.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mkdocs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0a/0e/f72a506a21bdb27b807124e00c688226848a388d1fd3980b80ae3cc27203/mkdocs_open_in_new_tab-1.0.8.tar.gz", hash = "sha256:3e0dad08cc9938b0b13097be8e0aa435919de1eeb2d1a648e66b5dee8d57e048", size = 5791, upload-time = "2024-11-18T13:15:13.977Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/94/44f3c868495481c868d08eea065c82803f1affd8553d3383b782f497613c/mkdocs_open_in_new_tab-1.0.8-py3-none-any.whl", hash = "sha256:051d767a4467b12d89827e1fea0ec660b05b027c726317fe4fceee5456e36ad2", size = 7717, upload-time = "2024-11-18T13:15:12.286Z" },
 ]
 
 [[package]]
