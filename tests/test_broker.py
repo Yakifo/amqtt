@@ -740,3 +740,14 @@ async def test_broker_broadcast_cancellation(broker):
     await _client_publish(topic, data, qos)
     message = await asyncio.wait_for(sub_client.deliver_message(), timeout=1)
     assert message
+
+
+def test_broker_socket_open_close(broker):
+
+    # check that https://github.com/Yakifo/amqtt/issues/86 is fixed
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server = ('localhost', 1883)
+    sock.connect(server)
+    sock.close()
+
