@@ -20,6 +20,14 @@
 
 `amqtt` docs are available on ![readthedocs](assets/readthedocs.svg) [Read the Docs](http://amqtt.readthedocs.org/).
 
+## Containerization
+
+Launch from ![dockerhub](assets/docker.svg) [DockerHub](https://hub.docker.com/repository/docker/amqtt/amqtt)
+
+```shell
+$ docker run -d -p 1883:1883 amqtt/amqtt:latest
+```
+
 ## Support
 
 `amqtt` development is available on ![github](assets/github.svg) [GitHub](https://github.com/Yakifo/amqtt). Bug reports, patches and suggestions welcome!

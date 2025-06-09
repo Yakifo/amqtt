@@ -9,7 +9,7 @@ import useMqtt  from '../../assets/usemqtt';
 import type { DataPoint } from '../../assets/helpers';
 import {Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGithub, faPython } from "@fortawesome/free-brands-svg-icons";
+import { faGithub, faPython, faDocker } from "@fortawesome/free-brands-svg-icons";
 
 import rtdIcon from "../../assets/readthedocs.svg";
 
@@ -28,10 +28,10 @@ export default function MainGrid() {
 
 
   const mqtt_settings = {
-    url: 'ws://' + import.meta.env.VITE_MQTT_HOST,
+    url: 'ws://' + import.meta.env.VITE_MQTT_WS_HOST,
     client_id: `web-client-${getRandomInt(1, 100)}`,
     config: {
-      port: import.meta.env.VITE_MQTT_PORT
+      port: import.meta.env.VITE_MQTT_WS_PORT
     }
   };
 
@@ -83,10 +83,6 @@ export default function MainGrid() {
     }
   }, [messageTick]);
 
-
-
-
-
   return (
     <Box sx={{ width: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
       {/* cards */}
@@ -102,27 +98,43 @@ export default function MainGrid() {
             Overview
           </Typography>
           <div>
-            <p style={{textAlign:'left'}}>This is <b>test.amqtt.io</b>.</p>
-            <p style={{textAlign:'left'}}>It hosts a publicly available aMQTT server/broker.</p>
-            <p style={{textAlign:'left'}}><a href="http://www.mqtt.org">MQTT</a> is a very lightweight
+            <p style={{textAlign: 'left'}}>This is <b>test.amqtt.io</b>.</p>
+            <p style={{textAlign: 'left'}}>It hosts a publicly available aMQTT server/broker.</p>
+            <p style={{textAlign: 'left'}}><a href="http://www.mqtt.org">MQTT</a> is a very lightweight
               protocol that uses a publish/subscribe model. This makes it suitable for "machine to machine"
               messaging such as with low power sensors or mobile devices.
             </p>
-            <p style={{textAlign:'left'}}>For more information: </p>
-            <p style={{textAlign: 'left'}}>
-              <FontAwesomeIcon icon={faGithub} size="xl"/> github: <a href="">Yakifo/amqtt</a>
-            </p>
-            <p style={{textAlign: 'left'}}>
-              <FontAwesomeIcon icon={faPython} size="xl"/> PyPi: <a href="">aMQTT</a>
-            </p>
-            <p style={{textAlign: 'left'}}>
-              <img
-                src={rtdIcon}
-                style={{width: 20, verticalAlign: -4}}
-                alt="website logo"
-              />
-              ReadTheDocs: <a href="">aMQTT</a>
-            </p>
+            <p style={{textAlign: 'left'}}>For more information: </p>
+            <table>
+              <tbody>
+              <tr>
+                <td style={{width:250}}>
+                  <p style={{textAlign: 'left'}}>
+                    <FontAwesomeIcon icon={faGithub} size="xl"/> github: <a href="">Yakifo/amqtt</a>
+                  </p>
+                  <p style={{textAlign: 'left'}}>
+                    <FontAwesomeIcon icon={faPython} size="xl"/> PyPi: <a href="">aMQTT</a>
+                  </p>
+                </td>
+                <td>
+                  <p style={{textAlign: 'left'}}>
+                    <img
+                      src={rtdIcon}
+                      style={{width: 20, verticalAlign: -4}}
+                      alt="website logo"
+                    />
+                    ReadTheDocs: <a href="">aMQTT</a>
+                  </p>
+                  <p style={{textAlign: 'left'}}>
+                    <FontAwesomeIcon icon={faDocker} size="xl"/> DockerHub: <a href="">aMQTT</a>
+                  </p>
+
+                </td>
+              </tr>
+              </tbody>
+            </table>
+
+
           </div>
         </Grid>
         <Grid size={{xs: 1, md: 1}}></Grid>

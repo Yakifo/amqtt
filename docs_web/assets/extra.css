@@ -44,4 +44,10 @@ h2.doc-heading-parameter {
   display: block;
 }
 
-img[alt=readthedocs], img[alt=pypi], img[alt=github] { width: 20px; vertical-align: -4px; }
+img[alt=readthedocs],
+img[alt=pypi],
+img[alt=github]
+{ width: 20px; vertical-align: -4px; }
+
+img[alt=dockerhub]
+{ width: 26px; vertical-align: -4px; }
