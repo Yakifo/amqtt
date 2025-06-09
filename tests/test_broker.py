@@ -746,8 +746,9 @@ def test_broker_socket_open_close(broker):
 
     # check that https://github.com/Yakifo/amqtt/issues/86 is fixed
 
+    static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-123'
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server = ('localhost', 1883)
     sock.connect(server)
+    sock.send(static_connect_packet)
     sock.close()
-
