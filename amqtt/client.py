@@ -88,6 +88,9 @@ class MQTTClient:
             it will be generated randomly by `amqtt.utils.gen_client_id`
         config: dictionary of configuration options (see [client configuration](client_config.md)).
 
+    Raises:
+        PluginError
+
     """
 
     def __init__(self, client_id: str | None = None, config: dict[str, Any] | None = None) -> None:
@@ -142,7 +145,7 @@ class MQTTClient:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
 
         Raises:
-            amqtt.client.ConnectException: if connection fails
+            ClientError, ConnectError
 
         """
         additional_headers = additional_headers if additional_headers is not None else {}

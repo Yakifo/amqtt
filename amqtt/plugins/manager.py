@@ -8,6 +8,8 @@ from importlib.metadata import EntryPoint, EntryPoints, entry_points
 import logging
 from typing import Any, NamedTuple
 
+from amqtt.errors import PluginImportError, PluginInitError
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -80,17 +82,21 @@ class PluginManager:
         try:
             self.logger.debug(f" Loading plugin {ep!s}")
             plugin = ep.load()
-            self.logger.debug(f" Initializing plugin {ep!s}")
 
-            plugin_context = copy.copy(self.app_context)
-            plugin_context.logger = self.logger.getChild(ep.name)
+        except ImportError as e:
+            self.logger.debug(f"Plugin import failed: {ep!r}", exc_info=True)
+            raise PluginImportError(ep) from e
+
+        self.logger.debug(f" Initializing plugin {ep!s}")
+
+        plugin_context = copy.copy(self.app_context)
+        plugin_context.logger = self.logger.getChild(ep.name)
+        try:
             obj = plugin(plugin_context)
             return Plugin(ep.name, ep, obj)
-        except ImportError:
-            self.logger.warning(f"Plugin {ep!r} import failed")
-            self.logger.debug("", exc_info=True)
-
-        return None
+        except Exception as e:
+            self.logger.debug(f"Plugin init failed: {ep!r}", exc_info=True)
+            raise PluginInitError(ep) from e
 
     def get_plugin(self, name: str) -> Plugin | None:
         """Get a plugin by its name from the plugins loaded for the current namespace.

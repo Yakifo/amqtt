@@ -1,12 +1,17 @@
 import inspect
+from importlib.metadata import EntryPoint
 from logging import getLogger
 from pathlib import Path
 from types import ModuleType
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
 import amqtt.plugins
+from amqtt.broker import Broker, BrokerContext
+from amqtt.errors import PluginError, PluginInitError, PluginImportError
+from amqtt.plugins.base import BasePlugin
 from amqtt.plugins.manager import BaseContext
 
 _INVALID_METHOD: str = "invalid_foo"
@@ -61,3 +66,62 @@ def test_plugins_correct_has_attr() -> None:
         __import__(name)
 
     _verify_module(module, module.__name__)
+
+
+class MockInitErrorPlugin(BasePlugin):
+
+    def __init__(self, context: BrokerContext) -> None:
+        super().__init__(context)
+        raise KeyError
+
+
+@pytest.mark.asyncio
+async def test_plugin_exception_while_init() -> None:
+    class MockEntryPoints:
+
+        def select(self, group) -> list[EntryPoint]:
+            match group:
+                case 'tests.mock_plugins':
+                    return [
+                            EntryPoint(name='TestExceptionPlugin', group='tests.mock_plugins', value='tests.plugins.test_plugins:MockInitErrorPlugin'),
+                        ]
+                case _:
+                    return list()
+
+    with patch("amqtt.plugins.manager.entry_points", side_effect=MockEntryPoints) as mocked_mqtt_publish:
+
+        config = {
+            "listeners": {
+                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+            },
+            'sys_interval': 1
+        }
+
+        with pytest.raises(PluginInitError):
+            _ = Broker(plugin_namespace='tests.mock_plugins', config=config)
+
+
+@pytest.mark.asyncio
+async def test_plugin_exception_while_loading() -> None:
+    class MockEntryPoints:
+
+        def select(self, group) -> list[EntryPoint]:
+            match group:
+                case 'tests.mock_plugins':
+                    return [
+                            EntryPoint(name='TestExceptionPlugin', group='tests.mock_plugins', value='tests.plugins.mock_plugins:MockImportErrorPlugin'),
+                        ]
+                case _:
+                    return list()
+
+    with patch("amqtt.plugins.manager.entry_points", side_effect=MockEntryPoints) as mocked_mqtt_publish:
+
+        config = {
+            "listeners": {
+                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+            },
+            'sys_interval': 1
+        }
+
+        with pytest.raises(PluginImportError):
+            _ = Broker(plugin_namespace='tests.mock_plugins', config=config)

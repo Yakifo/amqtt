@@ -7,7 +7,7 @@ from yaml.parser import ParserError
 
 from amqtt import __version__ as amqtt_version
 from amqtt.broker import Broker
-from amqtt.errors import BrokerError
+from amqtt.errors import BrokerError, PluginError
 from amqtt.utils import read_yaml_config
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ def broker_main(
     loop = asyncio.get_event_loop()
     try:
         broker = Broker(config)
-    except (BrokerError, ParserError) as exc:
+    except (BrokerError, ParserError, PluginError) as exc:
         typer.echo(f"❌ Broker failed to start: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 

@@ -185,7 +185,7 @@ timeout = 10
 asyncio_default_fixture_loop_scope = "function"
 #addopts = ["--tb=short", "--capture=tee-sys"]
 #log_cli = true
-#log_level = "DEBUG"
+log_level = "DEBUG"
 
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]
