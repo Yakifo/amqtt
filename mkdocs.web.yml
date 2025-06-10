@@ -6,7 +6,7 @@ repo_name: Yakifo/amqtt
 site_dir: "site_web"
 docs_dir: docs_web
 watch: [mkdocs.web.yml, docs_web]
-copyright: copyright 2025
+copyright: "amqtt.io © 2025"
 edit_uri: edit/main/docs/
 
 validation:
@@ -83,6 +83,7 @@ plugins:
   - autorefs
   - markdown-exec
   - section-index
+  - open-in-new-tab
   - git-revision-date-localized:
       enabled: !ENV [DEPLOY, false]
       enable_creation_date: true

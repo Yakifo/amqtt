@@ -9,7 +9,7 @@ import useMqtt  from '../../assets/usemqtt';
 import type { DataPoint } from '../../assets/helpers';
 import {Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGithub, faPython, faDocker } from "@fortawesome/free-brands-svg-icons";
+import { faGithub, faPython, faDocker, faGitter } from "@fortawesome/free-brands-svg-icons";
 
 import rtdIcon from "../../assets/readthedocs.svg";
 
@@ -19,12 +19,30 @@ export default function MainGrid() {
   const [received, setReceived] = useState<DataPoint[]>([]);
   const [bytesIn, setBytesIn] = useState<DataPoint[]>([]);
   const [bytesOut, setBytesOut] = useState<DataPoint[]>([]);
+  const [serverStart, setServerStart] = useState<string>('');
+  const [serverUptime, setServerUptime] = useState<string>('');
 
   function getRandomInt(min:number, max:number) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
+
+function secondsToDhms(seconds: int) {
+  const days = Math.floor(seconds / (24 * 3600));
+  seconds %= (24 * 3600);
+  const hours = Math.floor(seconds / 3600);
+  seconds %= 3600;
+  const minutes = Math.floor(seconds / 60);
+  seconds = seconds % 60;
+
+  return {
+    days: days,
+    hours: hours,
+    minutes: minutes,
+    seconds: seconds,
+  };
+}
 
 
   const mqtt_settings = {
@@ -41,6 +59,8 @@ export default function MainGrid() {
     if (isConnected) {
       mqttSubscribe('$SYS/broker/messages/publish/#');
       mqttSubscribe('$SYS/broker/load/bytes/#');
+      mqttSubscribe('$SYS/broker/uptime/formatted');
+      mqttSubscribe('$SYS/broker/uptime');
     }
   }, [isConnected, mqttSubscribe]);
 
@@ -50,7 +70,7 @@ export default function MainGrid() {
       const payload = messageQueue.current.shift()!;
             try {
 
-        const d = JSON.parse(payload.message);
+        const d = payload.message;
         if (payload.topic === '$SYS/broker/messages/publish/sent') {
           const newPoint: DataPoint = {
             timestamp: new Date().toISOString(),
@@ -75,13 +95,19 @@ export default function MainGrid() {
             value: d
           }
           setBytesOut(bytesOut => [...bytesOut, newPoint]);
+        } else if (payload.topic === '$SYS/broker/uptime/formatted') {
+          const dt = new Date(d + "Z");
+          setServerStart(dt.toLocaleString());
+        } else if (payload.topic === '$SYS/broker/uptime') {
+          const { days, hours, minutes, seconds } = secondsToDhms(d);
+          setServerUptime(`${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`);
         }
       }
       catch (e) {
         console.log(e);
       }
     }
-  }, [messageTick]);
+  }, [messageTick, messageQueue]);
 
   return (
     <Box sx={{ width: '100%', maxWidth: { sm: '100%', md: '1700px' } }}>
@@ -110,10 +136,13 @@ export default function MainGrid() {
               <tr>
                 <td style={{width:250}}>
                   <p style={{textAlign: 'left'}}>
-                    <FontAwesomeIcon icon={faGithub} size="xl"/> github: <a href="">Yakifo/amqtt</a>
+                    <FontAwesomeIcon icon={faGithub} size="xl"/> github: <a href="https://github.com/Yakofo/amqtt">Yakifo/amqtt</a>
                   </p>
                   <p style={{textAlign: 'left'}}>
-                    <FontAwesomeIcon icon={faPython} size="xl"/> PyPi: <a href="">aMQTT</a>
+                    <FontAwesomeIcon icon={faPython} size="xl"/> PyPi: <a href="https://pypi.org/project/amqtt/">aMQTT</a>
+                  </p>
+                  <p style={{textAlign: 'left'}}>
+                    <FontAwesomeIcon icon={faGitter} size="xl"/> Gitter: <a href="https://gitter.im/amqtt/community">aMQTT</a>
                   </p>
                 </td>
                 <td>
@@ -123,12 +152,12 @@ export default function MainGrid() {
                       style={{width: 20, verticalAlign: -4}}
                       alt="website logo"
                     />
-                    ReadTheDocs: <a href="">aMQTT</a>
+                    ReadTheDocs: <a href="https://amqtt.readthedocs.io/">aMQTT</a>
                   </p>
                   <p style={{textAlign: 'left'}}>
-                    <FontAwesomeIcon icon={faDocker} size="xl"/> DockerHub: <a href="">aMQTT</a>
+                    <FontAwesomeIcon icon={faDocker} size="xl"/> DockerHub: <a href="https://hub.docker.com/repositories/amqtt">aMQTT</a>
                   </p>
-
+                <p>&nbsp;</p>
                 </td>
               </tr>
               </tbody>
@@ -156,16 +185,16 @@ export default function MainGrid() {
                   <TableCell>1883</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Websocket</TableCell>
-                  <TableCell>8000</TableCell>
-                </TableRow>
-                <TableRow>
                   <TableCell>TLS TCP</TableCell>
                   <TableCell>8883</TableCell>
                 </TableRow>
                 <TableRow>
+                  <TableCell>Websocket</TableCell>
+                  <TableCell>8080</TableCell>
+                </TableRow>
+                <TableRow>
                   <TableCell>SSL Websocket</TableCell>
-                  <TableCell>8884</TableCell>
+                  <TableCell>8443</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -176,7 +205,7 @@ export default function MainGrid() {
             should not be used in production, development, staging or uat environments. Do not to use it to send any
             sensitive information or personal data into the system as all topics are public. Any illegal use of this
             MQTT broker is strictly forbidden. By using this MQTT broker located at <strong>test.amqtt.io</strong> you
-            warrant that you are not a sanctioned person nor are you located in a country that is subject to sanctions.
+            warrant that you are neither a sanctioned person nor located in a country that is subject to sanctions.
           </p>
         </Grid>
       </Grid>
@@ -185,7 +214,12 @@ export default function MainGrid() {
         spacing={2}
         columns={12}
         sx={{mb: (theme) => theme.spacing(2)}}
-      >
+      ><Grid size={{xs: 12, md: 12}}>
+
+
+        <strong>broker started at </strong> {serverStart} &nbsp;&nbsp;&nbsp;&nbsp;
+          <strong>up for</strong> {serverUptime}
+        </Grid>
         <Grid size={{xs: 12, md: 6}}>
           <SessionsChart title={'Sent Messages'} label={'Messages'} data={sent} isConnected={isConnected}/>
         </Grid>

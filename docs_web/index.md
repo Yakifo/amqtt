@@ -22,7 +22,7 @@
 
 ## Containerization
 
-Launch from ![dockerhub](assets/docker.svg) [DockerHub](https://hub.docker.com/repository/docker/amqtt/amqtt)
+Launch from ![dockerhub](assets/docker.svg) [DockerHub](https://hub.docker.com/repositories/amqtt)
 
 ```shell
 $ docker run -d -p 1883:1883 amqtt/amqtt:latest
@@ -32,7 +32,7 @@ $ docker run -d -p 1883:1883 amqtt/amqtt:latest
 
 `amqtt` development is available on ![github](assets/github.svg) [GitHub](https://github.com/Yakifo/amqtt). Bug reports, patches and suggestions welcome!
 
-[Open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [gitter community](https://gitter.im/amqtt/community).
+![github](assets/github.svg) [Open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the ![gitter](assets/gitter.svg) [gitter community](https://gitter.im/amqtt/community).
 
 ## Testing
 

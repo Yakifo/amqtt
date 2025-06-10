@@ -16,7 +16,7 @@ export default function Copyright(props: any) {
     >
       {'Copyright © '}
       <Link color="inherit" href="https://amqtt.io/">
-        aMQTT
+        aMQTT.io
       </Link>{' '}
       {new Date().getFullYear()}
       {'.'}

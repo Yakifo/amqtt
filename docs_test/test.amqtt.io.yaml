@@ -5,7 +5,7 @@ listeners:
     bind: 0.0.0.0:1883
   std-ws:
     type: ws
-    bind: 0.0.0.0:8000
+    bind: 0.0.0.0:8080
   tls-mqtt:
     type: tcp
     bind: 0.0.0.0:8883
@@ -14,7 +14,7 @@ listeners:
     keyfile: /etc/letsencrypt/live/test.amqtt.io/privkey.pemkk
   tls-ws:
     type: ws
-    bind: 0.0.0.0:8884
+    bind: 0.0.0.0:8443
     ssl: on
     certfile: /etc/letsencrypt/live/test.amqtt.io/fullchain.pem
     keyfile: /etc/letsencrypt/live/test.amqtt.io/privkey.pem

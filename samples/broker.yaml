@@ -5,19 +5,7 @@ listeners:
     bind: 0.0.0.0:1883
   std-ws:
    type: ws
-   bind: 0.0.0.0:8000
-  # tls-mqtt:
-  #   type: tcp
-  #   bind: 0.0.0.0:8883
-  #   ssl: on
-  #   certfile: /etc/letsencrypt/live/test.amqtt.io/fullchain.pem
-  #   keyfile: /etc/letsencrypt/live/test.amqtt.io/privkey.pemkk
-  # tls-ws:
-  #   type: ws
-  #   bind: 0.0.0.0:8884
-  #   ssl: on
-  #   certfile: /etc/letsencrypt/live/test.amqtt.io/fullchain.pem
-  #   keyfile: /etc/letsencrypt/live/test.amqtt.io/privkey.pem
+   bind: 0.0.0.0:8080
 sys_interval: 2
 auth:
   plugins:

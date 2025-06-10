@@ -3,8 +3,8 @@ services:
     image: amqtt
     container_name: amqtt
     ports:
-      - "1884:1884"
-      - "8000:8000"
+      - "1883:1883"
+      - "8080:8080"
     logging:
       driver: "json-file"
       options:

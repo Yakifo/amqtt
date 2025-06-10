@@ -17,7 +17,7 @@ watch:
   - docs
   - amqtt
   - samples
-copyright: '2025'
+copyright: 'amqtt.io © 2025'
 edit_uri: edit/main/docs/
 
 validation:

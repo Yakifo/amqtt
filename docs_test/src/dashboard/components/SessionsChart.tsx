@@ -64,8 +64,6 @@ function LinearChart(props: any) {
 
   const label: string = props.label || '--';
 
-
-
   return <LineChart
           colors={colorPalette}
           xAxis={[
@@ -74,7 +72,7 @@ function LinearChart(props: any) {
               data: props.data.map( (dp:DataPoint) =>
                 formatDate(new Date(dp.timestamp))
               ),
-              tickInterval: (_index, i) => (i + 1) % 5 === 0,
+              tickInterval: (_index, i) => (i + 1) % (Math.floor(props.data.length/10) + 1) === 0,
             },
           ]}
           series={[
