@@ -2,7 +2,7 @@
 
 ![assets/amqtt.svg](assets/amqtt.svg)
 
-`aMQTT` is an open source [MQTT](http://www.mqtt.org) broker, natively implemented with Python's [asyncio](https://docs.python.org/3/library/asyncio.html).
+`aMQTT` is an open source [MQTT](http://www.mqtt.org) broker and client, natively implemented with Python's [asyncio](https://docs.python.org/3/library/asyncio.html).
 
 ## Features
 
