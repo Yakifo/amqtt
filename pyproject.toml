@@ -7,16 +7,20 @@ build-backend = "hatchling.build"
 name = "amqtt"
 description = "MQTT client/broker using Python asyncio"
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Operating System :: POSIX",
   "Operating System :: MacOS",
   "Operating System :: Microsoft :: Windows",
   "Topic :: Communications",
   "Topic :: Internet",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13"
 ]
 
-version = "0.11.0-rc1"
+version = "0.11.0"
 requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }
