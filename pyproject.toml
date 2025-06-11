@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "amqtt"
-description = "MQTT client/broker using Python asyncio"
+description = "Python's asyncio-native MQTT broker and client."
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
