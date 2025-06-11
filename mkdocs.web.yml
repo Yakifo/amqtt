@@ -1,0 +1,108 @@
+site_name: ""
+site_description: "MQTT broker and client natively implemented with Python's asyncio"
+site_url: http://github.com
+repo_url: https://github.com/Yakifo/amqtt
+repo_name: Yakifo/amqtt
+site_dir: "site_web"
+docs_dir: docs_web
+watch: [mkdocs.web.yml, docs_web]
+copyright: "amqtt.io © 2025"
+edit_uri: edit/main/docs/
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+
+theme:
+  name: material
+  logo: assets/amqtt_bw.svg
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - navigation.footer
+    - navigation.instant.preview
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+extra_css:
+  - assets/extra.css
+
+
+#extra_javascript:
+#- assets/extra.js
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - callouts:
+      strip_period: false
+  - footnotes
+  - pymdownx.details
+  - pymdownx.highlight:
+      pygments_lang_class: true
+  - pymdownx.magiclink
+  - pymdownx.snippets:
+      base_path: !relative $config_dir
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - toc:
+      permalink: "¤"
+
+plugins:
+  - autorefs
+  - markdown-exec
+  - section-index
+  - open-in-new-tab
+  - git-revision-date-localized:
+      enabled: !ENV [DEPLOY, false]
+      enable_creation_date: true
+      type: timeago
+  - exclude:
+      glob:
+        - node_modules/*
+      regex:
+        - '.*\.(tmp|bin|tar)$'
+
+
+  #- redirects:
+  #    redirect_maps:
+  #      original_file.md: new/file_location.md
+
+  - minify:
+      minify_html: !ENV [DEPLOY, false]
+  - group:
+      enabled: !ENV [MATERIAL_INSIDERS, false]
+      plugins:
+        - typeset
+
