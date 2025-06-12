@@ -7,7 +7,9 @@
    jobs:
      pre_install:
        - pip install --upgrade pip
-       - pip install --group docs
+       - pip install uv
+       - uv pip install --group dev --group docs
+       - uv run pytest
 
  mkdocs:
    configuration: mkdocs.rtd.yml
