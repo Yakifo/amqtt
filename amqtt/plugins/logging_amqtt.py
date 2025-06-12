@@ -4,12 +4,13 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from amqtt.plugins.base import BasePlugin
+from amqtt.plugins.manager import BaseContext
 
 if TYPE_CHECKING:
     from amqtt.session import Session
 
 
-class EventLoggerPlugin(BasePlugin):
+class EventLoggerPlugin(BasePlugin[BaseContext]):
     """A plugin to log events dynamically based on method names."""
 
     async def log_event(self, *args: Any, **kwargs: Any) -> None:
@@ -25,7 +26,7 @@ class EventLoggerPlugin(BasePlugin):
         raise AttributeError(msg)
 
 
-class PacketLoggerPlugin(BasePlugin):
+class PacketLoggerPlugin(BasePlugin[BaseContext]):
     """A plugin to log MQTT packets sent and received."""
 
     async def on_mqtt_packet_received(self, *args: Any, **kwargs: Any) -> None:

@@ -6,7 +6,7 @@ import contextlib
 import copy
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 import logging
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeVar
 
 from amqtt.session import Session
 
@@ -24,10 +24,10 @@ class Plugin(NamedTuple):
     object: Any
 
 
-plugins_manager: dict[str, "PluginManager"] = {}
+plugins_manager: dict[str, "PluginManager[Any]"] = {}
 
 
-def get_plugin_manager(namespace: str) -> "PluginManager | None":
+def get_plugin_manager(namespace: str) -> "PluginManager[Any] | None":
     """Get the plugin manager for a given namespace.
 
     :param namespace: The namespace of the plugin manager to retrieve.
@@ -43,14 +43,17 @@ class BaseContext:
         self.config: dict[str, Any] | None = None
 
 
-class PluginManager:
+C = TypeVar("C", bound=BaseContext)
+
+
+class PluginManager(Generic[C]):
     """Wraps contextlib Entry point mechanism to provide a basic plugin system.
 
     Plugins are loaded for a given namespace (group). This plugin manager uses coroutines to
     run plugin calls asynchronously in an event queue.
     """
 
-    def __init__(self, namespace: str, context: BaseContext | None, loop: asyncio.AbstractEventLoop | None = None) -> None:
+    def __init__(self, namespace: str, context: C | None, loop: asyncio.AbstractEventLoop | None = None) -> None:
         try:
             self._loop = loop if loop is not None else asyncio.get_running_loop()
         except RuntimeError:
@@ -60,7 +63,7 @@ class PluginManager:
         self.logger = logging.getLogger(namespace)
         self.context = context if context is not None else BaseContext()
         self.context.loop = self._loop
-        self._plugins: list[BasePlugin] = []
+        self._plugins: list[BasePlugin[C]] = []
         self._auth_plugins: list[BaseAuthPlugin] = []
         self._topic_plugins: list[BaseTopicPlugin] = []
         self._load_plugins(namespace)
@@ -114,7 +117,7 @@ class PluginManager:
 
         return None
 
-    def get_plugin(self, name: str) -> Optional["BasePlugin"]:
+    def get_plugin(self, name: str) -> Optional["BasePlugin[C]"]:
         """Get a plugin by its name from the plugins loaded for the current namespace.
 
         :param name:
@@ -134,7 +137,7 @@ class PluginManager:
         self._fired_events.clear()
 
     @property
-    def plugins(self) -> list["BasePlugin"]:
+    def plugins(self) -> list["BasePlugin[C]"]:
         """Get the loaded plugins list.
 
         :return:
@@ -179,7 +182,7 @@ class PluginManager:
             await asyncio.wait(tasks)
         self.logger.debug(f"Plugins len(_fired_events)={len(self._fired_events)}")
 
-    async def map_plugin_auth(self, session: Session) -> dict["BasePlugin", str | bool | None]:
+    async def map_plugin_auth(self, session: Session) -> dict["BasePlugin[C]", str | bool | None]:
         """Schedule a coroutine for plugin 'authenticate' calls.
 
         :param session: the client session associated with the authentication check
@@ -198,17 +201,17 @@ class PluginManager:
             coro_instance: Awaitable[str | bool | None] =  auth_coro(plugin, session)
             tasks.append(asyncio.ensure_future(coro_instance))
 
-        ret_dict: dict[BasePlugin, str | bool | None] = {}
+        ret_dict: dict[BasePlugin[C], str | bool | None] = {}
         if tasks:
             ret_list = await asyncio.gather(*tasks)
             # Create result map plugin => ret
-            ret_dict = dict(zip(self._auth_plugins, ret_list, strict=False))
+            ret_dict = dict(zip(self._auth_plugins, ret_list, strict=False))  # type: ignore[arg-type]
 
         return ret_dict
 
     async def map_plugin_topic(self,
                                session: Session, topic: str, action: "Action"
-                               ) -> dict["BasePlugin", str | bool | None]:
+                               ) -> dict["BasePlugin[C]", str | bool | None]:
         """Schedule a coroutine for plugin 'topic_filtering' calls.
 
         :param session: the client session associated with the topic_filtering check
@@ -229,21 +232,21 @@ class PluginManager:
             coro_instance: Awaitable[str | bool | None] =  topic_coro(plugin, session, topic, action)
             tasks.append(asyncio.ensure_future(coro_instance))
 
-        ret_dict: dict[BasePlugin, str | bool | None] = {}
+        ret_dict: dict[BasePlugin[C], str | bool | None] = {}
         if tasks:
             ret_list = await asyncio.gather(*tasks)
             # Create result map plugin => ret
-            ret_dict= dict(zip(self._auth_plugins, ret_list, strict=False))
+            ret_dict= dict(zip(self._topic_plugins, ret_list, strict=False))  # type: ignore[arg-type]
 
         return ret_dict
 
-    async def map_plugin_close(self) -> dict["BasePlugin", str | bool | None]:
+    async def map_plugin_close(self) -> dict["BasePlugin[C]", str | bool | None]:
 
         tasks: list[asyncio.Future[Any]] = []
 
         for plugin in self._plugins:
 
-            async def close_coro(p: "BasePlugin") -> None:
+            async def close_coro(p: "BasePlugin[C]") -> None:
                 await p.close()
 
             if not hasattr(plugin, "close"):
@@ -252,10 +255,10 @@ class PluginManager:
             coro_instance: Awaitable[str | bool | None] =  close_coro(plugin)
             tasks.append(asyncio.ensure_future(coro_instance))
 
-        ret_dict: dict[BasePlugin, str | bool | None] = {}
+        ret_dict: dict[BasePlugin[C], str | bool | None] = {}
         if tasks:
             ret_list = await asyncio.gather(*tasks)
             # Create result map plugin => ret
-            ret_dict = dict(zip(self._auth_plugins, ret_list, strict=False))
+            ret_dict = dict(zip(self._plugins, ret_list, strict=False))
 
         return ret_dict
