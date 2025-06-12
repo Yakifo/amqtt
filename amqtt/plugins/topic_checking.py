@@ -6,7 +6,7 @@ from amqtt.plugins.manager import BaseContext
 from amqtt.session import Session
 
 
-class BaseTopicPlugin(BasePlugin):
+class BaseTopicPlugin(BasePlugin[BaseContext]):
     """Base class for topic plugins."""
 
     def __init__(self, context: BaseContext) -> None:

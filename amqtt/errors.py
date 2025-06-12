@@ -34,4 +34,3 @@ class ProtocolHandlerError(Exception):
 
 class PluginLoadError(Exception):
     """Exception thrown when loading a plugin."""
-

@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import logging
-import sys
-from importlib import import_module
 from pathlib import Path
 import secrets
 import string
 import typing
-from types import ModuleType
 from typing import Any
 
 import yaml
@@ -51,32 +48,3 @@ def read_yaml_config(config_file: str | Path) -> dict[str, Any] | None:
     except yaml.YAMLError:
         logger.exception(f"Invalid config_file {config_file}")
         return None
-
-def cached_import(module_path: str, class_name: str=None) -> ModuleType:
-    # Check whether module is loaded and fully initialized.
-    if not ((module := sys.modules.get(module_path))
-            and (spec := getattr(module, "__spec__", None))  # noqa
-            and getattr(spec, "_initializing", False) is False):  # noqa
-        module = import_module(module_path)
-    if class_name:
-        return getattr(module, class_name)
-    return module
-
-
-# TODO : figure out proper return type
-def import_string(dotted_path) -> Any:
-    """
-    Import a dotted module path and return the attribute/class designated by the
-    last name in the path. Raise ImportError if the import failed.
-    """
-    try:
-        module_path, class_name = dotted_path.rsplit(".", 1)
-    except ValueError as err:
-        raise ImportError(f"{dotted_path} doesn't look like a module path") from err
-
-    try:
-        return cached_import(module_path, class_name)
-    except AttributeError as err:
-        raise ImportError(
-            f'Module "{module_path}" does not define a "{class_name}" attribute/class'
-        ) from err

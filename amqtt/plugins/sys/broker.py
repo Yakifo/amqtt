@@ -42,7 +42,7 @@ STAT_CLIENTS_CONNECTED = "clients_connected"
 STAT_CLIENTS_DISCONNECTED = "clients_disconnected"
 
 
-class BrokerSysPlugin(BasePlugin):
+class BrokerSysPlugin(BasePlugin[BrokerContext]):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
         # Broker statistics initialization

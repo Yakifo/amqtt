@@ -11,7 +11,7 @@ from amqtt.session import Session
 _PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
 
 
-class BaseAuthPlugin(BasePlugin):
+class BaseAuthPlugin(BasePlugin[BaseContext]):
     """Base class for authentication plugins."""
 
     def __init__(self, context: BaseContext) -> None:

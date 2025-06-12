@@ -1,18 +1,19 @@
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from amqtt.plugins.manager import BaseContext
 
+C = TypeVar("C", bound=BaseContext)
 
-class BasePlugin:
+
+class BasePlugin(Generic[C]):
     """The base from which all plugins should inherit."""
 
-    def __init__(self, context: BaseContext) -> None:
-        self.context = context
+    def __init__(self, context: C) -> None:
+        self.context: C = context
 
     def _get_config_section(self, name: str) -> dict[str, Any] | None:
 
-        if not self.context.config or not hasattr(self.context.config, 'get') or self.context.config.get(name, None):
+        if not self.context.config or not hasattr(self.context.config, "get") or not self.context.config.get(name, None):
             return None
 
         section_config: int | dict[str, Any] | None = self.context.config.get(name, None)
@@ -21,6 +22,5 @@ class BasePlugin:
             return None
         return section_config
 
-    @dataclass
-    class Config:
+    async def close(self) -> None:
         pass
