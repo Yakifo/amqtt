@@ -333,7 +333,7 @@ async def test_client_no_auth():
         broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
         await broker.start()
 
-
         with pytest.raises(ConnectError):
             await client.connect("mqtt://127.0.0.1:1883/")
 
+        await broker.shutdown()
