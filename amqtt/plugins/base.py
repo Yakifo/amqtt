@@ -23,4 +23,5 @@ class BasePlugin(Generic[C]):
         return section_config
 
     async def close(self) -> None:
+        """Function to define by subclasses, if a plugin needs to clean up resources."""
         pass
