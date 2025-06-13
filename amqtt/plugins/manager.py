@@ -188,7 +188,7 @@ class PluginManager(Generic[C]):
         method_name: str,
         method_kwargs: dict[str, Any],
     ) -> dict["BasePlugin[C]", str | bool | None]:
-        """Generic helper to map a method call across plugins.
+        """Call plugin coroutines.
 
         :param plugins: List of plugins to execute the method on
         :param method_name: Name of the method to call on each plugin
@@ -211,7 +211,7 @@ class PluginManager(Generic[C]):
         ret_dict: dict[BasePlugin[C], str | bool | None] = {}
         if tasks:
             ret_list = await asyncio.gather(*tasks)
-            ret_dict = dict(zip(plugins, ret_list, strict=False))  # type: ignore[arg-type]
+            ret_dict = dict(zip(plugins, ret_list, strict=False))
 
         return ret_dict
 
@@ -221,7 +221,8 @@ class PluginManager(Generic[C]):
         :param session: the client session associated with the authentication check
         :return: dict containing return from coro call for each plugin.
         """
-        return await self._map_plugin_method(self._auth_plugins, "authenticate", {'session': session })
+        return await self._map_plugin_method(
+            self._auth_plugins, "authenticate", {"session": session })  # type: ignore[arg-type]
 
     async def map_plugin_topic(
         self, *, session: Session, topic: str, action: "Action"
@@ -234,7 +235,8 @@ class PluginManager(Generic[C]):
         :return: dict containing return from coro call for each plugin.
         """
         return await self._map_plugin_method(
-            self._topic_plugins, "topic_filtering", {'session': session, 'topic': topic, 'action': action}
+            self._topic_plugins, "topic_filtering",   # type: ignore[arg-type]
+            {"session": session, "topic": topic, "action": action}
         )
 
     async def map_plugin_close(self) -> None:
