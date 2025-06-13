@@ -4,10 +4,14 @@ import asyncio
 from collections.abc import Awaitable
 import contextlib
 import copy
+from dataclasses import dataclass
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 import logging
 from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeVar
 
+from dacite import DaciteError, from_dict
+
+from amqtt.errors import PluginLoadError
 from amqtt.session import Session
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,10 +78,18 @@ class PluginManager(Generic[C]):
     def app_context(self) -> BaseContext:
         return self.context
 
-    def _load_plugins(self, namespace: str) -> None:
+    def _load_plugins(self, namespace: str | None = None) -> None:
+        if self.app_context.config and "plugins" in self.app_context.config:
+            self._load_str_plugins(self.app_context.config.get("plugins"))
+        else:
+            if not namespace:
+                msg = "Namespace needs to be provided for EntryPoint plugin definitions"
+                raise PluginLoadError(msg)
+            self._load_ep_plugins(namespace)
+
+    def _load_ep_plugins(self, namespace:str) -> None:
 
         self.logger.debug(f"Loading plugins for namespace {namespace}")
-
         auth_filter_list = []
         topic_filter_list = []
         if self.app_context.config and "auth" in self.app_context.config:
@@ -116,6 +128,54 @@ class PluginManager(Generic[C]):
             self.logger.debug("", exc_info=True)
 
         return None
+
+    def _load_str_plugins(self, plugin_list: list[str|dict]) -> None:
+
+        self.logger.info("Loading plugins from config file")
+
+        for plugin_info in plugin_list:
+
+            if isinstance(plugin_info, dict):
+                assert len(plugin_info.keys()) == 1
+                plugin_path = list(plugin_info.keys())[0]
+                plugin_cfg = plugin_info[plugin_path]
+                plugin = self._load_str_plugin(plugin_path, plugin_cfg)
+            elif isinstance(plugin_info, str):
+                plugin = self._load_str_plugin(plugin_info, {})
+            else:
+                msg = "Unexpected entry in plugins config"
+                raise PluginLoadError(msg)
+
+            self._plugins.append(plugin)
+            if isinstance(plugin, BaseAuthPlugin):
+                self._auth_plugins.append(plugin)
+            if isinstance(plugin, BaseTopicPlugin):
+                self._topic_plugins.append(plugin)
+
+    def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin":
+        from amqtt.plugins.base import BasePlugin
+
+        try:
+            plugin_class =  import_string(plugin_path)
+        except ModuleNotFoundError as ep:
+            self.logger.error(f"Plugin import failed: {plugin_path}")
+            raise MQTTError() from ep
+
+        if not issubclass(plugin_class, BasePlugin):
+            msg = f"Plugin {plugin_path} is not a subclass of 'BasePlugin'"
+            raise PluginLoadError(msg)
+
+        plugin_context = copy.copy(self.app_context)
+        plugin_context.logger = self.logger.getChild(plugin_class.__name__)
+        try:
+            plugin_context.config = from_dict(data_class=plugin_class.Config, data=plugin_cfg or {}, config=Config(strict=True))
+        except DaciteError as e:
+            raise PluginLoadError from e
+
+        try:
+            return plugin_class(plugin_context)
+        except ImportError as e:
+            raise PluginLoadError from e
 
     def get_plugin(self, name: str) -> Optional["BasePlugin[C]"]:
         """Get a plugin by its name from the plugins loaded for the current namespace.
@@ -221,7 +281,7 @@ class PluginManager(Generic[C]):
         :param session: the client session associated with the authentication check
         :return: dict containing return from coro call for each plugin.
         """
-        return await self._map_plugin_method(self._auth_plugins, "authenticate", {'session': session })
+        return await self._map_plugin_method(self._auth_plugins, "authenticate", {"session": session })
 
     async def map_plugin_topic(
         self, *, session: Session, topic: str, action: "Action"
@@ -234,7 +294,7 @@ class PluginManager(Generic[C]):
         :return: dict containing return from coro call for each plugin.
         """
         return await self._map_plugin_method(
-            self._topic_plugins, "topic_filtering", {'session': session, 'topic': topic, 'action': action}
+            self._topic_plugins, "topic_filtering", {"session": session, "topic": topic, "action": action}
         )
 
     async def map_plugin_close(self) -> None:

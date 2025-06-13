@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from amqtt.plugins.manager import BaseContext
@@ -24,4 +25,7 @@ class BasePlugin(Generic[C]):
 
     async def close(self) -> None:
         """Function to define by subclasses, if a plugin needs to clean up resources."""
+
+    @dataclass
+    class Config:
         pass
