@@ -23,7 +23,9 @@ its own variables to configure its behavior.
 
 ::: amqtt.plugins.base.BasePlugin
 
-Plugins that are defined in the`project.entry-points` are loaded and notified of events by when the subclass 
+## Events
+
+Plugins that are defined in the`project.entry-points` are notified of events if the subclass 
 implements one or more of these methods:
 
 - `on_mqtt_packet_sent`
