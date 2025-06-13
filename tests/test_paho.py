@@ -6,8 +6,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 from paho.mqtt import client as mqtt_client
 
-from amqtt.broker import EVENT_BROKER_CLIENT_CONNECTED, EVENT_BROKER_CLIENT_DISCONNECTED, EVENT_BROKER_PRE_START, \
-    EVENT_BROKER_POST_START
+from amqtt.broker import EventBroker
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
@@ -54,11 +53,11 @@ async def test_paho_connect(broker, mock_plugin_manager):
     broker.plugins_manager.assert_has_calls(
         [
             call.fire_event(
-                EVENT_BROKER_CLIENT_CONNECTED,
+                EventBroker.CLIENT_CONNECTED.value,
                 client_id=client_id,
             ),
             call.fire_event(
-                EVENT_BROKER_CLIENT_DISCONNECTED,
+                EventBroker.CLIENT_DISCONNECTED.value,
                 client_id=client_id,
             ),
         ],

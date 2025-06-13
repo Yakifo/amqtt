@@ -53,7 +53,6 @@ async def test_broker_sys_plugin() -> None:
         except asyncio.TimeoutError:
             pass
 
-        logger.warning(f">>> sys message: {message.topic} - {message.data}")
         await client.disconnect()
         await broker.shutdown()
 
