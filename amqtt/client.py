@@ -470,6 +470,7 @@ class MQTTClient:
             reader: StreamReaderAdapter | WebSocketsReader | None = None
             writer: StreamWriterAdapter | WebSocketsWriter | None = None
             self._connected_state.clear()
+
             # Open connection
             if scheme in ("mqtt", "mqtts"):
                 conn_reader, conn_writer = await asyncio.open_connection(
@@ -489,11 +490,11 @@ class MQTTClient:
                 )
                 reader = WebSocketsReader(websocket)
                 writer = WebSocketsWriter(websocket)
-
-            if reader is None or writer is None:
-                self.session.transitions.disconnect()
-                self.logger.warning("reader or writer not initialized")
-                msg = "reader or writer not initialized"
+            elif not self.session.broker_uri:
+                msg = "missing broker uri"
+                raise ClientError(msg)
+            else:
+                msg = f"incorrect scheme defined in uri: '{scheme!r}'"
                 raise ClientError(msg)
 
             # Start MQTT protocol
