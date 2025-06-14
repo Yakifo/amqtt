@@ -9,7 +9,6 @@ from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_0
 
-
 logger = logging.getLogger(__name__)
 
 # test broker sys
