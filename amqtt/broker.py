@@ -42,18 +42,24 @@ _defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yam
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
 
-EVENT_BROKER_PRE_START = "broker_pre_start"
-EVENT_BROKER_POST_START = "broker_post_start"
-EVENT_BROKER_PRE_SHUTDOWN = "broker_pre_shutdown"
-EVENT_BROKER_POST_SHUTDOWN = "broker_post_shutdown"
-EVENT_BROKER_CLIENT_CONNECTED = "broker_client_connected"
-EVENT_BROKER_CLIENT_DISCONNECTED = "broker_client_disconnected"
-EVENT_BROKER_CLIENT_SUBSCRIBED = "broker_client_subscribed"
-EVENT_BROKER_CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
-EVENT_BROKER_MESSAGE_RECEIVED = "broker_message_received"
+
+class EventBroker(Enum):
+    """Events issued by the broker."""
+
+    PRE_START = "broker_pre_start"
+    POST_START = "broker_post_start"
+    PRE_SHUTDOWN = "broker_pre_shutdown"
+    POST_SHUTDOWN = "broker_post_shutdown"
+    CLIENT_CONNECTED = "broker_client_connected"
+    CLIENT_DISCONNECTED = "broker_client_disconnected"
+    CLIENT_SUBSCRIBED = "broker_client_subscribed"
+    CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
+    MESSAGE_RECEIVED = "broker_message_received"
 
 
 class Action(Enum):
+    """Actions issued by the broker."""
+
     SUBSCRIBE = "subscribe"
     PUBLISH = "publish"
 
@@ -143,7 +149,7 @@ class Broker:
 
     Args:
         config: dictionary of configuration options (see [broker configuration](broker_config.md)).
-        loop: asyncio loop. defaults to `asyncio.get_event_loop()`.
+        loop: asyncio loop. defaults to `asyncio.new_event_loop()`.
         plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
     """
@@ -171,7 +177,7 @@ class Broker:
             self.config.update(config)
         self._build_listeners_config(self.config)
 
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop = loop or asyncio.new_event_loop()
         self._servers: dict[str, Server] = {}
         self._init_states()
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
@@ -243,11 +249,11 @@ class Broker:
             msg = f"Broker instance can't be started: {exc}"
             raise BrokerError(msg) from exc
 
-        await self.plugins_manager.fire_event(EVENT_BROKER_PRE_START)
+        await self.plugins_manager.fire_event(EventBroker.PRE_START.value)
         try:
             await self._start_listeners()
             self.transitions.starting_success()
-            await self.plugins_manager.fire_event(EVENT_BROKER_POST_START)
+            await self.plugins_manager.fire_event(EventBroker.POST_START.value)
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
             self.logger.debug("Broker started")
         except Exception as e:
@@ -328,7 +334,7 @@ class Broker:
         """Stop broker instance."""
         self.logger.info("Shutting down broker...")
         # Fire broker_shutdown event to plugins
-        await self.plugins_manager.fire_event(EVENT_BROKER_PRE_SHUTDOWN)
+        await self.plugins_manager.fire_event(EventBroker.PRE_SHUTDOWN.value)
 
         # Cleanup all sessions
         for client_id in list(self._sessions.keys()):
@@ -352,7 +358,7 @@ class Broker:
                 self._broadcast_queue.get_nowait()
 
         self.logger.info("Broker closed")
-        await self.plugins_manager.fire_event(EVENT_BROKER_POST_SHUTDOWN)
+        await self.plugins_manager.fire_event(EventBroker.POST_SHUTDOWN.value)
         self.transitions.stopping_success()
 
     async def _cleanup_session(self, client_id: str) -> None:
@@ -495,7 +501,7 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
-        await self.plugins_manager.fire_event(EVENT_BROKER_CLIENT_CONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(EventBroker.CLIENT_CONNECTED.value, client_id=client_session.client_id)
 
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
@@ -598,7 +604,7 @@ class Broker:
         self.logger.debug(f"{client_session.client_id} Disconnecting session")
         await self._stop_handler(handler)
         client_session.transitions.disconnect()
-        await self.plugins_manager.fire_event(EVENT_BROKER_CLIENT_DISCONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(EventBroker.CLIENT_DISCONNECTED.value, client_id=client_session.client_id)
 
 
     async def _handle_subscription(
@@ -615,7 +621,7 @@ class Broker:
         for index, subscription in enumerate(subscriptions.topics):
             if return_codes[index] != AMQTT_MAGIC_VALUE_RET_SUBSCRIBED:
                 await self.plugins_manager.fire_event(
-                    EVENT_BROKER_CLIENT_SUBSCRIBED,
+                    EventBroker.CLIENT_SUBSCRIBED.value,
                     client_id=client_session.client_id,
                     topic=subscription[0],
                     qos=subscription[1],
@@ -634,7 +640,7 @@ class Broker:
         for topic in unsubscription.topics:
             self._del_subscription(topic, client_session)
             await self.plugins_manager.fire_event(
-                EVENT_BROKER_CLIENT_UNSUBSCRIBED,
+                EventBroker.CLIENT_UNSUBSCRIBED.value,
                 client_id=client_session.client_id,
                 topic=topic,
             )
@@ -669,7 +675,7 @@ class Broker:
             self.logger.info(f"{client_session.client_id} forbidden TOPIC {app_message.topic} sent in PUBLISH message.")
         else:
             await self.plugins_manager.fire_event(
-                EVENT_BROKER_MESSAGE_RECEIVED,
+                EventBroker.MESSAGE_RECEIVED.value,
                 client_id=client_session.client_id,
                 message=app_message,
             )
@@ -678,7 +684,6 @@ class Broker:
                 self.retain_message(client_session, app_message.topic, app_message.data, app_message.qos)
         return True
 
-    # TODO: Remove this method, not found it used
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
         """Create a BrokerProtocolHandler and attach to a session."""
         handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop)
@@ -701,7 +706,6 @@ class Broker:
          - False if user authentication fails
          - None if authentication can't be achieved (then plugin result is then ignored)
         :param session:
-        :param listener:
         :return:
         """
         auth_plugins = None
@@ -772,7 +776,6 @@ class Broker:
          - False if MQTT client is not allowed to subscribe to the topic
          - None if topic filtering can't be achieved (then plugin result is then ignored)
         :param session:
-        :param listener:
         :param topic: Topic in which the client wants to subscribe / publish
         :param action: What is being done with the topic?  subscribe or publish
         :return:

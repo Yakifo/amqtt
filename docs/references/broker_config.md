@@ -97,7 +97,7 @@ Configuration for access control policies for publishing and subscribing to topi
 ## Default Configuration
 
 ```yaml
---8<-- "../amqtt/amqtt/scripts/default_broker.yaml"
+--8<-- "amqtt/scripts/default_broker.yaml"
 ```
 
 ## Example

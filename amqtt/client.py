@@ -219,7 +219,7 @@ class MQTTClient:
         self.logger.debug(f"Reconnecting with session parameters: {self.session}")
 
         reconnect_max_interval = self.config.get("reconnect_max_interval", 10)
-        reconnect_retries = self.config.get("reconnect_retries", 5)
+        reconnect_retries = self.config.get("reconnect_retries", 2)
         nb_attempt = 1
 
         while True:
@@ -232,7 +232,7 @@ class MQTTClient:
             except Exception as e:
                 self.logger.warning(f"Reconnection attempt failed: {e!r}")
                 self.logger.debug("", exc_info=True)
-                if reconnect_retries < nb_attempt:  # reconnect_retries >= 0 and
+                if 0 <= reconnect_retries < nb_attempt:
                     self.logger.exception("Maximum connection attempts reached. Reconnection aborted.")
                     self.logger.debug("", exc_info=True)
                     msg = "Too many failed attempts"
@@ -470,6 +470,7 @@ class MQTTClient:
             reader: StreamReaderAdapter | WebSocketsReader | None = None
             writer: StreamWriterAdapter | WebSocketsWriter | None = None
             self._connected_state.clear()
+
             # Open connection
             if scheme in ("mqtt", "mqtts"):
                 conn_reader, conn_writer = await asyncio.open_connection(
@@ -489,11 +490,11 @@ class MQTTClient:
                 )
                 reader = WebSocketsReader(websocket)
                 writer = WebSocketsWriter(websocket)
-
-            if reader is None or writer is None:
-                self.session.transitions.disconnect()
-                self.logger.warning("reader or writer not initialized")
-                msg = "reader or writer not initialized"
+            elif not self.session.broker_uri:
+                msg = "missing broker uri"
+                raise ClientError(msg)
+            else:
+                msg = f"incorrect scheme defined in uri: '{scheme!r}'"
                 raise ClientError(msg)
 
             # Start MQTT protocol
@@ -533,7 +534,7 @@ class MQTTClient:
             while self.client_tasks:
                 task = self.client_tasks.popleft()
                 if not task.done():
-                    task.cancel()
+                    task.cancel(msg="Connection closed.")
 
         self.logger.debug("Monitoring broker disconnection")
         # Wait for disconnection from broker (like connection lost)
