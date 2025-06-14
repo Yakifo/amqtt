@@ -7,7 +7,7 @@ import pytest
 
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectError
+from amqtt.errors import ClientError, ConnectError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -332,8 +332,22 @@ async def test_client_with_will_empty_message(broker_fixture):
     await client2.disconnect()
 
 
-async def test_client_no_auth():
+async def test_connect_broken_uri():
+    config = {"auto_reconnect": False}
+    client = MQTTClient(config=config)
+    with pytest.raises(ClientError):
+        await client.connect('"mqtt://someplace')
 
+
+@pytest.mark.asyncio
+async def test_connect_incorrect_scheme():
+    config = {"auto_reconnect": False}
+    client = MQTTClient(config=config)
+    with pytest.raises(ClientError):
+        await client.connect('"mq://someplace')
+
+
+async def test_client_no_auth():
 
     class MockEntryPoints:
 
@@ -368,4 +382,3 @@ async def test_client_no_auth():
             await client.connect("mqtt://127.0.0.1:1883/")
 
         await broker.shutdown()
-
