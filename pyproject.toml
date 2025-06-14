@@ -5,18 +5,22 @@ build-backend = "hatchling.build"
 
 [project]
 name = "amqtt"
-description = "MQTT client/broker using Python asyncio"
+description = "Python's asyncio-native MQTT broker and client."
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Operating System :: POSIX",
   "Operating System :: MacOS",
   "Operating System :: Microsoft :: Windows",
   "Topic :: Communications",
   "Topic :: Internet",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13"
 ]
 
-version = "0.11.0-rc1"
+version = "0.11.0rc1"
 requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }
@@ -67,7 +71,9 @@ docs = [
     "mkdocstrings-python>=1.16.2",
     # YORE: EOL 3.10: Remove line.
     "tomli>=2.0; python_version < '3.11'",
-    "mkdocs-typer2>=0.1.4"
+    "mkdocs-typer2>=0.1.4",
+    "mkdocs-open-in-new-tab>=1.0.8",
+    "mkdocs-exclude>=1.0.2",
 ]
 
 [project.optional-dependencies]

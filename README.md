@@ -9,7 +9,7 @@
 
 ![docs/assets/amqtt.svg](docs/assets/amqtt.svg)
 
-`aMQTT` is an open source [MQTT](http://www.mqtt.org) broker[^1], natively implemented with Python's [asyncio](https://docs.python.org/3/library/asyncio.html).
+`aMQTT` is an open source [MQTT](http://www.mqtt.org) broker and client[^1], natively implemented with Python's [asyncio](https://docs.python.org/3/library/asyncio.html).
 
 ## Features
 
@@ -17,9 +17,7 @@
 - Communication over TCP and/or websocket, including support for SSL/TLS
 - Support QoS 0, QoS 1 and QoS 2 messages flow
 - Client auto-reconnection on network lost
-- Functionality expansion; plugins included:
-  - Authentication through password file
-  - Basic `$SYS` topics
+- Functionality expansion; plugins included: authentication and `$SYS` topic publishing
 
 ## Installation
 
@@ -32,6 +30,14 @@ $ pip install amqtt
 ## Documentation
 
 Available on [Read the Docs](http://amqtt.readthedocs.org/).
+
+## Containerization
+
+Launch from [DockerHub](https://hub.docker.com/repositories/amqtt)
+
+```shell
+$ docker run -d -p 1883:1883 amqtt/amqtt:latest
+```
 
 ## Support
 
