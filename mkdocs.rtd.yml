@@ -56,8 +56,6 @@ nav:
 theme:
   name: material
   logo: assets/amqtt_bw.svg
-  extend:
-    - base.html
   features:
     - announce.dismiss
     - content.action.edit
@@ -75,6 +73,7 @@ theme:
     - search.highlight
     - search.suggest
     - toc.follow
+    - version
   palette:
     # Palette toggle for light mode
     - scheme: default
@@ -168,7 +167,8 @@ plugins:
 extra:
   version:
     provider: readthedocs
-    default: latest
+    default: v0.11.0
+    warning: true
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/pawamoy

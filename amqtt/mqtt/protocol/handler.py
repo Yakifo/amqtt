@@ -152,7 +152,8 @@ class ProtocolHandler:
             if self.writer is not None:
                 await self.writer.close()
         except asyncio.CancelledError:
-            self.logger.debug("Writer close was cancelled.", exc_info=True)
+            # canceling the task is the expected result
+            self.logger.debug("Writer close was cancelled.")
         except TimeoutError:
             self.logger.debug("Writer close operation timed out.", exc_info=True)
         except OSError:

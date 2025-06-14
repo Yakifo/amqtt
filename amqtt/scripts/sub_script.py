@@ -110,8 +110,7 @@ def _version(v:bool) -> None:
 def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     url: str = typer.Option(None, help="Broker connection URL, *must conform to MQTT or URI scheme: `[mqtt(s)|ws(s)]://<username:password>@HOST:port`*", show_default=False),
     config_file: str | None = typer.Option(None, "-c", help="Client configuration file"),
-    client_id: str | None = typer.Option(None, "-i", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),
-    max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending *default: read indefinitely*"),
+    client_id: str | None = typer.Option(None, "-i", "--client-id", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),    max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending *default: read indefinitely*"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
     topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe, can be used multiple times."),  # noqa: B008
     keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout in seconds"),
@@ -147,8 +146,6 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
         logger.debug(f"Using default configuration from {default_config_path}")
         config = read_yaml_config(default_config_path)
 
-    loop = asyncio.get_event_loop()
-
     if not client_id:
         client_id = _gen_client_id()
 
@@ -175,7 +172,7 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     )
     with contextlib.suppress(KeyboardInterrupt):
         try:
-            loop.run_until_complete(do_sub(client,
+            asyncio.run(do_sub(client,
                                            url=url,
                                            topics=topics,
                                            ca_info=ca_info,
@@ -184,10 +181,10 @@ def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
                                            max_count=max_count,
                                            clean_session=clean_session,
                                            ))
+
         except (ClientError, ConnectError) as exc:
             typer.echo("❌ Connection failed", err=True)
             raise typer.Exit(code=1) from exc
-    loop.close()
 
 
 if __name__ == "__main__":
