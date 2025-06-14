@@ -70,7 +70,7 @@ TLS certificates used to verify the broker's authenticity.
 ## Default Configuration
 
 ```yaml
---8<-- "../amqtt/amqtt/scripts/default_client.yaml"
+--8<-- "amqtt/scripts/default_client.yaml"
 ```
 
 ## Example

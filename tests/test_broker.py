@@ -7,18 +7,7 @@ import psutil
 import pytest
 
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
-from amqtt.broker import (
-    EVENT_BROKER_CLIENT_CONNECTED,
-    EVENT_BROKER_CLIENT_DISCONNECTED,
-    EVENT_BROKER_CLIENT_SUBSCRIBED,
-    EVENT_BROKER_CLIENT_UNSUBSCRIBED,
-    EVENT_BROKER_MESSAGE_RECEIVED,
-    EVENT_BROKER_POST_SHUTDOWN,
-    EVENT_BROKER_POST_START,
-    EVENT_BROKER_PRE_SHUTDOWN,
-    EVENT_BROKER_PRE_START,
-    Broker,
-)
+from amqtt.broker import EventBroker, Broker
 from amqtt.client import MQTTClient
 from amqtt.errors import ConnectError
 from amqtt.mqtt.connack import ConnackPacket
@@ -67,8 +56,8 @@ def test_split_bindaddr_port(input_str, output_addr, output_port):
 async def test_start_stop(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(EVENT_BROKER_PRE_START),
-            call().fire_event(EVENT_BROKER_POST_START),
+            call().fire_event(EventBroker.PRE_START.value),
+            call().fire_event(EventBroker.POST_START.value),
         ],
         any_order=True,
     )
@@ -76,8 +65,8 @@ async def test_start_stop(broker, mock_plugin_manager):
     await broker.shutdown()
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(EVENT_BROKER_PRE_SHUTDOWN),
-            call().fire_event(EVENT_BROKER_POST_SHUTDOWN),
+            call().fire_event(EventBroker.PRE_SHUTDOWN.value),
+            call().fire_event(EventBroker.POST_SHUTDOWN.value),
         ],
         any_order=True,
     )
@@ -98,11 +87,11 @@ async def test_client_connect(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_CONNECTED,
+                EventBroker.CLIENT_CONNECTED.value,
                 client_id=client.session.client_id,
             ),
             call().fire_event(
-                EVENT_BROKER_CLIENT_DISCONNECTED,
+                EventBroker.CLIENT_DISCONNECTED.value,
                 client_id=client.session.client_id,
             ),
         ],
@@ -235,7 +224,7 @@ async def test_client_subscribe(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                EventBroker.CLIENT_SUBSCRIBED.value,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
@@ -272,7 +261,7 @@ async def test_client_subscribe_twice(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                EventBroker.CLIENT_SUBSCRIBED.value,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
@@ -306,13 +295,13 @@ async def test_client_unsubscribe(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                EventBroker.CLIENT_SUBSCRIBED.value,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
             ),
             call().fire_event(
-                EVENT_BROKER_CLIENT_UNSUBSCRIBED,
+                EventBroker.CLIENT_UNSUBSCRIBED.value,
                 client_id=client.session.client_id,
                 topic="/topic",
             ),
@@ -337,7 +326,7 @@ async def test_client_publish(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_MESSAGE_RECEIVED,
+                EventBroker.MESSAGE_RECEIVED.value,
                 client_id=pub_client.session.client_id,
                 message=ret_message,
             ),
@@ -509,7 +498,7 @@ async def test_client_publish_big(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_MESSAGE_RECEIVED,
+                EventBroker.MESSAGE_RECEIVED.value,
                 client_id=pub_client.session.client_id,
                 message=ret_message,
             ),
