@@ -448,7 +448,6 @@ async def test_connect_incorrect_scheme():
 
 async def test_client_no_auth():
 
-
     class MockEntryPoints:
 
         def select(self, group) -> list[EntryPoint]:

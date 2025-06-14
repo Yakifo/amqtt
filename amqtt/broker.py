@@ -152,6 +152,9 @@ class Broker:
         loop: asyncio loop. defaults to `asyncio.new_event_loop()`.
         plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
+    Raises:
+        BrokerError, ParserError, PluginError
+
     """
 
     states: ClassVar[list[str]] = [
