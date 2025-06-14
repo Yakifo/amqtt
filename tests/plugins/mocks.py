@@ -1,11 +1,14 @@
 import logging
+
 from dataclasses import dataclass
 
 from amqtt.broker import Action
-from amqtt.plugins.authentication import BaseAuthPlugin
+
 from amqtt.plugins.base import BasePlugin
 from amqtt.plugins.manager import BaseContext
 from amqtt.plugins.topic_checking import BaseTopicPlugin
+from amqtt.plugins.authentication import BaseAuthPlugin
+
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -28,10 +31,14 @@ class TestConfigPlugin(BasePlugin):
         option2: str
 
 
-class TestAuthPlugin(BaseAuthPlugin):
+class AuthPlugin(BaseAuthPlugin):
 
-    def __init__(self, context: BaseContext):
-        super().__init__(context)
+    async def authenticate(self, *, session: Session) -> bool | None:
+        return True
+
+
+class NoAuthPlugin(BaseAuthPlugin):
+
 
     async def authenticate(self, *, session: Session) -> bool | None:
         return False
