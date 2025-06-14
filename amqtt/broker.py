@@ -28,6 +28,7 @@ from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
+from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import BaseContext, PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
@@ -534,8 +535,12 @@ class Broker:
                 )
 
                 if disconnect_waiter in done:
-                    connected = await self._handle_disconnect(client_session, handler, disconnect_waiter)
-                    disconnect_waiter = asyncio.ensure_future(handler.wait_disconnect())
+                    # handle the disconnection: normal or abnormal result, either way, the client is no longer connected
+                    await self._handle_disconnect(client_session, handler, disconnect_waiter)
+                    connected = False
+
+                    # no need to reschedule the `disconnect_waiter` since we're exiting the message loop
+
 
                 if subscribe_waiter in done:
                     await self._handle_subscription(client_session, handler, subscribe_waiter)
@@ -565,11 +570,20 @@ class Broker:
         client_session: Session,
         handler: BrokerProtocolHandler,
         disconnect_waiter: asyncio.Future[Any],
-    ) -> bool:
-        """Handle client disconnection."""
+    ) -> None:
+        """Handle client disconnection.
+
+        Args:
+            client_session (Session): client session
+            handler (BrokerProtocolHandler): broker protocol handler
+            disconnect_waiter (asyncio.Future[Any]): future to wait for disconnection
+
+        """
+        # check the disconnected waiter result
         result = disconnect_waiter.result()
         self.logger.debug(f"{client_session.client_id} Result from wait_disconnect: {result}")
-        if result is None:
+        # if the client disconnects abruptly by sending no message or the message isn't a disconnect packet
+        if result is None or not isinstance(result, DisconnectPacket):
             self.logger.debug(f"Will flag: {client_session.will_flag}")
             if client_session.will_flag:
                 self.logger.debug(
@@ -588,12 +602,13 @@ class Broker:
                         client_session.will_message,
                         client_session.will_qos,
                     )
-            self.logger.debug(f"{client_session.client_id} Disconnecting session")
-            await self._stop_handler(handler)
-            client_session.transitions.disconnect()
-            await self.plugins_manager.fire_event(EventBroker.CLIENT_DISCONNECTED.value, client_id=client_session.client_id)
-            return False
-        return True
+
+        # normal or not, let's end the client's session
+        self.logger.debug(f"{client_session.client_id} Disconnecting session")
+        await self._stop_handler(handler)
+        client_session.transitions.disconnect()
+        await self.plugins_manager.fire_event(EventBroker.CLIENT_DISCONNECTED.value, client_id=client_session.client_id)
+
 
     async def _handle_subscription(
         self,
@@ -672,7 +687,6 @@ class Broker:
                 self.retain_message(client_session, app_message.topic, app_message.data, app_message.qos)
         return True
 
-    # TODO: Remove this method, not found it used
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
         """Create a BrokerProtocolHandler and attach to a session."""
         handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop)
@@ -695,7 +709,6 @@ class Broker:
          - False if user authentication fails
          - None if authentication can't be achieved (then plugin result is then ignored)
         :param session:
-        :param listener:
         :return:
         """
         auth_plugins = None
@@ -766,7 +779,6 @@ class Broker:
          - False if MQTT client is not allowed to subscribe to the topic
          - None if topic filtering can't be achieved (then plugin result is then ignored)
         :param session:
-        :param listener:
         :param topic: Topic in which the client wants to subscribe / publish
         :param action: What is being done with the topic?  subscribe or publish
         :return:

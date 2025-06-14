@@ -268,27 +268,121 @@ def client_config():
 
 
 @pytest.mark.asyncio
-async def test_client_publish_will_with_retain(broker_fixture, client_config):
+async def test_client_will_with_clean_disconnect(broker_fixture):
+    config = {
+        "will": {
+            "topic": "test/will/topic",
+            "retain": False,
+            "message": "client ABC has disconnected",
+            "qos": 1
+        },
+    }
 
-    # verifying client functionality of will topic
-    # https://github.com/Yakifo/amqtt/issues/159
+    client1 = MQTTClient(client_id="client1", config=config)
+    await client1.connect("mqtt://localhost:1883")
 
-    client1 = MQTTClient(client_id="client1")
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect("mqtt://localhost:1883")
+    await client2.subscribe(
+        [
+            ("test/will/topic", QOS_0),
+        ]
+    )
+
+    await client1.disconnect()
+    await asyncio.sleep(1)
+
+    with pytest.raises(asyncio.TimeoutError):
+        message = await client2.deliver_message(timeout_duration=2)
+        # if we do get a message, make sure it's not a will message
+        assert message.topic != "test/will/topic"
+
+    await client2.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_will_with_abrupt_disconnect(broker_fixture):
+    config = {
+        "will": {
+            "topic": "test/will/topic",
+            "retain": False,
+            "message": "client ABC has disconnected",
+            "qos": 1
+        },
+    }
+
+    client1 = MQTTClient(client_id="client1", config=config)
+    await client1.connect("mqtt://localhost:1883")
+
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect("mqtt://localhost:1883")
+    await client2.subscribe(
+        [
+            ("test/will/topic", QOS_0),
+        ]
+    )
+
+    # instead of client.disconnect, call the necessary closing but without sending the disconnect packet
+    await client1.cancel_tasks()
+    if client1._disconnect_task and not client1._disconnect_task.done():
+        client1._disconnect_task.cancel()
+    client1._connected_state.clear()
+    await client1._handler.stop()
+    client1.session.transitions.disconnect()
+
+    await asyncio.sleep(1)
+
+
+    message = await client2.deliver_message(timeout_duration=1)
+    # make sure we receive the will message
+    assert message.topic == "test/will/topic"
+    assert message.data == b'client ABC has disconnected'
+
+    await client2.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_retained_will_with_abrupt_disconnect(broker_fixture):
+
+    # verifying client functionality of retained will topic/message
+
+    config = {
+        "will": {
+            "topic": "test/will/topic",
+            "retain": True,
+            "message": "client ABC has disconnected",
+            "qos": 1
+        },
+    }
+
+    # first client, connect with retained will message
+    client1 = MQTTClient(client_id="client1", config=config)
     await client1.connect('mqtt://localhost:1883')
-    await  client1.subscribe([
+
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect('mqtt://localhost:1883')
+    await  client2.subscribe([
         ("test/will/topic", QOS_0)
         ])
 
-    client2 = MQTTClient(client_id="client2", config=client_config)
-    await client2.connect('mqtt://localhost:1883')
-    await client2.publish('my/topic', b'my message')
-    await client2.disconnect()
 
-    message = await client1.deliver_message(timeout_duration=1)
+    # let's abruptly disconnect client1
+    await client1.cancel_tasks()
+    if client1._disconnect_task and not client1._disconnect_task.done():
+        client1._disconnect_task.cancel()
+    client1._connected_state.clear()
+    await client1._handler.stop()
+    client1.session.transitions.disconnect()
+
+    await asyncio.sleep(0.5)
+
+    # make sure the client which is still connected that we get the 'will' message
+    message = await client2.deliver_message(timeout_duration=1)
     assert message.topic == 'test/will/topic'
     assert message.data == b'client ABC has disconnected'
-    await client1.disconnect()
+    await client2.disconnect()
 
+    # make sure a client which is connected after client1 disconnected still receives the 'will' message from
     client3 = MQTTClient(client_id="client3")
     await client3.connect('mqtt://localhost:1883')
     await client3.subscribe([
@@ -301,21 +395,18 @@ async def test_client_publish_will_with_retain(broker_fixture, client_config):
 
 
 @pytest.mark.asyncio
-async def test_client_with_will_empty_message(broker_fixture):
-    client_config = {
-        "broker": {
-            "uri": "mqtt://localhost:1883"
-        },
-        "reconnect_max_interval": 5,
+async def test_client_abruptly_disconnecting_with_empty_will_message(broker_fixture):
+
+    config = {
         "will": {
             "topic": "test/will/topic",
             "retain": True,
             "message": "",
-            "qos": 0
+            "qos": 1
         },
     }
-    client1 = MQTTClient(client_id="client1", config=client_config)
-    await client1.connect()
+    client1 = MQTTClient(client_id="client1", config=config)
+    await client1.connect('mqtt://localhost:1883')
 
     client2 = MQTTClient(client_id="client2")
     await client2.connect('mqtt://localhost:1883')
@@ -323,7 +414,15 @@ async def test_client_with_will_empty_message(broker_fixture):
         ("test/will/topic", QOS_0)
     ])
 
-    await client1.disconnect()
+    # let's abruptly disconnect client1
+    await client1.cancel_tasks()
+    if client1._disconnect_task and not client1._disconnect_task.done():
+        client1._disconnect_task.cancel()
+    client1._connected_state.clear()
+    await client1._handler.stop()
+    client1.session.transitions.disconnect()
+
+    await asyncio.sleep(0.5)
 
     message = await client2.deliver_message(timeout_duration=1)
     assert message.topic == 'test/will/topic'
