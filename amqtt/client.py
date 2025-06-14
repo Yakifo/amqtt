@@ -110,7 +110,7 @@ class MQTTClient:
         # Init plugins manager
         context = ClientContext()
         context.config = self.config
-        self.plugins_manager = PluginManager("amqtt.client.plugins", context)
+        self.plugins_manager: PluginManager[ClientContext] = PluginManager("amqtt.client.plugins", context)
         self.client_tasks: deque[asyncio.Task[Any]] = deque()
 
     async def connect(

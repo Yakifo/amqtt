@@ -32,7 +32,8 @@ dependencies = [
   "websockets==15.0.1", # https://pypi.org/project/websockets
   "passlib==1.7.4", # https://pypi.org/project/passlib
   "PyYAML==6.0.2", # https://pypi.org/project/PyYAML
-  "typer==0.15.4"
+  "typer==0.15.4",
+  "dacite>=1.9.2",
 ]
 
 [dependency-groups]

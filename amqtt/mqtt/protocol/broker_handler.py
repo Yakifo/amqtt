@@ -1,5 +1,6 @@
 import asyncio
 from asyncio import AbstractEventLoop, Queue
+from typing import TYPE_CHECKING
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import MQTTError
@@ -28,6 +29,8 @@ from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
 _MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
 
+if TYPE_CHECKING:
+    from amqtt.broker import BrokerContext
 
 class Subscription:
     def __init__(self, packet_id: int, topics: list[tuple[str, int]]) -> None:
@@ -41,10 +44,10 @@ class UnSubscription:
         self.topics = topics
 
 
-class BrokerProtocolHandler(ProtocolHandler):
+class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
     def __init__(
         self,
-        plugins_manager: PluginManager,
+        plugins_manager: PluginManager["BrokerContext"],
         session: Session | None = None,
         loop: AbstractEventLoop | None = None,
     ) -> None:
@@ -156,7 +159,7 @@ class BrokerProtocolHandler(ProtocolHandler):
         cls,
         reader: ReaderAdapter,
         writer: WriterAdapter,
-        plugins_manager: PluginManager,
+        plugins_manager: PluginManager["BrokerContext"],
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> tuple["BrokerProtocolHandler", Session]:
         """Initialize from a CONNECT packet and validates the connection."""

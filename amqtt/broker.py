@@ -711,20 +711,16 @@ class Broker:
         :param session:
         :return:
         """
-        auth_plugins = None
-        auth_config = self.config.get("auth", None)
-        if isinstance(auth_config, dict):
-            auth_plugins = auth_config.get("plugins", None)
-        returns = await self.plugins_manager.map_plugin_coro("authenticate", session=session, filter_plugins=auth_plugins)
+        returns = await self.plugins_manager.map_plugin_auth(session=session)
         auth_result = True
         if returns:
             for plugin in returns:
                 res = returns[plugin]
                 if res is False:
                     auth_result = False
-                    self.logger.debug(f"Authentication failed due to '{plugin.name}' plugin result: {res}")
+                    self.logger.debug(f"Authentication failed due to '{plugin.__class__}' plugin result: {res}")
                 else:
-                    self.logger.debug(f"'{plugin.name}' plugin result: {res}")
+                    self.logger.debug(f"'{plugin.__class__}' plugin result: {res}")
         # If all plugins returned True, authentication is success
         return auth_result
 
@@ -785,20 +781,14 @@ class Broker:
         """
         topic_config = self.config.get("topic-check", {})
         enabled = False
-        topic_plugins: list[str] | None = None
+
         if isinstance(topic_config, dict):
             enabled = topic_config.get("enabled", False)
-            topic_plugins = topic_config.get("plugins")
 
         if not enabled:
             return True
-        results = await self.plugins_manager.map_plugin_coro(
-            "topic_filtering",
-            session=session,
-            topic=topic,
-            action=action,
-            filter_plugins=topic_plugins,
-        )
+
+        results = await self.plugins_manager.map_plugin_topic(session=session, topic=topic, action=action)
         return all(result for result in results.values())
 
     async def _delete_session(self, client_id: str) -> None:

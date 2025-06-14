@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.connack import ConnackPacket
@@ -15,11 +15,13 @@ from amqtt.mqtt.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import Session
 
+if TYPE_CHECKING:
+    from amqtt.client import ClientContext
 
-class ClientProtocolHandler(ProtocolHandler):
+class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
     def __init__(
         self,
-        plugins_manager: PluginManager,
+        plugins_manager: PluginManager["ClientContext"],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:

@@ -5,15 +5,16 @@ from passlib.apps import custom_app_context as pwd_context
 
 from amqtt.broker import BrokerContext
 from amqtt.plugins.base import BasePlugin
+from amqtt.plugins.manager import BaseContext
 from amqtt.session import Session
 
 _PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
 
 
-class BaseAuthPlugin(BasePlugin):
+class BaseAuthPlugin(BasePlugin[BaseContext]):
     """Base class for authentication plugins."""
 
-    def __init__(self, context: BrokerContext) -> None:
+    def __init__(self, context: BaseContext) -> None:
         super().__init__(context)
 
         self.auth_config: dict[str, Any] | None = self._get_config_section("auth")

@@ -17,7 +17,7 @@ except ImportError:
 import collections
 import itertools
 import logging
-from typing import cast
+from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
@@ -56,19 +56,20 @@ from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.plugins.manager import PluginManager
+from amqtt.plugins.manager import BaseContext, PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 EVENT_MQTT_PACKET_SENT = "mqtt_packet_sent"
 EVENT_MQTT_PACKET_RECEIVED = "mqtt_packet_received"
 
+C = TypeVar("C", bound=BaseContext)
 
-class ProtocolHandler:
+class ProtocolHandler(Generic[C]):
     """Class implementing the MQTT communication protocol using asyncio features."""
 
     def __init__(
         self,
-        plugins_manager: PluginManager,
+        plugins_manager: PluginManager[C],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:
@@ -79,7 +80,7 @@ class ProtocolHandler:
             self.session: Session | None = None
         self.reader: ReaderAdapter | None = None
         self.writer: WriterAdapter | None = None
-        self.plugins_manager: PluginManager = plugins_manager
+        self.plugins_manager: PluginManager[C] = plugins_manager
 
         try:
             self._loop = loop if loop is not None else asyncio.get_running_loop()

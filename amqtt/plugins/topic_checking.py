@@ -1,14 +1,15 @@
 from typing import Any
 
-from amqtt.broker import Action, BrokerContext
+from amqtt.broker import Action
 from amqtt.plugins.base import BasePlugin
+from amqtt.plugins.manager import BaseContext
 from amqtt.session import Session
 
 
-class BaseTopicPlugin(BasePlugin):
+class BaseTopicPlugin(BasePlugin[BaseContext]):
     """Base class for topic plugins."""
 
-    def __init__(self, context: BrokerContext) -> None:
+    def __init__(self, context: BaseContext) -> None:
         super().__init__(context)
 
         self.topic_config: dict[str, Any] | None = self._get_config_section("topic-check")
@@ -37,7 +38,7 @@ class BaseTopicPlugin(BasePlugin):
 
 
 class TopicTabooPlugin(BaseTopicPlugin):
-    def __init__(self, context: BrokerContext) -> None:
+    def __init__(self, context: BaseContext) -> None:
         super().__init__(context)
         self._taboo: list[str] = ["prohibited", "top-secret", "data/classified"]
 

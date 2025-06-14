@@ -50,3 +50,7 @@ class ConnectError(ClientError):
 
 class ProtocolHandlerError(Exception):
     """Exceptions thrown by protocol handle."""
+
+
+class PluginLoadError(Exception):
+    """Exception thrown when loading a plugin."""
