@@ -729,3 +729,16 @@ async def test_broker_broadcast_cancellation(broker):
     await _client_publish(topic, data, qos)
     message = await asyncio.wait_for(sub_client.deliver_message(), timeout=1)
     assert message
+
+
+@pytest.mark.asyncio
+async def test_broker_socket_open_close(broker):
+
+    # check that https://github.com/Yakifo/amqtt/issues/86 is fixed
+
+    # mqtt 3.1 requires a connect packet, otherwise the socket connection is rejected
+    static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-123'
+    s = socket.create_connection(("127.0.0.1", 1883))
+    s.send(static_connect_packet)
+    await asyncio.sleep(0.1)
+    s.close()
