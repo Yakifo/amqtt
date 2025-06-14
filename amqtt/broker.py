@@ -43,12 +43,7 @@ AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
 
 
 class EventBroker(Enum):
-    """Events issued by the broker.
-
-    Attributes:
-        PRE_START: on_event_broker_pre_start
-
-    """
+    """Events issued by the broker."""
 
     PRE_START = "broker_pre_start"
     POST_START = "broker_post_start"
