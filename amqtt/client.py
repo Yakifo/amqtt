@@ -219,7 +219,7 @@ class MQTTClient:
         self.logger.debug(f"Reconnecting with session parameters: {self.session}")
 
         reconnect_max_interval = self.config.get("reconnect_max_interval", 10)
-        reconnect_retries = self.config.get("reconnect_retries", 5)
+        reconnect_retries = self.config.get("reconnect_retries", 2)
         nb_attempt = 1
 
         while True:
@@ -232,7 +232,7 @@ class MQTTClient:
             except Exception as e:
                 self.logger.warning(f"Reconnection attempt failed: {e!r}")
                 self.logger.debug("", exc_info=True)
-                if reconnect_retries < nb_attempt:  # reconnect_retries >= 0 and
+                if 0 <= reconnect_retries < nb_attempt:
                     self.logger.exception("Maximum connection attempts reached. Reconnection aborted.")
                     self.logger.debug("", exc_info=True)
                     msg = "Too many failed attempts"
