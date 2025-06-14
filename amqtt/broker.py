@@ -148,7 +148,7 @@ class Broker:
 
     Args:
         config: dictionary of configuration options (see [broker configuration](broker_config.md)).
-        loop: asyncio loop. defaults to `asyncio.get_event_loop()`.
+        loop: asyncio loop. defaults to `asyncio.new_event_loop()`.
         plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
     """
@@ -176,7 +176,7 @@ class Broker:
             self.config.update(config)
         self._build_listeners_config(self.config)
 
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop = loop or asyncio.new_event_loop()
         self._servers: dict[str, Server] = {}
         self._init_states()
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
