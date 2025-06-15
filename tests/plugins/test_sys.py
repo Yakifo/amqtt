@@ -11,9 +11,36 @@ from amqtt.mqtt.constants import QOS_0
 
 logger = logging.getLogger(__name__)
 
+all_sys_topics = [
+    '$SYS/broker/version',
+    '$SYS/broker/load/bytes/received',
+    '$SYS/broker/load/bytes/sent',
+    '$SYS/broker/messages/received',
+    '$SYS/broker/messages/sent',
+    '$SYS/broker/time',
+    '$SYS/broker/uptime',
+    '$SYS/broker/uptime/formatted',
+    '$SYS/broker/clients/connected',
+    '$SYS/broker/clients/disconnected',
+    '$SYS/broker/clients/maximum',
+    '$SYS/broker/clients/total',
+    '$SYS/broker/messages/inflight',
+    '$SYS/broker/messages/inflight/in',
+    '$SYS/broker/messages/inflight/out',
+    '$SYS/broker/messages/inflight/stored',
+    '$SYS/broker/messages/publish/received',
+    '$SYS/broker/messages/publish/sent',
+    '$SYS/broker/messages/retained/count',
+    '$SYS/broker/messages/subscriptions/count'
+]
+
+
+
 # test broker sys
 @pytest.mark.asyncio
 async def test_broker_sys_plugin() -> None:
+
+    sys_topic_flags = {sys_topic:False for sys_topic in all_sys_topics}
 
     class MockEntryPoints:
 
@@ -40,19 +67,24 @@ async def test_broker_sys_plugin() -> None:
         await broker.start()
         client = MQTTClient()
         await client.connect("mqtt://127.0.0.1:1883/")
-        await client.subscribe([("$SYS/broker/uptime", QOS_0),])
+        await client.subscribe([("$SYS/#", QOS_0),])
         await client.publish('test/topic', b'my test message')
         await asyncio.sleep(2)
         sys_msg_count = 0
         try:
-            while True:
+            while sys_msg_count < 30:
                 message = await client.deliver_message(timeout_duration=1)
                 if '$SYS' in message.topic:
                     sys_msg_count += 1
+                    assert message.topic in sys_topic_flags
+                    sys_topic_flags[message.topic] = True
+
         except asyncio.TimeoutError:
-            pass
+            logger.debug(f"TimeoutError after {sys_msg_count} messages")
 
         await client.disconnect()
         await broker.shutdown()
 
         assert sys_msg_count > 1
+
+        assert all(sys_topic_flags.values()), f'topic not received: {[ topic for topic, flag in sys_topic_flags.items() if not flag ]}'
