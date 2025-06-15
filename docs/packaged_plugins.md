@@ -117,22 +117,23 @@ Publishes, on a periodic basis, statistics about the broker
 
 **Supported Topics**
 
-- `$SYS/broker/load/bytes/received` - payload: `data`,  int
-- `$SYS/broker/load/bytes/sent` - payload: `data`,  int
-- `$SYS/broker/messages/received` - payload: `data`, int
-- `$SYS/broker/messages/sent` - payload: `data`, int
-- `$SYS/broker/time` - payload: `data`,  int (current time, epoch seconds)
-- `$SYS/broker/uptime` - payload: `data`, int (seconds since broker start)
-- `$SYS/broker/uptime/formatted` - payload: `data`, datetime (start time of broker in UTC)
-- `$SYS/broker/clients/connected` - payload: `data`, int
-- `$SYS/broker/clients/disconnected` - payload: `data`, int
-- `$SYS/broker/clients/maximum` - payload: `data`, int
-- `$SYS/broker/clients/total` - payload: `data`, int
-- `$SYS/broker/messages/inflight` - payload: `data`, int
-- `$SYS/broker/messages/inflight/in` - payload: `data`, int
-- `$SYS/broker/messages/inflight/out` - payload: `data`, int
-- `$SYS/broker/messages/inflight/stored` - payload: `data`, int
-- `$SYS/broker/messages/publish/received` - payload: `data`, int
-- `$SYS/broker/messages/publish/sent` - payload: `data`, int
-- `$SYS/broker/messages/retained/count` - payload: `data`, int
-- `$SYS/broker/messages/subscriptions/count` - payload: `data`, int
+- `$SYS/broker/version` - payload: `str`
+- `$SYS/broker/load/bytes/received` - payload: `int`
+- `$SYS/broker/load/bytes/sent` - payload: `int`
+- `$SYS/broker/messages/received` - payload: `int`
+- `$SYS/broker/messages/sent` - payload: `int`
+- `$SYS/broker/time` - payload: `int` (current time, epoch seconds)
+- `$SYS/broker/uptime` - payload: `int` (seconds since broker start)
+- `$SYS/broker/uptime/formatted` - payload: `str` (start time of broker in UTC)
+- `$SYS/broker/clients/connected` - payload: `int` (current number of connected clients)
+- `$SYS/broker/clients/disconnected` - payload: `int` (number of clients that have disconnected)
+- `$SYS/broker/clients/maximum` - payload: `int`
+- `$SYS/broker/clients/total` - payload: `int`
+- `$SYS/broker/messages/inflight` - payload: `int`
+- `$SYS/broker/messages/inflight/in` - payload: `int`
+- `$SYS/broker/messages/inflight/out` - payload: `int`
+- `$SYS/broker/messages/inflight/stored` - payload: `int`
+- `$SYS/broker/messages/publish/received` - payload: `int`
+- `$SYS/broker/messages/publish/sent` - payload: `int`
+- `$SYS/broker/messages/retained/count` - payload: `int`
+- `$SYS/broker/messages/subscriptions/count` - payload: `int`
