@@ -13,10 +13,6 @@ logger = logging.getLogger(__name__)
 
 # test broker sys
 @pytest.mark.asyncio
-@pytest.mark.xfail(
-    reason="see https://github.com/Yakifo/aio-amqtt/issues/215",
-    strict=False,
-)
 async def test_broker_sys_plugin() -> None:
 
     class MockEntryPoints:

@@ -630,10 +630,6 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(
-    reason="see https://github.com/Yakifo/aio-amqtt/issues/16",
-    strict=False,
-)
 async def test_client_publish_retain_subscribe(broker):
     sub_client = MQTTClient()
     await sub_client.connect("mqtt://127.0.0.1", cleansession=False)
