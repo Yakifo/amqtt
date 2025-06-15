@@ -1,4 +1,10 @@
-from enum import StrEnum
+try:
+    from enum import StrEnum
+except ImportError:
+    # support for python 3.10
+    from enum import Enum
+    class StrEnum(str, Enum):  #type: ignore[no-redef]
+        pass
 
 
 class Events(StrEnum):
