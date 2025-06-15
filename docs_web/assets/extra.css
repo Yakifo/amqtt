@@ -1,0 +1,54 @@
+/*
+ https://coolors.co/e6c229-f17105-d11149-6610f2-1a8fe3
+*/
+
+.md-header {
+  background: #d11149;
+}
+
+
+body > div.md-container > main > div > div.md-content > article > a:nth-child(2),
+body > div.md-container > main > div > div.md-content > article > a:nth-child(1),
+body > div.md-container > main > div > div.md-sidebar.md-sidebar--primary > div,
+body > div.md-container > main > div > div.md-sidebar.md-sidebar--secondary > div,
+#home
+{
+  display: none;
+  height: 0;
+}
+
+.md-footer-meta__inner {
+  display: block;
+  height: 50px;
+}
+
+.md-copyright {
+  display: none;
+}
+
+.md-footer-meta__inner {
+  color: #000 !important;
+}
+
+nav.md-tabs {
+  display: none;
+}
+
+
+h2.doc-heading-parameter {
+  font-size: 16px;
+}
+
+.doc-md-description {
+  font-size: 16px;
+  display: block;
+}
+
+img[alt=readthedocs],
+img[alt=pypi],
+img[alt=github],
+img[alt=gitter]
+{ width: 20px; vertical-align: -4px; }
+
+img[alt=dockerhub]
+{ width: 26px; vertical-align: -4px; }

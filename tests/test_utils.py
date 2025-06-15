@@ -1,9 +1,10 @@
-import yaml
-from hypothesis import given, strategies as st
-from hypothesis import provisional
+from pathlib import Path
 
-from amqtt.session import Session
+from hypothesis import given, provisional, strategies as st
+import yaml
+
 from amqtt import utils
+from amqtt.session import Session
 
 
 @given(st.text())
@@ -34,7 +35,7 @@ def test_client_id():
 
 def test_read_yaml_config(tmpdir):
     fn = tmpdir / "test.config"
-    with open(fn, "w") as f:
+    with Path(fn).open("w") as f:
         yaml.dump({"a": "b"}, f)
 
     configuration = utils.read_yaml_config(config_file=fn)

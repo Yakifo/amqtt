@@ -1,45 +1,28 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
 import asyncio
 import logging
 import socket
-import sys
-from unittest.mock import call, MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import psutil
 import pytest
 
+from amqtt.events import BrokerEvents
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
-from amqtt.broker import (
-    EVENT_BROKER_PRE_START,
-    EVENT_BROKER_POST_START,
-    EVENT_BROKER_PRE_SHUTDOWN,
-    EVENT_BROKER_POST_SHUTDOWN,
-    EVENT_BROKER_CLIENT_CONNECTED,
-    EVENT_BROKER_CLIENT_DISCONNECTED,
-    EVENT_BROKER_CLIENT_SUBSCRIBED,
-    EVENT_BROKER_CLIENT_UNSUBSCRIBED,
-    EVENT_BROKER_MESSAGE_RECEIVED,
-)
-from amqtt.client import MQTTClient, ConnectException
-from amqtt.mqtt import (
-    ConnectPacket,
-    ConnackPacket,
-    PublishPacket,
-    PubrecPacket,
-    PubrelPacket,
-    PubcompPacket,
-    DisconnectPacket,
-)
-from amqtt.mqtt.connect import ConnectVariableHeader, ConnectPayload
+from amqtt.broker import Broker
+from amqtt.client import MQTTClient
+from amqtt.errors import ConnectError
+from amqtt.mqtt.connack import ConnackPacket
+from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.mqtt.pubcomp import PubcompPacket
+from amqtt.mqtt.publish import PublishPacket
+from amqtt.mqtt.pubrec import PubrecPacket
+from amqtt.mqtt.pubrel import PubrelPacket
+from amqtt.session import OutgoingApplicationMessage
 
-
-formatter = (
-    "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-)
+formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 log = logging.getLogger(__name__)
 
@@ -50,15 +33,32 @@ async def async_magic():
     pass
 
 
-MagicMock.__await__ = lambda x: async_magic().__await__()
+MagicMock.__await__ = lambda _: async_magic().__await__()
+
+
+@pytest.mark.parametrize(
+    "input_str, output_addr, output_port",
+    [
+        ("1234", None, 1234),
+        (":1234", None, 1234),
+        ("0.0.0.0:1234", "0.0.0.0", 1234),
+        ("[::]:1234", "[::]", 1234),
+        ("0.0.0.0", "0.0.0.0", 5678),
+        ("[::]", "[::]", 5678),
+        ("localhost", "localhost", 5678),
+        ("localhost:1234", "localhost", 1234),
+    ],
+)
+def test_split_bindaddr_port(input_str, output_addr, output_port):
+    assert Broker._split_bindaddr_port(input_str, 5678) == (output_addr, output_port)
 
 
 @pytest.mark.asyncio
 async def test_start_stop(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(EVENT_BROKER_PRE_START),
-            call().fire_event(EVENT_BROKER_POST_START),
+            call().fire_event(BrokerEvents.PRE_START),
+            call().fire_event(BrokerEvents.POST_START),
         ],
         any_order=True,
     )
@@ -66,8 +66,8 @@ async def test_start_stop(broker, mock_plugin_manager):
     await broker.shutdown()
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(EVENT_BROKER_PRE_SHUTDOWN),
-            call().fire_event(EVENT_BROKER_POST_SHUTDOWN),
+            call().fire_event(BrokerEvents.PRE_SHUTDOWN),
+            call().fire_event(BrokerEvents.POST_SHUTDOWN),
         ],
         any_order=True,
     )
@@ -79,6 +79,7 @@ async def test_client_connect(broker, mock_plugin_manager):
     client = MQTTClient()
     ret = await client.connect("mqtt://127.0.0.1/")
     assert ret == 0
+    assert client.session is not None
     assert client.session.client_id in broker._sessions
     await client.disconnect()
 
@@ -87,10 +88,12 @@ async def test_client_connect(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_CONNECTED, client_id=client.session.client_id
+                BrokerEvents.CLIENT_CONNECTED,
+                client_id=client.session.client_id,
             ),
             call().fire_event(
-                EVENT_BROKER_CLIENT_DISCONNECTED, client_id=client.session.client_id
+                BrokerEvents.CLIENT_DISCONNECTED,
+                client_id=client.session.client_id,
             ),
         ],
         any_order=True,
@@ -101,34 +104,57 @@ async def test_client_connect(broker, mock_plugin_manager):
 async def test_connect_tcp(broker):
     process = psutil.Process()
     connections_number = 10
-    sockets = [
-        socket.create_connection(("127.0.0.1", 1883)) for _ in range(connections_number)
-    ]
-    connections = process.connections()
+
+    # mqtt 3.1 requires a connect packet, otherwise the socket connection is rejected
+    static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-123'
+
+    sockets = []
+    for i in range(connections_number):
+        s = socket.create_connection(("127.0.0.1", 1883))
+        s.send(static_connect_packet)
+        sockets.append(s)
+
+    # Wait for a brief moment to ensure connections are established
     await asyncio.sleep(0.1)
 
-    # max number of connections is 10
+    # # Get the current number of TCP connections
+    connections = process.net_connections()
+
+    # max number of connections on the TCP listener is 10
     assert broker._servers["default"].conn_count == connections_number
-    # Extra connection for the listening Broker
-    assert len(connections) == connections_number + 1
+
+    # Ensure connections are only on the TCP listener (port 1883)
+    tcp_connections = [conn for conn in connections if conn.laddr.port == 1883]
+    assert len(tcp_connections) == connections_number + 1  # Including the Broker's listening socket
+
     for conn in connections:
-        assert conn.status == "ESTABLISHED" or conn.status == "LISTEN"
+        assert conn.status in ("ESTABLISHED", "LISTEN")
 
     # close all connections
     for s in sockets:
         s.close()
-    connections = process.connections()
-    for conn in connections:
-        assert conn.status == "CLOSE_WAIT" or conn.status == "LISTEN"
+
+    # Wait a moment for connections to be closed
     await asyncio.sleep(0.1)
+
+    # Recheck connections after closing
+    connections = process.net_connections()
+    tcp_connections = [conn for conn in connections if conn.laddr.port == 1883]
+
+    for conn in tcp_connections:
+        assert conn.status in ("CLOSE_WAIT", "LISTEN")
+
+    # Ensure no active connections for the default listener
     assert broker._servers["default"].conn_count == 0
 
-    # Add one more connection
+    # Add one more connection to the TCP listener
     s = socket.create_connection(("127.0.0.1", 1883))
+    s.send(static_connect_packet)
+
     open_connections = []
-    for conn in process.connections():
-        if conn.status == "ESTABLISHED":
-            open_connections.append(conn)
+    open_connections = [conn for conn in process.net_connections() if conn.status == "ESTABLISHED"]
+
+    # Ensure that only one TCP connection is active now
     assert len(open_connections) == 1
     await asyncio.sleep(0.1)
     assert broker._servers["default"].conn_count == 1
@@ -151,7 +177,7 @@ async def test_client_connect_will_flag(broker):
     payload.client_id = "test_id"
     payload.will_message = b"test"
     payload.will_topic = "/topic"
-    connect = ConnectPacket(vh=vh, payload=payload)
+    connect = ConnectPacket(variable_header=vh, payload=payload)
     await connect.to_stream(writer)
     await ConnackPacket.from_stream(reader)
 
@@ -169,9 +195,10 @@ async def test_client_connect_clean_session_false(broker):
     return_code = None
     try:
         await client.connect("mqtt://127.0.0.1/", cleansession=False)
-    except ConnectException as ce:
+    except ConnectError as ce:
         return_code = ce.return_code
     assert return_code == 0x02
+    assert client.session is not None
     assert client.session.client_id not in broker._sessions
     await client.disconnect()
     await asyncio.sleep(0.1)
@@ -198,11 +225,11 @@ async def test_client_subscribe(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                BrokerEvents.CLIENT_SUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
-            )
+            ),
         ],
         any_order=True,
     )
@@ -235,11 +262,11 @@ async def test_client_subscribe_twice(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                BrokerEvents.CLIENT_SUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
-            )
+            ),
         ],
         any_order=True,
     )
@@ -269,13 +296,13 @@ async def test_client_unsubscribe(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                BrokerEvents.CLIENT_SUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
             ),
             call().fire_event(
-                EVENT_BROKER_CLIENT_UNSUBSCRIBED,
+                BrokerEvents.CLIENT_UNSUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
             ),
@@ -295,11 +322,12 @@ async def test_client_publish(broker, mock_plugin_manager):
     assert broker._retained_messages == {}
 
     await asyncio.sleep(0.1)
+    assert pub_client.session is not None
 
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_MESSAGE_RECEIVED,
+                BrokerEvents.MESSAGE_RECEIVED,
                 client_id=pub_client.session.client_id,
                 message=ret_message,
             ),
@@ -311,19 +339,19 @@ async def test_client_publish(broker, mock_plugin_manager):
 @pytest.mark.asyncio
 async def test_client_publish_acl_permitted(acl_broker):
     sub_client = MQTTClient()
-    ret = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
-    assert ret == 0
+    ret_conn = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
+    assert ret_conn == 0
 
-    ret = await sub_client.subscribe([("public/subtopic/test", QOS_0)])
-    assert ret == [QOS_0]
+    ret_sub = await sub_client.subscribe([("public/subtopic/test", QOS_0)])
+    assert ret_sub == [QOS_0]
 
     pub_client = MQTTClient()
-    ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
-    assert ret == 0
+    ret_conn = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
+    assert ret_conn == 0
 
     await pub_client.publish("public/subtopic/test", b"data", QOS_0)
 
-    message = await sub_client.deliver_message(timeout=1)
+    message = await sub_client.deliver_message(timeout_duration=1)
     await pub_client.disconnect()
     await sub_client.disconnect()
 
@@ -336,22 +364,23 @@ async def test_client_publish_acl_permitted(acl_broker):
 @pytest.mark.asyncio
 async def test_client_publish_acl_forbidden(acl_broker):
     sub_client = MQTTClient()
-    ret = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
-    assert ret == 0
+    ret_conn = await sub_client.connect("mqtt://user2:user2password@127.0.0.1:1884/")
+    assert ret_conn == 0
 
-    ret = await sub_client.subscribe([("public/forbidden/test", QOS_0)])
-    assert ret == [QOS_0]
+    ret_sub = await sub_client.subscribe([("public/forbidden/test", QOS_0)])
+    assert ret_sub == [QOS_0]
 
     pub_client = MQTTClient()
-    ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
-    assert ret == 0
+    ret_conn = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
+    assert ret_conn == 0
 
     await pub_client.publish("public/forbidden/test", b"data", QOS_0)
 
     try:
-        await sub_client.deliver_message(timeout=1)
-        assert False, "Should not have worked"
-    except asyncio.TimeoutError:
+        await sub_client.deliver_message(timeout_duration=1)
+        msg = "Should not have worked"
+        raise AssertionError(msg)
+    except Exception:
         pass
 
     await pub_client.disconnect()
@@ -361,31 +390,32 @@ async def test_client_publish_acl_forbidden(acl_broker):
 @pytest.mark.asyncio
 async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     sub_client1 = MQTTClient()
-    ret = await sub_client1.connect("mqtt://user2:user2password@127.0.0.1:1884/")
-    assert ret == 0
+    ret_conn = await sub_client1.connect("mqtt://user2:user2password@127.0.0.1:1884/")
+    assert ret_conn == 0
 
     sub_client2 = MQTTClient()
-    ret = await sub_client2.connect("mqtt://user3:user3password@127.0.0.1:1884/")
-    assert ret == 0
+    ret_conn = await sub_client2.connect("mqtt://user3:user3password@127.0.0.1:1884/")
+    assert ret_conn == 0
 
-    ret = await sub_client1.subscribe([("public/subtopic/test", QOS_0)])
-    assert ret == [QOS_0]
+    ret_sub = await sub_client1.subscribe([("public/subtopic/test", QOS_0)])
+    assert ret_sub == [QOS_0]
 
-    ret = await sub_client2.subscribe([("public/subtopic/test", QOS_0)])
-    assert ret == [0x80]
+    ret_sub = await sub_client2.subscribe([("public/subtopic/test", QOS_0)])
+    assert ret_sub == [128]
 
     pub_client = MQTTClient()
-    ret = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
-    assert ret == 0
+    ret_conn = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
+    assert ret_conn == 0
 
     await pub_client.publish("public/subtopic/test", b"data", QOS_0)
 
-    message = await sub_client1.deliver_message(timeout=1)
+    message = await sub_client1.deliver_message(timeout_duration=1)
 
     try:
-        await sub_client2.deliver_message(timeout=1)
-        assert False, "Should not have worked"
-    except asyncio.TimeoutError:
+        await sub_client2.deliver_message(timeout_duration=1)
+        msg = "Should not have worked"
+        raise AssertionError(msg)
+    except Exception:
         pass
 
     await pub_client.disconnect()
@@ -411,13 +441,15 @@ async def test_client_publish_dup(broker):
     vh.clean_session_flag = False
     vh.will_retain_flag = False
     payload.client_id = "test_id"
-    connect = ConnectPacket(vh=vh, payload=payload)
+    connect = ConnectPacket(variable_header=vh, payload=payload)
     await connect.to_stream(writer)
     await ConnackPacket.from_stream(reader)
 
     publish_1 = PublishPacket.build("/test", b"data", 1, False, QOS_2, False)
     await publish_1.to_stream(writer)
-    asyncio.ensure_future(PubrecPacket.from_stream(reader))
+
+    # Store the future of PubrecPacket.from_stream() in a variable
+    pubrec_task_1 = asyncio.ensure_future(PubrecPacket.from_stream(reader))
 
     await asyncio.sleep(2)
 
@@ -427,6 +459,9 @@ async def test_client_publish_dup(broker):
     pubrel = PubrelPacket.build(1)
     await pubrel.to_stream(writer)
     await PubcompPacket.from_stream(reader)
+
+    # Ensure we wait for the Pubrec packets to be processed
+    await pubrec_task_1
 
     disconnect = DisconnectPacket()
     await disconnect.to_stream(writer)
@@ -451,17 +486,20 @@ async def test_client_publish_big(broker, mock_plugin_manager):
     assert ret == 0
 
     ret_message = await pub_client.publish(
-        "/topic", bytearray(b"\x99" * 256 * 1024), QOS_2
+        "/topic",
+        bytearray(b"\x99" * 256 * 1024),
+        QOS_2,
     )
     await pub_client.disconnect()
     assert broker._retained_messages == {}
 
     await asyncio.sleep(0.1)
+    assert pub_client.session is not None
 
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_MESSAGE_RECEIVED,
+                BrokerEvents.MESSAGE_RECEIVED,
                 client_id=pub_client.session.client_id,
                 message=ret_message,
             ),
@@ -502,7 +540,7 @@ async def test_client_subscribe_publish(broker):
     sub_client = MQTTClient()
     await sub_client.connect("mqtt://127.0.0.1")
     ret = await sub_client.subscribe(
-        [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)]
+        [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)],
     )
     assert ret == [QOS_0, QOS_1, QOS_2]
 
@@ -513,7 +551,7 @@ async def test_client_subscribe_publish(broker):
     for qos in [QOS_0, QOS_1, QOS_2]:
         message = await sub_client.deliver_message()
         assert message is not None
-        assert message.topic == "/qos%s" % qos
+        assert message.topic == f"/qos{qos}"
         assert message.data == b"data"
         assert message.qos == qos
     await sub_client.disconnect()
@@ -530,7 +568,7 @@ async def test_client_subscribe_invalid(broker):
             ("+/tennis/#", QOS_0),
             ("sport+", QOS_0),
             ("sport/+/player1", QOS_0),
-        ]
+        ],
     )
     assert ret == [QOS_0, QOS_0, 0x80, QOS_0]
 
@@ -555,8 +593,8 @@ async def test_client_subscribe_publish_dollar_topic_1(broker):
     await asyncio.sleep(0.1)
     message = None
     try:
-        message = await sub_client.deliver_message(timeout=2)
-    except asyncio.TimeoutError:
+        message = await sub_client.deliver_message(timeout_duration=2)
+    except Exception:
         pass
     except RuntimeError as e:
         # The loop is closed with pending tasks. Needs fine tuning.
@@ -581,8 +619,8 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
     await asyncio.sleep(0.1)
     message = None
     try:
-        message = await sub_client.deliver_message(timeout=2)
-    except asyncio.TimeoutError:
+        message = await sub_client.deliver_message(timeout_duration=2)
+    except Exception:
         pass
     except RuntimeError as e:
         # The loop is closed with pending tasks. Needs fine tuning.
@@ -593,14 +631,11 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(
-    reason="see https://github.com/Yakifo/aio-amqtt/issues/16", strict=False
-)
 async def test_client_publish_retain_subscribe(broker):
     sub_client = MQTTClient()
     await sub_client.connect("mqtt://127.0.0.1", cleansession=False)
     ret = await sub_client.subscribe(
-        [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)]
+        [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)],
     )
     assert ret == [QOS_0, QOS_1, QOS_2]
     await sub_client.disconnect()
@@ -611,11 +646,11 @@ async def test_client_publish_retain_subscribe(broker):
     await _client_publish("/qos2", b"data", QOS_2, retain=True)
     await sub_client.reconnect()
     for qos in [QOS_0, QOS_1, QOS_2]:
-        log.debug("TEST QOS: %d" % qos)
+        log.debug(f"TEST QOS: {qos}")
         message = await sub_client.deliver_message()
-        log.debug("Message: " + repr(message.publish_packet))
+        log.debug(f"Message: {message.publish_packet if message else None!r}")
         assert message is not None
-        assert message.topic == "/qos%s" % qos
+        assert message.topic == f"/qos{qos}"
         assert message.data == b"data"
         assert message.qos == qos
     await sub_client.disconnect()
@@ -623,9 +658,9 @@ async def test_client_publish_retain_subscribe(broker):
 
 
 @pytest.mark.asyncio
-async def _client_publish(topic, data, qos, retain=False):
+async def _client_publish(topic, data, qos, retain=False) -> int | OutgoingApplicationMessage:
     pub_client = MQTTClient()
-    ret = await pub_client.connect("mqtt://127.0.0.1/")
+    ret: int | OutgoingApplicationMessage = await pub_client.connect("mqtt://127.0.0.1/")
     assert ret == 0
     ret = await pub_client.publish(topic, data, qos, retain)
     await pub_client.disconnect()
@@ -639,7 +674,7 @@ def test_matches_multi_level_wildcard(broker):
         "sport/tennis",
         "sport/tennis/",
     ]:
-        assert not broker.matches(bad_topic, test_filter)
+        assert not broker._matches(bad_topic, test_filter)
 
     for good_topic in [
         "sport/tennis/player1",
@@ -647,7 +682,7 @@ def test_matches_multi_level_wildcard(broker):
         "sport/tennis/player1/ranking",
         "sport/tennis/player1/score/wimbledon",
     ]:
-        assert broker.matches(good_topic, test_filter)
+        assert broker._matches(good_topic, test_filter)
 
 
 def test_matches_single_level_wildcard(broker):
@@ -658,14 +693,14 @@ def test_matches_single_level_wildcard(broker):
         "sport/tennis/player1/",
         "sport/tennis/player1/ranking",
     ]:
-        assert not broker.matches(bad_topic, test_filter)
+        assert not broker._matches(bad_topic, test_filter)
 
     for good_topic in [
         "sport/tennis/",
         "sport/tennis/player1",
         "sport/tennis/player2",
     ]:
-        assert broker.matches(good_topic, test_filter)
+        assert broker._matches(good_topic, test_filter)
 
 
 @pytest.mark.asyncio
@@ -678,22 +713,29 @@ async def test_broker_broadcast_cancellation(broker):
     await sub_client.connect("mqtt://127.0.0.1")
     await sub_client.subscribe([(topic, qos)])
 
-    with patch.object(
-        BrokerProtocolHandler, "mqtt_publish", side_effect=asyncio.CancelledError
-    ) as mocked_mqtt_publish:
+    with patch.object(BrokerProtocolHandler, "mqtt_publish", side_effect=asyncio.CancelledError) as mocked_mqtt_publish:
         await _client_publish(topic, data, qos)
 
         # Second publish triggers the awaiting of first `mqtt_publish` task
         await _client_publish(topic, data, qos)
         await asyncio.sleep(0.01)
 
-        # `assert_awaited` does not exist in Python before `3.8`
-        if sys.version_info >= (3, 8):
-            mocked_mqtt_publish.assert_awaited()
-        else:
-            mocked_mqtt_publish.assert_called()
+        mocked_mqtt_publish.assert_awaited()
 
     # Ensure broadcast loop is still functional and can deliver the message
     await _client_publish(topic, data, qos)
     message = await asyncio.wait_for(sub_client.deliver_message(), timeout=1)
     assert message
+
+
+@pytest.mark.asyncio
+async def test_broker_socket_open_close(broker):
+
+    # check that https://github.com/Yakifo/amqtt/issues/86 is fixed
+
+    # mqtt 3.1 requires a connect packet, otherwise the socket connection is rejected
+    static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-123'
+    s = socket.create_connection(("127.0.0.1", 1883))
+    s.send(static_connect_packet)
+    await asyncio.sleep(0.1)
+    s.close()

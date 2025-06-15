@@ -1,167 +1,190 @@
-# Copyright (c) 2015 Nicolas JOUANIN
-#
-# See the file license.txt for copying permission.
-"""
-amqtt_sub - MQTT 3.1.1 publisher
-
-Usage:
-    amqtt_sub --version
-    amqtt_sub (-h | --help)
-    amqtt_sub --url BROKER_URL -t TOPIC... [-n COUNT] [-c CONFIG_FILE] [-i CLIENT_ID] [-q | --qos QOS] [-d] [-k KEEP_ALIVE] [--clean-session] [--ca-file CAFILE] [--ca-path CAPATH] [--ca-data CADATA] [ --will-topic WILL_TOPIC [--will-message WILL_MESSAGE] [--will-qos WILL_QOS] [--will-retain] ] [--extra-headers HEADER]
-
-Options:
-    -h --help           Show this screen.
-    --version           Show version.
-    --url BROKER_URL    Broker connection URL (musr conform to MQTT URI scheme (see https://github.com/mqtt/mqtt.github.io/wiki/URI-Scheme>)
-    -c CONFIG_FILE      Broker configuration file (YAML format)
-    -i CLIENT_ID        Id to use as client ID.
-    -n COUNT            Number of messages to read before ending.
-    -q | --qos QOS      Quality of service desired to receive messages, from 0, 1 and 2. Defaults to 0.
-    -t TOPIC...         Topic filter to subcribe
-    -k KEEP_ALIVE       Keep alive timeout in second
-    --clean-session     Clean session on connect (defaults to False)
-    --ca-file CAFILE]   CA file
-    --ca-path CAPATH]   CA Path
-    --ca-data CADATA    CA data
-    --will-topic WILL_TOPIC
-    --will-message WILL_MESSAGE
-    --will-qos WILL_QOS
-    --will-retain
-    --extra-headers EXTRA_HEADERS      JSON object with key-value pairs of additional headers for websocket connections
-    -d                  Enable debug messages
-"""
-
-import sys
-import logging
 import asyncio
-import os
+import contextlib
+from dataclasses import dataclass
 import json
+import logging
+import os
+from pathlib import Path
+import socket
+import sys
+from typing import Any
 
-import amqtt
-from amqtt.client import MQTTClient, ConnectException
-from amqtt.errors import MQTTException
-from docopt import docopt
+import typer
+
+from amqtt import __version__ as amqtt_version
+from amqtt.client import MQTTClient
+from amqtt.errors import ClientError, ConnectError, MQTTError
 from amqtt.mqtt.constants import QOS_0
 from amqtt.utils import read_yaml_config
 
 logger = logging.getLogger(__name__)
 
 
-def _gen_client_id():
-    import os
-    import socket
-
+def _gen_client_id() -> str:
     pid = os.getpid()
     hostname = socket.gethostname()
-    return "amqtt_sub/%d-%s" % (pid, hostname)
+    return f"amqtt_sub/{pid}-{hostname}"
 
 
-def _get_qos(arguments):
+def _get_extra_headers(extra_headers_json: str | None = None) -> dict[str, Any]:
     try:
-        return int(arguments["--qos"][0])
-    except:
-        return QOS_0
-
-
-def _get_extra_headers(arguments):
-    try:
-        return json.loads(arguments["--extra-headers"])
-    except:
+        extra_headers: dict[str, Any] = json.loads(extra_headers_json or "{}")
+    except (json.JSONDecodeError, TypeError):
         return {}
+    return extra_headers
 
 
-async def do_sub(client, arguments):
+@dataclass
+class CAInfo:
+    ca_file: str | None = None
+    ca_path: str | None = None
+    ca_data: str | None = None
 
+
+async def do_sub(client: MQTTClient,
+                 url: str,
+                 topics: list[str],
+                 ca_info: CAInfo,
+                 max_count: int | None = None,
+                 clean_session: bool = False,
+                 extra_headers_json: str | None = None,
+                 qos: int | None = None,
+                 ) -> None:
+    """Perform the subscription."""
     try:
+        logger.info(f"{client.client_id} Connecting to broker")
+
         await client.connect(
-            uri=arguments["--url"],
-            cleansession=arguments["--clean-session"],
-            cafile=arguments["--ca-file"],
-            capath=arguments["--ca-path"],
-            cadata=arguments["--ca-data"],
-            extra_headers=_get_extra_headers(arguments),
+            uri=url,
+            cleansession=clean_session,
+            cafile=ca_info.ca_file,
+            capath=ca_info.ca_path,
+            cadata=ca_info.ca_data,
+            additional_headers=_get_extra_headers(extra_headers_json),
         )
-        qos = _get_qos(arguments)
-        filters = []
-        for topic in arguments["-t"]:
-            filters.append((topic, qos))
+
+        filters = [(topic, qos) for topic in topics]
         await client.subscribe(filters)
-        if arguments["-n"]:
-            max_count = int(arguments["-n"])
-        else:
-            max_count = None
+
         count = 0
         while True:
             if max_count and count >= max_count:
                 break
             try:
                 message = await client.deliver_message()
-                count += 1
-                sys.stdout.buffer.write(message.publish_packet.data)
-                sys.stdout.write("\n")
-            except MQTTException:
+                if message and message.publish_packet and message.publish_packet.data:
+                    count += 1
+                    sys.stdout.buffer.write(message.publish_packet.data)
+                    sys.stdout.write("\n")
+            except MQTTError:
                 logger.debug("Error reading packet")
+
         await client.disconnect()
+        logger.info(f"{client.client_id} Disconnected from broker")
     except KeyboardInterrupt:
         await client.disconnect()
-    except ConnectException as ce:
-        logger.fatal("connection to '%s' failed: %r" % (arguments["--url"], ce))
-    except asyncio.CancelledError:
+        logger.info(f"{client.client_id} Disconnected from broker")
+    except ConnectError as exc:
+        logger.fatal(f"Connection to '{url}' failed: {exc!r}")
+        raise ConnectError from exc
+    except asyncio.CancelledError as exc:
         logger.fatal("Publish canceled due to previous error")
+        raise asyncio.CancelledError from exc
 
 
-def main(*args, **kwargs):
-    if sys.version_info[:2] < (3, 6):
-        logger.fatal("Error: Python 3.6+ is required")
-        sys.exit(-1)
+app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
-    arguments = docopt(__doc__, version=amqtt.__version__)
+
+def main() -> None:
+    """Entry point for the amqtt subscriber."""
+    app()
+
+
+def _version(v:bool) -> None:
+    if v:
+        typer.echo(f"{amqtt_version}")
+        raise typer.Exit(code=0)
+
+
+@app.command()
+def subscribe_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
+    url: str = typer.Option(None, help="Broker connection URL, *must conform to MQTT or URI scheme: `[mqtt(s)|ws(s)]://<username:password>@HOST:port`*", show_default=False),
+    config_file: str | None = typer.Option(None, "-c", help="Client configuration file"),
+    client_id: str | None = typer.Option(None, "-i", "--client-id", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),    max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending *default: read indefinitely*"),
+    qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
+    topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe, can be used multiple times."),  # noqa: B008
+    keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout in seconds"),
+    clean_session: bool = typer.Option(False, "--clean-session", help="Clean session on connect. *default: False*"),
+    ca_file: str | None = typer.Option(None, "--ca-file", help="Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    ca_path: str | None = typer.Option(None, "--ca-path", help="Define the path to a directory containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    ca_data: str | None = typer.Option(None, "--ca-data", help="Set the PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
+    will_topic: str | None = typer.Option(None, "--will-topic", help="The topic on which to send a Will, in the event that the client disconnects unexpectedly."),
+    will_message: str | None = typer.Option(None, "--will-message", help="Specify a message that will be stored by the broker and sent out if this client disconnects unexpectedly. *required if `--will-topic` is specified*."),
+    will_qos: int = typer.Option(0, "--will-qos", help="The QoS to use for the Will. *default: 0, only valid if `--will-topic` is specified*"),
+    will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. *only valid, if `--will-topic` is specified*"),
+    extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."),
+    debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
+    version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"),  # noqa : ARG001
+) -> None:
+    """Command line MQTT client to subscribe to one or more topics and display any messages received."""
+    if bool(will_message) != bool(will_topic):
+        typer.echo("❌ must specify both 'will_message' and 'will_topic' ")
+        raise typer.Exit(code=1)
+
+    if will_retain and not (will_message and will_topic):
+        typer.echo("❌ 'will-retain' only valid if 'will_message' and 'will_topic' are specified.", err=True)
+        raise typer.Exit(code=1)
+
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
-
-    if arguments["-d"]:
-        level = logging.DEBUG
-    else:
-        level = logging.INFO
+    level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)
 
-    config = None
-    if arguments["-c"]:
-        config = read_yaml_config(arguments["-c"])
+    if config_file:
+        config = read_yaml_config(config_file)
     else:
-        config = read_yaml_config(
-            os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
-            )
-        )
-        logger.debug(
-            os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "default_client.yaml"
-            )
-        )
-        logger.debug("Using default configuration")
-    loop = asyncio.get_event_loop()
+        default_config_path = Path(__file__).parent / "default_client.yaml"
+        logger.debug(f"Using default configuration from {default_config_path}")
+        config = read_yaml_config(default_config_path)
 
-    client_id = arguments.get("-i", None)
     if not client_id:
         client_id = _gen_client_id()
 
-    if arguments["-k"]:
-        config["keep_alive"] = int(arguments["-k"])
+    if not isinstance(config, dict):
+        logger.debug("Failed to correctly initialize config")
+        return
 
-    if (
-        arguments["--will-topic"]
-        and arguments["--will-message"]
-        and arguments["--will-qos"]
-    ):
-        config["will"] = dict()
-        config["will"]["topic"] = arguments["--will-topic"]
-        config["will"]["message"] = arguments["--will-message"].encode("utf-8")
-        config["will"]["qos"] = int(arguments["--will-qos"])
-        config["will"]["retain"] = arguments["--will-retain"]
+    if keep_alive:
+        config["keep_alive"] = keep_alive
+
+    if will_topic and will_message:
+        config["will"] = {
+            "topic": will_topic,
+            "message": will_message,
+            "qos": int(will_qos),
+            "retain": will_retain,
+        }
 
     client = MQTTClient(client_id=client_id, config=config)
-    loop.run_until_complete(do_sub(client, arguments))
-    loop.close()
+    ca_info = CAInfo(
+        ca_file=ca_file,
+        ca_path=ca_path,
+        ca_data=ca_data,
+    )
+    with contextlib.suppress(KeyboardInterrupt):
+        try:
+            asyncio.run(do_sub(client,
+                                           url=url,
+                                           topics=topics,
+                                           ca_info=ca_info,
+                                           extra_headers_json=extra_headers_json,
+                                           qos=qos or QOS_0,
+                                           max_count=max_count,
+                                           clean_session=clean_session,
+                                           ))
+
+        except (ClientError, ConnectError) as exc:
+            typer.echo("❌ Connection failed", err=True)
+            raise typer.Exit(code=1) from exc
 
 
 if __name__ == "__main__":
