@@ -167,7 +167,7 @@ class Broker:
             self.config.update(config)
         self._build_listeners_config(self.config)
 
-        self._loop = loop or asyncio.new_event_loop()
+        self._loop = loop or asyncio.get_running_loop()
         self._servers: dict[str, Server] = {}
         self._init_states()
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
