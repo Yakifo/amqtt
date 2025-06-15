@@ -9,6 +9,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeVar
 
 from amqtt.errors import PluginImportError, PluginInitError
+from amqtt.events import Events
 from amqtt.session import Session
 
 _LOGGER = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ class PluginManager(Generic[C]):
     def _schedule_coro(self, coro: Awaitable[str | bool | None]) -> asyncio.Future[str | bool | None]:
         return asyncio.ensure_future(coro)
 
-    async def fire_event(self, event_name: str, *args: Any, wait: bool = False, **kwargs: Any) -> None:
+    async def fire_event(self, event_name: Events, *args: Any, wait: bool = False, **kwargs: Any) -> None:
         """Fire an event to plugins.
 
         PluginManager schedules async calls for each plugin on method called "on_" + event_name.

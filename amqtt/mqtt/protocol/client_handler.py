@@ -2,12 +2,13 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 from amqtt.errors import AMQTTError, NoDataError
+from amqtt.events import MQTTEvents
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.pingreq import PingReqPacket
 from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.protocol.handler import EVENT_MQTT_PACKET_RECEIVED, ProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandler
 from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
@@ -93,7 +94,7 @@ class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
             connack = await ConnackPacket.from_stream(self.reader)
         except NoDataError as e:
             raise ConnectionError from e
-        await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=connack, session=self.session)
+        await self.plugins_manager.fire_event(MQTTEvents.PACKET_RECEIVED, packet=connack, session=self.session)
         return connack.return_code
 
     def handle_write_timeout(self) -> None:

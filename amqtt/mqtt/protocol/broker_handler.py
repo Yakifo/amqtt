@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import MQTTError
+from amqtt.events import MQTTEvents
 from amqtt.mqtt.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
@@ -24,8 +25,6 @@ from amqtt.mqtt.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import Session
 from amqtt.utils import format_client_message
-
-from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
 
 _MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
 
@@ -164,7 +163,7 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
     ) -> tuple["BrokerProtocolHandler", Session]:
         """Initialize from a CONNECT packet and validates the connection."""
         connect = await ConnectPacket.from_stream(reader)
-        await plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=connect)
+        await plugins_manager.fire_event(MQTTEvents.PACKET_RECEIVED, packet=connect)
 
         if connect.variable_header is None:
             msg = "CONNECT packet: variable header not initialized."
@@ -219,7 +218,7 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
                 connack = ConnackPacket.build(0, IDENTIFIER_REJECTED)
 
             if connack is not None:
-                await plugins_manager.fire_event(EVENT_MQTT_PACKET_SENT, packet=connack)
+                await plugins_manager.fire_event(MQTTEvents.PACKET_SENT, packet=connack)
                 await connack.to_stream(writer)
                 await writer.close()
                 raise MQTTError(error_msg) from None
