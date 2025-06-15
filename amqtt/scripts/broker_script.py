@@ -54,11 +54,10 @@ def broker_main(
         typer.echo(f"❌ Config file error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        broker = Broker(config)
+        broker = Broker(config, loop=loop)
     except (BrokerError, ParserError, PluginError) as exc:
         typer.echo(f"❌ Broker failed to start: {exc}", err=True)
         raise typer.Exit(code=1) from exc
