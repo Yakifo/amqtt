@@ -8,8 +8,8 @@ from importlib.metadata import EntryPoint, EntryPoints, entry_points
 import logging
 from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeVar
 
-from amqtt import Events
 from amqtt.errors import PluginImportError, PluginInitError
+from amqtt.events import Events
 from amqtt.session import Session
 
 _LOGGER = logging.getLogger(__name__)

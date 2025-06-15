@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 from paho.mqtt import client as mqtt_client
 
-from amqtt.broker import BrokerEvents
+from amqtt.events import BrokerEvents
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 

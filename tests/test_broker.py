@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, call, patch
 import psutil
 import pytest
 
-from amqtt import BrokerEvents
+from amqtt.events import BrokerEvents
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient

@@ -28,7 +28,7 @@ from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
-from . import BrokerEvents
+from .events import BrokerEvents
 from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import BaseContext, PluginManager
 
