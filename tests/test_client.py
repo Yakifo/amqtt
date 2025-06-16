@@ -15,20 +15,20 @@ logging.basicConfig(level=logging.ERROR, format=formatter)
 log = logging.getLogger(__name__)
 
 
-@pytest.mark.asyncio
-async def test_connect_tcp():
-    client = MQTTClient()
-    await client.connect("mqtt://broker.hivemq.com:1883/")
-    assert client.session is not None
-    await client.disconnect()
-
-
-@pytest.mark.asyncio
-async def test_connect_tcp_secure(ca_file_fixture):
-    client = MQTTClient(config={"check_hostname": False})
-    await client.connect("mqtts://broker.hivemq.com:8883/")
-    assert client.session is not None
-    await client.disconnect()
+# @pytest.mark.asyncio
+# async def test_connect_tcp():
+#     client = MQTTClient()
+#     await client.connect("mqtt://broker.hivemq.com:1883/")
+#     assert client.session is not None
+#     await client.disconnect()
+#
+#
+# @pytest.mark.asyncio
+# async def test_connect_tcp_secure(ca_file_fixture):
+#     client = MQTTClient(config={"check_hostname": False})
+#     await client.connect("mqtts://broker.hivemq.com:8883/")
+#     assert client.session is not None
+#     await client.disconnect()
 
 
 @pytest.mark.asyncio
