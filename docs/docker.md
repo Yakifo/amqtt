@@ -1,6 +1,8 @@
 # Containerization
 
-Built from [dockerfile](https://github.com/Yakifo/amqtt/blob/main/dockerfile), the default `aMQTT` broker is publicly available on [DockerHub](https://hub.docker.com/repository/docker/amqtt/amqtt).
+`amqtt` library is available on [PyPI](https://pypi.python.org/pypi/amqtt), [GitHub](https://github.com/Yakifo/amqtt) and [Read the Docs](http://amqtt.readthedocs.org/).
+
+Built from [Dockerfile](https://github.com/Yakifo/amqtt/blob/main/dockerfile), the default `aMQTT` broker is publicly available on [DockerHub](https://hub.docker.com/repository/docker/amqtt/amqtt).
 
 ## Launch
 

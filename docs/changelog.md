@@ -7,6 +7,8 @@
 - linting with ruff, pylint and mypy to keep the codebase consistent in format and structure
 - github workflow CI of linting before pull requests can be merged
 - run linting with git pre-commit hooks 
+- add docker container
+- switch to discord
 - updates to community contribution guidance, code of conduct, etc. 
 - overhaul of the documentation, including move to mkdocs with the materials UI
 - updated plugin documentation and full docs for the broker/client configuration 
@@ -24,14 +26,11 @@
 - [Issue #105](https://github.com/Yakifo/amqtt/issues/105) Add stack traces to logging
 - [Issue #95](https://github.com/Yakifo/amqtt/issues/95) asyncio.get_event_loop() deprecated in Python 3.10
 - [Issue #94](https://github.com/Yakifo/amqtt/issues/94) test matrix for dependencies
+- [Issue #70](https://github.com/Yakifo/amqtt/issues/70) event and plugin documentation
 - [Issue #67](https://github.com/Yakifo/amqtt/issues/67) MQTTClient fails to raise appropriate exception if URI is broken
 - [Issue #51](https://github.com/Yakifo/amqtt/issues/51) failing plugin kills the broker
 - [Issue #48](https://github.com/Yakifo/amqtt/issues/48) Setup unit tests running against different versions of dependencies
-- [Issue #159](https://github.com/Yakifo/amqtt/issues/159)
-- [Issue #159](https://github.com/Yakifo/amqtt/issues/159)
-
-
-
+- [Issue #35](https://github.com/Yakifo/amqtt/issues/35) plugin interface and optimization
 
 
 ## 0.10.0
