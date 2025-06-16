@@ -9,7 +9,7 @@ import useMqtt  from '../../assets/usemqtt';
 import type { DataPoint } from '../../assets/helpers';
 import {Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGithub, faPython, faDocker, faGitter } from "@fortawesome/free-brands-svg-icons";
+import { faGithub, faPython, faDocker, faDiscord } from "@fortawesome/free-brands-svg-icons";
 
 import rtdIcon from "../../assets/readthedocs.svg";
 
@@ -142,7 +142,7 @@ function secondsToDhms(seconds: int) {
                     <FontAwesomeIcon icon={faPython} size="xl"/> PyPi: <a href="https://pypi.org/project/amqtt/">aMQTT</a>
                   </p>
                   <p style={{textAlign: 'left'}}>
-                    <FontAwesomeIcon icon={faGitter} size="xl"/> Gitter: <a href="https://gitter.im/amqtt/community">aMQTT</a>
+                    <FontAwesomeIcon icon={faDiscord} size="xl"/> Discord: <a href="https://discord.gg/S3sP6dDaF3">aMQTT</a>
                   </p>
                 </td>
                 <td>

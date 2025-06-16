@@ -32,7 +32,7 @@ $ docker run -d -p 1883:1883 amqtt/amqtt:latest
 
 `amqtt` development is available on ![github](assets/github.svg) [GitHub](https://github.com/Yakifo/amqtt). Bug reports, patches and suggestions welcome!
 
-![github](assets/github.svg) [Open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the ![gitter](assets/gitter.svg) [gitter community](https://gitter.im/amqtt/community).
+![github](assets/github.svg) [Open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the ![discord](assets/discord.svg) [discord community](https://discord.gg/S3sP6dDaF3).
 
 ## Testing
 
