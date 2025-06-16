@@ -3,6 +3,7 @@ from functools import partial
 import logging
 from typing import TYPE_CHECKING, Any
 
+from amqtt.events import BrokerEvents
 from amqtt.plugins.base import BasePlugin
 from amqtt.plugins.manager import BaseContext
 
@@ -16,7 +17,10 @@ class EventLoggerPlugin(BasePlugin[BaseContext]):
     async def log_event(self, *args: Any, **kwargs: Any) -> None:
         """Log the occurrence of an event."""
         event_name = kwargs["event_name"].replace("old", "")
-        self.context.logger.info(f"### '{event_name}' EVENT FIRED ###")
+        if event_name.replace("on_", "") in (BrokerEvents.CLIENT_CONNECTED, BrokerEvents.CLIENT_DISCONNECTED):
+            self.context.logger.info(f"### '{event_name}' EVENT FIRED ###")
+        else:
+            self.context.logger.debug(f"### '{event_name}' EVENT FIRED ###")
 
     def __getattr__(self, name: str) -> Callable[..., Coroutine[Any, Any, None]]:
         """Dynamically handle calls to methods starting with 'on_'."""
