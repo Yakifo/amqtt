@@ -86,8 +86,18 @@ amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
 
+[tool.hatch.build]
+exclude = [
+  ".venv*",
+  "tests/",
+  "**/tests/",
+  "**/*.pyc",
+  "**/__pycache__/",
+  "**/README.md",
+]
+
 [tool.hatch.build.targets.sdist]
-include = ["/amqtt", "README.md"]
+include = ["/amqtt", "README.md", "docs/assets/amqtt.svg"]
 
 [tool.hatch.version]
 source = "vcs"
