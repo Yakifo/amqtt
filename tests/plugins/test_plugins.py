@@ -17,7 +17,7 @@ from amqtt.errors import PluginError, PluginInitError, PluginImportError
 from amqtt.events import MQTTEvents, BrokerEvents
 from amqtt.mqtt.constants import QOS_0
 from amqtt.plugins.base import BasePlugin
-from amqtt.plugins.manager import BaseContext
+from amqtt.plugins.contexts import BaseContext
 
 _INVALID_METHOD: str = "invalid_foo"
 _PLUGIN: str = "Plugin"

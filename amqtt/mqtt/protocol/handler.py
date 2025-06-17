@@ -57,7 +57,8 @@ from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.plugins.manager import BaseContext, PluginManager
+from amqtt.plugins.contexts import BaseContext
+from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 C = TypeVar("C", bound=BaseContext)

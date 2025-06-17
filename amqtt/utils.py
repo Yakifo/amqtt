@@ -53,6 +53,7 @@ def read_yaml_config(config_file: str | Path) -> dict[str, Any] | None:
 
 
 def cached_import(module_path: str, class_name: str | None = None) -> Any:
+    """Return cached import of a class from a module path (or retrieve, cache and then return)."""
     # Check whether module is loaded and fully initialized.
     if not ((module := sys.modules.get(module_path))
             and (spec := getattr(module, "__spec__", None))
@@ -64,17 +65,24 @@ def cached_import(module_path: str, class_name: str | None = None) -> Any:
 
 
 def import_string(dotted_path: str) -> Any:
-    """Import a dotted module path and return the attribute/class designated by the
-    last name in the path. Raise ImportError if the import failed.
+    """Import a dotted module path.
+
+    Returns:
+         attribute/class designated by the last name in the path
+
+    Raises:
+         ImportError (if the import failed)
+
     """
     try:
         module_path, class_name = dotted_path.rsplit(".", 1)
     except ValueError as err:
-        raise ImportError(f"{dotted_path} doesn't look like a module path") from err
+        msg = f"{dotted_path} doesn't look like a module path"
+        raise ImportError(msg) from err
 
     try:
         return cached_import(module_path, class_name)
     except AttributeError as err:
-        raise ImportError(
-            f'Module "{module_path}" does not define a "{class_name}" attribute/class'
-        ) from err
+        msg = f'Module "{module_path}" does not define a "{class_name}" attribute/class'
+
+        raise ImportError(msg) from err

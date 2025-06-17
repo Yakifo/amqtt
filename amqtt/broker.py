@@ -30,7 +30,8 @@ from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .events import BrokerEvents
 from .mqtt.disconnect import DisconnectPacket
-from .plugins.manager import BaseContext, PluginManager
+from .plugins.contexts import BaseContext
+from .plugins.manager import PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]

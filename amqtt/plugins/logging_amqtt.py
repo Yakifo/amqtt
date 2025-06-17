@@ -7,7 +7,7 @@ from amqtt.events import BrokerEvents
 from amqtt.mqtt import MQTTPacket
 from amqtt.mqtt.packet import MQTTFixedHeader, MQTTPayload, MQTTVariableHeader
 from amqtt.plugins.base import BasePlugin
-from amqtt.plugins.manager import BaseContext
+from amqtt.plugins.contexts import BaseContext
 from amqtt.session import Session
 
 PACKET: TypeAlias = MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader]

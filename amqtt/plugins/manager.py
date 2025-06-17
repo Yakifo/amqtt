@@ -1,4 +1,4 @@
-__all__ = ["BaseContext", "PluginManager", "get_plugin_manager"]
+__all__ = ["PluginManager", "get_plugin_manager"]
 
 import asyncio
 from collections import defaultdict
@@ -8,22 +8,20 @@ import copy
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from inspect import iscoroutinefunction
 import logging
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar, cast
 
-from dacite import DaciteError, from_dict, Config as DaciteConfig
+from dacite import Config as DaciteConfig, DaciteError, from_dict
 
-from amqtt.errors import PluginLoadError, PluginImportError, PluginInitError
+from amqtt.errors import PluginImportError, PluginInitError, PluginLoadError
 from amqtt.events import BrokerEvents, Events, MQTTEvents
+from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
+from amqtt.plugins.contexts import BaseContext
 from amqtt.session import Session
 from amqtt.utils import import_string
 
-_LOGGER = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from amqtt.broker import Action
-    from amqtt.plugins.authentication import BaseAuthPlugin
-    from amqtt.plugins.base import BasePlugin
-    from amqtt.plugins.topic_checking import BaseTopicPlugin
+
 
 class Plugin(NamedTuple):
     name: str
@@ -43,11 +41,11 @@ def get_plugin_manager(namespace: str) -> "PluginManager[Any] | None":
     return plugins_manager.get(namespace)
 
 
-class BaseContext:
-    def __init__(self) -> None:
-        self.loop: asyncio.AbstractEventLoop | None = None
-        self.logger: logging.Logger = _LOGGER
-        self.config: dict[str, Any] | None = None
+def safe_issubclass(sub: Any, sup: Any) -> bool:
+    try:
+        return isinstance(sub, type) and isinstance(sup, type) and issubclass(sub, sup)
+    except TypeError:
+        return False
 
 
 AsyncFunc: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
@@ -84,7 +82,8 @@ class PluginManager(Generic[C]):
 
     def _load_plugins(self, namespace: str | None = None) -> None:
         if self.app_context.config and "plugins" in self.app_context.config:
-            self._load_str_plugins(self.app_context.config.get("plugins"))
+            plugin_list: list[Any] = self.app_context.config.get("plugins", [])
+            self._load_str_plugins(plugin_list)
         else:
             if not namespace:
                 msg = "Namespace needs to be provided for EntryPoint plugin definitions"
@@ -148,15 +147,17 @@ class PluginManager(Generic[C]):
             self.logger.debug(f"Plugin init failed: {ep!r}", exc_info=True)
             raise PluginInitError(ep) from e
 
-    def _load_str_plugins(self, plugin_list: list[str|dict]) -> None:
+    def _load_str_plugins(self, plugin_list: list[Any]) -> None:
 
         self.logger.info("Loading plugins from config file")
 
         for plugin_info in plugin_list:
 
             if isinstance(plugin_info, dict):
-                assert len(plugin_info.keys()) == 1
-                plugin_path = list(plugin_info.keys())[0]
+                if len(plugin_info.keys()) > 1:
+                    msg = f"yaml config file should have only one key: {plugin_info.keys()}"
+                    raise ValueError(msg)
+                plugin_path = next(iter(plugin_info.keys()))
                 plugin_cfg = plugin_info[plugin_path]
                 plugin = self._load_str_plugin(plugin_path, plugin_cfg)
             elif isinstance(plugin_info, str):
@@ -171,16 +172,15 @@ class PluginManager(Generic[C]):
             if isinstance(plugin, BaseTopicPlugin):
                 self._topic_plugins.append(plugin)
 
-    def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin":
-        from amqtt.plugins.base import BasePlugin
+    def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin[C]":
 
         try:
-            plugin_class =  import_string(plugin_path)
+            plugin_class: Any =  import_string(plugin_path)
         except ModuleNotFoundError as ep:
-            self.logger.error(f"Plugin import failed: {plugin_path}")
-            raise PluginImportError from ep
+            msg = f"Plugin import failed: {plugin_path}"
+            raise PluginImportError(msg) from ep
 
-        if not issubclass(plugin_class, BasePlugin):
+        if not safe_issubclass(plugin_class, BasePlugin[C]):
             msg = f"Plugin {plugin_path} is not a subclass of 'BasePlugin'"
             raise PluginLoadError(msg)
 
@@ -194,7 +194,7 @@ class PluginManager(Generic[C]):
             raise PluginLoadError from e
 
         try:
-            return plugin_class(plugin_context)
+            return cast("BasePlugin[C]", plugin_class(plugin_context))
         except ImportError as e:
             raise PluginLoadError from e
 
@@ -303,7 +303,6 @@ class PluginManager(Generic[C]):
         :param session: the client session associated with the authentication check
         :return: dict containing return from coro call for each plugin.
         """
-
         return await self._map_plugin_method(
             self._auth_plugins, "authenticate", {"session": session })  # type: ignore[arg-type]
 
