@@ -1,0 +1,182 @@
+# MKDocs configuration file for generating RTD (readthedocs) documentation
+
+site_name: "aMQTT"
+site_description: "Python's asyncio-native MQTT broker and client."
+site_url: http://github.com
+repo_url: https://github.com/Yakifo/amqtt
+repo_name: Yakifo/amqtt
+site_dir: "dist/rtd"
+watch:
+  - mkdocs.rtd.yml
+  - README.md
+  - CONTRIBUTING.md
+  - SUPPORT.md
+  - SECURITY.md
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTING.md
+  - docs
+  - amqtt
+  - samples
+copyright: 'amqtt.io © 2025'
+edit_uri: edit/main/docs/
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+
+nav:
+  - Home:
+      - Overview: index.md
+      - Quickstart: quickstart.md
+      - Console scripts:
+          - Broker: references/amqtt.md
+          - Publisher: references/amqtt_pub.md
+          - Subscriber: references/amqtt_sub.md
+      - Programming API:
+          - Broker: references/broker.md
+          - Client: references/client.md
+          - Common: references/common.md
+      - Plugins:
+          - Packaged: packaged_plugins.md
+          - Custom: custom_plugins.md
+      - Configuration:
+          - Broker: references/broker_config.md
+          - Client: references/client_config.md
+      - Reference:
+          - Containerization: docker.md
+          - Support: support.md
+          - Contributing: contributing.md
+          - Change log: changelog.md
+          - Coverage: coverage.md
+          - Code of Conduct: code_of_conduct.md
+          - Security: security.md
+          - License: license.md
+
+theme:
+  name: material
+  logo: assets/amqtt_bw.svg
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - navigation.footer
+    - navigation.instant.preview
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+    - version
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+extra_css:
+  - assets/extra.css
+
+#extra_javascript:
+#- assets/extra.js
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - callouts:
+      strip_period: false
+  - footnotes
+  - pymdownx.details
+  - pymdownx.highlight:
+      pygments_lang_class: true
+  - pymdownx.magiclink
+  - pymdownx.snippets:
+      base_path: !relative $config_dir
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - toc:
+      permalink: "¤"
+
+plugins:
+  - search
+  - autorefs
+  - open-in-new-tab
+  - markdown-exec
+  - section-index
+  - coverage
+  - mkdocs-typer2
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [amqtt]
+          options:
+            docstring_options:
+              ignore_init_summary: true
+            docstring_section_style: list
+            filters: ["!^_"]
+            heading_level: 1
+            inherited_members: true
+            merge_init_into_class: true
+            parameter_headings: true
+            separate_signature: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_source: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+            summary: true
+  - git-revision-date-localized:
+      enabled: !ENV [DEPLOY, false]
+      enable_creation_date: true
+      type: timeago
+
+  #- redirects:
+  #    redirect_maps:
+  #      original_file.md: new/file_location.md
+
+  - minify:
+      minify_html: !ENV [DEPLOY, false]
+  - group:
+      enabled: !ENV [MATERIAL_INSIDERS, false]
+      plugins:
+        - typeset
+
+extra:
+  version:
+    provider: readthedocs
+    default: v0.11.0
+    warning: true
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/pawamoy
+    - icon: fontawesome/brands/mastodon
+      link: https://fosstodon.org/@pawamoy
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/pawamoy
+    - icon: fontawesome/brands/gitter
+      link: https://gitter.im/mkdocstrings/community
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/mkdocstrings/

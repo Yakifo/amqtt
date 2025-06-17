@@ -1,9 +1,8 @@
-import logging
 import asyncio
+import logging
 
-from amqtt.client import MQTTClient, ConnectException
+from amqtt.client import ConnectError, MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
-
 
 #
 # This sample shows how to publish messages to broker using different QOS
@@ -18,11 +17,11 @@ config = {
         "message": b"Dead or alive",
         "qos": 0x01,
         "retain": True,
-    }
+    },
 }
 
 
-async def test_coro():
+async def test_coro() -> None:
     C = MQTTClient()
     await C.connect("mqtt://test.mosquitto.org/")
     tasks = [
@@ -35,7 +34,7 @@ async def test_coro():
     await C.disconnect()
 
 
-async def test_coro2():
+async def test_coro2() -> None:
     try:
         C = MQTTClient()
         await C.connect("mqtt://test.mosquitto.org:1883/")
@@ -44,15 +43,13 @@ async def test_coro2():
         await C.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=0x02)
         logger.info("messages published")
         await C.disconnect()
-    except ConnectException as ce:
-        logger.error("Connection failed: %s" % ce)
+    except ConnectError:
+        logger.exception(f"Connection failed", exc_info=True)
         asyncio.get_event_loop().stop()
 
 
 if __name__ == "__main__":
-    formatter = (
-        "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-    )
+    formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     formatter = "%(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
     asyncio.get_event_loop().run_until_complete(test_coro())
