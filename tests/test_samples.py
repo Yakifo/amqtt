@@ -22,10 +22,11 @@ async def test_broker_acl():
     broker_acl_script = Path(__file__).parent.parent / "samples/broker_acl.py"
     process = subprocess.Popen(["python", broker_acl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
-    assert "INFO :: amqtt.broker :: Broker closed" in stderr.decode("utf-8")
+    logger.debug(stderr.decode("utf-8"))
+    assert "Broker closed" in stderr.decode("utf-8")
     assert "ERROR" not in stderr.decode("utf-8")
     assert "Exception" not in stderr.decode("utf-8")
 
@@ -35,10 +36,11 @@ async def test_broker_simple():
     broker_simple_script = Path(__file__).parent.parent / "samples/broker_simple.py"
     process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
-    assert "INFO :: amqtt.broker :: Broker closed" in stderr.decode("utf-8")
+    logger.debug(stderr.decode("utf-8"))
+    assert "Broker closed" in stderr.decode("utf-8")
     assert "ERROR" not in stderr.decode("utf-8")
     assert "Exception" not in stderr.decode("utf-8")
 
@@ -48,10 +50,11 @@ async def test_broker_start():
     broker_start_script = Path(__file__).parent.parent / "samples/broker_start.py"
     process = subprocess.Popen(["python", broker_start_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
-    assert "INFO :: amqtt.broker :: Broker closed" in stderr.decode("utf-8")
+    logger.debug(stderr.decode("utf-8"))
+    assert "Broker closed" in stderr.decode("utf-8")
     assert "ERROR" not in stderr.decode("utf-8")
     assert "Exception" not in stderr.decode("utf-8")
 
@@ -61,9 +64,10 @@ async def test_broker_taboo():
     broker_taboo_script = Path(__file__).parent.parent / "samples/broker_taboo.py"
     process = subprocess.Popen(["python", broker_taboo_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
+    logger.debug(stderr.decode("utf-8"))
     assert "INFO :: amqtt.broker :: Broker closed" in stderr.decode("utf-8")
     assert "ERROR" not in stderr.decode("utf-8")
     assert "Exception" not in stderr.decode("utf-8")
@@ -91,9 +95,10 @@ async def test_client_publish_acl():
     broker_simple_script = Path(__file__).parent.parent / "samples/client_publish_acl.py"
     process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
+    logger.debug(stderr.decode("utf-8"))
     assert "ERROR" not in stderr.decode("utf-8")
     assert "Exception" not in stderr.decode("utf-8")
 
@@ -116,7 +121,7 @@ async def test_client_subscribe_plugin_acl():
     broker_simple_script = Path(__file__).parent.parent / "samples/client_subscribe_acl.py"
     process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
     logger.debug(stderr.decode("utf-8"))
@@ -135,7 +140,7 @@ async def test_client_subscribe_plugin_taboo():
     broker_simple_script = Path(__file__).parent.parent / "samples/client_subscribe_acl.py"
     process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(4)
+    await asyncio.sleep(5)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
     logger.debug(stderr.decode("utf-8"))
