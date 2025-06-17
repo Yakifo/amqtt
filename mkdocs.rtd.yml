@@ -5,7 +5,7 @@ site_description: "Python's asyncio-native MQTT broker and client."
 site_url: http://github.com
 repo_url: https://github.com/Yakifo/amqtt
 repo_name: Yakifo/amqtt
-site_dir: "site"
+site_dir: "dist/rtd"
 watch:
   - mkdocs.rtd.yml
   - README.md
