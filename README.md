@@ -7,7 +7,7 @@
 ![Python Wheel](https://img.shields.io/pypi/wheel/amqtt?style=plastic)
 [![PyPI](https://img.shields.io/pypi/v/amqtt?style=plastic&logo=python&logoColor=yellow)](https://pypi.org/project/amqtt/)
 
-![docs/assets/amqtt.svg](https://amqtt.readthedocs.io/en/v0.11.0/docs/assets/amqtt.svg)
+![docs/assets/amqtt.svg](https://github.com/Yakifo/amqtt/blob/v0.11.0/docs/assets/amqtt.svg)
 
 `aMQTT` is an open source [MQTT](http://www.mqtt.org) broker and client[^1], natively implemented with Python's [asyncio](https://docs.python.org/3/library/asyncio.html).
 
@@ -38,6 +38,11 @@ Launch from [DockerHub](https://hub.docker.com/repositories/amqtt)
 ```shell
 $ docker run -d -p 1883:1883 amqtt/amqtt:latest
 ```
+
+## Testing
+
+The `amqtt` project runs a test aMQTT broker/server at [test.amqtt.io](https://test.amqtt.io) which supports: MQTT, MQTT over TLS, websocket, secure websockets.
+
 
 ## Support
 

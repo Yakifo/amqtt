@@ -28,17 +28,14 @@ Launch from ![dockerhub](assets/docker.svg) [DockerHub](https://hub.docker.com/r
 $ docker run -d -p 1883:1883 amqtt/amqtt:latest
 ```
 
+## Testing
+
+The `amqtt` project runs a test aMQTT broker/server at [test.amqtt.io](https://test.amqtt.io) which supports: MQTT, MQTT over TLS, websocket, secure websockets.
+
+
 ## Support
 
 `amqtt` development is available on ![github](assets/github.svg) [GitHub](https://github.com/Yakifo/amqtt). Bug reports, patches and suggestions welcome!
 
 ![github](assets/github.svg) [Open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the ![discord](assets/discord.svg) [discord community](https://discord.gg/S3sP6dDaF3).
 
-## Testing
-
-The `amqtt` project runs a test MQTT server at [test.amqtt.io](https://test.amqtt.io) which supports:
-
-- MQTT
-- MQTT over TLS
-- websockets
-- secure websockets
