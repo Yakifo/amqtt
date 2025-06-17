@@ -4,7 +4,8 @@ import pytest
 
 from amqtt.broker import Action, BrokerContext, Broker
 from amqtt.plugins.manager import BaseContext
-from amqtt.plugins.topic_checking import BaseTopicPlugin, TopicAccessControlListPlugin, TopicTabooPlugin
+from amqtt.plugins.topic_checking import TopicAccessControlListPlugin, TopicTabooPlugin
+from amqtt.plugins.base import BaseTopicPlugin
 from amqtt.session import Session
 
 # Base plug-in object

@@ -4,10 +4,8 @@ from dataclasses import dataclass
 
 from amqtt.broker import Action
 
-from amqtt.plugins.base import BasePlugin
+from amqtt.plugins.base import BasePlugin, BaseTopicPlugin, BaseAuthPlugin
 from amqtt.plugins.manager import BaseContext
-from amqtt.plugins.topic_checking import BaseTopicPlugin
-from amqtt.plugins.authentication import BaseAuthPlugin
 
 from amqtt.session import Session
 

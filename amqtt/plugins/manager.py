@@ -18,9 +18,8 @@ _LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from amqtt.broker import Action
-    from amqtt.plugins.authentication import BaseAuthPlugin
-    from amqtt.plugins.base import BasePlugin
-    from amqtt.plugins.topic_checking import BaseTopicPlugin
+    from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
+
 
 class Plugin(NamedTuple):
     name: str
