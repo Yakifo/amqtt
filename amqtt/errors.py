@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class AMQTTError(Exception):
     """aMQTT base exception."""
 
@@ -13,9 +16,26 @@ class CodecError(Exception):
 class NoDataError(Exception):
     """Exceptions thrown by packet encode/decode functions."""
 
+class ZeroLengthReadError(NoDataError):
+    def __init__(self) -> None:
+        super().__init__("Decoding a string of length zero.")
 
 class BrokerError(Exception):
     """Exceptions thrown by broker."""
+
+
+class PluginError(Exception):
+    """Exceptions thrown when loading or initializing a plugin."""
+
+
+class PluginImportError(PluginError):
+    def __init__(self, plugin: Any) -> None:
+        super().__init__(f"Plugin import failed: {plugin!r}")
+
+
+class PluginInitError(PluginError):
+    def __init__(self, plugin: Any) -> None:
+        super().__init__(f"Plugin init failed: {plugin!r}")
 
 
 class ClientError(Exception):

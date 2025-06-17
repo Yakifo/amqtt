@@ -11,7 +11,7 @@ listeners:
     bind: 0.0.0.0:8883
     ssl: on
     certfile: /etc/letsencrypt/live/test.amqtt.io/fullchain.pem
-    keyfile: /etc/letsencrypt/live/test.amqtt.io/privkey.pemkk
+    keyfile: /etc/letsencrypt/live/test.amqtt.io/privkey.pem
   tls-ws:
     type: ws
     bind: 0.0.0.0:8443

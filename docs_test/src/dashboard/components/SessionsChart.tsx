@@ -6,7 +6,6 @@ import Stack from '@mui/material/Stack';
 import { LineChart } from '@mui/x-charts/LineChart';
 import CountUp from 'react-countup';
 import type { DataPoint } from '../../assets/helpers.jsx';
-import React from "react";
 import {CircularProgress} from "@mui/material";
 
 const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;

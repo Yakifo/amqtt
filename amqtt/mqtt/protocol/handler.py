@@ -21,6 +21,7 @@ from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
+from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
@@ -58,9 +59,6 @@ from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import BaseContext, PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
-
-EVENT_MQTT_PACKET_SENT = "mqtt_packet_sent"
-EVENT_MQTT_PACKET_RECEIVED = "mqtt_packet_received"
 
 C = TypeVar("C", bound=BaseContext)
 
@@ -153,7 +151,8 @@ class ProtocolHandler(Generic[C]):
             if self.writer is not None:
                 await self.writer.close()
         except asyncio.CancelledError:
-            self.logger.debug("Writer close was cancelled.", exc_info=True)
+            # canceling the task is the expected result
+            self.logger.debug("Writer close was cancelled.")
         except TimeoutError:
             self.logger.debug("Writer close operation timed out.", exc_info=True)
         except OSError:
@@ -472,7 +471,7 @@ class ProtocolHandler(Generic[C]):
 
                 cls = packet_class(fixed_header)
                 packet = await cls.from_stream(self.reader, fixed_header=fixed_header)
-                await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=packet, session=self.session)
+                await self.plugins_manager.fire_event(MQTTEvents.PACKET_RECEIVED, packet=packet, session=self.session)
                 if packet.fixed_header is None or packet.fixed_header.packet_type not in (
                     CONNACK,
                     SUBSCRIBE,
@@ -569,7 +568,7 @@ class ProtocolHandler(Generic[C]):
                 self._keepalive_task.cancel()
                 if self.keepalive_timeout is not None:
                     self._keepalive_task = self._loop.call_later(self.keepalive_timeout, self.handle_write_timeout)
-            await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_SENT, packet=packet, session=self.session)
+            await self.plugins_manager.fire_event(MQTTEvents.PACKET_SENT, packet=packet, session=self.session)
         except (ConnectionResetError, BrokenPipeError):
             await self.handle_connection_closed()
         except asyncio.CancelledError as e:

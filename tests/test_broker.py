@@ -6,19 +6,9 @@ from unittest.mock import MagicMock, call, patch
 import psutil
 import pytest
 
+from amqtt.events import BrokerEvents
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
-from amqtt.broker import (
-    EVENT_BROKER_CLIENT_CONNECTED,
-    EVENT_BROKER_CLIENT_DISCONNECTED,
-    EVENT_BROKER_CLIENT_SUBSCRIBED,
-    EVENT_BROKER_CLIENT_UNSUBSCRIBED,
-    EVENT_BROKER_MESSAGE_RECEIVED,
-    EVENT_BROKER_POST_SHUTDOWN,
-    EVENT_BROKER_POST_START,
-    EVENT_BROKER_PRE_SHUTDOWN,
-    EVENT_BROKER_PRE_START,
-    Broker,
-)
+from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.errors import ConnectError
 from amqtt.mqtt.connack import ConnackPacket
@@ -67,8 +57,8 @@ def test_split_bindaddr_port(input_str, output_addr, output_port):
 async def test_start_stop(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(EVENT_BROKER_PRE_START),
-            call().fire_event(EVENT_BROKER_POST_START),
+            call().fire_event(BrokerEvents.PRE_START),
+            call().fire_event(BrokerEvents.POST_START),
         ],
         any_order=True,
     )
@@ -76,8 +66,8 @@ async def test_start_stop(broker, mock_plugin_manager):
     await broker.shutdown()
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(EVENT_BROKER_PRE_SHUTDOWN),
-            call().fire_event(EVENT_BROKER_POST_SHUTDOWN),
+            call().fire_event(BrokerEvents.PRE_SHUTDOWN),
+            call().fire_event(BrokerEvents.POST_SHUTDOWN),
         ],
         any_order=True,
     )
@@ -98,11 +88,11 @@ async def test_client_connect(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_CONNECTED,
+                BrokerEvents.CLIENT_CONNECTED,
                 client_id=client.session.client_id,
             ),
             call().fire_event(
-                EVENT_BROKER_CLIENT_DISCONNECTED,
+                BrokerEvents.CLIENT_DISCONNECTED,
                 client_id=client.session.client_id,
             ),
         ],
@@ -235,7 +225,7 @@ async def test_client_subscribe(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                BrokerEvents.CLIENT_SUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
@@ -272,7 +262,7 @@ async def test_client_subscribe_twice(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                BrokerEvents.CLIENT_SUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
@@ -306,13 +296,13 @@ async def test_client_unsubscribe(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_CLIENT_SUBSCRIBED,
+                BrokerEvents.CLIENT_SUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
                 qos=QOS_0,
             ),
             call().fire_event(
-                EVENT_BROKER_CLIENT_UNSUBSCRIBED,
+                BrokerEvents.CLIENT_UNSUBSCRIBED,
                 client_id=client.session.client_id,
                 topic="/topic",
             ),
@@ -337,7 +327,7 @@ async def test_client_publish(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_MESSAGE_RECEIVED,
+                BrokerEvents.MESSAGE_RECEIVED,
                 client_id=pub_client.session.client_id,
                 message=ret_message,
             ),
@@ -509,7 +499,7 @@ async def test_client_publish_big(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
-                EVENT_BROKER_MESSAGE_RECEIVED,
+                BrokerEvents.MESSAGE_RECEIVED,
                 client_id=pub_client.session.client_id,
                 message=ret_message,
             ),
@@ -641,10 +631,6 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(
-    reason="see https://github.com/Yakifo/aio-amqtt/issues/16",
-    strict=False,
-)
 async def test_client_publish_retain_subscribe(broker):
     sub_client = MQTTClient()
     await sub_client.connect("mqtt://127.0.0.1", cleansession=False)
@@ -740,3 +726,16 @@ async def test_broker_broadcast_cancellation(broker):
     await _client_publish(topic, data, qos)
     message = await asyncio.wait_for(sub_client.deliver_message(), timeout=1)
     assert message
+
+
+@pytest.mark.asyncio
+async def test_broker_socket_open_close(broker):
+
+    # check that https://github.com/Yakifo/amqtt/issues/86 is fixed
+
+    # mqtt 3.1 requires a connect packet, otherwise the socket connection is rejected
+    static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-123'
+    s = socket.create_connection(("127.0.0.1", 1883))
+    s.send(static_connect_packet)
+    await asyncio.sleep(0.1)
+    s.close()

@@ -1,10 +1,13 @@
 import asyncio
 import logging
+from importlib.metadata import EntryPoint
+from unittest.mock import patch
 
 import pytest
 
+from amqtt.broker import Broker
 from amqtt.client import MQTTClient
-from amqtt.errors import ConnectError
+from amqtt.errors import ClientError, ConnectError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -15,15 +18,15 @@ log = logging.getLogger(__name__)
 # @pytest.mark.asyncio
 # async def test_connect_tcp():
 #     client = MQTTClient()
-#     await client.connect("mqtt://test.mosquitto.org:1883/")
+#     await client.connect("mqtt://broker.hivemq.com:1883/")
 #     assert client.session is not None
 #     await client.disconnect()
-
-
+#
+#
 # @pytest.mark.asyncio
 # async def test_connect_tcp_secure(ca_file_fixture):
 #     client = MQTTClient(config={"check_hostname": False})
-#     await client.connect("mqtts://test.mosquitto.org:8883/", cafile=ca_file_fixture)
+#     await client.connect("mqtts://broker.hivemq.com:8883/")
 #     assert client.session is not None
 #     await client.disconnect()
 
@@ -265,27 +268,121 @@ def client_config():
 
 
 @pytest.mark.asyncio
-async def test_client_publish_will_with_retain(broker_fixture, client_config):
+async def test_client_will_with_clean_disconnect(broker_fixture):
+    config = {
+        "will": {
+            "topic": "test/will/topic",
+            "retain": False,
+            "message": "client ABC has disconnected",
+            "qos": 1
+        },
+    }
 
-    # verifying client functionality of will topic
-    # https://github.com/Yakifo/amqtt/issues/159
+    client1 = MQTTClient(client_id="client1", config=config)
+    await client1.connect("mqtt://localhost:1883")
 
-    client1 = MQTTClient(client_id="client1")
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect("mqtt://localhost:1883")
+    await client2.subscribe(
+        [
+            ("test/will/topic", QOS_0),
+        ]
+    )
+
+    await client1.disconnect()
+    await asyncio.sleep(1)
+
+    with pytest.raises(asyncio.TimeoutError):
+        message = await client2.deliver_message(timeout_duration=2)
+        # if we do get a message, make sure it's not a will message
+        assert message.topic != "test/will/topic"
+
+    await client2.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_will_with_abrupt_disconnect(broker_fixture):
+    config = {
+        "will": {
+            "topic": "test/will/topic",
+            "retain": False,
+            "message": "client ABC has disconnected",
+            "qos": 1
+        },
+    }
+
+    client1 = MQTTClient(client_id="client1", config=config)
+    await client1.connect("mqtt://localhost:1883")
+
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect("mqtt://localhost:1883")
+    await client2.subscribe(
+        [
+            ("test/will/topic", QOS_0),
+        ]
+    )
+
+    # instead of client.disconnect, call the necessary closing but without sending the disconnect packet
+    await client1.cancel_tasks()
+    if client1._disconnect_task and not client1._disconnect_task.done():
+        client1._disconnect_task.cancel()
+    client1._connected_state.clear()
+    await client1._handler.stop()
+    client1.session.transitions.disconnect()
+
+    await asyncio.sleep(1)
+
+
+    message = await client2.deliver_message(timeout_duration=1)
+    # make sure we receive the will message
+    assert message.topic == "test/will/topic"
+    assert message.data == b'client ABC has disconnected'
+
+    await client2.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_retained_will_with_abrupt_disconnect(broker_fixture):
+
+    # verifying client functionality of retained will topic/message
+
+    config = {
+        "will": {
+            "topic": "test/will/topic",
+            "retain": True,
+            "message": "client ABC has disconnected",
+            "qos": 1
+        },
+    }
+
+    # first client, connect with retained will message
+    client1 = MQTTClient(client_id="client1", config=config)
     await client1.connect('mqtt://localhost:1883')
-    await  client1.subscribe([
+
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect('mqtt://localhost:1883')
+    await  client2.subscribe([
         ("test/will/topic", QOS_0)
         ])
 
-    client2 = MQTTClient(client_id="client2", config=client_config)
-    await client2.connect('mqtt://localhost:1883')
-    await client2.publish('my/topic', b'my message')
-    await client2.disconnect()
 
-    message = await client1.deliver_message(timeout_duration=1)
+    # let's abruptly disconnect client1
+    await client1.cancel_tasks()
+    if client1._disconnect_task and not client1._disconnect_task.done():
+        client1._disconnect_task.cancel()
+    client1._connected_state.clear()
+    await client1._handler.stop()
+    client1.session.transitions.disconnect()
+
+    await asyncio.sleep(0.5)
+
+    # make sure the client which is still connected that we get the 'will' message
+    message = await client2.deliver_message(timeout_duration=1)
     assert message.topic == 'test/will/topic'
     assert message.data == b'client ABC has disconnected'
-    await client1.disconnect()
+    await client2.disconnect()
 
+    # make sure a client which is connected after client1 disconnected still receives the 'will' message from
     client3 = MQTTClient(client_id="client3")
     await client3.connect('mqtt://localhost:1883')
     await client3.subscribe([
@@ -295,3 +392,92 @@ async def test_client_publish_will_with_retain(broker_fixture, client_config):
     assert message3.topic == 'test/will/topic'
     assert message3.data == b'client ABC has disconnected'
     await client3.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_abruptly_disconnecting_with_empty_will_message(broker_fixture):
+
+    config = {
+        "will": {
+            "topic": "test/will/topic",
+            "retain": True,
+            "message": "",
+            "qos": 1
+        },
+    }
+    client1 = MQTTClient(client_id="client1", config=config)
+    await client1.connect('mqtt://localhost:1883')
+
+    client2 = MQTTClient(client_id="client2")
+    await client2.connect('mqtt://localhost:1883')
+    await client2.subscribe([
+        ("test/will/topic", QOS_0)
+    ])
+
+    # let's abruptly disconnect client1
+    await client1.cancel_tasks()
+    if client1._disconnect_task and not client1._disconnect_task.done():
+        client1._disconnect_task.cancel()
+    client1._connected_state.clear()
+    await client1._handler.stop()
+    client1.session.transitions.disconnect()
+
+    await asyncio.sleep(0.5)
+
+    message = await client2.deliver_message(timeout_duration=1)
+    assert message.topic == 'test/will/topic'
+    assert message.data == b''
+
+    await client2.disconnect()
+
+
+async def test_connect_broken_uri():
+    config = {"auto_reconnect": False}
+    client = MQTTClient(config=config)
+    with pytest.raises(ClientError):
+        await client.connect('"mqtt://someplace')
+
+
+@pytest.mark.asyncio
+async def test_connect_incorrect_scheme():
+    config = {"auto_reconnect": False}
+    client = MQTTClient(config=config)
+    with pytest.raises(ClientError):
+        await client.connect('"mq://someplace')
+
+
+async def test_client_no_auth():
+
+    class MockEntryPoints:
+
+        def select(self, group) -> list[EntryPoint]:
+            match group:
+                case 'tests.mock_plugins':
+                    return [
+                            EntryPoint(name='auth_plugin', group='tests.mock_plugins', value='tests.plugins.mocks:NoAuthPlugin'),
+                        ]
+                case _:
+                    return list()
+
+
+    with patch("amqtt.plugins.manager.entry_points", side_effect=MockEntryPoints) as mocked_mqtt_publish:
+
+        config = {
+            "listeners": {
+                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+            },
+            'sys_interval': 1,
+            'auth': {
+                'plugins': ['auth_plugin', ]
+            }
+        }
+
+        client = MQTTClient(client_id="client1", config={'auto_reconnect': False})
+
+        broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
+        await broker.start()
+
+        with pytest.raises(ConnectError):
+            await client.connect("mqtt://127.0.0.1:1883/")
+
+        await broker.shutdown()

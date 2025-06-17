@@ -20,7 +20,7 @@ classifiers = [
   "Programming Language :: Python :: 3.13"
 ]
 
-version = "0.11.0rc1"
+version = "0.11.0"
 requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }
@@ -87,16 +87,24 @@ amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
 
+[tool.hatch.build]
+exclude = [
+  ".venv*",
+  "tests/",
+  "**/tests/",
+  "**/*.pyc",
+  "**/__pycache__/",
+  "**/README.md",
+]
+
 [tool.hatch.build.targets.sdist]
-include = ["/amqtt"]
+include = ["/amqtt", "README.md", "docs/assets/amqtt.svg"]
 
 [tool.hatch.version]
 source = "vcs"
 
-[tool.poe.tasks]
-rtd = "mkdocs serve -f mkdocs.rtd.yml"
-test = "pytest"
-docs = "mkdocs build"
+[tool.hatch.publish.indexes.testpypi]
+url = "https://test.pypi.org/legacy/"
 
 # ___________________________________ PLUGINS __________________________________
 [project.entry-points."amqtt.test.plugins"]
