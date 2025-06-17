@@ -87,15 +87,13 @@ amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
 
 [tool.hatch.build.targets.sdist]
-include = ["/amqtt"]
+include = ["/amqtt", "README.md"]
 
 [tool.hatch.version]
 source = "vcs"
 
-[tool.poe.tasks]
-rtd = "mkdocs serve -f mkdocs.rtd.yml"
-test = "pytest"
-docs = "mkdocs build"
+[tool.hatch.publish.indexes.testpypi]
+url = "https://test.pypi.org/legacy/"
 
 # ___________________________________ PLUGINS __________________________________
 [project.entry-points."amqtt.test.plugins"]
