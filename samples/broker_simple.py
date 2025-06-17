@@ -1,21 +1,31 @@
 import asyncio
 import logging
+from asyncio import CancelledError
 
 from amqtt.broker import Broker
 
-broker = Broker()
+"""
+This sample shows how to run a broker
+"""
+
+formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
+logging.basicConfig(level=logging.INFO, format=formatter)
 
 
-async def test_coro() -> None:
-    await broker.start()
+async def run_server() -> None:
+    broker = Broker()
+    try:
+        await broker.start()
+        while True:
+            await asyncio.sleep(1)
+    except CancelledError:
+        await broker.shutdown()
 
+def __main__():
+    try:
+        asyncio.run(run_server())
+    except KeyboardInterrupt:
+        print("Server exiting...")
 
 if __name__ == "__main__":
-    formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
-    logging.basicConfig(level=logging.INFO, format=formatter)
-
-    asyncio.get_event_loop().run_until_complete(test_coro())
-    try:
-        asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
-        asyncio.get_event_loop().run_until_complete(broker.shutdown())
+    __main__()
