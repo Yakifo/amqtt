@@ -33,7 +33,11 @@
 - [Issue #35](https://github.com/Yakifo/amqtt/issues/35) plugin interface and optimization
 
 
-## 0.10.0
+## 0.10.2
+
+- create the necessary .readthedocs.yaml to generate sphinx docs from the 0.10.x series
+
+## 0.10.1
 
 - First release under new package name: amqtt
 - Reworked unit tests

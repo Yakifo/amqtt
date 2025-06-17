@@ -46,8 +46,7 @@ export default function MainGrid() {
   }
 
   const mqtt_settings = {
-    url: import.meta.env.VITE_MQTT_WS_TYPE + '://' + import.meta.env.VITE_MQTT_WS_HOST + ':' + import.meta.env.VITE_MQTT_WS_PORT,
-    client_id: `web-client-${getRandomInt(1, 100)}`,
+    url: import.meta.env.VITE_MQTT_WS_TYPE + '://' + import.meta.env.VITE_MQTT_WS_HOST + ':' + import.meta.env.VITE_MQTT_WS_PORT, client_id: `web-client-${getRandomInt(1, 100)}`,
       clean: true,
       protocol: 'wss',
       protocolVersion: 4, // MQTT 3.1.1

@@ -1,10 +1,12 @@
 services:
   amqtt:
-    image: amqtt
+    image: amqtt/amqtt
     container_name: amqtt
     ports:
       - "1883:1883"
       - "8080:8080"
+      - "8443:8443"
+      - "8883:8883"
     logging:
       driver: "json-file"
       options:
@@ -12,3 +14,4 @@ services:
         max-file: "3"
     volumes:
       - ./broker.yaml:/app/conf/broker.yaml
+      - /etc/letsencrypt:/app/cert:ro
