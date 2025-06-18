@@ -767,13 +767,7 @@ class Broker:
         :param action: What is being done with the topic?  subscribe or publish
         :return:
         """
-        topic_config = self.config.get("topic-check", {})
-        enabled = False
-
-        if isinstance(topic_config, dict):
-            enabled = topic_config.get("enabled", False)
-
-        if not enabled:
+        if not self.plugins_manager.is_topic_filtering_enabled():
             return True
 
         results = await self.plugins_manager.map_plugin_topic(session=session, topic=topic, action=action)

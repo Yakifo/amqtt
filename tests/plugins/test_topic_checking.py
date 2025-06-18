@@ -23,15 +23,9 @@ async def test_base_no_config(logdog):
         authorised = await plugin.topic_filtering()
         assert authorised is False
 
-    # Should have printed a couple of warnings
+    # Warning messages are no longer generated
     log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].levelno == logging.WARNING
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-
-    assert log_records[1].levelno == logging.WARNING
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
-    assert pile.is_empty()
+    assert len(log_records) == 0
 
 
 @pytest.mark.asyncio
@@ -47,14 +41,9 @@ async def test_base_empty_config(logdog):
         authorised = await plugin.topic_filtering()
         assert authorised is False
 
-    # Should have printed just one warning
+    # Warning messages are no longer generated
     log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].levelno == logging.WARNING
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-
-    assert log_records[1].levelno == logging.WARNING
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
+    assert len(log_records) == 0
 
 
 @pytest.mark.asyncio
@@ -105,13 +94,9 @@ async def test_taboo_empty_config(logdog):
         plugin = TopicTabooPlugin(context)
         assert (await plugin.topic_filtering()) is False
 
-    # Should have printed a couple of warnings
+    # Warning messages are no longer generated
     log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].levelno == logging.WARNING
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-    assert log_records[1].levelno == logging.WARNING
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
+    assert len(log_records) == 0
 
 
 @pytest.mark.asyncio
@@ -265,11 +250,9 @@ async def test_taclp_empty_config(logdog):
         plugin = TopicAccessControlListPlugin(context)
         assert (await plugin.topic_filtering()) is False
 
-    # Should have printed a couple of warnings
+    # Warning messages are no longer generated
     log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
+    assert len(log_records) == 0
 
 
 @pytest.mark.asyncio

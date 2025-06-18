@@ -42,8 +42,6 @@ class BaseAuthPlugin(BasePlugin[BaseContext]):
         super().__init__(context)
 
         self.auth_config: dict[str, Any] | None = self._get_config_section("auth")
-        if not self.auth_config:
-            self.context.logger.warning("'auth' section not found in context configuration")
 
     async def authenticate(self, *, session: Session) -> bool | None:
         """Logic for session authentication.
@@ -56,12 +54,7 @@ class BaseAuthPlugin(BasePlugin[BaseContext]):
             - `None` if authentication can't be achieved (then plugin result is then ignored)
 
         """
-        if not self.auth_config:
-            # auth config section not found
-            self.context.logger.warning("'auth' section not found in context configuration")
-            return False
-        return True
-
+        return bool(self.auth_config)
 
 class BaseTopicPlugin(BasePlugin[BaseContext]):
     """Base class for topic plugins."""
@@ -70,8 +63,6 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
         super().__init__(context)
 
         self.topic_config: dict[str, Any] | None = self._get_config_section("topic-check")
-        if self.topic_config is None:
-            self.context.logger.warning("'topic-check' section not found in context configuration")
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Optional["Action"]  = None
@@ -87,8 +78,4 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
             bool: `True` if topic is allowed, `False` otherwise
 
         """
-        if not self.topic_config:
-            # auth config section not found
-            self.context.logger.warning("'topic-check' section not found in context configuration")
-            return False
-        return True
+        return bool(self.topic_config)

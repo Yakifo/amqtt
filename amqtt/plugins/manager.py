@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeAlias,
 
 from dacite import Config as DaciteConfig, DaciteError, from_dict
 
-from amqtt.errors import PluginImportError, PluginInitError, PluginLoadError
+from amqtt.errors import PluginCoroError, PluginImportError, PluginInitError, PluginLoadError
 from amqtt.events import BrokerEvents, Events, MQTTEvents
 from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
 from amqtt.plugins.contexts import BaseContext
@@ -41,9 +41,9 @@ def get_plugin_manager(namespace: str) -> "PluginManager[Any] | None":
     return plugins_manager.get(namespace)
 
 
-def safe_issubclass(sub: Any, sup: Any) -> bool:
+def safe_issubclass(sub_class: Any, super_class: Any) -> bool:
     try:
-        return isinstance(sub, type) and isinstance(sup, type) and issubclass(sub, sup)
+        return issubclass(sub_class, super_class)
     except TypeError:
         return False
 
@@ -72,6 +72,9 @@ class PluginManager(Generic[C]):
         self._auth_plugins: list[BaseAuthPlugin] = []
         self._topic_plugins: list[BaseTopicPlugin] = []
         self._event_plugin_callbacks: dict[str, list[AsyncFunc]] = defaultdict(list)
+        self._is_topic_filtering_enabled = False
+        self._is_auth_filtering_enabled = False
+
         self._load_plugins(namespace)
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
@@ -149,13 +152,14 @@ class PluginManager(Generic[C]):
 
     def _load_str_plugins(self, plugin_list: list[Any]) -> None:
 
-        self.logger.info("Loading plugins from config file")
-
+        self.logger.info("Loading plugins from config")
+        self._is_topic_filtering_enabled = True
+        self._is_auth_filtering_enabled = True
         for plugin_info in plugin_list:
 
             if isinstance(plugin_info, dict):
                 if len(plugin_info.keys()) > 1:
-                    msg = f"yaml config file should have only one key: {plugin_info.keys()}"
+                    msg = f"config file should have only one key: {plugin_info.keys()}"
                     raise ValueError(msg)
                 plugin_path = next(iter(plugin_info.keys()))
                 plugin_cfg = plugin_info[plugin_path]
@@ -168,8 +172,14 @@ class PluginManager(Generic[C]):
 
             self._plugins.append(plugin)
             if isinstance(plugin, BaseAuthPlugin):
+                if not iscoroutinefunction(plugin.authenticate):
+                    msg = f"Auth plugin {plugin_info} has non-async authenticate method."
+                    raise PluginCoroError(msg)
                 self._auth_plugins.append(plugin)
             if isinstance(plugin, BaseTopicPlugin):
+                if not iscoroutinefunction(plugin.topic_filtering):
+                    msg = f"Topic plugin {plugin_info} has non-async topic_filtering method."
+                    raise PluginCoroError(msg)
                 self._topic_plugins.append(plugin)
 
     def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin[C]":
@@ -180,7 +190,7 @@ class PluginManager(Generic[C]):
             msg = f"Plugin import failed: {plugin_path}"
             raise PluginImportError(msg) from ep
 
-        if not safe_issubclass(plugin_class, BasePlugin[C]):
+        if not safe_issubclass(plugin_class, BasePlugin):
             msg = f"Plugin {plugin_path} is not a subclass of 'BasePlugin'"
             raise PluginLoadError(msg)
 
@@ -194,6 +204,7 @@ class PluginManager(Generic[C]):
             raise PluginLoadError from e
 
         try:
+            self.logger.debug(f"Loading plugin {plugin_path}")
             return cast("BasePlugin[C]", plugin_class(plugin_context))
         except ImportError as e:
             raise PluginLoadError from e
@@ -208,6 +219,12 @@ class PluginManager(Generic[C]):
             if p.__class__.__name__ == name:
                 return p
         return None
+
+    def is_topic_filtering_enabled(self) -> bool:
+        topic_config = self.app_context.config.get("topic-check", {}) if self.app_context.config else {}
+        if isinstance(topic_config, dict):
+            return topic_config.get("enabled", False) or self._is_topic_filtering_enabled
+        return False or self._is_topic_filtering_enabled
 
     async def close(self) -> None:
         """Free PluginManager resources and cancel pending event methods."""
