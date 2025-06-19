@@ -5,18 +5,22 @@ build-backend = "hatchling.build"
 
 [project]
 name = "amqtt"
-description = "MQTT client/broker using Python asyncio"
+description = "Python's asyncio-native MQTT broker and client."
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Operating System :: POSIX",
   "Operating System :: MacOS",
   "Operating System :: Microsoft :: Windows",
   "Topic :: Communications",
   "Topic :: Internet",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13"
 ]
 
-version = "0.11.0-rc1"
+version = "0.11.0"
 requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }
@@ -69,7 +73,9 @@ docs = [
     "mkdocstrings-python>=1.16.2",
     # YORE: EOL 3.10: Remove line.
     "tomli>=2.0; python_version < '3.11'",
-    "mkdocs-typer2>=0.1.4"
+    "mkdocs-typer2>=0.1.4",
+    "mkdocs-open-in-new-tab>=1.0.8",
+    "mkdocs-exclude>=1.0.2",
 ]
 
 [project.optional-dependencies]
@@ -82,16 +88,24 @@ amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
 
+[tool.hatch.build]
+exclude = [
+  ".venv*",
+  "tests/",
+  "**/tests/",
+  "**/*.pyc",
+  "**/__pycache__/",
+  "**/README.md",
+]
+
 [tool.hatch.build.targets.sdist]
-include = ["/amqtt"]
+include = ["/amqtt", "README.md", "docs/assets/amqtt.svg"]
 
 [tool.hatch.version]
 source = "vcs"
 
-[tool.poe.tasks]
-rtd = "mkdocs serve -f mkdocs.rtd.yml"
-test = "pytest"
-docs = "mkdocs build"
+[tool.hatch.publish.indexes.testpypi]
+url = "https://test.pypi.org/legacy/"
 
 # ___________________________________ PLUGINS __________________________________
 [project.entry-points."amqtt.test.plugins"]
@@ -187,7 +201,7 @@ timeout = 10
 asyncio_default_fixture_loop_scope = "function"
 #addopts = ["--tb=short", "--capture=tee-sys"]
 #log_cli = true
-#log_level = "DEBUG"
+log_level = "DEBUG"
 
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]

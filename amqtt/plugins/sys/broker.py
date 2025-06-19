@@ -1,8 +1,9 @@
 import asyncio
 from collections import deque  # pylint: disable=C0412
-from typing import SupportsIndex, SupportsInt  # pylint: disable=C0412
+from typing import SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
 
 from amqtt.plugins.base import BasePlugin
+from amqtt.session import Session
 
 try:
     from collections.abc import Buffer
@@ -26,8 +27,7 @@ except ImportError:
 import amqtt
 from amqtt.broker import BrokerContext
 from amqtt.codecs_amqtt import int_to_bytes_str
-from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
-from amqtt.mqtt.subscribe import SubscribePayload
+from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 DOLLAR_SYS_ROOT = "$SYS/broker/"
 STAT_BYTES_SENT = "bytes_sent"
@@ -42,7 +42,10 @@ STAT_CLIENTS_CONNECTED = "clients_connected"
 STAT_CLIENTS_DISCONNECTED = "clients_disconnected"
 
 
-class BrokerSysPlugin(BasePlugin):
+PACKET: TypeAlias = MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader]
+
+
+class BrokerSysPlugin(BasePlugin[BrokerContext]):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
         # Broker statistics initialization
@@ -75,11 +78,11 @@ class BrokerSysPlugin(BasePlugin):
             loop=self.context.loop,
         )
 
-    async def on_broker_pre_start(self, *args: None, **kwargs: None) -> None:
+    async def on_broker_pre_start(self) -> None:
         """Clear statistics before broker start."""
         self._clear_stats()
 
-    async def on_broker_post_start(self, *args: None, **kwargs: None) -> None:
+    async def on_broker_post_start(self) -> None:
         """Initialize statistics and start $SYS broadcasting."""
         self._stats[STAT_START_TIME] = int(datetime.now(tz=UTC).timestamp())
         version = f"aMQTT version {amqtt.__version__}"
@@ -104,7 +107,7 @@ class BrokerSysPlugin(BasePlugin):
             pass
             # 'sys_interval' config parameter not found
 
-    async def on_broker_pre_stop(self, *args: None, **kwargs: None) -> None:
+    async def on_broker_pre_shutdown(self) -> None:
         """Stop $SYS topics broadcasting."""
         if self._sys_handle:
             self._sys_handle.cancel()
@@ -170,13 +173,8 @@ class BrokerSysPlugin(BasePlugin):
             else None
         )
 
-    async def on_mqtt_packet_received(
-        self,
-        *args: None,
-        **kwargs: MQTTPacket[PacketIdVariableHeader, SubscribePayload, MQTTFixedHeader],
-    ) -> None:
+    async def on_mqtt_packet_received(self, *, packet: PACKET, session: Session | None = None) -> None:
         """Handle incoming MQTT packets."""
-        packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
             self._stats[STAT_BYTES_RECEIVED] += packet_size
@@ -184,13 +182,8 @@ class BrokerSysPlugin(BasePlugin):
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_RECEIVED] += 1
 
-    async def on_mqtt_packet_sent(
-        self,
-        *args: None,
-        **kwargs: MQTTPacket[PacketIdVariableHeader, SubscribePayload, MQTTFixedHeader],
-    ) -> None:
+    async def on_mqtt_packet_sent(self, *, packet: PACKET, session: Session | None = None) -> None:
         """Handle sent MQTT packets."""
-        packet = kwargs.get("packet")
         if packet:
             packet_size = packet.bytes_length
             self._stats[STAT_BYTES_SENT] += packet_size
@@ -198,7 +191,7 @@ class BrokerSysPlugin(BasePlugin):
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_SENT] += 1
 
-    async def on_broker_client_connected(self, *args: None, **kwargs: None) -> None:
+    async def on_broker_client_connected(self, client_id: str) -> None:
         """Handle broker client connection."""
         self._stats[STAT_CLIENTS_CONNECTED] += 1
         self._stats[STAT_CLIENTS_MAXIMUM] = max(
@@ -206,7 +199,7 @@ class BrokerSysPlugin(BasePlugin):
             self._stats[STAT_CLIENTS_CONNECTED],
         )
 
-    async def on_broker_client_disconnected(self, *args: None, **kwargs: None) -> None:
+    async def on_broker_client_disconnected(self, client_id: str) -> None:
         """Handle broker client disconnection."""
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1

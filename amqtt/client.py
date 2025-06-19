@@ -23,7 +23,8 @@ from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
-from amqtt.plugins.manager import BaseContext, PluginManager
+from amqtt.plugins.contexts import BaseContext
+from amqtt.plugins.manager import PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id, read_yaml_config
 
@@ -88,6 +89,9 @@ class MQTTClient:
             it will be generated randomly by `amqtt.utils.gen_client_id`
         config: dictionary of configuration options (see [client configuration](client_config.md)).
 
+    Raises:
+        PluginError
+
     """
 
     def __init__(self, client_id: str | None = None, config: dict[str, Any] | None = None) -> None:
@@ -107,7 +111,7 @@ class MQTTClient:
         # Init plugins manager
         context = ClientContext()
         context.config = self.config
-        self.plugins_manager = PluginManager("amqtt.client.plugins", context)
+        self.plugins_manager: PluginManager[ClientContext] = PluginManager("amqtt.client.plugins", context)
         self.client_tasks: deque[asyncio.Task[Any]] = deque()
 
     async def connect(
@@ -142,13 +146,13 @@ class MQTTClient:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
 
         Raises:
-            amqtt.client.ConnectException: if connection fails
+            ClientError, ConnectError
 
         """
         additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)
         self.additional_headers = additional_headers
-        self.logger.debug(f"Connecting to: {uri}")
+        self.logger.debug(f"Connecting to: {self.session.broker_uri}")
 
         try:
             return await self._do_connect()
@@ -156,7 +160,7 @@ class MQTTClient:
             msg = "Future or Task was cancelled"
             raise ConnectError(msg) from e
         except Exception as e:
-            self.logger.warning(f"Connection failed: {e}")
+            self.logger.warning(f"Connection failed: {e!r}")
             if not self.config.get("auto_reconnect", False):
                 raise
             return await self.reconnect()
@@ -219,7 +223,7 @@ class MQTTClient:
         self.logger.debug(f"Reconnecting with session parameters: {self.session}")
 
         reconnect_max_interval = self.config.get("reconnect_max_interval", 10)
-        reconnect_retries = self.config.get("reconnect_retries", 5)
+        reconnect_retries = self.config.get("reconnect_retries", 2)
         nb_attempt = 1
 
         while True:
@@ -230,9 +234,11 @@ class MQTTClient:
                 msg = "Future or Task was cancelled"
                 raise ConnectError(msg) from e
             except Exception as e:
-                self.logger.warning(f"Reconnection attempt failed: {e}")
-                if reconnect_retries < nb_attempt:  # reconnect_retries >= 0 and
+                self.logger.warning(f"Reconnection attempt failed: {e!r}")
+                self.logger.debug("", exc_info=True)
+                if 0 <= reconnect_retries < nb_attempt:
                     self.logger.exception("Maximum connection attempts reached. Reconnection aborted.")
+                    self.logger.debug("", exc_info=True)
                     msg = "Too many failed attempts"
                     raise ConnectError(msg) from e
                 delay = min(reconnect_max_interval, 2**nb_attempt)
@@ -468,6 +474,7 @@ class MQTTClient:
             reader: StreamReaderAdapter | WebSocketsReader | None = None
             writer: StreamWriterAdapter | WebSocketsWriter | None = None
             self._connected_state.clear()
+
             # Open connection
             if scheme in ("mqtt", "mqtts"):
                 conn_reader, conn_writer = await asyncio.open_connection(
@@ -475,6 +482,7 @@ class MQTTClient:
                     self.session.remote_port,
                     **kwargs,
                 )
+
                 reader = StreamReaderAdapter(conn_reader)
                 writer = StreamWriterAdapter(conn_writer)
             elif scheme in ("ws", "wss") and self.session.broker_uri:
@@ -486,11 +494,11 @@ class MQTTClient:
                 )
                 reader = WebSocketsReader(websocket)
                 writer = WebSocketsWriter(websocket)
-
-            if reader is None or writer is None:
-                self.session.transitions.disconnect()
-                self.logger.warning("reader or writer not initialized")
-                msg = "reader or writer not initialized"
+            elif not self.session.broker_uri:
+                msg = "missing broker uri"
+                raise ClientError(msg)
+            else:
+                msg = f"incorrect scheme defined in uri: '{scheme!r}'"
                 raise ClientError(msg)
 
             # Start MQTT protocol
@@ -511,7 +519,7 @@ class MQTTClient:
             self.logger.debug(f"Connected to {self.session.remote_address}:{self.session.remote_port}")
 
         except (InvalidURI, InvalidHandshake, ProtocolHandlerError, ConnectionError, OSError) as e:
-            self.logger.warning(f"Connection failed : {self.session.broker_uri} : {e}")
+            self.logger.debug(f"Connection failed : {self.session.broker_uri} [{e!r}]")
             self.session.transitions.disconnect()
             raise ConnectError(e) from e
         return return_code
@@ -530,7 +538,7 @@ class MQTTClient:
             while self.client_tasks:
                 task = self.client_tasks.popleft()
                 if not task.done():
-                    task.cancel()
+                    task.cancel(msg="Connection closed.")
 
         self.logger.debug("Monitoring broker disconnection")
         # Wait for disconnection from broker (like connection lost)
@@ -594,7 +602,7 @@ class MQTTClient:
             session.will_flag = True
             session.will_retain = self.config["will"]["retain"]
             session.will_topic = self.config["will"]["topic"]
-            session.will_message = self.config["will"]["message"]
+            session.will_message = self.config["will"]["message"].encode()
             session.will_qos = self.config["will"]["qos"]
 
         return session

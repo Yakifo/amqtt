@@ -1,11 +1,11 @@
 # MKDocs configuration file for generating RTD (readthedocs) documentation
 
-site_name: ""
-site_description: "MQTT broker and client natively implemented with Python's asyncio"
+site_name: "aMQTT"
+site_description: "Python's asyncio-native MQTT broker and client."
 site_url: http://github.com
 repo_url: https://github.com/Yakifo/amqtt
 repo_name: Yakifo/amqtt
-site_dir: "site"
+site_dir: "dist/rtd"
 watch:
   - mkdocs.rtd.yml
   - README.md
@@ -17,7 +17,7 @@ watch:
   - docs
   - amqtt
   - samples
-copyright: TBD
+copyright: 'amqtt.io © 2025'
 edit_uri: edit/main/docs/
 
 validation:
@@ -44,6 +44,7 @@ nav:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
       - Reference:
+          - Containerization: docker.md
           - Support: support.md
           - Contributing: contributing.md
           - Change log: changelog.md
@@ -72,6 +73,7 @@ theme:
     - search.highlight
     - search.suggest
     - toc.follow
+    - version
   palette:
     # Palette toggle for light mode
     - scheme: default
@@ -119,6 +121,7 @@ markdown_extensions:
 plugins:
   - search
   - autorefs
+  - open-in-new-tab
   - markdown-exec
   - section-index
   - coverage
@@ -162,6 +165,10 @@ plugins:
         - typeset
 
 extra:
+  version:
+    provider: readthedocs
+    default: v0.11.0
+    warning: true
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/pawamoy

@@ -6,3 +6,5 @@ default_retain: false
 auto_reconnect: true
 reconnect_max_interval: 10
 reconnect_retries: 2
+broker:
+  uri: "mqtt://127.0.0.1"

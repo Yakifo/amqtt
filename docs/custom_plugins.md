@@ -23,20 +23,26 @@ its own variables to configure its behavior.
 
 ::: amqtt.plugins.base.BasePlugin
 
-Plugins that are defined in the`project.entry-points` are loaded and notified of events by when the subclass 
+## Events
+
+Plugins that are defined in the`project.entry-points` are notified of events if the subclass 
 implements one or more of these methods:
 
-- `on_mqtt_packet_sent`
-- `on_mqtt_packet_received`
-- `on_broker_pre_start`
-- `on_broker_post_start`
-- `on_broker_pre_shutdown`
-- `on_broker_post_shutdown`
-- `on_broker_client_connected`
-- `on_broker_client_disconnected`
-- `on_broker_client_subscribed`
-- `on_broker_client_unsubscribed`
-- `on_broker_message_received`
+- `async def on_mqtt_packet_sent(self, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
+- `async def on_mqtt_packet_received(self, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
+
+- `async def on_broker_pre_start() -> None`
+- `async def on_broker_post_start() -> None`
+- `async def on_broker_pre_shutdown() -> None`
+- `async def on_broker_post_shutdown() -> None`
+
+- `async def on_broker_client_connected(self, client_id:str) -> None`
+- `async def on_broker_client_disconnected(self, client_id:str) -> None`
+
+- `async def on_broker_client_subscribed(self, client_id: str, topic: str, qos: int) -> None`
+- `async def on_broker_client_unsubscribed(self, client_id: str, topic: str) -> None`
+
+- `async def on_broker_message_received(self, client_id: str, message: ApplicationMessage) -> None`
 
 
 ## Authentication Plugins

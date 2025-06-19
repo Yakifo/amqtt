@@ -10,7 +10,7 @@
 Without the `-c` argument, the broker will run with the following, default configuration:
 
 ```yaml
---8<-- "../amqtt/amqtt/scripts/default_broker.yaml"
+--8<-- "amqtt/scripts/default_broker.yaml"
 ```
 
 Using the `-c` argument allows for configuration with a YAML structured file; see [broker configuration](broker_config.md). 

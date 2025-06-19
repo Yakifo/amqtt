@@ -1,14 +1,26 @@
-__all__ = ["BaseContext", "PluginManager", "get_plugin_manager"]
+__all__ = ["PluginManager", "get_plugin_manager"]
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections import defaultdict
+from collections.abc import Awaitable, Callable, Coroutine
 import contextlib
 import copy
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
+from inspect import iscoroutinefunction
 import logging
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar, cast
 
-_LOGGER = logging.getLogger(__name__)
+from dacite import Config as DaciteConfig, DaciteError, from_dict
+
+from amqtt.errors import PluginCoroError, PluginImportError, PluginInitError, PluginLoadError
+from amqtt.events import BrokerEvents, Events, MQTTEvents
+from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
+from amqtt.plugins.contexts import BaseContext
+from amqtt.session import Session
+from amqtt.utils import import_string
+
+if TYPE_CHECKING:
+    from amqtt.broker import Action
 
 
 class Plugin(NamedTuple):
@@ -17,10 +29,10 @@ class Plugin(NamedTuple):
     object: Any
 
 
-plugins_manager: dict[str, "PluginManager"] = {}
+plugins_manager: dict[str, "PluginManager[Any]"] = {}
 
 
-def get_plugin_manager(namespace: str) -> "PluginManager | None":
+def get_plugin_manager(namespace: str) -> "PluginManager[Any] | None":
     """Get the plugin manager for a given namespace.
 
     :param namespace: The namespace of the plugin manager to retrieve.
@@ -29,21 +41,24 @@ def get_plugin_manager(namespace: str) -> "PluginManager | None":
     return plugins_manager.get(namespace)
 
 
-class BaseContext:
-    def __init__(self) -> None:
-        self.loop: asyncio.AbstractEventLoop | None = None
-        self.logger: logging.Logger = _LOGGER
-        self.config: dict[str, Any] | None = None
+def safe_issubclass(sub_class: Any, super_class: Any) -> bool:
+    try:
+        return issubclass(sub_class, super_class)
+    except TypeError:
+        return False
 
 
-class PluginManager:
+AsyncFunc: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
+C = TypeVar("C", bound=BaseContext)
+
+class PluginManager(Generic[C]):
     """Wraps contextlib Entry point mechanism to provide a basic plugin system.
 
     Plugins are loaded for a given namespace (group). This plugin manager uses coroutines to
     run plugin calls asynchronously in an event queue.
     """
 
-    def __init__(self, namespace: str, context: BaseContext | None, loop: asyncio.AbstractEventLoop | None = None) -> None:
+    def __init__(self, namespace: str, context: C | None, loop: asyncio.AbstractEventLoop | None = None) -> None:
         try:
             self._loop = loop if loop is not None else asyncio.get_running_loop()
         except RuntimeError:
@@ -53,7 +68,13 @@ class PluginManager:
         self.logger = logging.getLogger(namespace)
         self.context = context if context is not None else BaseContext()
         self.context.loop = self._loop
-        self._plugins: list[Plugin] = []
+        self._plugins: list[BasePlugin[C]] = []
+        self._auth_plugins: list[BaseAuthPlugin] = []
+        self._topic_plugins: list[BaseTopicPlugin] = []
+        self._event_plugin_callbacks: dict[str, list[AsyncFunc]] = defaultdict(list)
+        self._is_topic_filtering_enabled = False
+        self._is_auth_filtering_enabled = False
+
         self._load_plugins(namespace)
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
@@ -62,8 +83,26 @@ class PluginManager:
     def app_context(self) -> BaseContext:
         return self.context
 
-    def _load_plugins(self, namespace: str) -> None:
+    def _load_plugins(self, namespace: str | None = None) -> None:
+        if self.app_context.config and "plugins" in self.app_context.config:
+            plugin_list: list[Any] = self.app_context.config.get("plugins", [])
+            self._load_str_plugins(plugin_list)
+        else:
+            if not namespace:
+                msg = "Namespace needs to be provided for EntryPoint plugin definitions"
+                raise PluginLoadError(msg)
+            self._load_ep_plugins(namespace)
+
+    def _load_ep_plugins(self, namespace:str) -> None:
+
         self.logger.debug(f"Loading plugins for namespace {namespace}")
+        auth_filter_list = []
+        topic_filter_list = []
+        if self.app_context.config and "auth" in self.app_context.config:
+            auth_filter_list = self.app_context.config["auth"].get("plugins", [])
+        if self.app_context.config and "topic" in self.app_context.config:
+            topic_filter_list = self.app_context.config["topic"].get("plugins", [])
+
         ep: EntryPoints | list[EntryPoint] = []
         if hasattr(entry_points(), "select"):
             ep = entry_points().select(group=namespace)
@@ -71,46 +110,131 @@ class PluginManager:
             ep = [entry_points()[namespace]]
 
         for item in ep:
-            plugin = self._load_plugin(item)
-            if plugin is not None:
-                self._plugins.append(plugin)
+            ep_plugin = self._load_ep_plugin(item)
+            if ep_plugin is not None:
+                self._plugins.append(ep_plugin.object)
+                if ((not auth_filter_list or ep_plugin.name in auth_filter_list)
+                        and hasattr(ep_plugin.object, "authenticate")):
+                    self._auth_plugins.append(ep_plugin.object)
+                if ((not topic_filter_list or ep_plugin.name in topic_filter_list)
+                        and hasattr(ep_plugin.object, "topic_filtering")):
+                    self._topic_plugins.append(ep_plugin.object)
                 self.logger.debug(f" Plugin {item.name} ready")
 
-    def _load_plugin(self, ep: EntryPoint) -> Plugin | None:
+        for plugin in self._plugins:
+            for event in list(BrokerEvents) + list(MQTTEvents):
+                if awaitable := getattr(plugin, f"on_{event}", None):
+                    if not iscoroutinefunction(awaitable):
+                        msg = f"'on_{event}' for '{plugin.__class__.__name__}' is not a coroutine'"
+                        raise PluginImportError(msg)
+                    self.logger.debug(f"'{event}' handler found for '{plugin.__class__.__name__}'")
+                    self._event_plugin_callbacks[event].append(awaitable)
+
+    def _load_ep_plugin(self, ep: EntryPoint) -> Plugin | None:
         try:
             self.logger.debug(f" Loading plugin {ep!s}")
             plugin = ep.load()
-            self.logger.debug(f" Initializing plugin {ep!s}")
 
-            plugin_context = copy.copy(self.app_context)
-            plugin_context.logger = self.logger.getChild(ep.name)
+        except ImportError as e:
+            self.logger.debug(f"Plugin import failed: {ep!r}", exc_info=True)
+            raise PluginImportError(ep) from e
+
+        self.logger.debug(f" Initializing plugin {ep!s}")
+
+        plugin_context = copy.copy(self.app_context)
+        plugin_context.logger = self.logger.getChild(ep.name)
+        try:
             obj = plugin(plugin_context)
             return Plugin(ep.name, ep, obj)
-        except ImportError:
-            self.logger.warning(f"Plugin {ep!r} import failed", exc_info=True)
+        except Exception as e:
+            self.logger.debug(f"Plugin init failed: {ep!r}", exc_info=True)
+            raise PluginInitError(ep) from e
 
-        return None
+    def _load_str_plugins(self, plugin_list: list[Any]) -> None:
 
-    def get_plugin(self, name: str) -> Plugin | None:
+        self.logger.info("Loading plugins from config")
+        self._is_topic_filtering_enabled = True
+        self._is_auth_filtering_enabled = True
+        for plugin_info in plugin_list:
+
+            if isinstance(plugin_info, dict):
+                if len(plugin_info.keys()) > 1:
+                    msg = f"config file should have only one key: {plugin_info.keys()}"
+                    raise ValueError(msg)
+                plugin_path = next(iter(plugin_info.keys()))
+                plugin_cfg = plugin_info[plugin_path]
+                plugin = self._load_str_plugin(plugin_path, plugin_cfg)
+            elif isinstance(plugin_info, str):
+                plugin = self._load_str_plugin(plugin_info, {})
+            else:
+                msg = "Unexpected entry in plugins config"
+                raise PluginLoadError(msg)
+
+            self._plugins.append(plugin)
+            if isinstance(plugin, BaseAuthPlugin):
+                if not iscoroutinefunction(plugin.authenticate):
+                    msg = f"Auth plugin {plugin_info} has non-async authenticate method."
+                    raise PluginCoroError(msg)
+                self._auth_plugins.append(plugin)
+            if isinstance(plugin, BaseTopicPlugin):
+                if not iscoroutinefunction(plugin.topic_filtering):
+                    msg = f"Topic plugin {plugin_info} has non-async topic_filtering method."
+                    raise PluginCoroError(msg)
+                self._topic_plugins.append(plugin)
+
+    def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin[C]":
+
+        try:
+            plugin_class: Any =  import_string(plugin_path)
+        except ModuleNotFoundError as ep:
+            msg = f"Plugin import failed: {plugin_path}"
+            raise PluginImportError(msg) from ep
+
+        if not safe_issubclass(plugin_class, BasePlugin):
+            msg = f"Plugin {plugin_path} is not a subclass of 'BasePlugin'"
+            raise PluginLoadError(msg)
+
+        plugin_context = copy.copy(self.app_context)
+        plugin_context.logger = self.logger.getChild(plugin_class.__name__)
+        try:
+            plugin_context.config = from_dict(data_class=plugin_class.Config,
+                                              data=plugin_cfg or {},
+                                              config=DaciteConfig(strict=True))
+        except DaciteError as e:
+            raise PluginLoadError from e
+
+        try:
+            self.logger.debug(f"Loading plugin {plugin_path}")
+            return cast("BasePlugin[C]", plugin_class(plugin_context))
+        except ImportError as e:
+            raise PluginLoadError from e
+
+    def get_plugin(self, name: str) -> Optional["BasePlugin[C]"]:
         """Get a plugin by its name from the plugins loaded for the current namespace.
 
         :param name:
         :return:
         """
         for p in self._plugins:
-            if p.name == name:
+            if p.__class__.__name__ == name:
                 return p
         return None
 
+    def is_topic_filtering_enabled(self) -> bool:
+        topic_config = self.app_context.config.get("topic-check", {}) if self.app_context.config else {}
+        if isinstance(topic_config, dict):
+            return topic_config.get("enabled", False) or self._is_topic_filtering_enabled
+        return False or self._is_topic_filtering_enabled
+
     async def close(self) -> None:
         """Free PluginManager resources and cancel pending event methods."""
-        await self.map_plugin_coro("close")
+        await self.map_plugin_close()
         for task in self._fired_events:
             task.cancel()
         self._fired_events.clear()
 
     @property
-    def plugins(self) -> list[Plugin]:
+    def plugins(self) -> list["BasePlugin[C]"]:
         """Get the loaded plugins list.
 
         :return:
@@ -120,7 +244,7 @@ class PluginManager:
     def _schedule_coro(self, coro: Awaitable[str | bool | None]) -> asyncio.Future[str | bool | None]:
         return asyncio.ensure_future(coro)
 
-    async def fire_event(self, event_name: str, *args: Any, wait: bool = False, **kwargs: Any) -> None:
+    async def fire_event(self, event_name: Events, *, wait: bool = False, **method_kwargs: Any) -> None:
         """Fire an event to plugins.
 
         PluginManager schedules async calls for each plugin on method called "on_" + event_name.
@@ -128,86 +252,95 @@ class PluginManager:
         Method calls are scheduled in the async loop. wait parameter must be set to true
         to wait until all methods are completed.
         :param event_name:
-        :param args:
-        :param kwargs:
+        :param method_kwargs:
         :param wait: indicates if fire_event should wait for plugin calls completion (True), or not
         :return:
         """
         tasks: list[asyncio.Future[Any]] = []
-        event_method_name = "on_" + event_name
-        for plugin in self._plugins:
-            event_method = getattr(plugin.object, event_method_name, None)
-            if event_method:
-                try:
-                    task = self._schedule_coro(event_method(*args, **kwargs))
-                    tasks.append(task)
 
-                    def clean_fired_events(future: asyncio.Future[Any]) -> None:
-                        with contextlib.suppress(KeyError, ValueError):
-                            self._fired_events.remove(future)
+        # check if any plugin has defined a callback for this event, skip if none
+        if event_name not in self._event_plugin_callbacks:
+            return
 
-                    task.add_done_callback(clean_fired_events)
-                except AssertionError:
-                    self.logger.exception(f"Method '{event_method_name}' on plugin '{plugin.name}' is not a coroutine")
+        for event_awaitable in self._event_plugin_callbacks[event_name]:
+
+            async def call_method(method: AsyncFunc, kwargs: dict[str, Any]) -> Any:
+                return await method(**kwargs)
+
+            coro_instance: Awaitable[Any] = call_method(event_awaitable, method_kwargs)
+            tasks.append(asyncio.ensure_future(coro_instance))
+
+            def clean_fired_events(future: asyncio.Future[Any]) -> None:
+                with contextlib.suppress(KeyError, ValueError):
+                    self._fired_events.remove(future)
+
+            tasks[-1].add_done_callback(clean_fired_events)
 
         self._fired_events.extend(tasks)
         if wait and tasks:
             await asyncio.wait(tasks)
         self.logger.debug(f"Plugins len(_fired_events)={len(self._fired_events)}")
 
-    async def map(
-        self,
-        coro: Callable[[Plugin, Any], Awaitable[str | bool | None]],
-        *args: Any,
-        **kwargs: Any,
-    ) -> dict[Plugin, str | bool | None]:
-        """Schedule a given coroutine call for each plugin.
+    @staticmethod
+    async def _map_plugin_method(
+        plugins: list["BasePlugin[C]"],
+        method_name: str,
+        method_kwargs: dict[str, Any],
+    ) -> dict["BasePlugin[C]", str | bool | None]:
+        """Call plugin coroutines.
 
-        The coro called gets the Plugin instance as the first argument of its method call.
-        :param coro: coro to call on each plugin
-        :param filter_plugins: list of plugin names to filter (only plugin whose name is
-            in the filter are called). None will call all plugins. [] will call None.
-        :param args: arguments to pass to coro
-        :param kwargs: arguments to pass to coro
+        :param plugins: List of plugins to execute the method on
+        :param method_name: Name of the method to call on each plugin
+        :param method_kwargs: Keyword arguments to pass to the method
         :return: dict containing return from coro call for each plugin.
         """
-        p_list = kwargs.pop("filter_plugins", None)
-        if p_list is None:
-            p_list = [p.name for p in self.plugins]
         tasks: list[asyncio.Future[Any]] = []
-        plugins_list: list[Plugin] = []
-        for plugin in self._plugins:
-            if plugin.name in p_list:
-                coro_instance = coro(plugin, *args, **kwargs)
-                if coro_instance:
-                    try:
-                        tasks.append(self._schedule_coro(coro_instance))
-                        plugins_list.append(plugin)
-                    except AssertionError:
-                        self.logger.exception(f"Method '{coro!r}' on plugin '{plugin.name}' is not a coroutine")
+
+        for plugin in plugins:
+            if not hasattr(plugin, method_name):
+                continue
+
+            async def call_method(p: "BasePlugin[C]", kwargs: dict[str, Any]) -> Any:
+                method = getattr(p, method_name)
+                return await method(**kwargs)
+
+            coro_instance: Awaitable[Any] = call_method(plugin, method_kwargs)
+            tasks.append(asyncio.ensure_future(coro_instance))
+
+        ret_dict: dict[BasePlugin[C], str | bool | None] = {}
         if tasks:
             ret_list = await asyncio.gather(*tasks)
-            # Create result map plugin => ret
-            ret_dict = dict(zip(plugins_list, ret_list, strict=False))
-        else:
-            ret_dict = {}
+            ret_dict = dict(zip(plugins, ret_list, strict=False))
+
         return ret_dict
 
-    @staticmethod
-    async def _call_coro(plugin: Plugin, coro_name: str, *args: Any, **kwargs: Any) -> str | bool | None:
-        if not hasattr(plugin.object, coro_name):
-            _LOGGER.warning(f"Plugin doesn't implement coro_name '{coro_name}': {plugin.name}")
-            return None
+    async def map_plugin_auth(self, *, session: Session) -> dict["BasePlugin[C]", str | bool | None]:
+        """Schedule a coroutine for plugin 'authenticate' calls.
 
-        coro: Awaitable[str | bool | None] = getattr(plugin.object, coro_name)(*args, **kwargs)
-        return await coro
-
-    async def map_plugin_coro(self, coro_name: str, *args: Any, **kwargs: Any) -> dict[Plugin, str | bool | None]:
-        """Call a plugin declared by plugin by its name.
-
-        :param coro_name:
-        :param args:
-        :param kwargs:
-        :return:
+        :param session: the client session associated with the authentication check
+        :return: dict containing return from coro call for each plugin.
         """
-        return await self.map(self._call_coro, coro_name, *args, **kwargs)
+        return await self._map_plugin_method(
+            self._auth_plugins, "authenticate", {"session": session })  # type: ignore[arg-type]
+
+    async def map_plugin_topic(
+        self, *, session: Session, topic: str, action: "Action"
+    ) -> dict["BasePlugin[C]", str | bool | None]:
+        """Schedule a coroutine for plugin 'topic_filtering' calls.
+
+        :param session: the client session associated with the topic_filtering check
+        :param topic: the topic that needs to be filtered
+        :param action: the action being executed
+        :return: dict containing return from coro call for each plugin.
+        """
+        return await self._map_plugin_method(
+            self._topic_plugins, "topic_filtering",   # type: ignore[arg-type]
+            {"session": session, "topic": topic, "action": action}
+        )
+
+    async def map_plugin_close(self) -> None:
+        """Schedule a coroutine for plugin 'close' calls.
+
+        :return: dict containing return from coro call for each plugin.
+        """
+        await self._map_plugin_method(self._plugins, "close", {})
