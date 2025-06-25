@@ -56,6 +56,7 @@ nav:
 theme:
   name: material
   logo: assets/amqtt_bw.svg
+  custom_dir: overrides
   features:
     - announce.dismiss
     - content.action.edit
