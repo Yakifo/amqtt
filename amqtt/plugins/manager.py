@@ -202,6 +202,9 @@ class PluginManager(Generic[C]):
                                               config=DaciteConfig(strict=True))
         except DaciteError as e:
             raise PluginLoadError from e
+        except TypeError as e:
+            msg = f"Could not marshall 'Config' of {plugin_path}; should be a dataclass."
+            raise PluginLoadError(msg) from e
 
         try:
             self.logger.debug(f"Loading plugin {plugin_path}")
