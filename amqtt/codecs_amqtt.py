@@ -1,4 +1,5 @@
 import asyncio
+from decimal import ROUND_HALF_UP, Decimal
 from struct import pack, unpack
 
 from amqtt.adapters import ReaderAdapter
@@ -139,3 +140,10 @@ def int_to_bytes_str(value: int) -> bytes:
     :return: bytes array.
     """
     return str(value).encode("utf-8")
+
+
+def float_to_bytes_str(value: float, places:int=3) -> bytes:
+    """Convert an float value to a bytes array containing the numeric character."""
+    quant = Decimal(f"0.{"".join(['0' for i in range(places-1)])}1")
+    rounded = Decimal(value).quantize(quant, rounding=ROUND_HALF_UP)
+    return str(rounded).encode("utf-8")
