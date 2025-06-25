@@ -93,6 +93,15 @@ class PluginManager(Generic[C]):
                 raise PluginLoadError(msg)
             self._load_ep_plugins(namespace)
 
+        for plugin in self._plugins:
+            for event in list(BrokerEvents) + list(MQTTEvents):
+                if awaitable := getattr(plugin, f"on_{event}", None):
+                    if not iscoroutinefunction(awaitable):
+                        msg = f"'on_{event}' for '{plugin.__class__.__name__}' is not a coroutine'"
+                        raise PluginImportError(msg)
+                    self.logger.debug(f"'{event}' handler found for '{plugin.__class__.__name__}'")
+                    self._event_plugin_callbacks[event].append(awaitable)
+
     def _load_ep_plugins(self, namespace:str) -> None:
 
         self.logger.debug(f"Loading plugins for namespace {namespace}")
@@ -120,15 +129,6 @@ class PluginManager(Generic[C]):
                         and hasattr(ep_plugin.object, "topic_filtering")):
                     self._topic_plugins.append(ep_plugin.object)
                 self.logger.debug(f" Plugin {item.name} ready")
-
-        for plugin in self._plugins:
-            for event in list(BrokerEvents) + list(MQTTEvents):
-                if awaitable := getattr(plugin, f"on_{event}", None):
-                    if not iscoroutinefunction(awaitable):
-                        msg = f"'on_{event}' for '{plugin.__class__.__name__}' is not a coroutine'"
-                        raise PluginImportError(msg)
-                    self.logger.debug(f"'{event}' handler found for '{plugin.__class__.__name__}'")
-                    self._event_plugin_callbacks[event].append(awaitable)
 
     def _load_ep_plugin(self, ep: EntryPoint) -> Plugin | None:
         try:
