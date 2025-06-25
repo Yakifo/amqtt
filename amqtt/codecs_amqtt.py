@@ -144,6 +144,6 @@ def int_to_bytes_str(value: int) -> bytes:
 
 def float_to_bytes_str(value: float, places:int=3) -> bytes:
     """Convert an float value to a bytes array containing the numeric character."""
-    quant = Decimal(f"0.{"".join(['0' for i in range(places-1)])}1")
+    quant = Decimal(f"0.{''.join(['0' for i in range(places-1)])}1")
     rounded = Decimal(value).quantize(quant, rounding=ROUND_HALF_UP)
     return str(rounded).encode("utf-8")
