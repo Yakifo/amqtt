@@ -20,6 +20,7 @@ export default function MainGrid() {
   const [received, setReceived] = useState<DataPoint[]>([]);
   const [bytesIn, setBytesIn] = useState<DataPoint[]>([]);
   const [bytesOut, setBytesOut] = useState<DataPoint[]>([]);
+  const [clientsConnected, setClientsConnected] = useState<DataPoint[]>([]);
   const [serverStart, setServerStart] = useState<string>('');
   const [serverUptime, setServerUptime] = useState<string>('');
 
@@ -63,6 +64,7 @@ export default function MainGrid() {
       mqttSubscribe('$SYS/broker/load/bytes/#');
       mqttSubscribe('$SYS/broker/uptime/formatted');
       mqttSubscribe('$SYS/broker/uptime');
+      mqttSubscribe('$SYS/broker/clients/connected');
     }
   }, [isConnected, mqttSubscribe]);
 
@@ -97,6 +99,13 @@ export default function MainGrid() {
             value: d
           }
           setBytesOut(bytesOut => [...bytesOut, newPoint]);
+        } else if (payload.topic === '$SYS/broker/clients/connected') {
+          const newPoint: DataPoint = {
+            timestamp: new Date().toISOString(),
+            value: d
+          }
+          setClientsConnected(clientsConnected => [...clientsConnected, newPoint]);
+
         } else if (payload.topic === '$SYS/broker/uptime/formatted') {
           const dt = new Date(d + "Z");
           setServerStart(dt.toLocaleString());
@@ -236,6 +245,9 @@ export default function MainGrid() {
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
           <SessionsChart title={'Bytes In'} label={'Bytes'} data={bytesIn} isConnected={isConnected}/>
+        </Grid>
+        <Grid size={{xs: 12, md: 6}}>
+          <SessionsChart title={'Clients Connected'} label={''} data={clientsConnected} isConnected={isConnected}/>
         </Grid>
       </Grid>
 
