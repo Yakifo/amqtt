@@ -14,7 +14,7 @@ config = {
     "will": {
         "topic": "/will/client",
         "message": b"Dead or alive",
-        "qos": 0x01,
+        "qos": QOS_1,
         "retain": True,
     },
 }
@@ -22,7 +22,7 @@ config = {
 
 async def test_coro1() -> None:
     client = MQTTClient()
-    await client.connect("mqtt://test.mosquitto.org/")
+    await client.connect("mqtt://localhost:1883/")
     tasks = [
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_0")),
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)),
@@ -35,8 +35,8 @@ async def test_coro1() -> None:
 
 async def test_coro2() -> None:
     try:
-        client = MQTTClient()
-        await client.connect("mqtt://test.mosquitto.org:1883/")
+        client = MQTTClient(config={'auto_connect': False})
+        await client.connect("mqtt://localhost:1884/")
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_0", qos=0x00)
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=0x01)
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=0x02)

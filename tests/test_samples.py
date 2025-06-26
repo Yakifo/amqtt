@@ -75,13 +75,40 @@ async def test_broker_taboo():
     assert "Exception" not in stderr.decode("utf-8")
 
 
-@pytest.mark.timeout(20)
-def test_client_keepalive():
-    client_keepalive_main()
+@pytest.mark.timeout(25)
+@pytest.mark.asyncio
+async def test_client_keepalive():
+
+    broker = Broker()
+    await broker.start()
+    await asyncio.sleep(2)
+
+    keep_alive_script = Path(__file__).parent.parent / "samples/client_keepalive.py"
+    process = subprocess.Popen(["python", keep_alive_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    await asyncio.sleep(2)
+
+    stdout, stderr = process.communicate()
+    assert "ERROR" not in stderr.decode("utf-8")
+    assert "Exception" not in stderr.decode("utf-8")
+
+    await broker.shutdown()
 
 
-def test_client_publish():
-    client_publish_main()
+@pytest.mark.asyncio
+async def test_client_publish():
+    broker = Broker()
+    await broker.start()
+    await asyncio.sleep(2)
+
+    client_publish = Path(__file__).parent.parent / "samples/client_publish.py"
+    process = subprocess.Popen(["python", client_publish], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    await asyncio.sleep(2)
+
+    stdout, stderr = process.communicate()
+    assert "ERROR" not in stderr.decode("utf-8")
+    assert "Exception" not in stderr.decode("utf-8")
+
+    await broker.shutdown()
 
 broker_ssl_config = {
     "listeners": {
