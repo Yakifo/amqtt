@@ -147,7 +147,7 @@ export default function MainGrid() {
                 <td style={{width: 250}}>
                   <p style={{textAlign: 'left'}}>
                     <FontAwesomeIcon icon={faGithub} size="xl"/> github: <a
-                    href="https://github.com/Yakofo/amqtt">Yakifo/amqtt</a>
+                    href="https://github.com/Yakifo/amqtt">Yakifo/amqtt</a>
                   </p>
                   <p style={{textAlign: 'left'}}>
                     <FontAwesomeIcon icon={faPython} size="xl"/> PyPi: <a

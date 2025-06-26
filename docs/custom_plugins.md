@@ -58,7 +58,7 @@ auth:
 
 These plugins should subclass from `BaseAuthPlugin` and implement the `authenticate` method.
 
-::: amqtt.plugins.authentication.BaseAuthPlugin
+::: amqtt.plugins.base.BaseAuthPlugin
 
 ## Topic Filter Plugins
 
@@ -75,4 +75,4 @@ topic-check:
 These plugins should subclass from `BaseTopicPlugin` and implement the `topic_filtering` method.
 
 
-::: amqtt.plugins.topic_checking.BaseTopicPlugin
+::: amqtt.plugins.base.BaseTopicPlugin

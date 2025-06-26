@@ -25,6 +25,11 @@ Default retain value to messages published. Defaults to `false`.
 
 Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
 
+
+### `connect_timeout` *(int)*
+
+If specified, the number of seconds before a connection times out 
+
 ### `reconnect_retries` *(int)*
  
 Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
@@ -63,8 +68,15 @@ TLS certificates used to verify the broker's authenticity.
 - `cafile` *(string)*:  Path to a file of concatenated CA certificates in PEM format. See [Certificates](https://docs.python.org/3/library/ssl.html#ssl-certificates) for more info.
 - `capath` *(string)*:  Path to a directory containing several CA certificates in PEM format, following an [OpenSSL specific layout](https://docs.openssl.org/master/man3/SSL_CTX_load_verify_locations/).
 - `cadata` *(string)*:  Either an ASCII string of one or more PEM-encoded certificates or a bytes-like object of DER-encoded certificates.
+- 
+- 
+### `certfile` *(string)*
 
+Path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the server certificate's authenticity.
 
+### `check_hostname` *(bool)*
+
+Bypass ssl host certificate verification, allowing self-signed certificates
 
 
 ## Default Configuration

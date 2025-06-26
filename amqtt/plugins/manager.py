@@ -18,9 +18,8 @@ _LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from amqtt.broker import Action
-    from amqtt.plugins.authentication import BaseAuthPlugin
-    from amqtt.plugins.base import BasePlugin
-    from amqtt.plugins.topic_checking import BaseTopicPlugin
+    from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
+
 
 class Plugin(NamedTuple):
     name: str
@@ -87,8 +86,8 @@ class PluginManager(Generic[C]):
         topic_filter_list = []
         if self.app_context.config and "auth" in self.app_context.config:
             auth_filter_list = self.app_context.config["auth"].get("plugins", [])
-        if self.app_context.config and "topic" in self.app_context.config:
-            topic_filter_list = self.app_context.config["topic"].get("plugins", [])
+        if self.app_context.config and "topic-check" in self.app_context.config:
+            topic_filter_list = self.app_context.config["topic-check"].get("plugins", [])
 
         ep: EntryPoints | list[EntryPoint] = []
         if hasattr(entry_points(), "select"):

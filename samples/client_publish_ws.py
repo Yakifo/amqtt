@@ -4,39 +4,39 @@ import logging
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
-#
-# This sample shows how to publish messages to broker using different QOS
-# Debug outputs shows the message flows
-#
+"""
+This sample shows how to publish messages to secure websocket broker 
+"""
 
 logger = logging.getLogger(__name__)
 
 config = {
     "will": {
         "topic": "/will/client",
-        "message": b"Dead or alive",
-        "qos": 0x01,
+        "message": "Dead or alive",
+        "qos": QOS_1,
         "retain": True,
-    },
-    "capath": ".",
+    }
 }
-C = MQTTClient(config=config)
-# C = MQTTClient()
+client = MQTTClient(config=config)
 
 
 async def test_coro() -> None:
-    await C.connect("wss://test.mosquitto.org:8081/", cafile="mosquitto.org.crt")
+    await client.connect("ws://localhost:8080/")
     tasks = [
-        asyncio.ensure_future(C.publish("a/b", b"TEST MESSAGE WITH QOS_0")),
-        asyncio.ensure_future(C.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)),
-        asyncio.ensure_future(C.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=QOS_2)),
+        asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_0")),
+        asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)),
+        asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=QOS_2)),
     ]
     await asyncio.wait(tasks)
     logger.info("messages published")
-    await C.disconnect()
+    await client.disconnect()
 
 
-if __name__ == "__main__":
+def __main__():
     formatter = "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
-    asyncio.get_event_loop().run_until_complete(test_coro())
+    asyncio.run(test_coro())
+
+if __name__ == "__main__":
+    __main__()

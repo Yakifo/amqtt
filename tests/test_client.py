@@ -446,6 +446,15 @@ async def test_connect_incorrect_scheme():
         await client.connect('"mq://someplace')
 
 
+@pytest.mark.asyncio
+@pytest.mark.timeout(3)
+async def test_connect_timeout():
+    config = {"auto_reconnect": False, "connection_timeout": 2}
+    client = MQTTClient(config=config)
+    with pytest.raises(ClientError):
+        await client.connect("mqtt://localhost:8888")
+
+
 async def test_client_no_auth():
 
     class MockEntryPoints:
