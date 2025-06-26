@@ -21,7 +21,7 @@ async def main() -> None:
     try:
         await client.connect("mqtt://test.mosquitto.org:1883/")
         logger.info("client connected")
-        await asyncio.sleep(18)
+        await asyncio.sleep(15)
     except CancelledError:
         pass
 
@@ -32,21 +32,8 @@ def __main__():
 
     formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
+    asyncio.run(main())
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    task = loop.create_task(main())
-
-    try:
-        loop.run_until_complete(task)
-    except KeyboardInterrupt:
-        logger.info("KeyboardInterrupt received. Stopping client...")
-        task.cancel()
-        loop.run_until_complete(task)  # Ensure task finishes cleanup
-    finally:
-
-        loop.close()
 
 if __name__ == "__main__":
     __main__()

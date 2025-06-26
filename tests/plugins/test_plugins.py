@@ -132,7 +132,7 @@ async def test_plugin_exception_while_loading() -> None:
             _ = Broker(plugin_namespace='tests.mock_plugins', config=config)
 
 
-class TestAllEventsPlugin(BasePlugin[BaseContext]):
+class AllEventsPlugin(BasePlugin[BaseContext]):
     """A plugin to verify all events get sent to plugins."""
     def __init__(self, context: BaseContext) -> None:
         super().__init__(context)
@@ -161,7 +161,7 @@ async def test_all_plugin_events():
             match group:
                 case 'tests.mock_plugins':
                     return [
-                            EntryPoint(name='TestAllEventsPlugin', group='tests.mock_plugins', value='tests.plugins.test_plugins:TestAllEventsPlugin'),
+                            EntryPoint(name='AllEventsPlugin', group='tests.mock_plugins', value='tests.plugins.test_plugins:AllEventsPlugin'),
                         ]
                 case _:
                     return list()
@@ -192,7 +192,7 @@ async def test_all_plugin_events():
         await asyncio.sleep(1)
 
         # get the plugin so it doesn't get gc on shutdown
-        test_plugin = broker.plugins_manager.get_plugin('TestAllEventsPlugin')
+        test_plugin = broker.plugins_manager.get_plugin('AllEventsPlugin')
         await broker.shutdown()
         await asyncio.sleep(1)
 

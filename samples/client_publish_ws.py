@@ -22,7 +22,7 @@ client = MQTTClient(config=config)
 
 
 async def test_coro() -> None:
-    await client.connect("wss://test.mosquitto.org:8081/")
+    await client.connect("ws://localhost:8080/")
     tasks = [
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_0")),
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)),

@@ -7,6 +7,9 @@ from amqtt.mqtt.constants import QOS_1, QOS_2
 
 """
 This sample shows how to publish messages to secure broker.
+
+Use `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem -subj "/CN=localhost"` to
+generate a self-signed certificate for the broker to use.
 """
 
 logger = logging.getLogger(__name__)
@@ -17,7 +20,10 @@ config = {
         "message": "Dead or alive",
         "qos": QOS_1,
         "retain": True,
-    }
+    },
+    "auto_reconnect": False,
+    "check_hostname": False,
+    "certfile": "cert.pem",
 }
 
 client = MQTTClient(config=config)
@@ -25,7 +31,7 @@ client = MQTTClient(config=config)
 
 async def test_coro() -> None:
 
-    await client.connect("mqtts://broker.hivemq.com:8883")
+    await client.connect("mqtts://localhost:8883")
     tasks = [
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_0")),
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)),

@@ -14,7 +14,7 @@ config = {
     "will": {
         "topic": "/will/client",
         "message": b"Dead or alive",
-        "qos": 0x01,
+        "qos": QOS_1,
         "retain": True,
     },
 }
@@ -22,7 +22,7 @@ config = {
 
 async def test_coro1() -> None:
     client = MQTTClient()
-    await client.connect("mqtt://test.mosquitto.org/")
+    await client.connect("mqtt://localhost:1883/")
     tasks = [
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_0")),
         asyncio.ensure_future(client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)),
@@ -35,15 +35,15 @@ async def test_coro1() -> None:
 
 async def test_coro2() -> None:
     try:
-        client = MQTTClient()
-        await client.connect("mqtt://test.mosquitto.org:1883/")
+        client = MQTTClient(config={'auto_reconnect': False, 'connection_timeout': 1})
+        await client.connect("mqtt://localhost:1884/")
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_0", qos=0x00)
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=0x01)
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=0x02)
         logger.info("test_coro2 messages published")
         await client.disconnect()
     except ConnectError:
-        logger.exception(f"Connection failed", exc_info=True)
+        logger.info(f"Connection failed", exc_info=True)
 
 
 def __main__():
