@@ -25,6 +25,11 @@ Default retain value to messages published. Defaults to `false`.
 
 Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
 
+
+### `connect_timeout` *(int)*
+
+If specified, the number of seconds before a connection times out 
+
 ### `reconnect_retries` *(int)*
  
 Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
