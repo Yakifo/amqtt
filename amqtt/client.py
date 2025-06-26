@@ -456,6 +456,8 @@ class MQTTClient:
         # if not self._handler:
         self._handler = ClientProtocolHandler(self.plugins_manager)
 
+        connection_timeout = self.config.get("connection_timeout", None)
+
         if secure:
             sc = ssl.create_default_context(
                 ssl.Purpose.SERVER_AUTH,
@@ -478,21 +480,24 @@ class MQTTClient:
 
             # Open connection
             if scheme in ("mqtt", "mqtts"):
-                conn_reader, conn_writer = await asyncio.open_connection(
-                    self.session.remote_address,
-                    self.session.remote_port,
-                    **kwargs,
-                )
+                conn_reader, conn_writer = await asyncio.wait_for(
+                    asyncio.open_connection(
+                        self.session.remote_address,
+                        self.session.remote_port,
+                        **kwargs,
+                    ), timeout=connection_timeout)
 
                 reader = StreamReaderAdapter(conn_reader)
                 writer = StreamWriterAdapter(conn_writer)
             elif scheme in ("ws", "wss") and self.session.broker_uri:
-                websocket: ClientConnection = await websockets.connect(
-                    self.session.broker_uri,
-                    subprotocols=[websockets.Subprotocol("mqtt")],
-                    additional_headers=self.additional_headers,
-                    **kwargs,
-                )
+                websocket: ClientConnection = await asyncio.wait_for(
+                    websockets.connect(
+                        self.session.broker_uri,
+                        subprotocols=[websockets.Subprotocol("mqtt")],
+                        additional_headers=self.additional_headers,
+                        **kwargs,
+                    ), timeout=connection_timeout)
+
                 reader = WebSocketsReader(websocket)
                 writer = WebSocketsWriter(websocket)
             elif not self.session.broker_uri:
