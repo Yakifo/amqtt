@@ -8,8 +8,6 @@ import pytest
 
 from amqtt.broker import Broker
 from samples.client_publish import __main__ as client_publish_main
-from samples.client_publish_ssl import __main__ as client_publish_ssl_main
-from samples.client_publish_ws import __main__ as client_publish_ws_main
 from samples.client_subscribe import __main__ as client_subscribe_main
 from samples.client_keepalive import __main__ as client_keepalive_main
 from samples.broker_acl import config as broker_acl_config
@@ -35,8 +33,9 @@ async def test_broker_acl():
 async def test_broker_simple():
     broker_simple_script = Path(__file__).parent.parent / "samples/broker_simple.py"
     process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # Send the interrupt signal
     await asyncio.sleep(5)
+
+    # Send the interrupt signal
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
     logger.debug(stderr.decode("utf-8"))
@@ -50,8 +49,9 @@ async def test_broker_simple():
 async def test_broker_start():
     broker_start_script = Path(__file__).parent.parent / "samples/broker_start.py"
     process = subprocess.Popen(["python", broker_start_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # Send the interrupt signal
     await asyncio.sleep(5)
+
+    # Send the interrupt signal to stop broker
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
     logger.debug(stderr.decode("utf-8"))
@@ -64,8 +64,9 @@ async def test_broker_start():
 async def test_broker_taboo():
     broker_taboo_script = Path(__file__).parent.parent / "samples/broker_taboo.py"
     process = subprocess.Popen(["python", broker_taboo_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # Send the interrupt signal
     await asyncio.sleep(5)
+
+    # Send the interrupt signal to stop broker
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
     logger.debug(stderr.decode("utf-8"))
@@ -82,9 +83,43 @@ def test_client_keepalive():
 def test_client_publish():
     client_publish_main()
 
+broker_ssl_config = {
+    "listeners": {
+        "default": {
+            "type": "tcp",
+            "bind": "0.0.0.0:8883",
+            "ssl": True,
+            "certfile": "cert.pem",
+            "keyfile": "key.pem",
+        }
+    },
+    "auth": {
+        "allow-anonymous": True,
+        "plugins": ["auth_anonymous"]
+            }
+}
 
-def test_client_publish_ssl():
-    client_publish_ssl_main()
+@pytest.mark.asyncio
+async def test_client_publish_ssl():
+
+    # generate a self-signed certificate for this test
+    cmd = 'openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem -subj "/CN=localhost"'
+    subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    # start a secure broker
+    broker = Broker(config=broker_ssl_config)
+    await broker.start()
+    await asyncio.sleep(2)
+    # run the sample
+    client_publish_ssl_script = Path(__file__).parent.parent / "samples/client_publish_ssl.py"
+    process = subprocess.Popen(["python", client_publish_ssl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    await asyncio.sleep(2)
+    stdout, stderr = process.communicate()
+
+    assert "ERROR" not in stderr.decode("utf-8")
+    assert "Exception" not in stderr.decode("utf-8")
+
+    await broker.shutdown()
 
 
 @pytest.mark.asyncio
@@ -92,12 +127,13 @@ async def test_client_publish_acl():
 
     broker = Broker()
     await broker.start()
+    await asyncio.sleep(2)
 
     broker_simple_script = Path(__file__).parent.parent / "samples/client_publish_acl.py"
     process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
-    await asyncio.sleep(5)
-    process.send_signal(signal.SIGINT)
+    await asyncio.sleep(2)
+
     stdout, stderr = process.communicate()
     logger.debug(stderr.decode("utf-8"))
     assert "ERROR" not in stderr.decode("utf-8")
@@ -105,9 +141,36 @@ async def test_client_publish_acl():
 
     await broker.shutdown()
 
+broker_ws_config = {
+    "listeners": {
+        "default": {
+            "type": "ws",
+            "bind": "0.0.0.0:8080",
+        }
+    },
+    "auth": {
+        "allow-anonymous": True,
+        "plugins": ["auth_anonymous"]
+            }
+}
 
-def test_client_publish_ws():
-    client_publish_ws_main()
+@pytest.mark.asyncio
+async def test_client_publish_ws():
+    # start a secure broker
+    broker = Broker(config=broker_ws_config)
+    await broker.start()
+    await asyncio.sleep(2)
+    # run the sample
+
+    client_publish_ssl_script = Path(__file__).parent.parent / "samples/client_publish_ws.py"
+    process = subprocess.Popen(["python", client_publish_ssl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    await asyncio.sleep(2)
+    stdout, stderr = process.communicate()
+
+    assert "ERROR" not in stderr.decode("utf-8")
+    assert "Exception" not in stderr.decode("utf-8")
+
+    await broker.shutdown()
 
 
 def test_client_subscribe():

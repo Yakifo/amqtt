@@ -21,7 +21,7 @@ async def main() -> None:
     try:
         await client.connect("mqtt://test.mosquitto.org:1883/")
         logger.info("client connected")
-        await asyncio.sleep(18)
+        await asyncio.sleep(15)
     except CancelledError:
         pass
 
