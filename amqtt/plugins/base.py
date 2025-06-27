@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
 from amqtt.contexts import Action, BaseContext
@@ -23,6 +24,10 @@ class BasePlugin(Generic[C]):
             return None
         return section_config
 
+    @dataclass
+    class Config:
+        """Override to define the configuration and defaults for plugin."""
+
     async def close(self) -> None:
         """Override if plugin needs to clean up resources upon shutdown."""
 
@@ -34,8 +39,6 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
         super().__init__(context)
 
         self.topic_config: dict[str, Any] | None = self._get_config_section("topic-check")
-        if self.topic_config is None:
-            self.context.logger.warning("'topic-check' section not found in context configuration")
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
@@ -51,12 +54,7 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
             bool: `True` if topic is allowed, `False` otherwise
 
         """
-        if not self.topic_config:
-            # auth config section not found
-            self.context.logger.warning("'topic-check' section not found in context configuration")
-            return False
-        return True
-
+        return bool(self.topic_config)
 
 class BaseAuthPlugin(BasePlugin[BaseContext]):
     """Base class for authentication plugins."""
