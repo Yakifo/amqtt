@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 
 from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
-from amqtt.plugins.contexts import BaseContext
+from amqtt.contexts import BaseContext
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

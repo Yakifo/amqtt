@@ -2,8 +2,9 @@ import logging
 
 import pytest
 
-from amqtt.broker import Action, BrokerContext, Broker
-from amqtt.plugins.contexts import BaseContext
+from amqtt.broker import BrokerContext, Broker
+
+from amqtt.contexts import BaseContext, Action
 from amqtt.plugins.topic_checking import TopicAccessControlListPlugin, TopicTabooPlugin
 from amqtt.plugins.base import BaseTopicPlugin
 from amqtt.session import Session

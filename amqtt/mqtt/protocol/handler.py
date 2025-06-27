@@ -20,6 +20,7 @@ import logging
 from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
+from amqtt.contexts import BaseContext
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
@@ -57,7 +58,6 @@ from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.plugins.contexts import BaseContext
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
@@ -154,7 +154,7 @@ class ProtocolHandler(Generic[C]):
         except asyncio.CancelledError:
             # canceling the task is the expected result
             self.logger.debug("Writer close was cancelled.")
-        except TimeoutError:
+        except asyncio.TimeoutError:
             self.logger.debug("Writer close operation timed out.", exc_info=True)
         except OSError:
             self.logger.debug("Writer close failed due to I/O error.", exc_info=True)
@@ -322,7 +322,7 @@ class ProtocolHandler(Generic[C]):
             self._puback_waiters[app_message.packet_id] = waiter
             try:
                 app_message.puback_packet = await asyncio.wait_for(waiter, timeout=5)
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 msg = f"Timeout waiting for PUBACK for packet ID {app_message.packet_id}"
                 self.logger.warning(msg)
                 raise TimeoutError(msg) from None
@@ -529,7 +529,7 @@ class ProtocolHandler(Generic[C]):
             except asyncio.CancelledError:
                 self.logger.debug("Task cancelled, reader loop ending")
                 break
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 self.logger.debug(f"{self.session.client_id} Input stream read timeout")
                 self.handle_read_timeout()
             except NoDataError:

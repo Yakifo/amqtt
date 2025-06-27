@@ -58,7 +58,11 @@ all_sys_topics = [
     '$SYS/broker/messages/publish/received',
     '$SYS/broker/messages/publish/sent',
     '$SYS/broker/messages/retained/count',
-    '$SYS/broker/messages/subscriptions/count'
+    '$SYS/broker/messages/subscriptions/count',
+    '$SYS/broker/heap/size',
+    '$SYS/broker/heap/maximum',
+    '$SYS/broker/cpu/percent',
+    '$SYS/broker/cpu/maximum',
 ]
 
 
@@ -121,7 +125,6 @@ async def test_broker_sys_plugin_deprecated_config() -> None:
 async def test_broker_sys_plugin_config() -> None:
 
     sys_topic_flags = {sys_topic:False for sys_topic in all_sys_topics}
-
 
     config = {
         "listeners": {

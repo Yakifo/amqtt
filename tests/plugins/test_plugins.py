@@ -13,11 +13,11 @@ import pytest
 import amqtt.plugins
 from amqtt.broker import Broker, BrokerContext
 from amqtt.client import MQTTClient
-from amqtt.errors import PluginError, PluginInitError, PluginImportError
+from amqtt.errors import PluginInitError, PluginImportError
 from amqtt.events import MQTTEvents, BrokerEvents
 from amqtt.mqtt.constants import QOS_0
 from amqtt.plugins.base import BasePlugin
-from amqtt.plugins.contexts import BaseContext
+from amqtt.contexts import BaseContext
 
 _INVALID_METHOD: str = "invalid_foo"
 _PLUGIN: str = "Plugin"

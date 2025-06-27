@@ -3,6 +3,7 @@
 __pycache__
 node_modules
 .vite
+*.pem
 
 #------- Environment Files -------
 .python-version

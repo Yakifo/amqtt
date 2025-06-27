@@ -2,37 +2,41 @@ import asyncio
 import logging
 
 from amqtt.client import ConnectError, MQTTClient
+from amqtt.mqtt.constants import QOS_1
 
-#
-# This sample shows how to publish messages to broker using different QOS
-# Debug outputs shows the message flows
-#
+"""
+This sample shows how to publish messages to broker running either `samples/broker_acl.py`
+ or `samples/broker_taboo.py`. 
+"""
 
 logger = logging.getLogger(__name__)
 
 
 async def test_coro() -> None:
     try:
-        C = MQTTClient()
-        await C.connect("mqtt://0.0.0.0:1883")
-        await C.publish("data/classified", b"TOP SECRET", qos=0x01)
-        await C.publish("data/memes", b"REAL FUN", qos=0x01)
-        await C.publish("repositories/amqtt/master", b"NEW STABLE RELEASE", qos=0x01)
-        await C.publish(
+        client = MQTTClient()
+        await client.connect("mqtt://0.0.0.0:1883")
+        await client.publish("data/classified", b"TOP SECRET", qos=QOS_1)
+        await client.publish("data/memes", b"REAL FUN", qos=QOS_1)
+        await client.publish("repositories/amqtt/master", b"NEW STABLE RELEASE", qos=QOS_1)
+        await client.publish(
             "repositories/amqtt/devel",
             b"THIS NEEDS TO BE CHECKED",
-            qos=0x01,
+            qos=QOS_1,
         )
-        await C.publish("calendar/amqtt/releases", b"NEW RELEASE", qos=0x01)
+        await client.publish("calendar/amqtt/releases", b"NEW RELEASE", qos=QOS_1)
         logger.info("messages published")
-        await C.disconnect()
+        await client.disconnect()
     except ConnectError as ce:
-        logger.exception("Connection failed")
-        asyncio.get_event_loop().stop()
+        logger.exception("ERROR: Connection failed")
 
+
+def __main__():
+
+    formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
+    logging.basicConfig(level=logging.INFO, format=formatter)
+
+    asyncio.run(test_coro())
 
 if __name__ == "__main__":
-    formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-    formatter = "%(message)s"
-    logging.basicConfig(level=logging.DEBUG, format=formatter)
-    asyncio.get_event_loop().run_until_complete(test_coro())
+    __main__()

@@ -8,19 +8,16 @@ import copy
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from inspect import iscoroutinefunction
 import logging
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar, cast
+from typing import Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar, cast
 
 from dacite import Config as DaciteConfig, DaciteError, from_dict
 
+from amqtt.contexts import Action, BaseContext
 from amqtt.errors import PluginCoroError, PluginImportError, PluginInitError, PluginLoadError
 from amqtt.events import BrokerEvents, Events, MQTTEvents
 from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
-from amqtt.plugins.contexts import BaseContext
 from amqtt.session import Session
 from amqtt.utils import import_string
-
-if TYPE_CHECKING:
-    from amqtt.broker import Action
 
 
 class Plugin(NamedTuple):
@@ -109,8 +106,8 @@ class PluginManager(Generic[C]):
         topic_filter_list = []
         if self.app_context.config and "auth" in self.app_context.config:
             auth_filter_list = self.app_context.config["auth"].get("plugins", [])
-        if self.app_context.config and "topic" in self.app_context.config:
-            topic_filter_list = self.app_context.config["topic"].get("plugins", [])
+        if self.app_context.config and "topic-check" in self.app_context.config:
+            topic_filter_list = self.app_context.config["topic-check"].get("plugins", [])
 
         ep: EntryPoints | list[EntryPoint] = []
         if hasattr(entry_points(), "select"):

@@ -1,8 +1,7 @@
 from typing import Any
 
-from amqtt.broker import Action
+from amqtt.contexts import Action, BaseContext
 from amqtt.plugins.base import BaseTopicPlugin
-from amqtt.plugins.contexts import BaseContext
 from amqtt.session import Session
 
 
