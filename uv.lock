@@ -9,11 +9,12 @@ resolution-markers = [
 
 [[package]]
 name = "amqtt"
-version = "0.11.0"
+version = "0.11.1"
 source = { editable = "." }
 dependencies = [
     { name = "dacite" },
     { name = "passlib" },
+    { name = "psutil" },
     { name = "pyyaml" },
     { name = "transitions" },
     { name = "typer" },
@@ -69,6 +70,7 @@ requires-dist = [
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "passlib", specifier = "==1.7.4" },
+    { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "transitions", specifier = "==0.9.2" },
     { name = "typer", specifier = "==0.15.4" },

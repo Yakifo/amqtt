@@ -31,7 +31,11 @@ all_sys_topics = [
     '$SYS/broker/messages/publish/received',
     '$SYS/broker/messages/publish/sent',
     '$SYS/broker/messages/retained/count',
-    '$SYS/broker/messages/subscriptions/count'
+    '$SYS/broker/messages/subscriptions/count',
+    '$SYS/broker/heap/size',
+    '$SYS/broker/heap/maximum',
+    '$SYS/broker/cpu/percent',
+    '$SYS/broker/cpu/maximum',
 ]
 
 

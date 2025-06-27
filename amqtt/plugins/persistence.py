@@ -2,7 +2,7 @@ import json
 import sqlite3
 from typing import Any
 
-from amqtt.plugins.contexts import BaseContext
+from amqtt.contexts import BaseContext
 from amqtt.session import Session
 
 

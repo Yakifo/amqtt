@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -11,3 +12,10 @@ class BaseContext:
         self.loop: asyncio.AbstractEventLoop | None = None
         self.logger: logging.Logger = _LOGGER
         self.config: dict[str, Any] | None = None
+
+
+class Action(Enum):
+    """Actions issued by the broker."""
+
+    SUBSCRIBE = "subscribe"
+    PUBLISH = "publish"

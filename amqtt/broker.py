@@ -3,7 +3,6 @@ from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
 import copy
-from enum import Enum
 from functools import partial
 import logging
 from pathlib import Path
@@ -23,6 +22,7 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
+from amqtt.contexts import Action, BaseContext
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -30,7 +30,6 @@ from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .events import BrokerEvents
 from .mqtt.disconnect import DisconnectPacket
-from .plugins.contexts import BaseContext
 from .plugins.manager import PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
@@ -43,13 +42,6 @@ _defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yam
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
-
-
-class Action(Enum):
-    """Actions issued by the broker."""
-
-    SUBSCRIBE = "subscribe"
-    PUBLISH = "publish"
 
 
 class RetainedApplicationMessage(ApplicationMessage):

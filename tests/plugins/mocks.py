@@ -2,10 +2,8 @@ import logging
 
 from dataclasses import dataclass
 
-from amqtt.broker import Action
-
 from amqtt.plugins.base import BasePlugin, BaseAuthPlugin, BaseTopicPlugin
-from amqtt.plugins.contexts import BaseContext
+from amqtt.contexts import BaseContext, Action
 
 from amqtt.session import Session
 
