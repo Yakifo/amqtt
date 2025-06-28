@@ -1,6 +1,6 @@
 import asyncio
 from collections import deque  # pylint: disable=C0412
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
 
 import psutil
@@ -116,12 +116,10 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
 
         # Start $SYS topics management
         try:
-            if is_dataclass(self.context.config):
-                self._sys_interval = self.context.config.sys_interval   # type: ignore[unreachable]
-            else:
-                x = self.context.config.get("sys_interval") if self.context.config is not None else None
-                if isinstance(x, str | Buffer | SupportsInt | SupportsIndex):
-                    self._sys_interval = int(x)
+            self._sys_interval = self._get_config_option("sys_interval", None)
+            if isinstance(self._sys_interval, str | Buffer | SupportsInt | SupportsIndex):
+                self._sys_interval = int(self._sys_interval)
+
             if self._sys_interval > 0:
                 self.context.logger.debug(f"Setup $SYS broadcasting every {self._sys_interval} seconds")
                 self._sys_handle = (

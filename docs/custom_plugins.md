@@ -28,8 +28,16 @@ its own variables to configure its behavior.
 Plugins that are defined in the`project.entry-points` are notified of events if the subclass 
 implements one or more of these methods:
 
+### Client and Broker
+
 - `async def on_mqtt_packet_sent(self, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
 - `async def on_mqtt_packet_received(self, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
+
+### Client Only
+
+none
+
+### Broker Only
 
 - `async def on_broker_pre_start() -> None`
 - `async def on_broker_post_start() -> None`

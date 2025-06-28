@@ -9,6 +9,7 @@ from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from inspect import iscoroutinefunction
 import logging
 from typing import Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar, cast
+import warnings
 
 from dacite import Config as DaciteConfig, DaciteError, from_dict
 
@@ -82,12 +83,25 @@ class PluginManager(Generic[C]):
 
     def _load_plugins(self, namespace: str | None = None) -> None:
         if self.app_context.config and "plugins" in self.app_context.config:
+            if "auth" in self.app_context.config:
+                self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
+            if "topic-check" in self.app_context.config:
+                self.logger.warning("Loading plugins from config will ignore 'topic-check' section of config")
+
             plugin_list: list[Any] = self.app_context.config.get("plugins", [])
             self._load_str_plugins(plugin_list)
         else:
             if not namespace:
                 msg = "Namespace needs to be provided for EntryPoint plugin definitions"
                 raise PluginLoadError(msg)
+
+            warnings.warn(
+                "Loading plugins from EntryPoints is deprecated and will be removed in a future version."
+                " Use `plugins` section of config instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
             self._load_ep_plugins(namespace)
 
         for plugin in self._plugins:
@@ -183,7 +197,7 @@ class PluginManager(Generic[C]):
 
         try:
             plugin_class: Any =  import_string(plugin_path)
-        except ModuleNotFoundError as ep:
+        except ImportError as ep:
             msg = f"Plugin import failed: {plugin_path}"
             raise PluginImportError(msg) from ep
 
@@ -204,10 +218,12 @@ class PluginManager(Generic[C]):
             raise PluginLoadError(msg) from e
 
         try:
+            pc = plugin_class(plugin_context)
             self.logger.debug(f"Loading plugin {plugin_path}")
-            return cast("BasePlugin[C]", plugin_class(plugin_context))
-        except ImportError as e:
-            raise PluginLoadError from e
+            return cast("BasePlugin[C]", pc)
+        except Exception as e:
+            self.logger.debug(f"Plugin init failed: {plugin_class.__name__}", exc_info=True)
+            raise PluginInitError(plugin_class) from e
 
     def get_plugin(self, name: str) -> Optional["BasePlugin[C]"]:
         """Get a plugin by its name from the plugins loaded for the current namespace.

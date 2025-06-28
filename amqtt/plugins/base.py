@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass
 from typing import Any, Generic, TypeVar
 
 from amqtt.contexts import Action, BaseContext
@@ -24,6 +24,16 @@ class BasePlugin(Generic[C]):
             return None
         return section_config
 
+    def _get_config_option(self, option_name: str, default: Any=None) -> Any:
+        if not self.context.config:
+            return default
+
+        if is_dataclass(self.context.config):
+            return getattr(self.context.config, option_name.replace("-", "_"), default)  # type: ignore[unreachable]
+        if option_name in self.context.config:
+            return self.context.config[option_name]
+        return default
+
     @dataclass
     class Config:
         """Override to define the configuration and defaults for plugin."""
@@ -39,6 +49,18 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
         super().__init__(context)
 
         self.topic_config: dict[str, Any] | None = self._get_config_section("topic-check")
+        if not bool(self.topic_config) and not is_dataclass(self.context.config):
+            self.context.logger.warning("'topic-check' section not found in context configuration")
+
+    def _get_config_option(self, option_name: str, default: Any=None) -> Any:
+        if not self.context.config:
+            return default
+
+        if is_dataclass(self.context.config):
+            return getattr(self.context.config, option_name.replace("-", "_"), default)  # type: ignore[unreachable]
+        if self.topic_config and option_name in self.topic_config:
+            return self.topic_config[option_name]
+        return default
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
@@ -54,17 +76,30 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
             bool: `True` if topic is allowed, `False` otherwise
 
         """
-        return bool(self.topic_config)
+        return bool(self.topic_config) or is_dataclass(self.context.config)
+
 
 class BaseAuthPlugin(BasePlugin[BaseContext]):
     """Base class for authentication plugins."""
+
+    def _get_config_option(self, option_name: str, default: Any=None) -> Any:
+        if not self.context.config:
+            return default
+
+        if is_dataclass(self.context.config):
+            return getattr(self.context.config, option_name.replace("-", "_"), default)  # type: ignore[unreachable]
+        if self.auth_config and option_name in self.auth_config:
+            return self.auth_config[option_name]
+        return default
 
     def __init__(self, context: BaseContext) -> None:
         super().__init__(context)
 
         self.auth_config: dict[str, Any] | None = self._get_config_section("auth")
-        if not self.auth_config:
+        if not bool(self.auth_config) and not is_dataclass(self.context.config):
+            # auth config section not found and Config dataclass not provided
             self.context.logger.warning("'auth' section not found in context configuration")
+
 
     async def authenticate(self, *, session: Session) -> bool | None:
         """Logic for session authentication.
@@ -77,8 +112,4 @@ class BaseAuthPlugin(BasePlugin[BaseContext]):
             - `None` if authentication can't be achieved (then plugin result is then ignored)
 
         """
-        if not self.auth_config:
-            # auth config section not found
-            self.context.logger.warning("'auth' section not found in context configuration")
-            return False
-        return True
+        return bool(self.auth_config) or is_dataclass(self.context.config)
