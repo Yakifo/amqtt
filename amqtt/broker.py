@@ -158,9 +158,9 @@ class Broker:
         self.config = copy.deepcopy(_defaults or {})
         if config is not None:
             # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
-            if ('auth' in config or 'topic-check' in config) and 'plugins' not in config:
+            if ("auth" in config or "topic-check" in config) and "plugins" not in config:
                 # set to None so that the config isn't updated with the new-style default plugin list
-                config['plugins'] = None
+                config["plugins"] = None  # type: ignore[assignment]
             self.config.update(config)
         self._build_listeners_config(self.config)
 
