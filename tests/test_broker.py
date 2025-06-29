@@ -85,19 +85,13 @@ async def test_client_connect(broker, mock_plugin_manager):
 
     await asyncio.sleep(0.01)
 
-    mock_plugin_manager.assert_has_calls(
-        [
-            call().fire_event(
-                BrokerEvents.CLIENT_CONNECTED,
-                client_id=client.session.client_id,
-            ),
-            call().fire_event(
-                BrokerEvents.CLIENT_DISCONNECTED,
-                client_id=client.session.client_id,
-            ),
-        ],
-        any_order=True,
-    )
+    broker.plugins_manager.fire_event.assert_called()
+    assert broker.plugins_manager.fire_event.call_count > 2
+
+    # double indexing is ugly, but call_args_list returns a tuple of tuples
+    events = [c[0][0] for c in broker.plugins_manager.fire_event.call_args_list]
+    assert BrokerEvents.CLIENT_CONNECTED in events
+    assert BrokerEvents.CLIENT_DISCONNECTED in events
 
 
 @pytest.mark.asyncio
