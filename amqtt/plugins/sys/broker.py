@@ -225,7 +225,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_SENT] += 1
 
-    async def on_broker_client_connected(self, client_id: str) -> None:
+    async def on_broker_client_connected(self, client_id: str, client_session: Session) -> None:
         """Handle broker client connection."""
         self._stats[STAT_CLIENTS_CONNECTED] += 1
         self._stats[STAT_CLIENTS_MAXIMUM] = max(
@@ -233,7 +233,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             self._stats[STAT_CLIENTS_CONNECTED],
         )
 
-    async def on_broker_client_disconnected(self, client_id: str) -> None:
+    async def on_broker_client_disconnected(self, client_id: str, client_session: Session) -> None:
         """Handle broker client disconnection."""
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1

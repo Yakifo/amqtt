@@ -36,8 +36,8 @@ implements one or more of these methods:
 - `async def on_broker_pre_shutdown() -> None`
 - `async def on_broker_post_shutdown() -> None`
 
-- `async def on_broker_client_connected(self, client_id:str) -> None`
-- `async def on_broker_client_disconnected(self, client_id:str) -> None`
+- `async def on_broker_client_connected(self, client_id:str, client_session:Session) -> None`
+- `async def on_broker_client_disconnected(self, client_id:str, client_session:Session) -> None`
 
 - `async def on_broker_client_subscribed(self, client_id: str, topic: str, qos: int) -> None`
 - `async def on_broker_client_unsubscribed(self, client_id: str, topic: str) -> None`
