@@ -3,7 +3,6 @@ from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
 import copy
-from enum import Enum
 from functools import partial
 import logging
 from pathlib import Path
@@ -23,6 +22,7 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
+from amqtt.contexts import Action, BaseContext
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -30,7 +30,7 @@ from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .events import BrokerEvents
 from .mqtt.disconnect import DisconnectPacket
-from .plugins.manager import BaseContext, PluginManager
+from .plugins.manager import PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
@@ -42,13 +42,6 @@ _defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yam
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
-
-
-class Action(Enum):
-    """Actions issued by the broker."""
-
-    SUBSCRIBE = "subscribe"
-    PUBLISH = "publish"
 
 
 class RetainedApplicationMessage(ApplicationMessage):
@@ -164,6 +157,10 @@ class Broker:
         self.logger = logging.getLogger(__name__)
         self.config = copy.deepcopy(_defaults or {})
         if config is not None:
+            # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
+            if ("auth" in config or "topic-check" in config) and "plugins" not in config:
+                # set to None so that the config isn't updated with the new-style default plugin list
+                config["plugins"] = None  # type: ignore[assignment]
             self.config.update(config)
         self._build_listeners_config(self.config)
 
@@ -766,13 +763,7 @@ class Broker:
         :param action: What is being done with the topic?  subscribe or publish
         :return:
         """
-        topic_config = self.config.get("topic-check", {})
-        enabled = False
-
-        if isinstance(topic_config, dict):
-            enabled = topic_config.get("enabled", False)
-
-        if not enabled:
+        if not self.plugins_manager.is_topic_filtering_enabled():
             return True
 
         results = await self.plugins_manager.map_plugin_topic(session=session, topic=topic, action=action)

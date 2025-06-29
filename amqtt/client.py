@@ -19,11 +19,12 @@ from amqtt.adapters import (
     WebSocketsReader,
     WebSocketsWriter,
 )
+from amqtt.contexts import BaseContext
 from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
-from amqtt.plugins.manager import BaseContext, PluginManager
+from amqtt.plugins.manager import PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id, read_yaml_config
 

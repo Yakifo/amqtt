@@ -50,6 +50,11 @@ test_config_acl: dict[str, int | dict[str, Any]] = {
 @pytest.fixture
 def mock_plugin_manager():
     with unittest.mock.patch("amqtt.broker.PluginManager") as plugin_manager:
+        plugin_manager_instance = plugin_manager.return_value
+
+        # disable topic filtering when using the mock manager
+        plugin_manager_instance.is_topic_filtering_enabled.return_value = False
+
         yield plugin_manager
 
 

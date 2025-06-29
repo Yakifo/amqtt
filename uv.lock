@@ -12,6 +12,7 @@ name = "amqtt"
 version = "0.11.1"
 source = { editable = "." }
 dependencies = [
+    { name = "dacite" },
     { name = "passlib" },
     { name = "psutil" },
     { name = "pyyaml" },
@@ -67,6 +68,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
+    { name = "dacite", specifier = ">=1.9.2" },
     { name = "passlib", specifier = "==1.7.4" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
@@ -486,6 +488,15 @@ name = "csscompressor"
 version = "0.9.5"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f1/2a/8c3ac3d8bc94e6de8d7ae270bb5bc437b210bb9d6d9e46630c98f4abd20c/csscompressor-0.9.5.tar.gz", hash = "sha256:afa22badbcf3120a4f392e4d22f9fff485c044a1feda4a950ecc5eba9dd31a05", size = 237808, upload-time = "2017-11-26T21:13:08.238Z" }
+
+[[package]]
+name = "dacite"
+version = "1.9.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/a0/7ca79796e799a3e782045d29bf052b5cde7439a2bbb17f15ff44f7aacc63/dacite-1.9.2.tar.gz", hash = "sha256:6ccc3b299727c7aa17582f0021f6ae14d5de47c7227932c47fec4cdfefd26f09", size = 22420, upload-time = "2025-02-05T09:27:29.757Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/35/386550fd60316d1e37eccdda609b074113298f23cef5bddb2049823fe666/dacite-1.9.2-py3-none-any.whl", hash = "sha256:053f7c3f5128ca2e9aceb66892b1a3c8936d02c686e707bee96e19deef4bc4a0", size = 16600, upload-time = "2025-02-05T09:27:24.345Z" },
+]
 
 [[package]]
 name = "dill"

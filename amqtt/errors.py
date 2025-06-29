@@ -29,11 +29,16 @@ class PluginError(Exception):
 
 
 class PluginImportError(PluginError):
-    def __init__(self, plugin: Any) -> None:
-        super().__init__(f"Plugin import failed: {plugin!r}")
+    """Exceptions thrown when loading plugin."""
+
+
+class PluginCoroError(PluginError):
+    """Exceptions thrown when loading a plugin with a non-async call method."""
 
 
 class PluginInitError(PluginError):
+    """Exceptions thrown when initializing plugin."""
+
     def __init__(self, plugin: Any) -> None:
         super().__init__(f"Plugin init failed: {plugin!r}")
 
