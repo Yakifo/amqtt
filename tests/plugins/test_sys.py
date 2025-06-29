@@ -91,7 +91,8 @@ async def test_broker_sys_plugin_deprecated_config() -> None:
             "listeners": {
                 "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
             },
-            'sys_interval': 1
+            'sys_interval': 1,
+            'auth': {}
         }
 
         broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
