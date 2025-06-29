@@ -79,7 +79,8 @@ async def test_broker_sys_plugin_deprecated_config() -> None:
             match group:
                 case 'tests.mock_plugins':
                     return [
-                            EntryPoint(name='BrokerSysPlugin', group='tests.mock_plugins', value='amqtt.plugins.sys.broker:BrokerSysPlugin'),
+                            EntryPoint(name='broker_sys', group='tests.mock_plugins', value='amqtt.plugins.sys.broker:BrokerSysPlugin'),
+                            EntryPoint(name='auth_anonymous', group='test.mock_plugins', value='amqtt.plugins.sys.auth:AuthAnonymousPlugin'),
                         ]
                 case _:
                     return list()
@@ -91,7 +92,10 @@ async def test_broker_sys_plugin_deprecated_config() -> None:
             "listeners": {
                 "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
             },
-            'sys_interval': 1
+            'sys_interval': 1,
+            'auth': {
+                'allow_anonymous': True
+            }
         }
 
         broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
@@ -131,6 +135,7 @@ async def test_broker_sys_plugin_config() -> None:
             "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
         },
         'plugins': [
+            {'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True}},
             {'amqtt.plugins.sys.broker.BrokerSysPlugin': {'sys_interval': 1}},
         ]
     }
