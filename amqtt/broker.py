@@ -697,7 +697,7 @@ class Broker:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
 
-        results = [ result for _, result in returns.items() if result is not None]
+        results = [ result for _, result in returns.items() if result is not None] if returns else []
         if len(results) < 1:
             self.logger.debug("Authentication failed: no plugin responded with a boolean")
             return False

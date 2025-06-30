@@ -80,7 +80,7 @@ async def test_broker_sys_plugin_deprecated_config() -> None:
                 case 'tests.mock_plugins':
                     return [
                             EntryPoint(name='broker_sys', group='tests.mock_plugins', value='amqtt.plugins.sys.broker:BrokerSysPlugin'),
-                            EntryPoint(name='auth_anonymous', group='test.mock_plugins', value='amqtt.plugins.sys.auth:AuthAnonymousPlugin'),
+                            EntryPoint(name='auth_anonymous', group='test.mock_plugins', value='amqtt.plugins.authentication:AnonymousAuthPlugin'),
                         ]
                 case _:
                     return list()

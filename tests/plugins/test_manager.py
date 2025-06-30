@@ -31,7 +31,7 @@ class EventTestPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
     async def authenticate(self, *, session: Session) -> bool | None:
         self.test_auth_flag = True
-        return None
+        return True
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
