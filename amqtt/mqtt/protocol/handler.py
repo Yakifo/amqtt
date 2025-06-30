@@ -20,6 +20,7 @@ import logging
 from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
+from amqtt.contexts import BaseContext
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
@@ -57,7 +58,7 @@ from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.plugins.manager import BaseContext, PluginManager
+from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 C = TypeVar("C", bound=BaseContext)
