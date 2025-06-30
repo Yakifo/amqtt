@@ -82,7 +82,7 @@ class PluginManager(Generic[C]):
         return self.context
 
     def _load_plugins(self, namespace: str | None = None) -> None:
-        if self.app_context.config and "plugins" in self.app_context.config:
+        if self.app_context.config and self.app_context.config.get("plugins", None) is not None:
             if "auth" in self.app_context.config:
                 self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
             if "topic-check" in self.app_context.config:
