@@ -10,7 +10,7 @@
 Without the `-c` argument, the client will run with the following, default configuration:
 
 ```yaml
---8<-- "../amqtt/amqtt/scripts/default_client.yaml"
+--8<-- "amqtt/scripts/default_client.yaml"
 ```
 
 Using the `-c` argument allows for configuration with a YAML structured file; see [client configuration](client_config.md). 

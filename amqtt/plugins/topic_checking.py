@@ -1,43 +1,13 @@
 from typing import Any
 
-from amqtt.broker import Action, BrokerContext
-from amqtt.plugins.base import BasePlugin
+from amqtt.broker import Action
+from amqtt.plugins.base import BaseTopicPlugin
+from amqtt.plugins.manager import BaseContext
 from amqtt.session import Session
 
 
-class BaseTopicPlugin(BasePlugin):
-    """Base class for topic plugins."""
-
-    def __init__(self, context: BrokerContext) -> None:
-        super().__init__(context)
-
-        self.topic_config: dict[str, Any] | None = self._get_config_section("topic-check")
-        if self.topic_config is None:
-            self.context.logger.warning("'topic-check' section not found in context configuration")
-
-    async def topic_filtering(
-        self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool:
-        """Logic for filtering out topics.
-
-        Args:
-            session: amqtt.session.Session
-            topic: str
-            action: amqtt.broker.Action
-
-        Returns:
-            bool: `True` if topic is allowed, `False` otherwise
-
-        """
-        if not self.topic_config:
-            # auth config section not found
-            self.context.logger.warning("'topic-check' section not found in context configuration")
-            return False
-        return True
-
-
 class TopicTabooPlugin(BaseTopicPlugin):
-    def __init__(self, context: BrokerContext) -> None:
+    def __init__(self, context: BaseContext) -> None:
         super().__init__(context)
         self._taboo: list[str] = ["prohibited", "top-secret", "data/classified"]
 

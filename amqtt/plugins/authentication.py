@@ -1,41 +1,12 @@
 from pathlib import Path
-from typing import Any
 
 from passlib.apps import custom_app_context as pwd_context
 
 from amqtt.broker import BrokerContext
-from amqtt.plugins.base import BasePlugin
+from amqtt.plugins.base import BaseAuthPlugin
 from amqtt.session import Session
 
 _PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
-
-
-class BaseAuthPlugin(BasePlugin):
-    """Base class for authentication plugins."""
-
-    def __init__(self, context: BrokerContext) -> None:
-        super().__init__(context)
-
-        self.auth_config: dict[str, Any] | None = self._get_config_section("auth")
-        if not self.auth_config:
-            self.context.logger.warning("'auth' section not found in context configuration")
-
-    async def authenticate(self, *, session: Session) -> bool | None:
-        """Logic for session authentication.
-
-        Args:
-            session: amqtt.session.Session
-
-        Returns:
-            - `True` if user is authentication succeed, `False` if user authentication fails
-            - `None` if authentication can't be achieved (then plugin result is then ignored)
-
-        """
-        if not self.auth_config:
-            # auth config section not found
-            self.context.logger.warning("'auth' section not found in context configuration")
-            return False
-        return True
 
 
 class AnonymousAuthPlugin(BaseAuthPlugin):

@@ -7,7 +7,7 @@ from yaml.parser import ParserError
 
 from amqtt import __version__ as amqtt_version
 from amqtt.broker import Broker
-from amqtt.errors import BrokerError
+from amqtt.errors import BrokerError, PluginError
 from amqtt.utils import read_yaml_config
 
 logger = logging.getLogger(__name__)
@@ -54,21 +54,21 @@ def broker_main(
         typer.echo(f"❌ Config file error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        broker = Broker(config)
-    except (BrokerError, ParserError) as exc:
+        broker = Broker(config, loop=loop)
+    except (BrokerError, ParserError, PluginError) as exc:
         typer.echo(f"❌ Broker failed to start: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
+    _ = loop.create_task(broker.start())  #noqa : RUF006
     try:
-        loop.run_until_complete(broker.start())
         loop.run_forever()
     except KeyboardInterrupt:
         loop.run_until_complete(broker.shutdown())
     except Exception as exc:
-        typer.echo("❌ Connection failed", err=True)
+        typer.echo("❌ Broker execution halted", err=True)
         raise typer.Exit(code=1) from exc
     finally:
         loop.close()

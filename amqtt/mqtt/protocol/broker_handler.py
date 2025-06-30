@@ -1,8 +1,10 @@
 import asyncio
 from asyncio import AbstractEventLoop, Queue
+from typing import TYPE_CHECKING
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import MQTTError
+from amqtt.events import MQTTEvents
 from amqtt.mqtt.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
@@ -24,10 +26,10 @@ from amqtt.plugins.manager import PluginManager
 from amqtt.session import Session
 from amqtt.utils import format_client_message
 
-from .handler import EVENT_MQTT_PACKET_RECEIVED, EVENT_MQTT_PACKET_SENT
-
 _MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
 
+if TYPE_CHECKING:
+    from amqtt.broker import BrokerContext
 
 class Subscription:
     def __init__(self, packet_id: int, topics: list[tuple[str, int]]) -> None:
@@ -41,10 +43,10 @@ class UnSubscription:
         self.topics = topics
 
 
-class BrokerProtocolHandler(ProtocolHandler):
+class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
     def __init__(
         self,
-        plugins_manager: PluginManager,
+        plugins_manager: PluginManager["BrokerContext"],
         session: Session | None = None,
         loop: AbstractEventLoop | None = None,
     ) -> None:
@@ -156,12 +158,12 @@ class BrokerProtocolHandler(ProtocolHandler):
         cls,
         reader: ReaderAdapter,
         writer: WriterAdapter,
-        plugins_manager: PluginManager,
+        plugins_manager: PluginManager["BrokerContext"],
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> tuple["BrokerProtocolHandler", Session]:
         """Initialize from a CONNECT packet and validates the connection."""
         connect = await ConnectPacket.from_stream(reader)
-        await plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=connect)
+        await plugins_manager.fire_event(MQTTEvents.PACKET_RECEIVED, packet=connect)
 
         if connect.variable_header is None:
             msg = "CONNECT packet: variable header not initialized."
@@ -216,7 +218,7 @@ class BrokerProtocolHandler(ProtocolHandler):
                 connack = ConnackPacket.build(0, IDENTIFIER_REJECTED)
 
             if connack is not None:
-                await plugins_manager.fire_event(EVENT_MQTT_PACKET_SENT, packet=connack)
+                await plugins_manager.fire_event(MQTTEvents.PACKET_SENT, packet=connack)
                 await connack.to_stream(writer)
                 await writer.close()
                 raise MQTTError(error_msg) from None

@@ -17,10 +17,11 @@ except ImportError:
 import collections
 import itertools
 import logging
-from typing import cast
+from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
+from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
@@ -56,19 +57,17 @@ from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.plugins.manager import PluginManager
+from amqtt.plugins.manager import BaseContext, PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
-EVENT_MQTT_PACKET_SENT = "mqtt_packet_sent"
-EVENT_MQTT_PACKET_RECEIVED = "mqtt_packet_received"
+C = TypeVar("C", bound=BaseContext)
 
-
-class ProtocolHandler:
+class ProtocolHandler(Generic[C]):
     """Class implementing the MQTT communication protocol using asyncio features."""
 
     def __init__(
         self,
-        plugins_manager: PluginManager,
+        plugins_manager: PluginManager[C],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:
@@ -79,7 +78,7 @@ class ProtocolHandler:
             self.session: Session | None = None
         self.reader: ReaderAdapter | None = None
         self.writer: WriterAdapter | None = None
-        self.plugins_manager: PluginManager = plugins_manager
+        self.plugins_manager: PluginManager[C] = plugins_manager
 
         try:
             self._loop = loop if loop is not None else asyncio.get_running_loop()
@@ -152,8 +151,9 @@ class ProtocolHandler:
             if self.writer is not None:
                 await self.writer.close()
         except asyncio.CancelledError:
-            self.logger.debug("Writer close was cancelled.", exc_info=True)
-        except TimeoutError:
+            # canceling the task is the expected result
+            self.logger.debug("Writer close was cancelled.")
+        except asyncio.TimeoutError:
             self.logger.debug("Writer close operation timed out.", exc_info=True)
         except OSError:
             self.logger.debug("Writer close failed due to I/O error.", exc_info=True)
@@ -321,7 +321,7 @@ class ProtocolHandler:
             self._puback_waiters[app_message.packet_id] = waiter
             try:
                 app_message.puback_packet = await asyncio.wait_for(waiter, timeout=5)
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 msg = f"Timeout waiting for PUBACK for packet ID {app_message.packet_id}"
                 self.logger.warning(msg)
                 raise TimeoutError(msg) from None
@@ -446,7 +446,7 @@ class ProtocolHandler:
         self.logger.debug(f"{self.session.client_id} Starting reader coro")
         running_tasks: collections.deque[asyncio.Task[None]] = collections.deque()
         keepalive_timeout: int | None = self.session.keep_alive
-        if keepalive_timeout and keepalive_timeout <= 0:
+        if keepalive_timeout is not None and keepalive_timeout <= 0:
             keepalive_timeout = None
         while True:
             try:
@@ -471,7 +471,7 @@ class ProtocolHandler:
 
                 cls = packet_class(fixed_header)
                 packet = await cls.from_stream(self.reader, fixed_header=fixed_header)
-                await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_RECEIVED, packet=packet, session=self.session)
+                await self.plugins_manager.fire_event(MQTTEvents.PACKET_RECEIVED, packet=packet, session=self.session)
                 if packet.fixed_header is None or packet.fixed_header.packet_type not in (
                     CONNACK,
                     SUBSCRIBE,
@@ -528,7 +528,7 @@ class ProtocolHandler:
             except asyncio.CancelledError:
                 self.logger.debug("Task cancelled, reader loop ending")
                 break
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 self.logger.debug(f"{self.session.client_id} Input stream read timeout")
                 self.handle_read_timeout()
             except NoDataError:
@@ -568,7 +568,7 @@ class ProtocolHandler:
                 self._keepalive_task.cancel()
                 if self.keepalive_timeout is not None:
                     self._keepalive_task = self._loop.call_later(self.keepalive_timeout, self.handle_write_timeout)
-            await self.plugins_manager.fire_event(EVENT_MQTT_PACKET_SENT, packet=packet, session=self.session)
+            await self.plugins_manager.fire_event(MQTTEvents.PACKET_SENT, packet=packet, session=self.session)
         except (ConnectionResetError, BrokenPipeError):
             await self.handle_connection_closed()
         except asyncio.CancelledError as e:

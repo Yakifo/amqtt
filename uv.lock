@@ -9,10 +9,11 @@ resolution-markers = [
 
 [[package]]
 name = "amqtt"
-version = "0.11.0rc1"
+version = "0.11.1"
 source = { editable = "." }
 dependencies = [
     { name = "passlib" },
+    { name = "psutil" },
     { name = "pyyaml" },
     { name = "transitions" },
     { name = "typer" },
@@ -50,10 +51,12 @@ docs = [
     { name = "markdown-exec" },
     { name = "mkdocs" },
     { name = "mkdocs-coverage" },
+    { name = "mkdocs-exclude" },
     { name = "mkdocs-git-revision-date-localized-plugin" },
     { name = "mkdocs-llmstxt" },
     { name = "mkdocs-material" },
     { name = "mkdocs-minify-plugin" },
+    { name = "mkdocs-open-in-new-tab" },
     { name = "mkdocs-redirects" },
     { name = "mkdocs-section-index" },
     { name = "mkdocs-typer2" },
@@ -65,6 +68,7 @@ docs = [
 requires-dist = [
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
     { name = "passlib", specifier = "==1.7.4" },
+    { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
     { name = "transitions", specifier = "==0.9.2" },
     { name = "typer", specifier = "==0.15.4" },
@@ -98,10 +102,12 @@ docs = [
     { name = "markdown-exec", specifier = ">=1.8" },
     { name = "mkdocs", specifier = ">=1.6" },
     { name = "mkdocs-coverage", specifier = ">=1.0" },
+    { name = "mkdocs-exclude", specifier = ">=1.0.2" },
     { name = "mkdocs-git-revision-date-localized-plugin", specifier = ">=1.2" },
     { name = "mkdocs-llmstxt", specifier = ">=0.1" },
     { name = "mkdocs-material", specifier = ">=9.5" },
     { name = "mkdocs-minify-plugin", specifier = ">=0.8" },
+    { name = "mkdocs-open-in-new-tab", specifier = ">=1.0.8" },
     { name = "mkdocs-redirects", specifier = ">=1.2.1" },
     { name = "mkdocs-section-index", specifier = ">=0.3" },
     { name = "mkdocs-typer2", specifier = ">=0.1.4" },
@@ -1024,6 +1030,15 @@ wheels = [
 ]
 
 [[package]]
+name = "mkdocs-exclude"
+version = "1.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mkdocs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/54/b5/3a8e289282c9e8d7003f8a2f53d673d4fdaa81d493dc6966092d9985b6fc/mkdocs-exclude-1.0.2.tar.gz", hash = "sha256:ba6fab3c80ddbe3fd31d3e579861fd3124513708271180a5f81846da8c7e2a51", size = 6751, upload-time = "2019-02-20T23:34:12.81Z" }
+
+[[package]]
 name = "mkdocs-get-deps"
 version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1110,6 +1125,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/52/67/fe4b77e7a8ae7628392e28b14122588beaf6078b53eb91c7ed000fd158ac/mkdocs-minify-plugin-0.8.0.tar.gz", hash = "sha256:bc11b78b8120d79e817308e2b11539d790d21445eb63df831e393f76e52e753d", size = 8366, upload-time = "2024-01-29T16:11:32.982Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1b/cd/2e8d0d92421916e2ea4ff97f10a544a9bd5588eb747556701c983581df13/mkdocs_minify_plugin-0.8.0-py3-none-any.whl", hash = "sha256:5fba1a3f7bd9a2142c9954a6559a57e946587b21f133165ece30ea145c66aee6", size = 6723, upload-time = "2024-01-29T16:11:31.851Z" },
+]
+
+[[package]]
+name = "mkdocs-open-in-new-tab"
+version = "1.0.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mkdocs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0a/0e/f72a506a21bdb27b807124e00c688226848a388d1fd3980b80ae3cc27203/mkdocs_open_in_new_tab-1.0.8.tar.gz", hash = "sha256:3e0dad08cc9938b0b13097be8e0aa435919de1eeb2d1a648e66b5dee8d57e048", size = 5791, upload-time = "2024-11-18T13:15:13.977Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/94/44f3c868495481c868d08eea065c82803f1affd8553d3383b782f497613c/mkdocs_open_in_new_tab-1.0.8-py3-none-any.whl", hash = "sha256:051d767a4467b12d89827e1fea0ec660b05b027c726317fe4fceee5456e36ad2", size = 7717, upload-time = "2024-11-18T13:15:12.286Z" },
 ]
 
 [[package]]

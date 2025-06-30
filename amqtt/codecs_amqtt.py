@@ -1,8 +1,9 @@
 import asyncio
+from decimal import ROUND_HALF_UP, Decimal
 from struct import pack, unpack
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.errors import NoDataError
+from amqtt.errors import NoDataError, ZeroLengthReadError
 
 
 def bytes_to_hex_str(data: bytes | bytearray) -> str:
@@ -59,7 +60,7 @@ async def read_or_raise(reader: ReaderAdapter | asyncio.StreamReader, n: int = -
         data = await reader.read(n)
     except (asyncio.IncompleteReadError, ConnectionResetError, BrokenPipeError):
         data = None
-    if not data:
+    if data is None:
         msg = "No more data"
         raise NoDataError(msg)
     return data
@@ -72,6 +73,8 @@ async def decode_string(reader: ReaderAdapter | asyncio.StreamReader) -> str:
     :return: string read from stream.
     """
     length_bytes = await read_or_raise(reader, 2)
+    if len(length_bytes) < 1:
+        raise ZeroLengthReadError
     str_length = unpack("!H", length_bytes)[0]
     if str_length:
         byte_str = await read_or_raise(reader, str_length)
@@ -90,6 +93,8 @@ async def decode_data_with_length(reader: ReaderAdapter | asyncio.StreamReader) 
     :return: bytes read from stream (without length).
     """
     length_bytes = await read_or_raise(reader, 2)
+    if len(length_bytes) < 1:
+        raise ZeroLengthReadError
     bytes_length = unpack("!H", length_bytes)[0]
     return await read_or_raise(reader, bytes_length)
 
@@ -135,3 +140,10 @@ def int_to_bytes_str(value: int) -> bytes:
     :return: bytes array.
     """
     return str(value).encode("utf-8")
+
+
+def float_to_bytes_str(value: float, places:int=3) -> bytes:
+    """Convert an float value to a bytes array containing the numeric character."""
+    quant = Decimal(f"0.{''.join(['0' for i in range(places-1)])}1")
+    rounded = Decimal(value).quantize(quant, rounding=ROUND_HALF_UP)
+    return str(rounded).encode("utf-8")
