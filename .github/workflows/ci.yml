@@ -71,6 +71,15 @@ jobs:
       - name: 🏗 Install the project
         run: uv sync --locked --dev
 
+      - name: Setup Node.js for testing mqttjs
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: install dependencies
+        run: npm install
+        working-directory: ./tests/clients
+
       - name: Run pytest
         run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
 

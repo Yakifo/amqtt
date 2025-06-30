@@ -5,20 +5,18 @@ import { spawn, ChildProcess } from 'child_process';
 let brokerProcess: ChildProcess;
 
 beforeAll(() => {
-  brokerProcess = spawn('amqtt', {
-    cwd: __dirname,
-    stdio: 'inherit', // optional: shows output in real time
-  });
+  // brokerProcess = spawn('amqtt', {
+  //   cwd: __dirname,
+  //   stdio: 'inherit', // optional: shows output in real time
+  // });
 
 });
 
 afterAll(() => {
-  if (brokerProcess && !brokerProcess.killed) {
-    brokerProcess.kill();
-  }
+  // if (brokerProcess && !brokerProcess.killed) {
+  //   brokerProcess.kill();
+  // }
 });
-
-
 
 test('MQTT client connects to broker', async () => {
 
