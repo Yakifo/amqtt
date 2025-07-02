@@ -1,5 +1,6 @@
 import asyncio
 from collections import deque  # pylint: disable=C0412
+from dataclasses import dataclass
 from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
 
 import psutil
@@ -70,7 +71,10 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         # Broker statistics initialization
         self._stats: dict[str, int] = {}
         self._sys_handle: asyncio.Handle | None = None
+
+        self._sys_interval: int = 0
         self._current_process = psutil.Process()
+
 
     def _clear_stats(self) -> None:
         """Initialize broker statistics data structures."""
@@ -112,21 +116,21 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
 
         # Start $SYS topics management
         try:
-            sys_interval: int = 0
-            x = self.context.config.get("sys_interval") if self.context.config is not None else None
-            if isinstance(x, str | Buffer | SupportsInt | SupportsIndex):
-                sys_interval = int(x)
-            if sys_interval > 0:
-                self.context.logger.debug(f"Setup $SYS broadcasting every {sys_interval} seconds")
+            self._sys_interval = self._get_config_option("sys_interval", None)
+            if isinstance(self._sys_interval, str | Buffer | SupportsInt | SupportsIndex):
+                self._sys_interval = int(self._sys_interval)
+
+            if self._sys_interval > 0:
+                self.context.logger.debug(f"Setup $SYS broadcasting every {self._sys_interval} seconds")
                 self._sys_handle = (
-                    self.context.loop.call_later(sys_interval, self.broadcast_dollar_sys_topics)
+                    self.context.loop.call_later(self._sys_interval, self.broadcast_dollar_sys_topics)
                     if self.context.loop is not None
                     else None
                 )
             else:
                 self.context.logger.debug("$SYS disabled")
         except KeyError:
-            pass
+            self.context.logger.debug("could not find 'sys_interval' key: {e!r}")
             # 'sys_interval' config parameter not found
 
     async def on_broker_pre_shutdown(self) -> None:
@@ -194,15 +198,9 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             tasks.popleft()
 
         # Reschedule
-        sys_interval: int = 0
-        x = self.context.config.get("sys_interval") if self.context.config is not None else None
-        if isinstance(x, str | Buffer | SupportsInt | SupportsIndex):
-            sys_interval = int(x)
-        self.context.logger.debug("Broadcasting $SYS topics")
-
-        self.context.logger.debug(f"Setup $SYS broadcasting every {sys_interval} seconds")
+        self.context.logger.debug(f"Broadcast $SYS topics again in {self._sys_interval} seconds.")
         self._sys_handle = (
-            self.context.loop.call_later(sys_interval, self.broadcast_dollar_sys_topics)
+            self.context.loop.call_later(self._sys_interval, self.broadcast_dollar_sys_topics)
             if self.context.loop is not None
             else None
         )
@@ -237,3 +235,9 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         """Handle broker client disconnection."""
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1
+
+    @dataclass
+    class Config:
+        """Configuration struct for plugin."""
+
+        sys_interval: int = 0

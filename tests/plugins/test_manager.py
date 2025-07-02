@@ -2,10 +2,11 @@ import asyncio
 import logging
 import unittest
 
-from amqtt.broker import Action
 from amqtt.events import BrokerEvents
-from amqtt.plugins.manager import BaseContext, PluginManager
-from amqtt.plugins.base import BaseTopicPlugin, BaseAuthPlugin
+
+from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
+from amqtt.plugins.manager import PluginManager
+from amqtt.contexts import BaseContext, Action
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

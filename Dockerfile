@@ -1,7 +1,7 @@
 
 # -- build stage, install dependencies only using `uv`
 FROM python:3.13-alpine AS build
-
+RUN apk add gcc python3-dev musl-dev linux-headers
 RUN pip install uv
 
 WORKDIR /app
