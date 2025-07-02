@@ -29,7 +29,7 @@ from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Sessio
 from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .events import BrokerEvents
-from .mqtt.constants import QOS_1, QOS_2
+from .mqtt.constants import QOS_1, QOS_2, QOS_0
 from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import BaseContext, PluginManager
 
@@ -497,8 +497,17 @@ class Broker:
 
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
-        self.logger.debug(f"Retained messages queue size: {client_session.retained_messages.qsize()}")
+
+        # publish messages that were retained because the client session was disconnecte
+        self.logger.debug(f"Offline messages queue size: {client_session.retained_messages.qsize()}")
         await self._publish_session_retained_messages(client_session)
+
+        # publish messages that were marked as retained for a specific
+        # self.logger.debug(f"Publish messages that have been marked as retained.")
+        # for topic in self._subscriptions.keys():
+        #     await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
+
+
 
         await self._client_message_loop(client_session, handler)
 

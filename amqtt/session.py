@@ -145,7 +145,7 @@ class Session:
         # Used to store incoming ApplicationMessage while publish protocol flows
         self.inflight_in: OrderedDict[int, IncomingApplicationMessage] = OrderedDict()
 
-        # Stores messages retained for this session
+        # Stores messages retained for this session (specifically when the client is disconnected)
         self.retained_messages: Queue[ApplicationMessage] = Queue()
 
         # Stores PUBLISH messages ID received in order and ready for application process
