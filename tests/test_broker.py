@@ -632,7 +632,7 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
 
 @pytest.mark.asyncio
 async def test_client_publish_retain_subscribe(broker):
-    sub_client = MQTTClient()
+    sub_client = MQTTClient(client_id='test_client')
     await sub_client.connect("mqtt://127.0.0.1", cleansession=False)
     ret = await sub_client.subscribe(
         [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)],
@@ -644,7 +644,7 @@ async def test_client_publish_retain_subscribe(broker):
     await _client_publish("/qos0", b"data", QOS_0, retain=True)
     await _client_publish("/qos1", b"data", QOS_1, retain=True)
     await _client_publish("/qos2", b"data", QOS_2, retain=True)
-    await sub_client.reconnect()
+    await sub_client.reconnect(cleansession=False)
     for qos in [QOS_0, QOS_1, QOS_2]:
         log.debug(f"TEST QOS: {qos}")
         message = await sub_client.deliver_message()

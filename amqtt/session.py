@@ -151,6 +151,9 @@ class Session:
         # Stores PUBLISH messages ID received in order and ready for application process
         self.delivered_message_queue: Queue[ApplicationMessage] = Queue()
 
+        # identify anonymous client sessions or clients which didn't identify themselves
+        self.is_anonymous: bool = False
+
     def _init_states(self) -> None:
         self.transitions = Machine(states=Session.states, initial="new")
         self.transitions.add_transition(

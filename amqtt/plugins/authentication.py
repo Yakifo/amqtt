@@ -19,6 +19,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
             allow_anonymous = self.auth_config.get("allow-anonymous", True) if isinstance(self.auth_config, dict) else True
             if allow_anonymous:
                 self.context.logger.debug("Authentication success: config allows anonymous")
+                session.is_anonymous = True
                 return True
 
             if session and session.username:

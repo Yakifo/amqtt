@@ -26,8 +26,7 @@ System status report interval in seconds (`broker_sys` plugin)
 
 ### `timeout-disconnect-delay` *(int)*
 
-Client disconnect timeout without a keep-alive
-
+Client disconnect timeout without a keep-alive. 
 
 ### `auth` *(mapping)*
 
