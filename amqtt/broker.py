@@ -498,14 +498,14 @@ class Broker:
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
 
-        # publish messages that were retained because the client session was disconnecte
+        # publish messages that were retained because the client session was disconnected
         self.logger.debug(f"Offline messages queue size: {client_session.retained_messages.qsize()}")
         await self._publish_session_retained_messages(client_session)
 
-        # publish messages that were marked as retained for a specific
-        # self.logger.debug(f"Publish messages that have been marked as retained.")
-        # for topic in self._subscriptions.keys():
-        #     await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
+        # if this is not a new session, there are subscriptions associated with them
+        self.logger.debug(f"Publish retained messages to a pre-existing session's subscriptions.")
+        for topic in self._subscriptions.keys():
+            await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
 
 
 

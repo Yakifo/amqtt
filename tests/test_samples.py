@@ -200,8 +200,40 @@ async def test_client_publish_ws():
     await broker.shutdown()
 
 
-def test_client_subscribe():
-    client_subscribe_main()
+broker_std_config = {
+    "listeners": {
+        "default": {
+            "type": "tcp",
+            "bind": "0.0.0.0:1883",        }
+    },
+    'sys_interval':1,
+    "auth": {
+        "allow-anonymous": True,
+        "plugins": ["auth_anonymous"]
+            }
+}
+
+
+@pytest.mark.asyncio
+async def test_client_subscribe():
+
+    # start a secure broker
+    broker = Broker(config=broker_std_config)
+    await broker.start()
+    await asyncio.sleep(1)
+
+    # run the sample
+    client_subscribe_script = Path(__file__).parent.parent / "samples/client_subscribe.py"
+    process = subprocess.Popen(["python", client_subscribe_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    await asyncio.sleep(1)
+    stdout, stderr = process.communicate()
+    logger.debug("-------------------------------------------------")
+    logger.debug(stderr.decode("utf-8"))
+    logger.debug(stdout.decode("utf-8"))
+    assert "ERROR" not in stderr.decode("utf-8")
+    assert "Exception" not in stderr.decode("utf-8")
+
+    await broker.shutdown()
 
 
 @pytest.mark.asyncio
