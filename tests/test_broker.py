@@ -677,7 +677,7 @@ async def test_client_subscribe_publish_dollar_topic_2(broker):
 @pytest.mark.asyncio
 async def test_client_publish_clean_session_subscribe(broker):
 
-    sub_client = MQTTClient(client_id='test_client')
+    sub_client = MQTTClient(client_id='test_client', config={'auto_reconnect': False})
     await sub_client.connect("mqtt://127.0.0.1", cleansession=False)
     ret = await sub_client.subscribe(
         [("/qos0", QOS_0), ("/qos1", QOS_1), ("/qos2", QOS_2)],
@@ -707,7 +707,7 @@ async def test_client_publish_clean_session_subscribe(broker):
         while True:
             message = await sub_client.deliver_message(timeout_duration=1)
             assert message is not None, "no other messages should have been retained"
-    except TimeoutError:
+    except asyncio.TimeoutError:
         pass
 
     await sub_client.disconnect()
