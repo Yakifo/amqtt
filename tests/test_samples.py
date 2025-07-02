@@ -206,7 +206,7 @@ broker_std_config = {
             "type": "tcp",
             "bind": "0.0.0.0:1883",        }
     },
-    'sys_interval':1,
+    'sys_interval':2,
     "auth": {
         "allow-anonymous": True,
         "plugins": ["auth_anonymous"]
@@ -217,19 +217,24 @@ broker_std_config = {
 @pytest.mark.asyncio
 async def test_client_subscribe():
 
-    # start a secure broker
+    # start a standard broker
     broker = Broker(config=broker_std_config)
     await broker.start()
     await asyncio.sleep(1)
 
     # run the sample
     client_subscribe_script = Path(__file__).parent.parent / "samples/client_subscribe.py"
-    process = subprocess.Popen(["python", client_subscribe_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    await asyncio.sleep(1)
-    stdout, stderr = process.communicate()
-    logger.debug("-------------------------------------------------")
-    logger.debug(stderr.decode("utf-8"))
-    logger.debug(stdout.decode("utf-8"))
+
+    process = await asyncio.create_subprocess_shell(
+        " ".join(["python", str(client_subscribe_script)]),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+
+    stdout, stderr = await process.communicate()
+
+    assert "ERROR" not in stdout.decode("utf-8")
+    assert "Exception" not in stdout.decode("utf-8")
     assert "ERROR" not in stderr.decode("utf-8")
     assert "Exception" not in stderr.decode("utf-8")
 
