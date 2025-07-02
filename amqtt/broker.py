@@ -901,6 +901,10 @@ class Broker:
                     await self._retain_broadcast_message(broadcast, qos, target_session)
                     continue
 
+                # Only broadcast the message to connected clients
+                if target_session.transitions.state != "connected":
+                    continue
+
                 self.logger.debug(
                     f"Broadcasting message from {format_client_message(session=broadcast['session'])}"
                     f" on topic '{broadcast['topic']}' to {format_client_message(session=target_session)}",
