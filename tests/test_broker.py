@@ -691,12 +691,12 @@ async def test_client_publish_clean_session_subscribe(broker):
     await _client_publish("/qos0", b"data0", QOS_0)  # should not be retained
     await _client_publish("/qos1", b"data1", QOS_1)
     await _client_publish("/qos2", b"data2", QOS_2)
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(2)
 
     await sub_client.reconnect(cleansession=False)
     for qos in [QOS_1, QOS_2]:
         log.debug(f"TEST QOS: {qos}")
-        message = await sub_client.deliver_message()
+        message = await sub_client.deliver_message(timeout_duration=2)
         log.debug(f"Message: {message.publish_packet if message else None!r}")
         assert message is not None
         assert message.topic == f"/qos{qos}"
