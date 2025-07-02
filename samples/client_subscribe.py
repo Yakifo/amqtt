@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 async def uptime_coro() -> None:
-    client = MQTTClient()
-    await client.connect("mqtt://test.mosquitto.org/")
+    client = MQTTClient(config={'auto_reconnect': False})
+    await client.connect("mqtt://localhost:1883")
 
     await client.subscribe(
         [
