@@ -499,10 +499,10 @@ class Broker:
         await handler.start()
 
         # publish messages that were retained because the client session was disconnected
-        self.logger.debug(f"Offline messages queue size: {client_session.retained_messages.qsize()}")
+        self.logger.debug(f"Retained messages queue size: {client_session.retained_messages.qsize()}")
         await self._publish_session_retained_messages(client_session)
 
-        # if this is not a new session, there are subscriptions associated with them
+        # if this is not a new session, there are subscriptions associated with them; publish any topic retained messages
         self.logger.debug("Publish retained messages to a pre-existing session's subscriptions.")
         for topic in self._subscriptions:
             await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
