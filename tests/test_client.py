@@ -498,9 +498,9 @@ async def test_publish_to_incorrect_wildcard(broker_fixture):
     await client.connect("mqtt://127.0.0.1/")
 
     with pytest.raises(MQTTError):
-        await client.publish("my/+/topic", b'start wildcard topic publish')
+        await client.publish("my/+/topic", b'plus-sign wildcard topic invalid publish')
     with pytest.raises(MQTTError):
-        await client.publish("topic/#", b'hash wildcard topic publish')
+        await client.publish("topic/#", b'hash wildcard topic invalid publish')
 
-    await client.publish("topic/*", b'start wildcard topic publish')
+    await client.publish("topic/*", b'asterisk topic normal publish')
     await client.disconnect()
