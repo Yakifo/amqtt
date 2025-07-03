@@ -22,8 +22,7 @@ listener.
 
 ### `timeout-disconnect-delay` *(int)*
 
-Client disconnect timeout without a keep-alive
-
+Client disconnect timeout without a keep-alive. 
 
 ### `plugins` *(mapping)*
 

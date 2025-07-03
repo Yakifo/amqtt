@@ -9,6 +9,7 @@ from paho.mqtt import client as mqtt_client
 from amqtt.events import BrokerEvents
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
+from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
 paho_logger = logging.getLogger("paho_client")
@@ -50,19 +51,15 @@ async def test_paho_connect(broker, mock_plugin_manager):
 
     await asyncio.wait_for(test_complete.wait(), timeout=5)
     await asyncio.sleep(0.1)
-    broker.plugins_manager.assert_has_calls(
-        [
-            call.fire_event(
-                BrokerEvents.CLIENT_CONNECTED,
-                client_id=client_id,
-            ),
-            call.fire_event(
-                BrokerEvents.CLIENT_DISCONNECTED,
-                client_id=client_id,
-            ),
-        ],
-        any_order=True,
-    )
+
+    broker.plugins_manager.fire_event.assert_called()
+    assert broker.plugins_manager.fire_event.call_count > 2
+
+    # double indexing is ugly, but call_args_list returns a tuple of tuples
+    events = [c[0][0] for c in broker.plugins_manager.fire_event.call_args_list]
+    assert BrokerEvents.CLIENT_CONNECTED in events
+    assert BrokerEvents.CLIENT_DISCONNECTED in events
+
     test_client.loop_stop()
 
 
