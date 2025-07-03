@@ -1,9 +1,11 @@
 import asyncio
 import unittest
+import pytest
 
 from amqtt.adapters import BufferReader
+from amqtt.errors import AMQTTError
 from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
-from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader
+from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader, PUBLISH
 
 
 class ConnectPacketTest(unittest.TestCase):
@@ -150,3 +152,36 @@ class ConnectPacketTest(unittest.TestCase):
         assert message.username == "user"
         assert message.payload.password == "password"
         assert message.password == "password"
+
+def test_incorrect_fixed_header():
+    header = MQTTFixedHeader(PUBLISH, 0x00)
+    with pytest.raises(AMQTTError):
+        _ = ConnectPacket(fixed=header)
+
+@pytest.mark.parametrize("prop", [
+    "proto_name",
+    "proto_level",
+    "username_flag",
+    "password_flag",
+    "clean_session_flag",
+    "will_retain_flag",
+    "will_qos",
+    "will_flag",
+    "reserved_flag",
+    "client_id",
+    "client_id_is_random",
+    "will_topic",
+    "will_message",
+    "username",
+    "password",
+    "keep_alive",
+])
+def test_empty_variable_header(prop):
+    packet = ConnectPacket()
+
+    with pytest.raises(ValueError):
+        assert getattr(packet, prop) is not None
+
+    with pytest.raises(ValueError):
+        assert setattr(packet, prop, "a value")
+

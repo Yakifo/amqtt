@@ -1,7 +1,10 @@
 import asyncio
 import unittest
+import pytest
 
 from amqtt.adapters import BufferReader
+from amqtt.errors import AMQTTError
+from amqtt.mqtt.packet import MQTTFixedHeader, CONNECT
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.publish import PublishPacket, PublishPayload, PublishVariableHeader
 
@@ -116,3 +119,28 @@ class PublishPacketTest(unittest.TestCase):
         assert packet.dup_flag
         assert packet.qos == QOS_2
         assert packet.retain_flag
+
+
+def test_incorrect_fixed_header():
+    header = MQTTFixedHeader(CONNECT, 0x00)
+    with pytest.raises(AMQTTError):
+        _ = PublishPacket(fixed=header)
+
+def test_set_flags():
+    packet = PublishPacket()
+    packet.set_flags(dup_flag=True, qos=QOS_1, retain_flag=True)
+
+
+@pytest.mark.parametrize("prop", [
+    "packet_id",
+    "data",
+    "topic_name"
+])
+def test_empty_variable_header(prop):
+    packet = PublishPacket()
+
+    with pytest.raises(ValueError):
+        assert getattr(packet, prop) is not None
+
+    with pytest.raises(ValueError):
+        assert setattr(packet, prop, "a value")

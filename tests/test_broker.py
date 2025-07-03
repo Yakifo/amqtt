@@ -510,14 +510,59 @@ async def test_client_publish_dup(broker):
 
 
 @pytest.mark.asyncio
-async def test_client_publish_invalid_topic(broker):
+async def test_client_publishing_invalid_topic(broker):
     assert broker.transitions.is_started()
-    pub_client = MQTTClient()
+    pub_client = MQTTClient(config={'auto_reconnect': False})
     ret = await pub_client.connect("mqtt://127.0.0.1/")
     assert ret == 0
 
-    await pub_client.publish("/+", b"data", QOS_0)
+    await pub_client.subscribe([
+        ("my/+/topic", QOS_0)
+    ])
+    await asyncio.sleep(0.5)
+
+    # need to build & send packet directly to bypass client's check of invalid topic name
+    #    see test_client.py::test_publish_to_incorrect_wildcard for client checks
+    packet = PublishPacket.build(topic_name='my/topic', message=b'messages',
+                                 packet_id=None, dup_flag=False, qos=QOS_0, retain=False)
+    packet.topic_name = "my/+/topic"
+    await pub_client._handler._send_packet(packet)
+    await asyncio.sleep(0.5)
+
+    with pytest.raises(asyncio.TimeoutError):
+        msg = await pub_client.deliver_message(timeout_duration=1)
+        assert msg is None
+
     await asyncio.sleep(0.1)
+    await pub_client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_client_publish_asterisk(broker):
+    """'*' is a valid, non-wildcard character for MQTT."""
+    assert broker.transitions.is_started()
+    pub_client = MQTTClient(config={'auto_reconnect': False})
+    ret = await pub_client.connect("mqtt://127.0.0.1/")
+    assert ret == 0
+
+    await pub_client.subscribe([
+        ("my*/topic", QOS_0),
+        ("my/+/topic", QOS_0)
+    ])
+    await asyncio.sleep(0.1)
+    await pub_client.publish('my*/topic', b'my valid message', QOS_0, retain=False)
+    await asyncio.sleep(0.1)
+    msg = await pub_client.deliver_message(timeout_duration=1)
+    assert msg is not None
+    assert msg.topic == "my*/topic"
+    assert msg.data == b'my valid message'
+
+    await asyncio.sleep(0.1)
+    msg = await pub_client.publish('my/****/topic', b'my valid message', QOS_0, retain=False)
+    assert msg is not None
+    assert msg.topic == "my/****/topic"
+    assert msg.data == b'my valid message'
+
     await pub_client.disconnect()
 
 
