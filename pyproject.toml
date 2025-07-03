@@ -34,7 +34,7 @@ dependencies = [
   "PyYAML==6.0.2", # https://pypi.org/project/PyYAML
   "typer==0.15.4",
   "dacite>=1.9.2",
-  "psutil>=7.0.0",
+  "psutil>=7.0.0"
 ]
 
 [dependency-groups]
@@ -80,6 +80,10 @@ docs = [
 
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
+db = [
+    "aiosqlite>=0.21.0",
+    "sqlalchemy[asyncio]>=2.0.41",
+]
 
 
 

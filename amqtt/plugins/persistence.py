@@ -1,85 +1,125 @@
-import json
-import sqlite3
-from typing import Any
+from dataclasses import asdict, dataclass, is_dataclass
+from typing import Any, TypeVar
+import warnings
 
-from amqtt.contexts import BaseContext
-from amqtt.session import Session
+from sqlalchemy import JSON, Boolean, Integer, LargeBinary, String
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
+
+from amqtt.broker import BrokerContext
+from amqtt.errors import PluginError
+from amqtt.mqtt.constants import QOS_0
+from amqtt.plugins.base import BasePlugin
 
 
 class SQLitePlugin:
-    def __init__(self, context: BaseContext) -> None:
-        self.context: BaseContext = context
-        self.conn: sqlite3.Connection | None = None
-        self.cursor: sqlite3.Cursor | None = None
-        self.db_file: str | None = None
-        self.persistence_config: dict[str, Any]
 
-        if (
-            persistence_config := self.context.config.get("persistence") if self.context.config is not None else None
-        ) is not None:
-            self.persistence_config = persistence_config
-            self.init_db()
-        else:
-            self.context.logger.warning("'persistence' section not found in context configuration")
+    def __init__(self) -> None:
+        warnings.warn("SQLitePlugin is deprecated, use amqtt.plugins.persistence.SessionDBPlugin", stacklevel=1)
 
-    def init_db(self) -> None:
-        self.db_file = self.persistence_config.get("file")
-        if not self.db_file:
-            self.context.logger.warning("'file' persistence parameter not found")
-        else:
-            try:
-                self.conn = sqlite3.connect(self.db_file)
-                self.cursor = self.conn.cursor()
-                self.context.logger.info(f"Database file '{self.db_file}' opened")
-            except Exception:
-                self.context.logger.exception(f"Error while initializing database '{self.db_file}'")
-        if self.cursor:
-            self.cursor.execute(
-                "CREATE TABLE IF NOT EXISTS session(client_id TEXT PRIMARY KEY, data BLOB)",
-            )
-            self.cursor.execute("PRAGMA table_info(session)")
-            columns = {col[1] for col in self.cursor.fetchall()}
-            required_columns = {"client_id", "data"}
-            if not required_columns.issubset(columns):
-                self.context.logger.error("Database schema for 'session' table is incompatible.")
+class Base(DeclarativeBase):
+    pass
 
-    async def save_session(self, session: Session) -> None:
-        if self.cursor and self.conn:
-            dump: str = json.dumps(session, default=str)
-            try:
-                self.cursor.execute(
-                    "INSERT OR REPLACE INTO session (client_id, data) VALUES (?, ?)",
-                    (session.client_id, dump),
-                )
-                self.conn.commit()
-            except Exception:
-                self.context.logger.exception(f"Failed saving session '{session}'")
 
-    async def find_session(self, client_id: str) -> Session | None:
-        if self.cursor:
-            row = self.cursor.execute(
-                "SELECT data FROM session where client_id=?",
-                (client_id,),
-            ).fetchone()
-            return json.loads(row[0]) if row else None
-        return None
+class RetainedMessage:
+    topic: str
+    data: str
+    qos: int
 
-    async def del_session(self, client_id: str) -> None:
-        if self.cursor and self.conn:
-            try:
-                exists = self.cursor.execute("SELECT 1 FROM session WHERE client_id=?", (client_id,)).fetchone()
-                if exists:
-                    self.cursor.execute("DELETE FROM session where client_id=?", (client_id,))
-                    self.conn.commit()
-            except Exception:
-                self.context.logger.exception(f"Failed deleting session with client_id '{client_id}'")
 
-    async def on_broker_post_shutdown(self) -> None:
-        if self.conn:
-            try:
-                self.conn.close()
-                self.context.logger.info(f"Database file '{self.db_file}' closed")
-            except Exception:
-                self.context.logger.exception("Error closing database connection")
-            finally:
-                self.conn = None
+T = TypeVar("T")
+
+class DataClassListJSON(TypeDecorator[list[dict[str, Any]]]):
+    impl = JSON
+    cache_ok = True
+
+    def __init__(self, dataclass_type: type[T]) -> None:
+        if not is_dataclass(dataclass_type):
+            msg = f"{dataclass_type} must be a dataclass type"
+            raise TypeError(msg)
+        self.dataclass_type: type[T] = dataclass_type
+        super().__init__()
+
+    def process_bind_param(
+            self,
+            value: list[Any] | None,  # Python -> DB
+            dialect: Any
+    ) -> list[dict[str, Any]] | None:
+        if value is None:
+            return None
+        return [asdict(item) for item in value]
+
+    def process_result_value(
+            self,
+            value: list[dict[str, Any]] | None,  # DB -> Python
+            dialect: Any
+    ) -> list[Any] | None:
+        if value is None:
+            return None
+        return [self.dataclass_type(**item) for item in value]
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    client_id: Mapped[str] = mapped_column(String)
+
+    clean_session: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+    will_flag: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    will_message: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, default=None)
+    will_qos: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    will_retain: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    will_topic: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+
+    keep_alive: Mapped[int] = mapped_column(Integer, default=0)
+    retained: Mapped[list[RetainedMessage]] = mapped_column(DataClassListJSON(RetainedMessage), default=list)
+
+class SessionDBPlugin(BasePlugin[BrokerContext]):
+    def __init__(self, context: BrokerContext) -> None:
+        super().__init__(context)
+
+        self._engine = create_async_engine(f"sqlite+aiosqlite:///{context.config.file}")
+
+
+    async def on_broker_client_connected(self, client_id:str) -> None:
+        """Search to see if session already exists."""
+        # if client id doesn't exist, create (can ignore if session is anonymous)
+        # update session information (will, clean_session, etc)
+
+    async def on_broker_client_subscribed(self, client_id: str, topic: str, qos: int) -> None:
+        """Store subscription if clean session = false."""
+
+    async def on_broker_client_unsubscribed(self, client_id: str, topic: str) -> None:
+        """Remove subscription if clean session = false."""
+
+    async def on_broker_pre_start(self) -> None:
+        """Initialize the database and db connection."""
+        async with self._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+
+    async def on_broker_post_start(self) -> None:
+        """Load subscriptions."""
+        if len(self.context.subscriptions) > 0:
+            msg = "SessionDBPlugin : broker shouldn't have any subscriptions yet"
+            raise PluginError(msg)
+
+
+        if len(list(self.context.sessions)) > 0:
+            msg = "SessionDBPlugin : broker shouldn't have any sessions yet"
+            raise PluginError(msg)
+
+        await self.context.add_subscription("test_client1", "a/b", QOS_0)
+
+    async def on_broker_pre_shutdown(self) -> None:
+        """Clean up the db connection."""
+        await self._engine.dispose()
+
+    @dataclass
+    class Config:
+        """Configuration variables."""
+
+        file: str = "amqtt.sqlite3"

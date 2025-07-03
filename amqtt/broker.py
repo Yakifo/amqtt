@@ -101,7 +101,7 @@ class BrokerContext(BaseContext):
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
-        self.config: _CONFIG_LISTENER | None = None
+        self.config: _CONFIG_LISTENER | object | None = None
         self._broker_instance = broker
 
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
@@ -122,6 +122,18 @@ class BrokerContext(BaseContext):
     @property
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
         return self._broker_instance.subscriptions
+
+    async def add_subscription(self, client_id: str, topic: str, qos: int) -> None:
+
+        if client_id not in self._broker_instance.sessions:
+            broker_handler, session = self._broker_instance.create_offline_session(client_id)
+            self._broker_instance._sessions[client_id] = (session, broker_handler)  # noqa: SLF001
+
+        session, _ = self._broker_instance.sessions[client_id]
+        await self._broker_instance.add_subscription((topic, qos), session)
+
+
+
 
 
 class Broker:
@@ -451,6 +463,14 @@ class Broker:
         self.logger.debug(f"Keep-alive timeout={client_session.keep_alive}")
         return handler, client_session
 
+    def create_offline_session(self, client_id: str) -> tuple[BrokerProtocolHandler, Session]:
+        session = Session()
+        session.client_id = client_id
+
+        bph = BrokerProtocolHandler(self.plugins_manager, session)
+        session.transitions.disconnect()
+        return bph, session
+
     async def _handle_client_session(
         self,
         reader: ReaderAdapter,
@@ -603,7 +623,7 @@ class Broker:
         """Handle client subscription."""
         self.logger.debug(f"{client_session.client_id} handling subscription")
         subscriptions = subscribe_waiter.result()
-        return_codes = [await self._add_subscription(subscription, client_session) for subscription in subscriptions.topics]
+        return_codes = [await self.add_subscription(subscription, client_session) for subscription in subscriptions.topics]
         await handler.mqtt_acknowledge_subscription(subscriptions.packet_id, return_codes)
         for index, subscription in enumerate(subscriptions.topics):
             if return_codes[index] != AMQTT_MAGIC_VALUE_RET_SUBSCRIBED:
@@ -724,7 +744,7 @@ class Broker:
             self.logger.debug(f"Clearing retained messages for topic '{topic_name}'")
             del self._retained_messages[topic_name]
 
-    async def _add_subscription(self, subscription: tuple[str, int], session: Session) -> int:
+    async def add_subscription(self, subscription: tuple[str, int], session: Session) -> int:
         topic_filter, qos = subscription
         if "#" in topic_filter and not topic_filter.endswith("#"):
             # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter

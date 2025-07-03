@@ -4,53 +4,99 @@ from pathlib import Path
 import sqlite3
 import unittest
 
+import pytest
+
+from amqtt.broker import Broker
+from amqtt.client import MQTTClient
 from amqtt.contexts import BaseContext
 from amqtt.plugins.persistence import SQLitePlugin
 from amqtt.session import Session
+from samples.client_publish_ssl import client
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)
 
 
-class TestSQLitePlugin(unittest.TestCase):
-    def setUp(self) -> None:
-        self.loop = asyncio.new_event_loop()
 
-    def test_create_tables(self) -> None:
-        dbfile = Path(__file__).resolve().parent / "test.db"
+@pytest.mark.asyncio
+async def test_rehydrate_subscriptions() -> None:
 
-        context = BaseContext()
-        context.logger = logging.getLogger(__name__)
-        context.config = {"persistence": {"file": str(dbfile)}}  # Ensure string path for config
-        SQLitePlugin(context)
+    cfg = {
+        'listeners': {
+            'default': {
+                'type': 'tcp',
+                'bind': '127.0.0.1:1883'
+            }
+        },
+        'plugins': {
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow-anonymous': True},
+            'amqtt.plugins.persistence.SessionDBPlugin': {}
+        }
+    }
 
-        try:
-            conn = sqlite3.connect(str(dbfile))  # Convert Path to string for sqlite connection
-            cursor = conn.cursor()
-            rows = cursor.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
-            tables = [row[0] for row in rows]  # List comprehension for brevity
-            assert "session" in tables
-        finally:
-            conn.close()
+    b = Broker(config=cfg)
+    await b.start()
+    await asyncio.sleep(1)
 
-    def test_save_session(self) -> None:
-        dbfile = Path(__file__).resolve().parent / "test.db"
+    # c = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
+    # await c.connect(cleansession=False)
+    #
+    # await c.publish('a/b', b'my messages without subscription')
+    #
+    # msg = await c.deliver_message(timeout_duration=1)
+    # assert msg is not None
+    # assert msg.topic == 'a/b'
+    # assert msg.data == b'my messages without subscription'
+    #
+    # await c.disconnect()
+    # await asyncio.sleep(0.5)
+    await b.shutdown()
 
-        context = BaseContext()
-        context.logger = logging.getLogger(__name__)
-        context.config = {"persistence": {"file": str(dbfile)}}  # Ensure string path for config
-        sql_plugin = SQLitePlugin(context)
 
-        s = Session()
-        s.client_id = "test_save_session"
 
-        self.loop.run_until_complete(sql_plugin.save_session(session=s))
 
-        try:
-            conn = sqlite3.connect(str(dbfile))  # Convert Path to string for sqlite connection
-            cursor = conn.cursor()
-            row = cursor.execute("SELECT client_id FROM session WHERE client_id = 'test_save_session'").fetchone()
-            assert row is not None
-            assert row[0] == s.client_id
-        finally:
-            conn.close()
+
+
+
+
+"""
+
+def test_create_tables(self) -> None:
+    dbfile = Path(__file__).resolve().parent / "test.db"
+
+    context = BaseContext()
+    context.logger = logging.getLogger(__name__)
+    context.config = {"persistence": {"file": str(dbfile)}}  # Ensure string path for config
+    SQLitePlugin(context)
+
+    try:
+        conn = sqlite3.connect(str(dbfile))  # Convert Path to string for sqlite connection
+        cursor = conn.cursor()
+        rows = cursor.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        tables = [row[0] for row in rows]  # List comprehension for brevity
+        assert "session" in tables
+    finally:
+        conn.close()
+
+def test_save_session(self) -> None:
+    dbfile = Path(__file__).resolve().parent / "test.db"
+
+    context = BaseContext()
+    context.logger = logging.getLogger(__name__)
+    context.config = {"persistence": {"file": str(dbfile)}}  # Ensure string path for config
+    sql_plugin = SQLitePlugin(context)
+
+    s = Session()
+    s.client_id = "test_save_session"
+
+    self.loop.run_until_complete(sql_plugin.save_session(session=s))
+
+    try:
+        conn = sqlite3.connect(str(dbfile))  # Convert Path to string for sqlite connection
+        cursor = conn.cursor()
+        row = cursor.execute("SELECT client_id FROM session WHERE client_id = 'test_save_session'").fetchone()
+        assert row is not None
+        assert row[0] == s.client_id
+    finally:
+        conn.close()
+"""
