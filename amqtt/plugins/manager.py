@@ -119,9 +119,9 @@ class PluginManager(Generic[C]):
         auth_filter_list = []
         topic_filter_list = []
         if self.app_context.config and "auth" in self.app_context.config:
-            auth_filter_list = self.app_context.config["auth"].get("plugins", [])
+            auth_filter_list = self.app_context.config["auth"].get("plugins", None)
         if self.app_context.config and "topic-check" in self.app_context.config:
-            topic_filter_list = self.app_context.config["topic-check"].get("plugins", [])
+            topic_filter_list = self.app_context.config["topic-check"].get("plugins", None)
 
         ep: EntryPoints | list[EntryPoint] = []
         if hasattr(entry_points(), "select"):
@@ -133,10 +133,12 @@ class PluginManager(Generic[C]):
             ep_plugin = self._load_ep_plugin(item)
             if ep_plugin is not None:
                 self._plugins.append(ep_plugin.object)
-                if ((not auth_filter_list or ep_plugin.name in auth_filter_list)
+                # maintain legacy behavior that if there is no list, use all auth plugins
+                if ((auth_filter_list is None or ep_plugin.name in auth_filter_list)
                         and hasattr(ep_plugin.object, "authenticate")):
                     self._auth_plugins.append(ep_plugin.object)
-                if ((not topic_filter_list or ep_plugin.name in topic_filter_list)
+                # maintain legacy behavior that if there is no list, use all topic plugins
+                if ((topic_filter_list is None or ep_plugin.name in topic_filter_list)
                         and hasattr(ep_plugin.object, "topic_filtering")):
                     self._topic_plugins.append(ep_plugin.object)
                 self.logger.debug(f" Plugin {item.name} ready")

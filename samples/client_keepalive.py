@@ -19,7 +19,7 @@ async def main() -> None:
     client = MQTTClient(config=config)
 
     try:
-        await client.connect("mqtt://test.mosquitto.org:1883/")
+        await client.connect("mqtt://localhost:1883/")
         logger.info("client connected")
         await asyncio.sleep(15)
     except CancelledError:

@@ -700,17 +700,20 @@ class Broker:
         :return:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
-        auth_result = True
-        if returns:
-            for plugin in returns:
-                res = returns[plugin]
-                if res is False:
-                    auth_result = False
-                    self.logger.debug(f"Authentication failed due to '{plugin.__class__}' plugin result: {res}")
-                else:
-                    self.logger.debug(f"'{plugin.__class__}' plugin result: {res}")
-        # If all plugins returned True, authentication is success
-        return auth_result
+
+        results = [ result for _, result in returns.items() if result is not None] if returns else []
+        if len(results) < 1:
+            self.logger.debug("Authentication failed: no plugin responded with a boolean")
+            return False
+
+        if all(results):
+            self.logger.debug("Authentication succeeded")
+            return True
+
+        for plugin, result in returns.items():
+            self.logger.debug(f"Authentication '{plugin.__class__.__name__}' result: {result}")
+
+        return False
 
     def retain_message(
         self,
