@@ -262,6 +262,10 @@ class PluginManager(Generic[C]):
     def _schedule_coro(self, coro: Awaitable[str | bool | None]) -> asyncio.Future[str | bool | None]:
         return asyncio.ensure_future(coro)
 
+    def _clean_fired_events(self, future: asyncio.Future[Any]) -> None:
+        with contextlib.suppress(KeyError, ValueError):
+            self._fired_events.remove(future)
+
     async def fire_event(self, event_name: Events, *, wait: bool = False, **method_kwargs: Any) -> None:
         """Fire an event to plugins.
 
@@ -287,12 +291,7 @@ class PluginManager(Generic[C]):
 
             coro_instance: Awaitable[Any] = call_method(event_awaitable, method_kwargs)
             tasks.append(asyncio.ensure_future(coro_instance))
-
-            def clean_fired_events(future: asyncio.Future[Any]) -> None:
-                with contextlib.suppress(KeyError, ValueError):
-                    self._fired_events.remove(future)
-
-            tasks[-1].add_done_callback(clean_fired_events)
+            tasks[-1].add_done_callback(self._clean_fired_events)
 
         self._fired_events.extend(tasks)
         if wait and tasks:

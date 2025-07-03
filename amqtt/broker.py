@@ -29,6 +29,7 @@ from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Sessio
 from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .events import BrokerEvents
+from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import PluginManager
 
@@ -435,6 +436,7 @@ class Broker:
                 await self._delete_session(client_session.client_id)
             else:
                 client_session.client_id = gen_client_id()
+
             client_session.parent = 0
         # Get session from cache
         elif client_session.client_id in self._sessions:
@@ -494,8 +496,17 @@ class Broker:
 
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
+
+        # publish messages that were retained because the client session was disconnected
         self.logger.debug(f"Retained messages queue size: {client_session.retained_messages.qsize()}")
         await self._publish_session_retained_messages(client_session)
+
+        # if this is not a new session, there are subscriptions associated with them; publish any topic retained messages
+        self.logger.debug("Publish retained messages to a pre-existing session's subscriptions.")
+        for topic in self._subscriptions:
+            await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
+
+
 
         await self._client_message_loop(client_session, handler)
 
@@ -878,9 +889,18 @@ class Broker:
                 qos = broadcast.get("qos", sub_qos)
 
                 # Retain all messages which cannot be broadcasted, due to the session not being connected
-                if target_session.transitions.state != "connected":
+                #  but only when clean session is false and qos is 1 or 2 [MQTT 3.1.2.4]
+                #  and, if a client used anonymous authentication, there is no expectation that messages should be retained
+                if (target_session.transitions.state != "connected"
+                        and not target_session.clean_session
+                        and qos in (QOS_1, QOS_2)
+                        and not target_session.is_anonymous):
                     self.logger.debug(f"Session {target_session.client_id} is not connected, retaining message.")
                     await self._retain_broadcast_message(broadcast, qos, target_session)
+                    continue
+
+                # Only broadcast the message to connected clients
+                if target_session.transitions.state != "connected":
                     continue
 
                 self.logger.debug(

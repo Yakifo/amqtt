@@ -17,9 +17,9 @@ pytest_plugins = ["pytest_logdog"]
 
 test_config = {
     "listeners": {
-        "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
-        "ws": {"type": "ws", "bind": "127.0.0.1:8080", "max_connections": 10},
-        "wss": {"type": "ws", "bind": "127.0.0.1:8081", "max_connections": 10},
+        "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 15},
+        "ws": {"type": "ws", "bind": "127.0.0.1:8080", "max_connections": 15},
+        "wss": {"type": "ws", "bind": "127.0.0.1:8081", "max_connections": 15},
     },
     "sys_interval": 0,
     "auth": {

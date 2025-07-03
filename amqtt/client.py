@@ -598,7 +598,7 @@ class MQTTClient:
         session.cadata = broker_conf.get("cadata")
 
         if cleansession is not None:
-            broker_conf["cleansession"] = cleansession
+            broker_conf["cleansession"] = cleansession  # noop?
             session.clean_session = cleansession
         else:
             session.clean_session = self.config.get("cleansession", True)

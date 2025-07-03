@@ -192,7 +192,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
             # A Server MAY allow a Client to supply a ClientId that has a length of zero bytes
             # [MQTT-3.1.3-6]
             payload.client_id = gen_client_id()
-            # indicator to trow exception in case CLEAN_SESSION_FLAG is set to False
+            # indicator to throw exception in case CLEAN_SESSION_FLAG is set to False
             payload.client_id_is_random = True
 
         # Read will topic, username and password
