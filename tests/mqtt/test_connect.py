@@ -153,10 +153,10 @@ class ConnectPacketTest(unittest.TestCase):
         assert message.payload.password == "password"
         assert message.password == "password"
 
-    def test_incorrect_fixed_header(self):
-        header = MQTTFixedHeader(PUBLISH, 0x00)
-        with pytest.raises(AMQTTError):
-            connect_packet = ConnectPacket(fixed=header)
+def test_incorrect_fixed_header():
+    header = MQTTFixedHeader(PUBLISH, 0x00)
+    with pytest.raises(AMQTTError):
+        _ = ConnectPacket(fixed=header)
 
 @pytest.mark.parametrize("prop", [
     "proto_name",
@@ -177,11 +177,11 @@ class ConnectPacketTest(unittest.TestCase):
     "keep_alive",
 ])
 def test_empty_variable_header(prop):
-    connect_packet = ConnectPacket()
+    packet = ConnectPacket()
 
     with pytest.raises(ValueError):
-        assert getattr(connect_packet, prop) is not None
+        assert getattr(packet, prop) is not None
 
     with pytest.raises(ValueError):
-        assert setattr(connect_packet, prop, "a value")
+        assert setattr(packet, prop, "a value")
 
