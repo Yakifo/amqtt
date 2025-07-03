@@ -9,6 +9,7 @@ C = TypeVar("C", bound=BaseContext)
 
 class BasePlugin(Generic[C]):
     """The base from which all plugins should inherit.
+
     Type Parameters
     ---------------
     C:
@@ -30,7 +31,7 @@ class BasePlugin(Generic[C]):
     def __init__(self, context: C) -> None:
         self.context: C = context
         # since the PluginManager will hydrate the config from a plugin's `Config` class, this is a safe cast
-        self.config = cast("self.Config", context.config)  # inner class, so type: ignore[name-defined]
+        self.config = cast("self.Config", context.config)  # type: ignore[name-defined]
 
     # Deprecated: included to support entrypoint-style configs. Replaced by dataclass Config class.
     def _get_config_section(self, name: str) -> dict[str, Any] | None:
@@ -50,7 +51,8 @@ class BasePlugin(Generic[C]):
             return default
 
         if is_dataclass(self.context.config):
-            return getattr(self.context.config, option_name.replace("-", "_"), default)
+            # overloaded context.config for BasePlugin `Config` class, so ignoring static type check
+            return getattr(self.context.config, option_name.replace("-", "_"), default) # type: ignore[unreachable]
         if option_name in self.context.config:
             return self.context.config[option_name]
         return default
@@ -78,7 +80,8 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
             return default
 
         if is_dataclass(self.context.config):
-            return getattr(self.context.config, option_name.replace("-", "_"), default)
+            # overloaded context.config for BasePlugin `Config` class, so ignoring static type check
+            return getattr(self.context.config, option_name.replace("-", "_"), default) # type: ignore[unreachable]
         if self.topic_config and option_name in self.topic_config:
             return self.topic_config[option_name]
         return default
@@ -108,7 +111,8 @@ class BaseAuthPlugin(BasePlugin[BaseContext]):
             return default
 
         if is_dataclass(self.context.config):
-            return getattr(self.context.config, option_name.replace("-", "_"), default)
+            # overloaded context.config for BasePlugin `Config` class, so ignoring static type check
+            return getattr(self.context.config, option_name.replace("-", "_"), default)  # type: ignore[unreachable]
         if self.auth_config and option_name in self.auth_config:
             return self.auth_config[option_name]
         return default
