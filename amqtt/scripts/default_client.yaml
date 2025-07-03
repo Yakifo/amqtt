@@ -4,6 +4,7 @@ ping_delay: 1
 default_qos: 0
 default_retain: false
 auto_reconnect: true
+cleansession: true
 reconnect_max_interval: 10
 reconnect_retries: 2
 broker:

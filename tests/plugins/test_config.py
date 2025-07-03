@@ -83,6 +83,7 @@ listeners:
     type: tcp
     bind: 0.0.0.0:1883
 plugins:
+   - amqtt.plugins.authentication.AnonymousAuthPlugin
    - tests.plugins.mocks.TestAllowTopicPlugin:
 """
 
@@ -93,6 +94,7 @@ listeners:
     type: tcp
     bind: 0.0.0.0:1883
 plugins:
+   - amqtt.plugins.authentication.AnonymousAuthPlugin
    - tests.plugins.mocks.TestBlockTopicPlugin:
 """
 

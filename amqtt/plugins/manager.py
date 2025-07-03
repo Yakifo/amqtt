@@ -119,9 +119,9 @@ class PluginManager(Generic[C]):
         auth_filter_list = []
         topic_filter_list = []
         if self.app_context.config and "auth" in self.app_context.config:
-            auth_filter_list = self.app_context.config["auth"].get("plugins", [])
+            auth_filter_list = self.app_context.config["auth"].get("plugins", None)
         if self.app_context.config and "topic-check" in self.app_context.config:
-            topic_filter_list = self.app_context.config["topic-check"].get("plugins", [])
+            topic_filter_list = self.app_context.config["topic-check"].get("plugins", None)
 
         ep: EntryPoints | list[EntryPoint] = []
         if hasattr(entry_points(), "select"):
@@ -133,10 +133,12 @@ class PluginManager(Generic[C]):
             ep_plugin = self._load_ep_plugin(item)
             if ep_plugin is not None:
                 self._plugins.append(ep_plugin.object)
-                if ((not auth_filter_list or ep_plugin.name in auth_filter_list)
+                # maintain legacy behavior that if there is no list, use all auth plugins
+                if ((auth_filter_list is None or ep_plugin.name in auth_filter_list)
                         and hasattr(ep_plugin.object, "authenticate")):
                     self._auth_plugins.append(ep_plugin.object)
-                if ((not topic_filter_list or ep_plugin.name in topic_filter_list)
+                # maintain legacy behavior that if there is no list, use all topic plugins
+                if ((topic_filter_list is None or ep_plugin.name in topic_filter_list)
                         and hasattr(ep_plugin.object, "topic_filtering")):
                     self._topic_plugins.append(ep_plugin.object)
                 self.logger.debug(f" Plugin {item.name} ready")
@@ -260,6 +262,10 @@ class PluginManager(Generic[C]):
     def _schedule_coro(self, coro: Awaitable[str | bool | None]) -> asyncio.Future[str | bool | None]:
         return asyncio.ensure_future(coro)
 
+    def _clean_fired_events(self, future: asyncio.Future[Any]) -> None:
+        with contextlib.suppress(KeyError, ValueError):
+            self._fired_events.remove(future)
+
     async def fire_event(self, event_name: Events, *, wait: bool = False, **method_kwargs: Any) -> None:
         """Fire an event to plugins.
 
@@ -285,12 +291,7 @@ class PluginManager(Generic[C]):
 
             coro_instance: Awaitable[Any] = call_method(event_awaitable, method_kwargs)
             tasks.append(asyncio.ensure_future(coro_instance))
-
-            def clean_fired_events(future: asyncio.Future[Any]) -> None:
-                with contextlib.suppress(KeyError, ValueError):
-                    self._fired_events.remove(future)
-
-            tasks[-1].add_done_callback(clean_fired_events)
+            tasks[-1].add_done_callback(self._clean_fired_events)
 
         self._fired_events.extend(tasks)
         if wait and tasks:

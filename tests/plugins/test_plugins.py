@@ -145,6 +145,7 @@ async def test_all_plugin_events():
         },
         'sys_interval': 1,
         'plugins':{
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {},
             'tests.plugins.test_plugins.AllEventsPlugin': {}
         }
     }
