@@ -38,7 +38,7 @@ class DataClassListJSON(TypeDecorator[list[dict[str, Any]]]):
         if not is_dataclass(dataclass_type):
             msg = f"{dataclass_type} must be a dataclass type"
             raise TypeError(msg)
-        self.dataclass_type: type[T] = dataclass_type
+        self.dataclass_type = dataclass_type
         super().__init__()
 
     def process_bind_param(
@@ -58,6 +58,13 @@ class DataClassListJSON(TypeDecorator[list[dict[str, Any]]]):
         if value is None:
             return None
         return [self.dataclass_type(**item) for item in value]
+    def process_literal_param(self, value: Any, dialect: Any) -> Any:
+        # Required by SQLAlchemy, typically used for literal SQL rendering.
+        return value
+    @property
+    def python_type(self) -> type:
+        # Required by TypeEngine to indicate the expected Python type.
+        return list
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -80,8 +87,7 @@ class Session(Base):
 class SessionDBPlugin(BasePlugin[BrokerContext]):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
-
-        self._engine = create_async_engine(f"sqlite+aiosqlite:///{context.config.file}")
+        self._engine = create_async_engine(f"sqlite+aiosqlite:///{self.config.file}")
 
 
     async def on_broker_client_connected(self, client_id:str) -> None:
