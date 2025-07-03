@@ -145,10 +145,11 @@ async def test_connect_tcp(broker):
     connections_number = 10
 
     # mqtt 3.1 requires a connect packet, otherwise the socket connection is rejected
-    static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-123'
 
     sockets = []
     for i in range(connections_number):
+        static_connect_packet = b'\x10\x1b\x00\x04MQTT\x04\x02\x00<\x00\x0ftest-client-12' + f"{i}".encode()
+
         s = socket.create_connection(("127.0.0.1", 1883))
         s.send(static_connect_packet)
         sockets.append(s)
@@ -166,9 +167,11 @@ async def test_connect_tcp(broker):
     tcp_connections = [conn for conn in connections if conn.laddr.port == 1883]
     assert len(tcp_connections) == connections_number + 1  # Including the Broker's listening socket
 
+    await asyncio.sleep(0.1)
     for conn in connections:
         assert conn.status in ("ESTABLISHED", "LISTEN")
 
+    await asyncio.sleep(0.1)
     # close all connections
     for s in sockets:
         s.close()
