@@ -488,7 +488,9 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
@@ -591,7 +593,9 @@ class Broker:
         self.logger.debug(f"{client_session.client_id} Disconnecting session")
         await self._stop_handler(handler)
         client_session.transitions.disconnect()
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
 
     async def _handle_subscription(
