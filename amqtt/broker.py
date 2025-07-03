@@ -3,7 +3,6 @@ from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
 import copy
-from enum import Enum
 from functools import partial
 import logging
 from pathlib import Path
@@ -23,6 +22,7 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
+from amqtt.contexts import Action, BaseContext
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -31,7 +31,7 @@ from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 from .events import BrokerEvents
 from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
-from .plugins.manager import BaseContext, PluginManager
+from .plugins.manager import PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
@@ -43,13 +43,6 @@ _defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yam
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
-
-
-class Action(Enum):
-    """Actions issued by the broker."""
-
-    SUBSCRIBE = "subscribe"
-    PUBLISH = "publish"
 
 
 class RetainedApplicationMessage(ApplicationMessage):
@@ -165,6 +158,10 @@ class Broker:
         self.logger = logging.getLogger(__name__)
         self.config = copy.deepcopy(_defaults or {})
         if config is not None:
+            # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
+            if ("auth" in config or "topic-check" in config) and "plugins" not in config:
+                # set to None so that the config isn't updated with the new-style default plugin list
+                config["plugins"] = None  # type: ignore[assignment]
             self.config.update(config)
         self._build_listeners_config(self.config)
 
@@ -493,7 +490,9 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
@@ -605,7 +604,9 @@ class Broker:
         self.logger.debug(f"{client_session.client_id} Disconnecting session")
         await self._stop_handler(handler)
         client_session.transitions.disconnect()
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
 
     async def _handle_subscription(
@@ -710,17 +711,20 @@ class Broker:
         :return:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
-        auth_result = True
-        if returns:
-            for plugin in returns:
-                res = returns[plugin]
-                if res is False:
-                    auth_result = False
-                    self.logger.debug(f"Authentication failed due to '{plugin.__class__}' plugin result: {res}")
-                else:
-                    self.logger.debug(f"'{plugin.__class__}' plugin result: {res}")
-        # If all plugins returned True, authentication is success
-        return auth_result
+
+        results = [ result for _, result in returns.items() if result is not None] if returns else []
+        if len(results) < 1:
+            self.logger.debug("Authentication failed: no plugin responded with a boolean")
+            return False
+
+        if all(results):
+            self.logger.debug("Authentication succeeded")
+            return True
+
+        for plugin, result in returns.items():
+            self.logger.debug(f"Authentication '{plugin.__class__.__name__}' result: {result}")
+
+        return False
 
     def retain_message(
         self,
@@ -777,13 +781,7 @@ class Broker:
         :param action: What is being done with the topic?  subscribe or publish
         :return:
         """
-        topic_config = self.config.get("topic-check", {})
-        enabled = False
-
-        if isinstance(topic_config, dict):
-            enabled = topic_config.get("enabled", False)
-
-        if not enabled:
+        if not self.plugins_manager.is_topic_filtering_enabled():
             return True
 
         results = await self.plugins_manager.map_plugin_topic(session=session, topic=topic, action=action)

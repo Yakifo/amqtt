@@ -120,7 +120,8 @@ async def test_start_stop(broker, mock_plugin_manager):
 
 @pytest.mark.asyncio
 async def test_client_connect(broker, mock_plugin_manager):
-    client = MQTTClient()
+    client = MQTTClient(config={'auto_reconnect':False})
+
     ret = await client.connect("mqtt://127.0.0.1/")
     assert ret == 0
     assert client.session is not None
@@ -129,19 +130,13 @@ async def test_client_connect(broker, mock_plugin_manager):
 
     await asyncio.sleep(0.01)
 
-    mock_plugin_manager.assert_has_calls(
-        [
-            call().fire_event(
-                BrokerEvents.CLIENT_CONNECTED,
-                client_id=client.session.client_id,
-            ),
-            call().fire_event(
-                BrokerEvents.CLIENT_DISCONNECTED,
-                client_id=client.session.client_id,
-            ),
-        ],
-        any_order=True,
-    )
+    broker.plugins_manager.fire_event.assert_called()
+    assert broker.plugins_manager.fire_event.call_count > 2
+
+    # double indexing is ugly, but call_args_list returns a tuple of tuples
+    events = [c[0][0] for c in broker.plugins_manager.fire_event.call_args_list]
+    assert BrokerEvents.CLIENT_CONNECTED in events
+    assert BrokerEvents.CLIENT_DISCONNECTED in events
 
 
 @pytest.mark.asyncio
@@ -890,3 +885,69 @@ async def test_broker_socket_open_close(broker):
     s.send(static_connect_packet)
     await asyncio.sleep(0.1)
     s.close()
+
+
+legacy_config_empty_auth_plugin_list = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'sys_interval': 0,
+        'auth':{
+            'plugins':[]  # explicitly declare no auth plugins
+        }
+    }
+class_path_config_no_auth = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'plugins':{
+            'tests.plugins.test_plugins.AllEventsPlugin': {}
+        }
+    }
+
+
+@pytest.mark.parametrize("test_config", [
+    legacy_config_empty_auth_plugin_list,
+    class_path_config_no_auth,
+])
+@pytest.mark.asyncio
+async def test_broker_without_auth_plugin(test_config):
+
+    broker = Broker(config=test_config)
+
+    await broker.start()
+    await asyncio.sleep(2)
+
+    # make sure all expected events get triggered
+    with pytest.raises(ConnectError):
+        mqtt_client = MQTTClient(config={'auto_reconnect': False})
+        await mqtt_client.connect()
+
+
+    await broker.shutdown()
+
+
+
+legacy_config_with_absent_auth_plugin_filter = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'sys_interval': 0,
+        'auth':{
+            'allow-anonymous': True
+        }
+    }
+@pytest.mark.asyncio
+async def test_broker_with_absent_auth_plugin_filter():
+
+    # maintain legacy behavior that if a config is missing the 'auth' > 'plugins' filter, all plugins are active
+    broker = Broker(config=legacy_config_with_absent_auth_plugin_filter)
+
+    await broker.start()
+    await asyncio.sleep(2)
+
+
+    mqtt_client = MQTTClient(config={'auto_reconnect': False})
+    await mqtt_client.connect()
+
+    await broker.shutdown()

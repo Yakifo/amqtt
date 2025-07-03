@@ -240,7 +240,6 @@ async def test_client_subscribe():
 
     await broker.shutdown()
 
-
 @pytest.mark.asyncio
 async def test_client_subscribe_plugin_acl():
     broker = Broker(config=broker_acl_config)

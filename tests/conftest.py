@@ -8,6 +8,8 @@ import urllib.request
 import pytest
 
 from amqtt.broker import Broker
+from amqtt.contexts import BaseContext
+from amqtt.plugins.base import BasePlugin
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ test_config = {
     "sys_interval": 0,
     "auth": {
         "allow-anonymous": True,
-    },
+    }
 }
 
 
@@ -49,7 +51,15 @@ test_config_acl: dict[str, int | dict[str, Any]] = {
 
 @pytest.fixture
 def mock_plugin_manager():
-    with unittest.mock.patch("amqtt.broker.PluginManager") as plugin_manager:
+    with (unittest.mock.patch("amqtt.broker.PluginManager") as plugin_manager):
+        plugin_manager_instance = plugin_manager.return_value
+
+        # disable topic filtering when using the mock manager
+        plugin_manager_instance.is_topic_filtering_enabled.return_value = False
+
+        # allow any connection when using the mock manager
+        plugin_manager_instance.map_plugin_auth = unittest.mock.AsyncMock(return_value={ BasePlugin(BaseContext()): True })
+
         yield plugin_manager
 
 

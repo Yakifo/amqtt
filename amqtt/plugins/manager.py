@@ -1,4 +1,4 @@
-__all__ = ["BaseContext", "PluginManager", "get_plugin_manager"]
+__all__ = ["PluginManager", "get_plugin_manager"]
 
 import asyncio
 from collections import defaultdict
@@ -8,17 +8,17 @@ import copy
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from inspect import iscoroutinefunction
 import logging
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar
+from typing import Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar, cast
+import warnings
 
-from amqtt.errors import PluginImportError, PluginInitError
+from dacite import Config as DaciteConfig, DaciteError, from_dict
+
+from amqtt.contexts import Action, BaseContext
+from amqtt.errors import PluginCoroError, PluginImportError, PluginInitError, PluginLoadError
 from amqtt.events import BrokerEvents, Events, MQTTEvents
+from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
 from amqtt.session import Session
-
-_LOGGER = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from amqtt.broker import Action
-    from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
+from amqtt.utils import import_string
 
 
 class Plugin(NamedTuple):
@@ -39,11 +39,11 @@ def get_plugin_manager(namespace: str) -> "PluginManager[Any] | None":
     return plugins_manager.get(namespace)
 
 
-class BaseContext:
-    def __init__(self) -> None:
-        self.loop: asyncio.AbstractEventLoop | None = None
-        self.logger: logging.Logger = _LOGGER
-        self.config: dict[str, Any] | None = None
+def safe_issubclass(sub_class: Any, super_class: Any) -> bool:
+    try:
+        return issubclass(sub_class, super_class)
+    except TypeError:
+        return False
 
 
 AsyncFunc: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
@@ -70,6 +70,9 @@ class PluginManager(Generic[C]):
         self._auth_plugins: list[BaseAuthPlugin] = []
         self._topic_plugins: list[BaseTopicPlugin] = []
         self._event_plugin_callbacks: dict[str, list[AsyncFunc]] = defaultdict(list)
+        self._is_topic_filtering_enabled = False
+        self._is_auth_filtering_enabled = False
+
         self._load_plugins(namespace)
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
@@ -78,16 +81,47 @@ class PluginManager(Generic[C]):
     def app_context(self) -> BaseContext:
         return self.context
 
-    def _load_plugins(self, namespace: str) -> None:
+    def _load_plugins(self, namespace: str | None = None) -> None:
+        if self.app_context.config and self.app_context.config.get("plugins", None) is not None:
+            if "auth" in self.app_context.config:
+                self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
+            if "topic-check" in self.app_context.config:
+                self.logger.warning("Loading plugins from config will ignore 'topic-check' section of config")
+
+            plugin_list: list[Any] = self.app_context.config.get("plugins", [])
+            self._load_str_plugins(plugin_list)
+        else:
+            if not namespace:
+                msg = "Namespace needs to be provided for EntryPoint plugin definitions"
+                raise PluginLoadError(msg)
+
+            warnings.warn(
+                "Loading plugins from EntryPoints is deprecated and will be removed in a future version."
+                " Use `plugins` section of config instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+            self._load_ep_plugins(namespace)
+
+        for plugin in self._plugins:
+            for event in list(BrokerEvents) + list(MQTTEvents):
+                if awaitable := getattr(plugin, f"on_{event}", None):
+                    if not iscoroutinefunction(awaitable):
+                        msg = f"'on_{event}' for '{plugin.__class__.__name__}' is not a coroutine'"
+                        raise PluginImportError(msg)
+                    self.logger.debug(f"'{event}' handler found for '{plugin.__class__.__name__}'")
+                    self._event_plugin_callbacks[event].append(awaitable)
+
+    def _load_ep_plugins(self, namespace:str) -> None:
 
         self.logger.debug(f"Loading plugins for namespace {namespace}")
-
         auth_filter_list = []
         topic_filter_list = []
         if self.app_context.config and "auth" in self.app_context.config:
-            auth_filter_list = self.app_context.config["auth"].get("plugins", [])
+            auth_filter_list = self.app_context.config["auth"].get("plugins", None)
         if self.app_context.config and "topic-check" in self.app_context.config:
-            topic_filter_list = self.app_context.config["topic-check"].get("plugins", [])
+            topic_filter_list = self.app_context.config["topic-check"].get("plugins", None)
 
         ep: EntryPoints | list[EntryPoint] = []
         if hasattr(entry_points(), "select"):
@@ -99,22 +133,15 @@ class PluginManager(Generic[C]):
             ep_plugin = self._load_ep_plugin(item)
             if ep_plugin is not None:
                 self._plugins.append(ep_plugin.object)
-                if ((not auth_filter_list or ep_plugin.name in auth_filter_list)
+                # maintain legacy behavior that if there is no list, use all auth plugins
+                if ((auth_filter_list is None or ep_plugin.name in auth_filter_list)
                         and hasattr(ep_plugin.object, "authenticate")):
                     self._auth_plugins.append(ep_plugin.object)
-                if ((not topic_filter_list or ep_plugin.name in topic_filter_list)
+                # maintain legacy behavior that if there is no list, use all topic plugins
+                if ((topic_filter_list is None or ep_plugin.name in topic_filter_list)
                         and hasattr(ep_plugin.object, "topic_filtering")):
                     self._topic_plugins.append(ep_plugin.object)
                 self.logger.debug(f" Plugin {item.name} ready")
-
-        for plugin in self._plugins:
-            for event in list(BrokerEvents) + list(MQTTEvents):
-                if awaitable := getattr(plugin, f"on_{event}", None):
-                    if not iscoroutinefunction(awaitable):
-                        msg = f"'on_{event}' for '{plugin.__class__.__name__}' is not a coroutine'"
-                        raise PluginImportError(msg)
-                    self.logger.debug(f"'{event}' handler found for '{plugin.__class__.__name__}'")
-                    self._event_plugin_callbacks[event].append(awaitable)
 
     def _load_ep_plugin(self, ep: EntryPoint) -> Plugin | None:
         try:
@@ -136,6 +163,70 @@ class PluginManager(Generic[C]):
             self.logger.debug(f"Plugin init failed: {ep!r}", exc_info=True)
             raise PluginInitError(ep) from e
 
+    def _load_str_plugins(self, plugin_list: list[Any]) -> None:
+
+        self.logger.info("Loading plugins from config")
+        self._is_topic_filtering_enabled = True
+        self._is_auth_filtering_enabled = True
+        for plugin_info in plugin_list:
+
+            if isinstance(plugin_info, dict):
+                if len(plugin_info.keys()) > 1:
+                    msg = f"config file should have only one key: {plugin_info.keys()}"
+                    raise ValueError(msg)
+                plugin_path = next(iter(plugin_info.keys()))
+                plugin_cfg = plugin_info[plugin_path]
+                plugin = self._load_str_plugin(plugin_path, plugin_cfg)
+            elif isinstance(plugin_info, str):
+                plugin = self._load_str_plugin(plugin_info, {})
+            else:
+                msg = "Unexpected entry in plugins config"
+                raise PluginLoadError(msg)
+
+            self._plugins.append(plugin)
+            if isinstance(plugin, BaseAuthPlugin):
+                if not iscoroutinefunction(plugin.authenticate):
+                    msg = f"Auth plugin {plugin_info} has non-async authenticate method."
+                    raise PluginCoroError(msg)
+                self._auth_plugins.append(plugin)
+            if isinstance(plugin, BaseTopicPlugin):
+                if not iscoroutinefunction(plugin.topic_filtering):
+                    msg = f"Topic plugin {plugin_info} has non-async topic_filtering method."
+                    raise PluginCoroError(msg)
+                self._topic_plugins.append(plugin)
+
+    def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin[C]":
+
+        try:
+            plugin_class: Any =  import_string(plugin_path)
+        except ImportError as ep:
+            msg = f"Plugin import failed: {plugin_path}"
+            raise PluginImportError(msg) from ep
+
+        if not safe_issubclass(plugin_class, BasePlugin):
+            msg = f"Plugin {plugin_path} is not a subclass of 'BasePlugin'"
+            raise PluginLoadError(msg)
+
+        plugin_context = copy.copy(self.app_context)
+        plugin_context.logger = self.logger.getChild(plugin_class.__name__)
+        try:
+            plugin_context.config = from_dict(data_class=plugin_class.Config,
+                                              data=plugin_cfg or {},
+                                              config=DaciteConfig(strict=True))
+        except DaciteError as e:
+            raise PluginLoadError from e
+        except TypeError as e:
+            msg = f"Could not marshall 'Config' of {plugin_path}; should be a dataclass."
+            raise PluginLoadError(msg) from e
+
+        try:
+            pc = plugin_class(plugin_context)
+            self.logger.debug(f"Loading plugin {plugin_path}")
+            return cast("BasePlugin[C]", pc)
+        except Exception as e:
+            self.logger.debug(f"Plugin init failed: {plugin_class.__name__}", exc_info=True)
+            raise PluginInitError(plugin_class) from e
+
     def get_plugin(self, name: str) -> Optional["BasePlugin[C]"]:
         """Get a plugin by its name from the plugins loaded for the current namespace.
 
@@ -146,6 +237,12 @@ class PluginManager(Generic[C]):
             if p.__class__.__name__ == name:
                 return p
         return None
+
+    def is_topic_filtering_enabled(self) -> bool:
+        topic_config = self.app_context.config.get("topic-check", {}) if self.app_context.config else {}
+        if isinstance(topic_config, dict):
+            return topic_config.get("enabled", False) or self._is_topic_filtering_enabled
+        return False or self._is_topic_filtering_enabled
 
     async def close(self) -> None:
         """Free PluginManager resources and cancel pending event methods."""

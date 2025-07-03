@@ -13,11 +13,11 @@ import pytest
 import amqtt.plugins
 from amqtt.broker import Broker, BrokerContext
 from amqtt.client import MQTTClient
-from amqtt.errors import PluginError, PluginInitError, PluginImportError
+from amqtt.errors import PluginInitError, PluginImportError
 from amqtt.events import MQTTEvents, BrokerEvents
 from amqtt.mqtt.constants import QOS_0
 from amqtt.plugins.base import BasePlugin
-from amqtt.plugins.manager import BaseContext
+from amqtt.contexts import BaseContext
 
 _INVALID_METHOD: str = "invalid_foo"
 _PLUGIN: str = "Plugin"
@@ -82,54 +82,36 @@ class MockInitErrorPlugin(BasePlugin):
 
 @pytest.mark.asyncio
 async def test_plugin_exception_while_init() -> None:
-    class MockEntryPoints:
 
-        def select(self, group) -> list[EntryPoint]:
-            match group:
-                case 'tests.mock_plugins':
-                    return [
-                            EntryPoint(name='TestExceptionPlugin', group='tests.mock_plugins', value='tests.plugins.test_plugins:MockInitErrorPlugin'),
-                        ]
-                case _:
-                    return list()
-
-    with patch("amqtt.plugins.manager.entry_points", side_effect=MockEntryPoints) as mocked_mqtt_publish:
-
-        config = {
-            "listeners": {
-                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
-            },
-            'sys_interval': 1
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'sys_interval': 1,
+        'plugins':{
+            'tests.plugins.test_plugins.MockInitErrorPlugin':{}
         }
+    }
 
-        with pytest.raises(PluginInitError):
-            _ = Broker(plugin_namespace='tests.mock_plugins', config=config)
+    with pytest.raises(PluginInitError):
+        _ = Broker(plugin_namespace='tests.mock_plugins', config=config)
 
 
 @pytest.mark.asyncio
 async def test_plugin_exception_while_loading() -> None:
-    class MockEntryPoints:
 
-        def select(self, group) -> list[EntryPoint]:
-            match group:
-                case 'tests.mock_plugins':
-                    return [
-                            EntryPoint(name='TestExceptionPlugin', group='tests.mock_plugins', value='tests.plugins.mock_plugins:MockImportErrorPlugin'),
-                        ]
-                case _:
-                    return list()
-
-    with patch("amqtt.plugins.manager.entry_points", side_effect=MockEntryPoints) as mocked_mqtt_publish:
-
-        config = {
-            "listeners": {
-                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
-            },
-            'sys_interval': 1
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'sys_interval': 1,
+        'plugins':{
+            'tests.plugins.mock_plugins.MockImportErrorPlugin':{}
         }
+    }
 
-        with pytest.raises(PluginImportError):
-            _ = Broker(plugin_namespace='tests.mock_plugins', config=config)
+    with pytest.raises(PluginImportError):
+        _ = Broker(plugin_namespace='tests.mock_plugins', config=config)
 
 
 class AllEventsPlugin(BasePlugin[BaseContext]):
@@ -153,47 +135,38 @@ class AllEventsPlugin(BasePlugin[BaseContext]):
         if name not in ('authenticate', 'topic_filtering'):
             pytest.fail(f'unexpected method called: {name}')
 
+
 @pytest.mark.asyncio
 async def test_all_plugin_events():
-    class MockEntryPoints:
 
-        def select(self, group) -> list[EntryPoint]:
-            match group:
-                case 'tests.mock_plugins':
-                    return [
-                            EntryPoint(name='AllEventsPlugin', group='tests.mock_plugins', value='tests.plugins.test_plugins:AllEventsPlugin'),
-                        ]
-                case _:
-                    return list()
-
-    # patch the entry points so we can load our test plugin
-    with patch("amqtt.plugins.manager.entry_points", side_effect=MockEntryPoints) as mocked_mqtt_publish:
-
-        config = {
-            "listeners": {
-                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
-            },
-            'sys_interval': 1
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'sys_interval': 1,
+        'plugins':{
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {},
+            'tests.plugins.test_plugins.AllEventsPlugin': {}
         }
+    }
 
+    broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
 
-        broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
+    await broker.start()
+    await asyncio.sleep(2)
 
-        await broker.start()
-        await asyncio.sleep(2)
+    # make sure all expected events get triggered
+    client = MQTTClient()
+    await client.connect("mqtt://127.0.0.1:1883/")
+    await client.subscribe([('my/test/topic', QOS_0),])
+    await client.publish('test/topic', b'my test message')
+    await client.unsubscribe(['my/test/topic',])
+    await client.disconnect()
+    await asyncio.sleep(1)
 
-        # make sure all expected events get triggered
-        client = MQTTClient()
-        await client.connect("mqtt://127.0.0.1:1883/")
-        await client.subscribe([('my/test/topic', QOS_0),])
-        await client.publish('test/topic', b'my test message')
-        await client.unsubscribe(['my/test/topic',])
-        await client.disconnect()
-        await asyncio.sleep(1)
+    # get the plugin so it doesn't get gc on shutdown
+    test_plugin = broker.plugins_manager.get_plugin('AllEventsPlugin')
+    await broker.shutdown()
+    await asyncio.sleep(1)
 
-        # get the plugin so it doesn't get gc on shutdown
-        test_plugin = broker.plugins_manager.get_plugin('AllEventsPlugin')
-        await broker.shutdown()
-        await asyncio.sleep(1)
-
-        assert all(test_plugin.test_flags.values()), f'event not received: {[event for event, value in test_plugin.test_flags.items() if not value]}'
+    assert all(test_plugin.test_flags.values()), f'event not received: {[event for event, value in test_plugin.test_flags.items() if not value]}'
