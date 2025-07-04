@@ -180,7 +180,7 @@ Publishes, on a periodic basis, statistics about the broker
 
 **Configuration**
 
-- `sys_interval` - int, seconds between updates
+- `sys_interval` - int, seconds between updates (default: 20)
 
 ```yaml
 plugins:
