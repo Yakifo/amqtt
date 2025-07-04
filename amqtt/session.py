@@ -145,11 +145,14 @@ class Session:
         # Used to store incoming ApplicationMessage while publish protocol flows
         self.inflight_in: OrderedDict[int, IncomingApplicationMessage] = OrderedDict()
 
-        # Stores messages retained for this session
+        # Stores messages retained for this session (specifically when the client is disconnected)
         self.retained_messages: Queue[ApplicationMessage] = Queue()
 
         # Stores PUBLISH messages ID received in order and ready for application process
         self.delivered_message_queue: Queue[ApplicationMessage] = Queue()
+
+        # identify anonymous client sessions or clients which didn't identify themselves
+        self.is_anonymous: bool = False
 
     def _init_states(self) -> None:
         self.transitions = Machine(states=Session.states, initial="new")

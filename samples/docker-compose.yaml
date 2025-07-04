@@ -2,6 +2,14 @@ services:
   amqtt:
     image: amqtt/amqtt
     container_name: amqtt
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 8g
+        reservations:
+          cpus: '3'
+          memory: 8g
     ports:
       - "1883:1883"
       - "8080:8080"

@@ -463,7 +463,7 @@ async def test_client_no_auth():
             match group:
                 case 'tests.mock_plugins':
                     return [
-                            EntryPoint(name='auth_plugin', group='tests.mock_plugins', value='tests.plugins.mocks:NoAuthPlugin'),
+                            EntryPoint(name='auth_plugin', group='tests.mock_plugins', value='tests.plugins.mocks:TestNoAuthPlugin'),
                         ]
                 case _:
                     return list()

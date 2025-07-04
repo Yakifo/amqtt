@@ -2,11 +2,14 @@ import logging
 
 import pytest
 
-from amqtt.broker import Action, BrokerContext, Broker
-from amqtt.plugins.manager import BaseContext
+from amqtt.broker import BrokerContext, Broker
+
+from amqtt.contexts import BaseContext, Action
 from amqtt.plugins.topic_checking import TopicAccessControlListPlugin, TopicTabooPlugin
 from amqtt.plugins.base import BaseTopicPlugin
 from amqtt.session import Session
+
+logger = logging.getLogger(__name__)
 
 # Base plug-in object
 
@@ -23,15 +26,11 @@ async def test_base_no_config(logdog):
         authorised = await plugin.topic_filtering()
         assert authorised is False
 
-    # Should have printed a couple of warnings
-    log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].levelno == logging.WARNING
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-
-    assert log_records[1].levelno == logging.WARNING
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
-    assert pile.is_empty()
+        # Warning messages are only generated if using deprecated plugin configuration on initial load
+        log_records = list(pile.drain(name="testlog"))
+        assert len(log_records) == 1
+        assert log_records[0].levelno == logging.WARNING
+        assert log_records[0].message == "'topic-check' section not found in context configuration"
 
 
 @pytest.mark.asyncio
@@ -47,14 +46,11 @@ async def test_base_empty_config(logdog):
         authorised = await plugin.topic_filtering()
         assert authorised is False
 
-    # Should have printed just one warning
-    log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].levelno == logging.WARNING
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-
-    assert log_records[1].levelno == logging.WARNING
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
+        # Warning messages are only generated if using deprecated plugin configuration on initial load
+        log_records = list(pile.drain(name="testlog"))
+        assert len(log_records) == 1
+        assert log_records[0].levelno == logging.WARNING
+        assert log_records[0].message == "'topic-check' section not found in context configuration"
 
 
 @pytest.mark.asyncio
@@ -69,9 +65,9 @@ async def test_base_disabled_config(logdog):
         authorised = await plugin.topic_filtering()
         assert authorised is True
 
-    # Should NOT have printed warnings
-    log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 0
+        # Should NOT have printed warnings
+        log_records = list(pile.drain(name="testlog"))
+        assert len(log_records) == 0
 
 
 @pytest.mark.asyncio
@@ -86,9 +82,9 @@ async def test_base_enabled_config(logdog):
         authorised = await plugin.topic_filtering()
         assert authorised is True
 
-    # Should NOT have printed warnings
-    log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 0
+        # Should NOT have printed warnings
+        log_records = list(pile.drain(name="testlog"))
+        assert len(log_records) == 0
 
 
 # Taboo plug-in
@@ -105,13 +101,11 @@ async def test_taboo_empty_config(logdog):
         plugin = TopicTabooPlugin(context)
         assert (await plugin.topic_filtering()) is False
 
-    # Should have printed a couple of warnings
-    log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].levelno == logging.WARNING
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-    assert log_records[1].levelno == logging.WARNING
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
+        # Warning messages are only generated if using deprecated plugin configuration on initial load
+        log_records = list(pile.drain(name="testlog"))
+        assert len(log_records) == 1
+        assert log_records[0].levelno == logging.WARNING
+        assert log_records[0].message == "'topic-check' section not found in context configuration"
 
 
 @pytest.mark.asyncio
@@ -133,13 +127,17 @@ async def test_taboo_disabled(logdog):
     assert len(log_records) == 0
 
 
+@pytest.mark.parametrize("test_config", [
+    ({"topic-check": {"enabled": True}}),
+    (TopicTabooPlugin.Config())
+])
 @pytest.mark.asyncio
-async def test_taboo_not_taboo_topic(logdog):
+async def test_taboo_not_taboo_topic(logdog, test_config):
     """Check TopicTabooPlugin returns true if topic not taboo."""
     with logdog() as pile:
         context = BaseContext()
         context.logger = logging.getLogger("testlog")
-        context.config = {"topic-check": {"enabled": True}}
+        context.config = test_config
 
         session = Session()
         session.username = "anybody"
@@ -152,13 +150,17 @@ async def test_taboo_not_taboo_topic(logdog):
     assert len(log_records) == 0
 
 
+@pytest.mark.parametrize("test_config", [
+    ({"topic-check": {"enabled": True}}),
+    (TopicTabooPlugin.Config())
+])
 @pytest.mark.asyncio
-async def test_taboo_anon_taboo_topic(logdog):
+async def test_taboo_anon_taboo_topic(logdog, test_config):
     """Check TopicTabooPlugin returns false if topic is taboo and session is anonymous."""
     with logdog() as pile:
         context = BaseContext()
         context.logger = logging.getLogger("testlog")
-        context.config = {"topic-check": {"enabled": True}}
+        context.config = test_config
 
         session = Session()
         session.username = ""
@@ -171,13 +173,17 @@ async def test_taboo_anon_taboo_topic(logdog):
     assert len(log_records) == 0
 
 
+@pytest.mark.parametrize("test_config", [
+    ({"topic-check": {"enabled": True}}),
+    (TopicTabooPlugin.Config())
+])
 @pytest.mark.asyncio
-async def test_taboo_notadmin_taboo_topic(logdog):
+async def test_taboo_notadmin_taboo_topic(logdog, test_config):
     """Check TopicTabooPlugin returns false if topic is taboo and user is not "admin"."""
     with logdog() as pile:
         context = BaseContext()
         context.logger = logging.getLogger("testlog")
-        context.config = {"topic-check": {"enabled": True}}
+        context.config = test_config
 
         session = Session()
         session.username = "notadmin"
@@ -189,14 +195,17 @@ async def test_taboo_notadmin_taboo_topic(logdog):
     log_records = list(pile.drain(name="testlog"))
     assert len(log_records) == 0
 
-
+@pytest.mark.parametrize("test_config", [
+    ({"topic-check": {"enabled": True}}),
+    (TopicTabooPlugin.Config())
+])
 @pytest.mark.asyncio
-async def test_taboo_admin_taboo_topic(logdog):
+async def test_taboo_admin_taboo_topic(logdog, test_config):
     """Check TopicTabooPlugin returns true if topic is taboo and user is "admin"."""
     with logdog() as pile:
         context = BaseContext()
         context.logger = logging.getLogger("testlog")
-        context.config = {"topic-check": {"enabled": True}}
+        context.config = test_config
 
         session = Session()
         session.username = "admin"
@@ -265,11 +274,11 @@ async def test_taclp_empty_config(logdog):
         plugin = TopicAccessControlListPlugin(context)
         assert (await plugin.topic_filtering()) is False
 
-    # Should have printed a couple of warnings
-    log_records = list(pile.drain(name="testlog"))
-    assert len(log_records) == 2
-    assert log_records[0].message == "'topic-check' section not found in context configuration"
-    assert log_records[1].message == "'topic-check' section not found in context configuration"
+        # Warning messages are only generated if using deprecated plugin configuration on initial load
+        log_records = list(pile.drain(name="testlog"))
+        assert len(log_records) == 1
+        assert log_records[0].levelno == logging.WARNING
+        assert log_records[0].message == "'topic-check' section not found in context configuration"
 
 
 @pytest.mark.asyncio
@@ -291,15 +300,19 @@ async def test_taclp_true_disabled(logdog):
     assert authorised is True
 
 
+@pytest.mark.parametrize("test_config", [
+    ({"topic-check": {"enabled": True}}),
+    (TopicAccessControlListPlugin.Config())
+])
 @pytest.mark.asyncio
-async def test_taclp_true_no_pub_acl(logdog):
+async def test_taclp_true_no_pub_acl(logdog, test_config):
     """Check TopicAccessControlListPlugin returns true if action=publish and no publish-acl given.
 
     (This is for backward-compatibility with existing installations.).
     """
     context = BaseContext()
     context.logger = logging.getLogger("testlog")
-    context.config = {"topic-check": {"enabled": True}}
+    context.config = test_config
 
     session = Session()
     session.username = "user"
@@ -313,17 +326,23 @@ async def test_taclp_true_no_pub_acl(logdog):
     assert authorised is True
 
 
-@pytest.mark.asyncio
-async def test_taclp_false_sub_no_topic(logdog):
-    """Check TopicAccessControlListPlugin returns false user there is no topic."""
-    context = BaseContext()
-    context.logger = logging.getLogger("testlog")
-    context.config = {
+@pytest.mark.parametrize("test_config", [
+    ({
         "topic-check": {
             "enabled": True,
             "acl": {"anotheruser": ["allowed/topic", "another/allowed/topic/#"]},
         },
-    }
+    }),
+    (TopicAccessControlListPlugin.Config(
+        acl={"anotheruser": ["allowed/topic", "another/allowed/topic/#"]}
+    ))
+])
+@pytest.mark.asyncio
+async def test_taclp_false_sub_no_topic(logdog, test_config):
+    """Check TopicAccessControlListPlugin returns false user there is no topic."""
+    context = BaseContext()
+    context.logger = logging.getLogger("testlog")
+    context.config = test_config
 
     session = Session()
     session.username = "user"
@@ -337,17 +356,23 @@ async def test_taclp_false_sub_no_topic(logdog):
     assert authorised is False
 
 
-@pytest.mark.asyncio
-async def test_taclp_false_sub_unknown_user(logdog):
-    """Check TopicAccessControlListPlugin returns false user is not listed in ACL."""
-    context = BaseContext()
-    context.logger = logging.getLogger("testlog")
-    context.config = {
+@pytest.mark.parametrize("test_config", [
+    ({
         "topic-check": {
             "enabled": True,
             "acl": {"anotheruser": ["allowed/topic", "another/allowed/topic/#"]},
         },
-    }
+    }),
+    (TopicAccessControlListPlugin.Config(
+        acl={"anotheruser": ["allowed/topic", "another/allowed/topic/#"]}
+    ))
+])
+@pytest.mark.asyncio
+async def test_taclp_false_sub_unknown_user(logdog, test_config):
+    """Check TopicAccessControlListPlugin returns false user is not listed in ACL."""
+    context = BaseContext()
+    context.logger = logging.getLogger("testlog")
+    context.config = test_config
 
     session = Session()
     session.username = "user"
@@ -361,17 +386,23 @@ async def test_taclp_false_sub_unknown_user(logdog):
     assert authorised is False
 
 
-@pytest.mark.asyncio
-async def test_taclp_false_sub_no_permission(logdog):
-    """Check TopicAccessControlListPlugin returns false if "acl" does not list allowed topic."""
-    context = BaseContext()
-    context.logger = logging.getLogger("testlog")
-    context.config = {
+@pytest.mark.parametrize("test_config", [
+    ({
         "topic-check": {
             "enabled": True,
             "acl": {"user": ["allowed/topic", "another/allowed/topic/#"]},
         },
-    }
+    }),
+    (TopicAccessControlListPlugin.Config(
+        acl={"user": ["allowed/topic", "another/allowed/topic/#"]}
+    ))
+])
+@pytest.mark.asyncio
+async def test_taclp_false_sub_no_permission(logdog, test_config):
+    """Check TopicAccessControlListPlugin returns false if "acl" does not list allowed topic."""
+    context = BaseContext()
+    context.logger = logging.getLogger("testlog")
+    context.config = test_config
 
     session = Session()
     session.username = "user"
@@ -384,18 +415,23 @@ async def test_taclp_false_sub_no_permission(logdog):
     )
     assert authorised is False
 
-
-@pytest.mark.asyncio
-async def test_taclp_true_sub_permission(logdog):
-    """Check TopicAccessControlListPlugin returns true if "acl" lists allowed topic."""
-    context = BaseContext()
-    context.logger = logging.getLogger("testlog")
-    context.config = {
+@pytest.mark.parametrize("test_config", [
+    ({
         "topic-check": {
             "enabled": True,
             "acl": {"user": ["allowed/topic", "another/allowed/topic/#"]},
         },
-    }
+    }),
+    (TopicAccessControlListPlugin.Config(
+        acl={"user": ["allowed/topic", "another/allowed/topic/#"]}
+    ))
+])
+@pytest.mark.asyncio
+async def test_taclp_true_sub_permission(logdog, test_config):
+    """Check TopicAccessControlListPlugin returns true if "acl" lists allowed topic."""
+    context = BaseContext()
+    context.logger = logging.getLogger("testlog")
+    context.config = test_config
 
     session = Session()
     session.username = "user"
@@ -409,17 +445,23 @@ async def test_taclp_true_sub_permission(logdog):
     assert authorised is True
 
 
-@pytest.mark.asyncio
-async def test_taclp_true_pub_permission(logdog):
-    """Check TopicAccessControlListPlugin returns true if "publish-acl" lists allowed topic for publish action."""
-    context = BaseContext()
-    context.logger = logging.getLogger("testlog")
-    context.config = {
+@pytest.mark.parametrize("test_config", [
+    ({
         "topic-check": {
             "enabled": True,
             "publish-acl": {"user": ["allowed/topic", "another/allowed/topic/#"]},
         },
-    }
+    }),
+    (TopicAccessControlListPlugin.Config(
+        publish_acl={"user": ["allowed/topic", "another/allowed/topic/#"]}
+    ))
+])
+@pytest.mark.asyncio
+async def test_taclp_true_pub_permission(logdog, test_config):
+    """Check TopicAccessControlListPlugin returns true if "publish-acl" lists allowed topic for publish action."""
+    context = BaseContext()
+    context.logger = logging.getLogger("testlog")
+    context.config = test_config
 
     session = Session()
     session.username = "user"
@@ -433,17 +475,23 @@ async def test_taclp_true_pub_permission(logdog):
     assert authorised is True
 
 
-@pytest.mark.asyncio
-async def test_taclp_true_anon_sub_permission(logdog):
-    """Check TopicAccessControlListPlugin handles anonymous users."""
-    context = BaseContext()
-    context.logger = logging.getLogger("testlog")
-    context.config = {
+@pytest.mark.parametrize("test_config", [
+    ({
         "topic-check": {
             "enabled": True,
             "acl": {"anonymous": ["allowed/topic", "another/allowed/topic/#"]},
         },
-    }
+    }),
+    (TopicAccessControlListPlugin.Config(
+        acl={"anonymous": ["allowed/topic", "another/allowed/topic/#"]}
+    ))
+])
+@pytest.mark.asyncio
+async def test_taclp_true_anon_sub_permission(logdog, test_config):
+    """Check TopicAccessControlListPlugin handles anonymous users."""
+    context = BaseContext()
+    context.logger = logging.getLogger("testlog")
+    context.config = test_config
 
     session = Session()
     session.username = None
