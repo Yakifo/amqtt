@@ -4,9 +4,9 @@ listeners:
     type: tcp
     bind: 0.0.0.0:1883
 plugins:
-  - amqtt.plugins.logging_amqtt.EventLoggerPlugin:
-  - amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
-  - amqtt.plugins.authentication.AnonymousAuthPlugin:
-      allow_anonymous: true
-  - amqtt.plugins.sys.broker.BrokerSysPlugin:
-      sys_interval: 20
+  amqtt.plugins.logging_amqtt.EventLoggerPlugin:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
+  amqtt.plugins.authentication.AnonymousAuthPlugin:
+    allow_anonymous: true
+  amqtt.plugins.sys.broker.BrokerSysPlugin:
+    sys_interval: 20

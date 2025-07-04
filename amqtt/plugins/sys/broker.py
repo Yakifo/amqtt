@@ -240,4 +240,4 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
     class Config:
         """Configuration struct for plugin."""
 
-        sys_interval: int = 0
+        sys_interval: int = 20

@@ -10,4 +10,4 @@ reconnect_retries: 2
 broker:
   uri: "mqtt://127.0.0.1"
 plugins:
-  - amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:

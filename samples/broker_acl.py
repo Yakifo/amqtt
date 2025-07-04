@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 from amqtt.broker import Broker
 
@@ -22,24 +23,20 @@ config = {
             "max_connections": 10,
         },
     },
-    "sys_interval": 10,
-    "auth": {
-        "allow-anonymous": True,
-        "password-file": os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "passwd",
-        ),
-        "plugins": ["auth_file", "auth_anonymous"],
-    },
-    "topic-check": {
-        "enabled": True,
-        "plugins": ["topic_acl"],
-        "acl": {
-            # username: [list of allowed topics]
-            "test": ["repositories/+/master", "calendar/#", "data/memes"],
-            "anonymous": [],
+    "plugins": {
+        'amqtt.plugins.authentication.AnonymousAuthPlugin': { 'allow_anonymous': True},
+        'amqtt.plugins.authentication.FileAuthPlugin': {
+            'password_file': Path(__file__).parent / 'passwd',
         },
-    },
+        'amqtt.plugins.sys.broker.BrokerSysPlugin': { "sys_interval": 10},
+        'amqtt.plugins.topic_checking.TopicAccessControlListPlugin': {
+            'acl': {
+                # username: [list of allowed topics]
+                "test": ["repositories/+/master", "calendar/#", "data/memes"],
+                "anonymous": [],
+            }
+        }
+    }
 }
 
 
