@@ -239,7 +239,7 @@ listeners:
     type: tcp
     bind: 0.0.0.0:1883
 plugins:
-   - tests.plugins.mocks.TestSimplePlugin:
+   - tests.plugins.mocks.TestSimplePlugin
    - tests.plugins.mocks.TestConfigPlugin:
        option1: 1
        option2: bar

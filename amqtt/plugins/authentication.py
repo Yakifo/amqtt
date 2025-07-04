@@ -58,7 +58,10 @@ class FileAuthPlugin(BaseAuthPlugin):
             return
 
         try:
-            with Path(password_file).open(mode="r", encoding="utf-8") as file:
+            file = password_file
+            if isinstance(file, str):
+                file = Path(file)
+            with file.open(mode="r", encoding="utf-8") as file:
                 self.context.logger.debug(f"Reading user database from {password_file}")
                 for _line in file:
                     line = _line.strip()
@@ -106,4 +109,4 @@ class FileAuthPlugin(BaseAuthPlugin):
     class Config:
         """Path to the properly encoded password file."""
 
-        password_file: str | None = None
+        password_file: str | Path | None = None
