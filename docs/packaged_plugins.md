@@ -47,11 +47,10 @@ By default, the `PacketLoggerPlugin` is  activated  and configured for the clien
 
 ```yaml
 plugins:
-  - ...
-  - amqtt.plugins.authentication.AnonymousAuthPlugin:
-      allow_anonymous: false 
-  - ...
-
+  .
+  .
+  amqtt.plugins.authentication.AnonymousAuthPlugin:
+      allow_anonymous: false
 ```
 
 !!! danger
@@ -78,10 +77,8 @@ clients are authorized by providing username and password, compared against file
 
 ```yaml
 plugins:
-  - ...
-  - amqtt.plugins.authentication.FileAuthPlugin:
-      password_file: /path/to/password_file 
-  - ...
+  amqtt.plugins.authentication.FileAuthPlugin:
+      password_file: /path/to/password_file
 ```
 
 ??? warning "EntryPoint-style configuration is deprecated"
@@ -119,9 +116,7 @@ Prevents using topics named: `prohibited`, `top-secret`, and `data/classified`
 
 ```yaml
 plugins:
-  - ...
-  - amqtt.plugins.topic_checking.TopicTabooPlugin:
-  - ...
+  amqtt.plugins.topic_checking.TopicTabooPlugin:
 ```
 
 ??? warning "EntryPoint-style configuration is deprecated"
@@ -139,13 +134,13 @@ plugins:
 
 **Configuration**
 
-- `acl` *(mapping)*: determines subscription access; if `publish-acl` is not specified, determine both publish and subscription access.
+- `acl` *(mapping)*: determines subscription access
    The list should be a key-value pair, where:
-`<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+        `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
 
 
-- `publish-acl` *(mapping)*: determines publish access. This parameter defines the list of access control rules; each item is a key-value pair, where:
-`<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+- `publish-acl` *(mapping)*: determines publish access. If absent, no restrictions are placed on client publishing. 
+        `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
 
     !!! info "Reserved usernames"
 
@@ -154,13 +149,13 @@ plugins:
 
 ```yaml
 plugins:
-  - ...
-  - amqtt.plugins.topic_checking.TopicAccessControlListPlugin:
-      publish_acl:
-        - username: ["list", "of", "allowed", "topics", "for", "publishing"]
-      acl:
-        - username: ["list", "of", "allowed", "topics", "for", "subscribing"]
-  - ...
+  amqtt.plugins.topic_checking.TopicAccessControlListPlugin:
+    acl:
+      - username: ["list", "of", "allowed", "topics", "for", "subscribing"]
+      - .
+    publish_acl:
+      - username: ["list", "of", "allowed", "topics", "for", "publishing"]
+      - .
 ```
 
 ??? warning "EntryPoint-style configuration is deprecated"
@@ -186,12 +181,11 @@ Publishes, on a periodic basis, statistics about the broker
 **Configuration**
 
 - `sys_interval` - int, seconds between updates
+
 ```yaml
 plugins:
-  - ...
-  - amqtt.plugins.sys.broker.BrokerSysPlugin:
-      sys_interval: 20  # int, seconds between updates 
-  - ...
+  amqtt.plugins.sys.broker.BrokerSysPlugin:
+    sys_interval: 20  # int, seconds between updates
 ```
 
 **Supported Topics**
@@ -231,6 +225,11 @@ This plugin issues log messages when [broker and mqtt events](custom_plugins.md#
 - info level messages for `client connected` and `client disconnected`
 - debug level for all others
 
+```yaml
+plugins:
+  amqtt.plugins.logging_amqtt.EventLoggerPlugin:
+```
+
 
 ### Packet Logger
 
@@ -239,3 +238,7 @@ This plugin issues log messages when [broker and mqtt events](custom_plugins.md#
 This plugin issues debug-level messages for [mqtt events](custom_plugins.md#client-and-broker): `on_mqtt_packet_sent`
 and `on_mqtt_packet_received`.
 
+```yaml
+plugins:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
+```

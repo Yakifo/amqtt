@@ -88,8 +88,20 @@ class PluginManager(Generic[C]):
             if "topic-check" in self.app_context.config:
                 self.logger.warning("Loading plugins from config will ignore 'topic-check' section of config")
 
-            plugin_list: list[Any] = self.app_context.config.get("plugins", [])
-            self._load_str_plugins(plugin_list)
+            plugins_config: list[Any] | dict[str, Any] = self.app_context.config.get("plugins", [])
+            if isinstance(plugins_config, list):
+                plugins_info: dict[str, Any] = {}
+                for plugin_config in plugins_config:
+                    if isinstance(plugin_config, str):
+                        plugins_info.update({plugin_config: {}})
+                    elif not isinstance(plugin_config, dict):
+                        msg = "malformed 'plugins' configuration"
+                        raise PluginLoadError(msg)
+                    else:
+                        plugins_info.update(plugin_config)
+                self._load_str_plugins(plugins_info)
+            if isinstance(plugins_config, dict):
+                self._load_str_plugins(plugins_config)
         else:
             if not namespace:
                 msg = "Namespace needs to be provided for EntryPoint plugin definitions"
@@ -163,35 +175,24 @@ class PluginManager(Generic[C]):
             self.logger.debug(f"Plugin init failed: {ep!r}", exc_info=True)
             raise PluginInitError(ep) from e
 
-    def _load_str_plugins(self, plugin_list: list[Any]) -> None:
+    def _load_str_plugins(self, plugins_info: dict[str, Any]) -> None:
 
         self.logger.info("Loading plugins from config")
         self._is_topic_filtering_enabled = True
         self._is_auth_filtering_enabled = True
-        for plugin_info in plugin_list:
+        for plugin_path, plugin_config in plugins_info.items():
 
-            if isinstance(plugin_info, dict):
-                if len(plugin_info.keys()) > 1:
-                    msg = f"config file should have only one key: {plugin_info.keys()}"
-                    raise ValueError(msg)
-                plugin_path = next(iter(plugin_info.keys()))
-                plugin_cfg = plugin_info[plugin_path]
-                plugin = self._load_str_plugin(plugin_path, plugin_cfg)
-            elif isinstance(plugin_info, str):
-                plugin = self._load_str_plugin(plugin_info, {})
-            else:
-                msg = "Unexpected entry in plugins config"
-                raise PluginLoadError(msg)
-
+            plugin = self._load_str_plugin(plugin_path, plugin_config)
             self._plugins.append(plugin)
+
             if isinstance(plugin, BaseAuthPlugin):
                 if not iscoroutinefunction(plugin.authenticate):
-                    msg = f"Auth plugin {plugin_info} has non-async authenticate method."
+                    msg = f"Auth plugin {plugin_path} has non-async authenticate method."
                     raise PluginCoroError(msg)
                 self._auth_plugins.append(plugin)
             if isinstance(plugin, BaseTopicPlugin):
                 if not iscoroutinefunction(plugin.topic_filtering):
-                    msg = f"Topic plugin {plugin_info} has non-async topic_filtering method."
+                    msg = f"Topic plugin {plugin_path} has non-async topic_filtering method."
                     raise PluginCoroError(msg)
                 self._topic_plugins.append(plugin)
 

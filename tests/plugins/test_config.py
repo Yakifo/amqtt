@@ -219,3 +219,101 @@ async def test_block_topic_plugin_load():
     await client1.disconnect()
 
     await broker.shutdown()
+
+plugin_yaml_list_config_one = """---
+listeners:
+  default:
+    type: tcp
+    bind: 0.0.0.0:1883
+plugins:
+   - tests.plugins.mocks.TestSimplePlugin:
+   - tests.plugins.mocks.TestConfigPlugin:
+       option1: 1
+       option2: bar
+       option3: 3
+"""
+
+plugin_yaml_list_config_two = """---
+listeners:
+  default:
+    type: tcp
+    bind: 0.0.0.0:1883
+plugins:
+   - tests.plugins.mocks.TestSimplePlugin:
+   - tests.plugins.mocks.TestConfigPlugin:
+       option1: 1
+       option2: bar
+       option3: 3
+"""
+
+plugin_yaml_dict_config = """---
+listeners:
+  default:
+    type: tcp
+    bind: 0.0.0.0:1883
+plugins:
+   tests.plugins.mocks.TestSimplePlugin:
+   tests.plugins.mocks.TestConfigPlugin:
+    option1: 1
+    option2: bar
+    option3: 3
+"""
+
+plugin_empty_dict_config = {
+    'listeners': {'default': {'type': 'tcp', 'bind': '127.0.0.1'}},
+    'plugins': {
+        'tests.plugins.mocks.TestSimplePlugin': {},
+    }
+}
+
+plugin_dict_option_config = {
+    'listeners': {'default': {'type': 'tcp', 'bind': '127.0.0.1'}},
+    'plugins': {
+        'tests.plugins.mocks.TestConfigPlugin': {'option1': 1, 'option2': 'bar', 'option3': 3}
+    }
+}
+
+@pytest.mark.asyncio
+async def test_plugin_yaml_list_config():
+    cfg: dict[str, Any] = yaml.load(plugin_yaml_list_config_one, Loader=Loader)
+    broker = Broker(config=cfg)
+
+    await asyncio.sleep(0.5)
+    plugin = broker.plugins_manager.get_plugin('TestConfigPlugin')
+    assert getattr(plugin.context.config, 'option1', None) == 1
+    assert getattr(plugin.context.config, 'option3', None) == 3
+
+    cfg: dict[str, Any] = yaml.load(plugin_yaml_list_config_two, Loader=Loader)
+    broker = Broker(config=cfg)
+
+    await asyncio.sleep(0.5)
+    plugin = broker.plugins_manager.get_plugin('TestConfigPlugin')
+    assert getattr(plugin.context.config, 'option1', None) == 1
+    assert getattr(plugin.context.config, 'option3', None) == 3
+
+
+@pytest.mark.asyncio
+async def test_plugin_yaml_dict_config():
+    cfg: dict[str, Any] = yaml.load(plugin_yaml_dict_config, Loader=Loader)
+    broker = Broker(config=cfg)
+
+    await asyncio.sleep(0.5)
+    assert broker.plugins_manager.get_plugin('TestSimplePlugin') is not None
+
+
+@pytest.mark.asyncio
+async def test_plugin_empty_dict_config():
+    broker = Broker(config=plugin_empty_dict_config)
+
+    await asyncio.sleep(0.5)
+    assert broker.plugins_manager.get_plugin('TestSimplePlugin') is not None
+
+
+@pytest.mark.asyncio
+async def test_plugin_option_dict_config():
+    broker = Broker(config=plugin_dict_option_config)
+
+    await asyncio.sleep(0.5)
+    plugin = broker.plugins_manager.get_plugin('TestConfigPlugin')
+    assert getattr(plugin.context.config, 'option1', None) == 1
+    assert getattr(plugin.context.config, 'option3', None) == 3
