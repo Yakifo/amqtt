@@ -9,6 +9,7 @@ import pytest
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.contexts import BaseContext
+from amqtt.mqtt.constants import QOS_0
 from amqtt.plugins.persistence import SQLitePlugin
 from amqtt.session import Session
 from samples.client_publish_ssl import client
@@ -19,7 +20,7 @@ logging.basicConfig(level=logging.DEBUG, format=formatter)
 
 
 @pytest.mark.asyncio
-async def test_rehydrate_subscriptions() -> None:
+async def test_create_stored_session() -> None:
 
     cfg = {
         'listeners': {
@@ -38,19 +39,18 @@ async def test_rehydrate_subscriptions() -> None:
     await b.start()
     await asyncio.sleep(1)
 
-    # c = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-    # await c.connect(cleansession=False)
-    #
-    # await c.publish('a/b', b'my messages without subscription')
-    #
-    # msg = await c.deliver_message(timeout_duration=1)
-    # assert msg is not None
-    # assert msg.topic == 'a/b'
-    # assert msg.data == b'my messages without subscription'
-    #
-    # await c.disconnect()
-    # await asyncio.sleep(0.5)
+    c = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
+    await c.connect(cleansession=False)
+    await c.subscribe(
+        [
+            ('my/topic', QOS_0)
+        ]
+    )
+
+    await c.disconnect()
+    await asyncio.sleep(2)
     await b.shutdown()
+    await asyncio.sleep(1)
 
 
 

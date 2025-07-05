@@ -102,7 +102,7 @@ class BrokerContext(BaseContext):
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
-        self.config: _CONFIG_LISTENER | object | None = None
+        self.config: _CONFIG_LISTENER | None = None
         self._broker_instance = broker
 
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
@@ -115,6 +115,9 @@ class BrokerContext(BaseContext):
     def sessions(self) -> Generator[Session]:
         for session in self._broker_instance.sessions.values():
             yield session[0]
+
+    def get_session(self, client_id: str) -> Session | None:
+        return self._broker_instance.sessions.get(client_id, None)
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:

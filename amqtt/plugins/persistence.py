@@ -1,9 +1,10 @@
 from dataclasses import asdict, dataclass, is_dataclass
+import logging
 from typing import Any, TypeVar
 import warnings
 
-from sqlalchemy import JSON, Boolean, Integer, LargeBinary, String
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import JSON, Boolean, Integer, LargeBinary, String, select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
 
@@ -12,23 +13,34 @@ from amqtt.errors import PluginError
 from amqtt.mqtt.constants import QOS_0
 from amqtt.plugins.base import BasePlugin
 
+logger = logging.getLogger(__name__)
+
 
 class SQLitePlugin:
 
     def __init__(self) -> None:
         warnings.warn("SQLitePlugin is deprecated, use amqtt.plugins.persistence.SessionDBPlugin", stacklevel=1)
 
+
 class Base(DeclarativeBase):
     pass
 
 
+@dataclass
 class RetainedMessage:
     topic: str
     data: str
     qos: int
 
 
+@dataclass
+class Subscription:
+    topic: str
+    qos: int
+
+
 T = TypeVar("T")
+
 
 class DataClassListJSON(TypeDecorator[list[dict[str, Any]]]):
     impl = JSON
@@ -66,8 +78,9 @@ class DataClassListJSON(TypeDecorator[list[dict[str, Any]]]):
         # Required by TypeEngine to indicate the expected Python type.
         return list
 
-class Session(Base):
-    __tablename__ = "sessions"
+
+class StoredSession(Base):
+    __tablename__ = "stored_sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     client_id: Mapped[str] = mapped_column(String)
@@ -83,11 +96,13 @@ class Session(Base):
 
     keep_alive: Mapped[int] = mapped_column(Integer, default=0)
     retained: Mapped[list[RetainedMessage]] = mapped_column(DataClassListJSON(RetainedMessage), default=list)
+    subscriptions: Mapped[list[Subscription]] = mapped_column(DataClassListJSON(Subscription), default=list)
 
 class SessionDBPlugin(BasePlugin[BrokerContext]):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
         self._engine = create_async_engine(f"sqlite+aiosqlite:///{self.config.file}")
+        self._async_session = async_sessionmaker(self._engine, expire_on_commit=False)
 
 
     async def on_broker_client_connected(self, client_id:str) -> None:
@@ -95,8 +110,31 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         # if client id doesn't exist, create (can ignore if session is anonymous)
         # update session information (will, clean_session, etc)
 
+    @staticmethod
+    async def _get_or_create(aio_session, client_id:str):
+
+        stmt = select(StoredSession).filter(StoredSession.client_id == client_id)
+        stored_session = await aio_session.scalar(stmt)
+        if stored_session is None:
+            stored_session = StoredSession(client_id=client_id)
+            aio_session.add(stored_session)
+
+        await aio_session.flush()
+        return stored_session
+
     async def on_broker_client_subscribed(self, client_id: str, topic: str, qos: int) -> None:
-        """Store subscription if clean session = false."""
+        """Create/update subscription if clean session = false."""
+        session, _ = self.context.get_session(client_id)
+        async with self._async_session() as aio_session:
+            stored_session = await self._get_or_create(aio_session, client_id)
+            stored_session.will_topic = session.will_topic
+            stored_session.will_qos = session.will_qos
+            stored_session.will_retain = session.will_retain
+            stored_session.will_message = session.will_message
+            subscriptions = stored_session.subscriptions
+            subscriptions.append(Subscription(topic, qos))
+            stored_session.subscriptions = subscriptions
+            await aio_session.flush()
 
     async def on_broker_client_unsubscribed(self, client_id: str, topic: str) -> None:
         """Remove subscription if clean session = false."""
@@ -106,13 +144,11 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-
     async def on_broker_post_start(self) -> None:
         """Load subscriptions."""
         if len(self.context.subscriptions) > 0:
             msg = "SessionDBPlugin : broker shouldn't have any subscriptions yet"
             raise PluginError(msg)
-
 
         if len(list(self.context.sessions)) > 0:
             msg = "SessionDBPlugin : broker shouldn't have any sessions yet"
@@ -129,3 +165,4 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         """Configuration variables."""
 
         file: str = "amqtt.sqlite3"
+        interval: int = 5

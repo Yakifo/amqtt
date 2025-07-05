@@ -39,6 +39,7 @@ ci = [
 ]
 db = [
     { name = "aiosqlite" },
+    { name = "greenlet" },
     { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 
@@ -86,6 +87,7 @@ requires-dist = [
     { name = "aiosqlite", marker = "extra == 'db'", specifier = ">=0.21.0" },
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
     { name = "dacite", specifier = ">=1.9.2" },
+    { name = "greenlet", marker = "extra == 'db'", specifier = ">=3.2.3" },
     { name = "passlib", specifier = "==1.7.4" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = "==6.0.2" },

@@ -263,6 +263,14 @@ class PluginManager(Generic[C]):
         return asyncio.ensure_future(coro)
 
     def _clean_fired_events(self, future: asyncio.Future[Any]) -> None:
+        # TODO : do i (re)raise exception here for a plugin?
+        # try:
+        #     future.result()
+        # except asyncio.CancelledError:
+        #     self.logger.warning("fired event was cancelled")
+        # except Exception as exc:
+        #     traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
+
         with contextlib.suppress(KeyError, ValueError):
             self._fired_events.remove(future)
 
