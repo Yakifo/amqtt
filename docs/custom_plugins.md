@@ -75,18 +75,21 @@ none
 
 ### Broker Only
 
-- `async def on_broker_pre_start() -> None`
-- `async def on_broker_post_start() -> None`
-- `async def on_broker_pre_shutdown() -> None`
-- `async def on_broker_post_shutdown() -> None`
+- `async def on_broker_pre_start(self) -> None`
+- `async def on_broker_post_start(self) -> None`
+- `async def on_broker_pre_shutdown(self) -> None`
+- `async def on_broker_post_shutdown(self) -> None`
 
-- `async def on_broker_client_connected(self, client_id:str) -> None`
-- `async def on_broker_client_disconnected(self, client_id:str) -> None`
+- `async def on_broker_client_connected(self, *, client_id:str, client_session:Session) -> None`
+- `async def on_broker_client_disconnected(self, *, client_id:str, client_session:Session) -> None`
 
-- `async def on_broker_client_subscribed(self, client_id: str, topic: str, qos: int) -> None`
-- `async def on_broker_client_unsubscribed(self, client_id: str, topic: str) -> None`
+- `async def on_broker_client_connected(self, *, client_id:str) -> None`
+- `async def on_broker_client_disconnected(self, *, client_id:str) -> None`
 
-- `async def on_broker_message_received(self, client_id: str, message: ApplicationMessage) -> None`
+- `async def on_broker_client_subscribed(self, *, client_id: str, topic: str, qos: int) -> None`
+- `async def on_broker_client_unsubscribed(self, *, client_id: str, topic: str) -> None`
+
+- `async def on_broker_message_received(self, *, client_id: str, message: ApplicationMessage) -> None`
 
 
 ## Authentication Plugins

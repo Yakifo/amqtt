@@ -29,6 +29,7 @@ from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Sessio
 from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .events import BrokerEvents
+from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import PluginManager
 
@@ -447,6 +448,7 @@ class Broker:
                 await self._delete_session(client_session.client_id)
             else:
                 client_session.client_id = gen_client_id()
+
             client_session.parent = 0
         # Get session from cache
         elif client_session.client_id in self._sessions:
@@ -508,12 +510,23 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
+
+        # publish messages that were retained because the client session was disconnected
         self.logger.debug(f"Retained messages queue size: {client_session.retained_messages.qsize()}")
         await self._publish_session_retained_messages(client_session)
+
+        # if this is not a new session, there are subscriptions associated with them; publish any topic retained messages
+        self.logger.debug("Publish retained messages to a pre-existing session's subscriptions.")
+        for topic in self._subscriptions:
+            await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
+
+
 
         await self._client_message_loop(client_session, handler)
 
@@ -611,7 +624,9 @@ class Broker:
         self.logger.debug(f"{client_session.client_id} Disconnecting session")
         await self._stop_handler(handler)
         client_session.transitions.disconnect()
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
 
     async def _handle_subscription(
@@ -716,17 +731,20 @@ class Broker:
         :return:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
-        auth_result = True
-        if returns:
-            for plugin in returns:
-                res = returns[plugin]
-                if res is False:
-                    auth_result = False
-                    self.logger.debug(f"Authentication failed due to '{plugin.__class__}' plugin result: {res}")
-                else:
-                    self.logger.debug(f"'{plugin.__class__}' plugin result: {res}")
-        # If all plugins returned True, authentication is success
-        return auth_result
+
+        results = [ result for _, result in returns.items() if result is not None] if returns else []
+        if len(results) < 1:
+            self.logger.debug("Authentication failed: no plugin responded with a boolean")
+            return False
+
+        if all(results):
+            self.logger.debug("Authentication succeeded")
+            return True
+
+        for plugin, result in returns.items():
+            self.logger.debug(f"Authentication '{plugin.__class__.__name__}' result: {result}")
+
+        return False
 
     def retain_message(
         self,
@@ -891,9 +909,18 @@ class Broker:
                 qos = broadcast.get("qos", sub_qos)
 
                 # Retain all messages which cannot be broadcasted, due to the session not being connected
-                if target_session.transitions.state != "connected":
+                #  but only when clean session is false and qos is 1 or 2 [MQTT 3.1.2.4]
+                #  and, if a client used anonymous authentication, there is no expectation that messages should be retained
+                if (target_session.transitions.state != "connected"
+                        and not target_session.clean_session
+                        and qos in (QOS_1, QOS_2)
+                        and not target_session.is_anonymous):
                     self.logger.debug(f"Session {target_session.client_id} is not connected, retaining message.")
                     await self._retain_broadcast_message(broadcast, qos, target_session)
+                    continue
+
+                # Only broadcast the message to connected clients
+                if target_session.transitions.state != "connected":
                     continue
 
                 self.logger.debug(
