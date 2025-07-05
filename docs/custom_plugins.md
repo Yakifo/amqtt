@@ -86,10 +86,17 @@ none
 - `async def on_broker_client_connected(self, *, client_id:str) -> None`
 - `async def on_broker_client_disconnected(self, *, client_id:str) -> None`
 
+- `async def on_broker_retained_message(self, *, client_id: str | None, retained_message: RetainedMessage) -> None`
+
 - `async def on_broker_client_subscribed(self, *, client_id: str, topic: str, qos: int) -> None`
 - `async def on_broker_client_unsubscribed(self, *, client_id: str, topic: str) -> None`
 
 - `async def on_broker_message_received(self, *, client_id: str, message: ApplicationMessage) -> None`
+
+
+!!! note retained message event
+    if the `client_id` is `None`, the message is retained for a topic
+    if the `retained_message.data` is `None` or empty (`''`), the topic message is being cleared
 
 
 ## Authentication Plugins

@@ -108,16 +108,16 @@ class BrokerContext(BaseContext):
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
-    def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
-        self._broker_instance.retain_message(None, topic_name, data, qos)
+    async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
+        await self._broker_instance.retain_message(None, topic_name, data, qos)
 
     @property
     def sessions(self) -> Generator[Session]:
         for session in self._broker_instance.sessions.values():
             yield session[0]
 
-    def get_session(self, client_id: str) -> Session | None:
-        return self._broker_instance.sessions.get(client_id, None)
+    def get_session(self, client_id: str) -> tuple[Session, BrokerProtocolHandler] | tuple[None, None]:
+        return self._broker_instance.sessions.get(client_id, (None, None))
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
@@ -127,17 +127,15 @@ class BrokerContext(BaseContext):
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
         return self._broker_instance.subscriptions
 
-    async def add_subscription(self, client_id: str, topic: str, qos: int) -> None:
+    async def add_subscription(self, client_id: str, topic: str|None, qos: int|None) -> None:
 
         if client_id not in self._broker_instance.sessions:
             broker_handler, session = self._broker_instance.create_offline_session(client_id)
             self._broker_instance._sessions[client_id] = (session, broker_handler)  # noqa: SLF001
 
-        session, _ = self._broker_instance.sessions[client_id]
-        await self._broker_instance.add_subscription((topic, qos), session)
-
-
-
+        if topic is not None and qos is not None:
+            session, _ = self._broker_instance.sessions[client_id]
+            await self._broker_instance.add_subscription((topic, qos), session)
 
 
 class Broker:
@@ -616,7 +614,7 @@ class Broker:
                     client_session.will_qos,
                 )
                 if client_session.will_retain:
-                    self.retain_message(
+                    await self.retain_message(
                         client_session,
                         client_session.will_topic,
                         client_session.will_message,
@@ -706,7 +704,7 @@ class Broker:
             )
             await self._broadcast_message(client_session, app_message.topic, app_message.data)
             if app_message.publish_packet and app_message.publish_packet.retain_flag:
-                self.retain_message(client_session, app_message.topic, app_message.data, app_message.qos)
+                await self.retain_message(client_session, app_message.topic, app_message.data, app_message.qos)
         return True
 
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
@@ -749,7 +747,7 @@ class Broker:
 
         return False
 
-    def retain_message(
+    async def retain_message(
         self,
         source_session: Session | None,
         topic_name: str | None,
@@ -760,9 +758,20 @@ class Broker:
             # If retained flag set, store the message for further subscriptions
             self.logger.debug(f"Retaining message on topic {topic_name}")
             self._retained_messages[topic_name] = RetainedApplicationMessage(source_session, topic_name, data, qos)
+
+            kwargs = {'client_id': None, "retained_message": self._retained_messages[topic_name]}
+            await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE, method_kwargs=kwargs)
+
         # [MQTT-3.3.1-10]
         elif topic_name in self._retained_messages:
             self.logger.debug(f"Clearing retained messages for topic '{topic_name}'")
+
+            cleared_message = self._retained_messages[topic_name]
+            cleared_message.data = None
+
+            kwargs = {'client_id': None, "retained_message": cleared_message}
+            await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE, method_kwargs=kwargs)
+
             del self._retained_messages[topic_name]
 
     async def add_subscription(self, subscription: tuple[str, int], session: Session) -> int:
@@ -952,6 +961,9 @@ class Broker:
 
         retained_message = RetainedApplicationMessage(broadcast["session"], broadcast["topic"], broadcast["data"], qos)
         await target_session.retained_messages.put(retained_message)
+
+        kwargs = {'client_id': target_session.client_id, "retained_message": retained_message}
+        await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE, method_kwargs=kwargs)
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(f"target_session.retained_messages={target_session.retained_messages.qsize()}")

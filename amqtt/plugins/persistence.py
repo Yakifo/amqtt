@@ -1,10 +1,11 @@
 from dataclasses import asdict, dataclass, is_dataclass
 import logging
+from pathlib import Path
 from typing import Any, TypeVar
 import warnings
 
 from sqlalchemy import JSON, Boolean, Integer, LargeBinary, String, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
 
@@ -12,6 +13,7 @@ from amqtt.broker import BrokerContext
 from amqtt.errors import PluginError
 from amqtt.mqtt.constants import QOS_0
 from amqtt.plugins.base import BasePlugin
+from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
 
@@ -98,46 +100,71 @@ class StoredSession(Base):
     retained: Mapped[list[RetainedMessage]] = mapped_column(DataClassListJSON(RetainedMessage), default=list)
     subscriptions: Mapped[list[Subscription]] = mapped_column(DataClassListJSON(Subscription), default=list)
 
+
 class SessionDBPlugin(BasePlugin[BrokerContext]):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
         self._engine = create_async_engine(f"sqlite+aiosqlite:///{self.config.file}")
-        self._async_session = async_sessionmaker(self._engine, expire_on_commit=False)
+        self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
 
+    @staticmethod
+    async def _get_or_create(db_session: AsyncSession, client_id:str):
 
-    async def on_broker_client_connected(self, client_id:str) -> None:
+        stmt = select(StoredSession).filter(StoredSession.client_id == client_id)
+        stored_session = await db_session.scalar(stmt)
+        if stored_session is None:
+            stored_session = StoredSession(client_id=client_id)
+            db_session.add(stored_session)
+        await db_session.flush()
+        return stored_session
+
+    async def on_broker_client_connected(self, client_id:str, client_session:Session) -> None:
         """Search to see if session already exists."""
         # if client id doesn't exist, create (can ignore if session is anonymous)
         # update session information (will, clean_session, etc)
+        if not client_session.clean_session:
+            return
+        async with self._db_session_maker() as db_session:
+            async with db_session.begin():
+                stored_session = await self._get_or_create(db_session, client_id)
 
-    @staticmethod
-    async def _get_or_create(aio_session, client_id:str):
+                stored_session.clean_session = client_session.clean_session
+                stored_session.will_flag = client_session.will_flag
+                stored_session.will_message = client_session.will_message
+                stored_session.will_qos = client_session.will_qos
+                stored_session.will_retain = client_session.will_retain
+                stored_session.will_topic = client_session.will_topic
+                stored_session.keep_alive = client_session.keep_alive
 
-        stmt = select(StoredSession).filter(StoredSession.client_id == client_id)
-        stored_session = await aio_session.scalar(stmt)
-        if stored_session is None:
-            stored_session = StoredSession(client_id=client_id)
-            aio_session.add(stored_session)
-
-        await aio_session.flush()
-        return stored_session
+                await db_session.flush()
 
     async def on_broker_client_subscribed(self, client_id: str, topic: str, qos: int) -> None:
         """Create/update subscription if clean session = false."""
         session, _ = self.context.get_session(client_id)
-        async with self._async_session() as aio_session:
-            stored_session = await self._get_or_create(aio_session, client_id)
-            stored_session.will_topic = session.will_topic
-            stored_session.will_qos = session.will_qos
-            stored_session.will_retain = session.will_retain
-            stored_session.will_message = session.will_message
-            subscriptions = stored_session.subscriptions
-            subscriptions.append(Subscription(topic, qos))
-            stored_session.subscriptions = subscriptions
-            await aio_session.flush()
+        if not session:
+            logger.warning(f"'{client_id}' is subscribing but doesn't have a session")
+            return
+
+        if not session.clean_session:
+            return
+
+        async with self._db_session_maker() as db_session:
+            async with db_session.begin():
+                # stored sessions shouldn't need to be created here, but we'll use the same helper...
+                stored_session = await self._get_or_create(db_session, client_id)
+                stored_session.subscriptions = stored_session.subscriptions + [Subscription(topic, qos)]
+                await db_session.flush()
 
     async def on_broker_client_unsubscribed(self, client_id: str, topic: str) -> None:
         """Remove subscription if clean session = false."""
+
+    async def on_broker_retained_message(self, *, client_id: str | None, retained_message: RetainedMessage) -> None:
+        """Update to retained messages.
+        if client_id is None, the retained message is on a topic
+        if retained_message.data is None or '', the message is being cleared
+
+        if client_id is valid, the retained message should always have data
+        """
 
     async def on_broker_pre_start(self) -> None:
         """Initialize the database and db connection."""
@@ -160,9 +187,19 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         """Clean up the db connection."""
         await self._engine.dispose()
 
+    async def on_broker_post_shutdown(self) -> None:
+
+        if self.config.clear_on_shutdown and self.config.file.exists():
+            self.config.file.unlink()
+
     @dataclass
     class Config:
         """Configuration variables."""
 
-        file: str = "amqtt.sqlite3"
-        interval: int = 5
+        file: str | Path = "amqtt.sqlite3"
+        retain_interval: int = 5
+        clear_on_shutdown: bool = True
+
+        def __post_init__(self):
+            if isinstance(self.file, str):
+                self.file = Path(self.file)
