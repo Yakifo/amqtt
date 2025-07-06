@@ -769,7 +769,7 @@ class Broker:
             self.logger.debug(f"Clearing retained messages for topic '{topic_name}'")
 
             cleared_message = self._retained_messages[topic_name]
-            cleared_message.data = None
+            cleared_message.data = b""
 
             await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE,
                                                   client_id=None,

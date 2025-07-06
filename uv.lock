@@ -47,7 +47,6 @@ db = [
 dev = [
     { name = "hatch" },
     { name = "hypothesis" },
-    { name = "mypy" },
     { name = "paho-mqtt" },
     { name = "poethepoet" },
     { name = "pre-commit" },
@@ -60,6 +59,7 @@ dev = [
     { name = "pytest-timeout" },
     { name = "ruff" },
     { name = "setuptools" },
+    { name = "sqlalchemy", extra = ["mypy"] },
     { name = "types-mock" },
     { name = "types-pyyaml" },
     { name = "types-setuptools" },
@@ -102,7 +102,6 @@ provides-extras = ["ci", "db"]
 dev = [
     { name = "hatch", specifier = ">=1.14.1" },
     { name = "hypothesis", specifier = ">=6.130.8" },
-    { name = "mypy", specifier = ">=1.15.0" },
     { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "poethepoet", specifier = ">=0.34.0" },
     { name = "pre-commit", specifier = ">=4.2.0" },
@@ -115,6 +114,7 @@ dev = [
     { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "ruff", specifier = ">=0.11.3" },
     { name = "setuptools", specifier = ">=78.1.0" },
+    { name = "sqlalchemy", extras = ["mypy"], specifier = ">=2.0.41" },
     { name = "types-mock", specifier = ">=5.2.0.20250306" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250402" },
     { name = "types-setuptools", specifier = ">=78.1.0.20250329" },
@@ -1977,6 +1977,9 @@ wheels = [
 [package.optional-dependencies]
 asyncio = [
     { name = "greenlet" },
+]
+mypy = [
+    { name = "mypy" },
 ]
 
 [[package]]

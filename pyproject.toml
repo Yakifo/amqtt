@@ -41,7 +41,6 @@ dependencies = [
 dev = [
   "hatch>=1.14.1",
   "hypothesis>=6.130.8",
-  "mypy>=1.15.0",
   "paho-mqtt>=2.1.0",
   "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
@@ -54,6 +53,7 @@ dev = [
   "pytest>=8.3.5", # https://pypi.org/project/pytest
   "ruff>=0.11.3", # https://pypi.org/project/ruff
   "setuptools>=78.1.0",
+  "sqlalchemy[mypy]>=2.0.41",
   "types-mock>=5.2.0.20250306", # https://pypi.org/project/types-mock
   "types-PyYAML>=6.0.12.20250402", # https://pypi.org/project/types-PyYAML
   "types-setuptools>=78.1.0.20250329", # https://pypi.org/project/types-setuptools
@@ -211,6 +211,7 @@ log_level = "DEBUG"
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]
 exclude = ["^tests/.*", "^docs/.*", "^samples/.*"]
+plugins = ['sqlalchemy.ext.mypy.plugin']
 follow_imports = "silent"
 show_error_codes = true
 ignore_missing_imports = true

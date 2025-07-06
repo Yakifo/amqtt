@@ -115,8 +115,8 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         super().__init__(context)
 
         # bypass the `test_plugins_correct_has_attr` until it can be updated
-        if not hasattr(self.config, 'file'):
-            logger.warning('`Config` is missing a `file` attribute')
+        if not hasattr(self.config, "file"):
+            logger.warning("`Config` is missing a `file` attribute")
             return
 
         self._engine = create_async_engine(f"sqlite+aiosqlite:///{self.config.file}")
@@ -154,19 +154,18 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         # don't store session information for clean or anonymous sessions
         if client_session.clean_session in (None, True) or client_session.is_anonymous:
             return
-        async with self._db_session_maker() as db_session:
-            async with db_session.begin():
-                stored_session = await self._get_or_create_session(db_session, client_id)
+        async with self._db_session_maker() as db_session, db_session.begin():
+            stored_session = await self._get_or_create_session(db_session, client_id)
 
-                stored_session.clean_session = client_session.clean_session
-                stored_session.will_flag = client_session.will_flag
-                stored_session.will_message = client_session.will_message
-                stored_session.will_qos = client_session.will_qos
-                stored_session.will_retain = client_session.will_retain
-                stored_session.will_topic = client_session.will_topic
-                stored_session.keep_alive = client_session.keep_alive
+            stored_session.clean_session = client_session.clean_session
+            stored_session.will_flag = client_session.will_flag
+            stored_session.will_message = client_session.will_message  # type: ignore[assignment]
+            stored_session.will_qos = client_session.will_qos
+            stored_session.will_retain = client_session.will_retain
+            stored_session.will_topic = client_session.will_topic
+            stored_session.keep_alive = client_session.keep_alive
 
-                await db_session.flush()
+            await db_session.flush()
 
     async def on_broker_client_subscribed(self, client_id: str, topic: str, qos: int) -> None:
         """Create/update subscription if clean session = false."""
@@ -178,12 +177,11 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         if not session.clean_session:
             return
 
-        async with self._db_session_maker() as db_session:
-            async with db_session.begin():
-                # stored sessions shouldn't need to be created here, but we'll use the same helper...
-                stored_session = await self._get_or_create_session(db_session, client_id)
-                stored_session.subscriptions = stored_session.subscriptions + [Subscription(topic, qos)]
-                await db_session.flush()
+        async with self._db_session_maker() as db_session, db_session.begin():
+            # stored sessions shouldn't need to be created here, but we'll use the same helper...
+            stored_session = await self._get_or_create_session(db_session, client_id)
+            stored_session.subscriptions = [*stored_session.subscriptions, Subscription(topic, qos)]
+            await db_session.flush()
 
     async def on_broker_client_unsubscribed(self, client_id: str, topic: str) -> None:
         """Remove subscription if clean session = false."""
@@ -195,33 +193,31 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         """
         # if client_id is valid, the retained message is for a disconnected client
         if client_id is not None:
-            async with self._db_session_maker() as db_session:
-                async with db_session.begin():
-                    # stored sessions shouldn't need to be created here, but we'll use the same helper...
-                    stored_session = await self._get_or_create_session(db_session, client_id)
-                    stored_session.retained = stored_session.retained + [RetainedMessage(retained_message.topic,
-                                                                                                   retained_message.data.decode(),
-                                                                                                   retained_message.qos)]
-                    await db_session.flush()
+            async with self._db_session_maker() as db_session, db_session.begin():
+                # stored sessions shouldn't need to be created here, but we'll use the same helper...
+                stored_session = await self._get_or_create_session(db_session, client_id)
+                stored_session.retained = [*stored_session.retained, RetainedMessage(retained_message.topic,
+                                                                                     retained_message.data.decode(),
+                                                                                     retained_message.qos or 0)]
+                await db_session.flush()
             return
 
-        async with self._db_session_maker() as db_session:
-            async with db_session.begin():
-                # if the retained message has data, we need to store/update for the topic
-                if retained_message.data:
-                    stored_message = await self._get_or_create_message(db_session, retained_message.topic)
-                    stored_message.data = retained_message.data
-                    stored_message.qos = retained_message.qos
-                    await db_session.flush()
-                    return
-
-                # if there is no data, clear the stored message (if exists) for the topic
-                stmt = select(StoredMessage).filter(StoredMessage.topic == retained_message.topic)
-                stored_message = await db_session.scalar(stmt)
-                if stored_message is not None:
-                    await db_session.delete(stored_message)
-                    await db_session.flush()
+        async with self._db_session_maker() as db_session, db_session.begin():
+            # if the retained message has data, we need to store/update for the topic
+            if retained_message.data:
+                client_message = await self._get_or_create_message(db_session, retained_message.topic)
+                client_message.data = retained_message.data  # type: ignore[assignment]
+                client_message.qos = retained_message.qos or 0
+                await db_session.flush()
                 return
+
+            # if there is no data, clear the stored message (if exists) for the topic
+            stmt = select(StoredMessage).filter(StoredMessage.topic == retained_message.topic)
+            topic_message = await db_session.scalar(stmt)
+            if topic_message is not None:
+                await db_session.delete(topic_message)
+                await db_session.flush()
+            return
 
     async def on_broker_pre_start(self) -> None:
         """Initialize the database and db connection."""
@@ -238,37 +234,36 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
             msg = "SessionDBPlugin : broker shouldn't have any sessions yet"
             raise PluginError(msg)
 
-        async with self._db_session_maker() as db_session:
-            async with db_session.begin():
-                stmt = select(StoredSession)
-                stored_sessions = await db_session.execute(stmt)
+        async with self._db_session_maker() as db_session, db_session.begin():
+            stmt = select(StoredSession)
+            stored_sessions = await db_session.execute(stmt)
 
-                restored_sessions = 0
-                for stored_session in stored_sessions.scalars():
-                    for subscription in stored_session.subscriptions:
-                        await self.context.add_subscription(stored_session.client_id,
-                                                            subscription.topic,
-                                                            subscription.qos)
-                    session = self.context.get_session(stored_session.client_id)
-                    if not session:
-                        continue
-                    session.clean_session = stored_session.clean_session
-                    session.will_flag = stored_session.will_flag
-                    session.will_message = stored_session.will_message
-                    session.will_qos = stored_session.will_qos
-                    session.will_retain = stored_session.will_retain
-                    session.will_topic = stored_session.will_topic
-                    session.keep_alive = stored_session.keep_alive
+            restored_sessions = 0
+            for stored_session in stored_sessions.scalars():
+                for subscription in stored_session.subscriptions:
+                    await self.context.add_subscription(stored_session.client_id,
+                                                        subscription.topic,
+                                                        subscription.qos)
+                session = self.context.get_session(stored_session.client_id)
+                if not session:
+                    continue
+                session.clean_session = stored_session.clean_session
+                session.will_flag = stored_session.will_flag
+                session.will_message = stored_session.will_message
+                session.will_qos = stored_session.will_qos
+                session.will_retain = stored_session.will_retain
+                session.will_topic = stored_session.will_topic
+                session.keep_alive = stored_session.keep_alive
 
-                    for message in stored_session.retained:
-                        retained_message = RetainedApplicationMessage(
-                            source_session=None,
-                            topic=message.topic,
-                            data=message.data.encode(),
-                            qos=message.qos
-                        )
-                        await session.retained_messages.put(retained_message)
-                    restored_sessions += 1
+                for message in stored_session.retained:
+                    retained_message = RetainedApplicationMessage(
+                        source_session=None,
+                        topic=message.topic,
+                        data=message.data.encode(),
+                        qos=message.qos
+                    )
+                    await session.retained_messages.put(retained_message)
+                restored_sessions += 1
 
         logger.info(f"Restored {restored_sessions} sessions.")
 
@@ -289,6 +284,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         retain_interval: int = 5
         clear_on_shutdown: bool = True
 
-        def __post_init__(self):
+        def __post_init__(self) -> None:
+            """Create `Path` from string path."""
             if isinstance(self.file, str):
                 self.file = Path(self.file)
