@@ -759,8 +759,9 @@ class Broker:
             self.logger.debug(f"Retaining message on topic {topic_name}")
             self._retained_messages[topic_name] = RetainedApplicationMessage(source_session, topic_name, data, qos)
 
-            kwargs = {'client_id': None, "retained_message": self._retained_messages[topic_name]}
-            await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE, method_kwargs=kwargs)
+            await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE,
+                                                  client_id=None,
+                                                  retained_message=self._retained_messages[topic_name])
 
         # [MQTT-3.3.1-10]
         elif topic_name in self._retained_messages:
@@ -769,8 +770,9 @@ class Broker:
             cleared_message = self._retained_messages[topic_name]
             cleared_message.data = None
 
-            kwargs = {'client_id': None, "retained_message": cleared_message}
-            await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE, method_kwargs=kwargs)
+            await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE,
+                                                  client_id=None,
+                                                  retained_message=cleared_message)
 
             del self._retained_messages[topic_name]
 
@@ -962,8 +964,9 @@ class Broker:
         retained_message = RetainedApplicationMessage(broadcast["session"], broadcast["topic"], broadcast["data"], qos)
         await target_session.retained_messages.put(retained_message)
 
-        kwargs = {'client_id': target_session.client_id, "retained_message": retained_message}
-        await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE, method_kwargs=kwargs)
+        await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE,
+                                              client_id=target_session.client_id,
+                                              retained_message=retained_message)
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(f"target_session.retained_messages={target_session.retained_messages.qsize()}")

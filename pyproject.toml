@@ -199,13 +199,13 @@ max-returns = 10
 
 # ----------------------------------- PYTEST -----------------------------------
 [tool.pytest.ini_options]
-#addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
+addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 10
 asyncio_default_fixture_loop_scope = "function"
-addopts = ["--tb=short", "--capture=tee-sys"]
-log_cli = true
+#addopts = ["--tb=short", "--capture=tee-sys"]
+#log_cli = true
 log_level = "DEBUG"
 
 # ------------------------------------ MYPY ------------------------------------
