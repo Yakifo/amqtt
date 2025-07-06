@@ -143,7 +143,41 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
                 assert row[1] == 'test_client_1'
                 assert row[-1] == '[{"topic": "sensors/#", "qos": 1}, {"topic": "my/topic", "qos": 2}]'
                 has_stored_session = True
-    assert has_stored_session
+    assert has_stored_session, "stored session wasn't updated"
+
+
+@pytest.mark.asyncio
+async def test_repopulate_stored_sessions(db_file, broker_context, db_session_factory) -> None:
+
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    async with aiosqlite.connect(str(db_file)) as db:
+        sql = """INSERT INTO stored_sessions (
+        client_id, clean_session, will_flag,
+        will_qos, keep_alive,
+        retained, subscriptions
+    ) VALUES (
+        'test_client_1',
+        1,
+        0,
+        1,
+        60,
+        '[{"topic":"sensors/#","data":"this message is retained when client reconnects","qos":1}]',
+        '[{"topic":"sensors/#","qos":1}]'
+    )"""
+        await db.execute(sql)
+        await db.commit()
+
+    await session_db_plugin.on_broker_post_start()
+
+    session, _ = broker_context.get_session('test_client_1')
+    assert session is not None
+    assert session.retained_messages.qsize() == 1
+
+    assert 'sensors/#' in broker_context._broker_instance._subscriptions
+
 
 
 # @pytest.mark.asyncio
