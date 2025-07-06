@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from amqtt.broker import Broker, BrokerContext
 from amqtt.plugins.persistence import SessionDBPlugin, Subscription
+from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)
@@ -117,6 +118,7 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
     session_db_plugin = SessionDBPlugin(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
+    # initialize with stored client session
     async with aiosqlite.connect(str(db_file)) as db:
         sql = """INSERT INTO stored_sessions (
     client_id, clean_session, will_flag,
@@ -136,6 +138,7 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
 
     await session_db_plugin.on_broker_client_subscribed(client_id='test_client_1', topic='my/topic', qos=2)
 
+    # verify that the stored session has been updated with the new subscription
     has_stored_session = False
     async with aiosqlite.connect(str(db_file)) as db:
         async with await db.execute("SELECT * FROM stored_sessions") as cursor:
@@ -144,6 +147,84 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
                 assert row[-1] == '[{"topic": "sensors/#", "qos": 1}, {"topic": "my/topic", "qos": 2}]'
                 has_stored_session = True
     assert has_stored_session, "stored session wasn't updated"
+
+
+@pytest.mark.asyncio
+async def test_client_connected_with_clean_session(db_file, broker_context, db_session_factory) -> None:
+
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    session = Session()
+    session.client_id = 'test_client_connected'
+    session.is_anonymous = False
+    session.clean_session = True
+
+    await session_db_plugin.on_broker_client_connected(client_id='test_client_connected', client_session=session)
+
+    async with aiosqlite.connect(str(db_file)) as db_conn:
+        db_conn.row_factory = sqlite3.Row
+
+        async with await db_conn.execute("SELECT * FROM stored_sessions") as cursor:
+            assert len(await cursor.fetchall()) == 0
+
+
+@pytest.mark.asyncio
+async def test_client_connected_anonymous_session(db_file, broker_context, db_session_factory) -> None:
+
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    session = Session()
+    session.is_anonymous = True
+    session.client_id = 'test_client_connected'
+
+    await session_db_plugin.on_broker_client_connected(client_id='test_client_connected', client_session=session)
+
+    async with aiosqlite.connect(str(db_file)) as db_conn:
+        db_conn.row_factory = sqlite3.Row  # Set the row_factory
+        async with await db_conn.execute("SELECT * FROM stored_sessions") as cursor:
+            assert len(await cursor.fetchall()) == 0
+
+
+@pytest.mark.asyncio
+async def test_client_connected_and_stored_session(db_file, broker_context, db_session_factory) -> None:
+
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    session = Session()
+    session.client_id = 'test_client_connected'
+    session.is_anonymous = False
+    session.clean_session = False
+    session.will_flag = True
+    session.will_qos = 1
+    session.will_topic = 'my/will/topic'
+    session.will_retain = False
+    session.will_message = b'test connected client has a last will (and testament) message'
+    session.keep_alive = 42
+
+    await session_db_plugin.on_broker_client_connected(client_id='test_client_connected', client_session=session)
+
+    has_stored_session = False
+    async with aiosqlite.connect(str(db_file)) as db_conn:
+        db_conn.row_factory = sqlite3.Row  # Set the row_factory
+
+        async with await db_conn.execute("SELECT * FROM stored_sessions") as cursor:
+            for row in await cursor.fetchall():
+                assert row['client_id'] == 'test_client_connected'
+                assert row['clean_session'] == False
+                assert row['will_flag'] == True
+                assert row['will_qos'] == 1
+                assert row['will_topic'] == 'my/will/topic'
+                assert row['will_retain'] == False
+                assert row['will_message'] == b'test connected client has a last will (and testament) message'
+                assert row['keep_alive'] == 42
+                has_stored_session = True
+    assert has_stored_session, "client session wasn't stored"
 
 
 @pytest.mark.asyncio
@@ -177,6 +258,9 @@ async def test_repopulate_stored_sessions(db_file, broker_context, db_session_fa
     assert session.retained_messages.qsize() == 1
 
     assert 'sensors/#' in broker_context._broker_instance._subscriptions
+
+    # ugly: b/c _subscriptions is a list of dictionaries of tuples
+    assert broker_context._broker_instance._subscriptions['sensors/#'][0][1] == 1
 
 
 
