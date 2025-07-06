@@ -116,8 +116,9 @@ class BrokerContext(BaseContext):
         for session in self._broker_instance.sessions.values():
             yield session[0]
 
-    def get_session(self, client_id: str) -> tuple[Session, BrokerProtocolHandler] | tuple[None, None]:
-        return self._broker_instance.sessions.get(client_id, (None, None))
+    def get_session(self, client_id: str) -> Session | None:
+        # only return the session, not the broker handler
+        return self._broker_instance.sessions.get(client_id, (None, None))[0]
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:

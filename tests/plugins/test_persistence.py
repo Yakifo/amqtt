@@ -6,9 +6,11 @@ import pytest
 import aiosqlite
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy import select
 
-from amqtt.broker import Broker, BrokerContext
-from amqtt.plugins.persistence import SessionDBPlugin, Subscription
+from amqtt.broker import Broker, BrokerContext, RetainedApplicationMessage
+from amqtt.plugins.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage, \
+    StoredMessage
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -67,7 +69,7 @@ async def test_create_stored_session(db_file, broker_context, db_session_factory
 
     async with db_session_factory() as db_session:
         async with db_session.begin():
-            stored_session = await session_db_plugin._get_or_create(db_session, 'test_client_1')
+            stored_session = await session_db_plugin._get_or_create_session(db_session, 'test_client_1')
             assert stored_session.client_id == 'test_client_1'
 
     async with aiosqlite.connect(str(db_file)) as db:
@@ -100,7 +102,7 @@ async def test_get_stored_session(db_file, broker_context, db_session_factory):
 
     async with db_session_factory() as db_session:
         async with db_session.begin():
-            stored_session = await session_db_plugin._get_or_create(db_session, 'test_client_1')
+            stored_session = await session_db_plugin._get_or_create_session(db_session, 'test_client_1')
             assert stored_session.subscriptions == [Subscription(topic='sensors/#', qos=1)]
 
 
@@ -111,7 +113,7 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
     # create session for client id (without subscription)
     await broker_context.add_subscription('test_client_1', None, None)
 
-    session, _ = broker_context.get_session('test_client_1')
+    session = broker_context.get_session('test_client_1')
     assert session is not None
     session.clean_session = True
 
@@ -253,7 +255,7 @@ async def test_repopulate_stored_sessions(db_file, broker_context, db_session_fa
 
     await session_db_plugin.on_broker_post_start()
 
-    session, _ = broker_context.get_session('test_client_1')
+    session = broker_context.get_session('test_client_1')
     assert session is not None
     assert session.retained_messages.qsize() == 1
 
@@ -261,6 +263,99 @@ async def test_repopulate_stored_sessions(db_file, broker_context, db_session_fa
 
     # ugly: b/c _subscriptions is a list of dictionaries of tuples
     assert broker_context._broker_instance._subscriptions['sensors/#'][0][1] == 1
+
+
+@pytest.mark.asyncio
+async def test_client_retained_message(db_file, broker_context, db_session_factory) -> None:
+
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    # add a session to the broker
+    await broker_context.add_subscription('test_retained_client', None, None)
+
+    # update the session so that it's retained
+    session = broker_context.get_session('test_retained_client')
+    assert session is not None
+    session.is_anonymous = False
+    session.clean_session = False
+    session.transitions.disconnect()
+
+    retained_message = RetainedApplicationMessage(source_session=session, topic='my/retained/topic', data=b'retain message for disconnected client', qos=2)
+    await session_db_plugin.on_broker_retained_message(client_id='test_retained_client', retained_message=retained_message)
+
+    async with db_session_factory() as db_session:
+        async with db_session.begin():
+            stmt = select(StoredSession).filter(StoredSession.client_id == 'test_retained_client')
+            stored_session = await db_session.scalar(stmt)
+            assert stored_session is not None
+            assert len(stored_session.retained) > 0
+            assert RetainedMessage(topic='my/retained/topic', data='retained message', qos=2)
+
+
+@pytest.mark.asyncio
+async def test_topic_retained_message(db_file, broker_context, db_session_factory) -> None:
+
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    # add a session to the broker
+    await broker_context.add_subscription('test_retained_client', None, None)
+
+    # update the session so that it's retained
+    session = broker_context.get_session('test_retained_client')
+    assert session is not None
+    session.is_anonymous = False
+    session.clean_session = False
+    session.transitions.disconnect()
+
+    retained_message = RetainedApplicationMessage(source_session=session, topic='my/retained/topic', data=b'retained message', qos=2)
+    await session_db_plugin.on_broker_retained_message(client_id=None, retained_message=retained_message)
+
+    has_stored_message = False
+    async with aiosqlite.connect(str(db_file)) as db_conn:
+        db_conn.row_factory = sqlite3.Row  # Set the row_factory
+
+        async with await db_conn.execute("SELECT * FROM stored_messages") as cursor:
+            # assert(len(await cursor.fetchall()) > 0)
+            for row in await cursor.fetchall():
+                assert row['topic'] == 'my/retained/topic'
+                assert row['data'] == b'retained message'
+                assert row['qos'] == 2
+                has_stored_message = True
+
+    assert has_stored_message, "retained topic message wasn't stored"
+
+
+@pytest.mark.asyncio
+async def test_topic_clear_retained_message(db_file, broker_context, db_session_factory) -> None:
+
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    # add a session to the broker
+    await broker_context.add_subscription('test_retained_client', None, None)
+
+    # update the session so that it's retained
+    session = broker_context.get_session('test_retained_client')
+    assert session is not None
+    session.is_anonymous = False
+    session.clean_session = False
+    session.transitions.disconnect()
+
+    retained_message = RetainedApplicationMessage(source_session=session, topic='my/retained/topic', data=b'', qos=0)
+    await session_db_plugin.on_broker_retained_message(client_id=None, retained_message=retained_message)
+
+    async with aiosqlite.connect(str(db_file)) as db_conn:
+        db_conn.row_factory = sqlite3.Row
+
+        async with await db_conn.execute("SELECT * FROM stored_messages") as cursor:
+            assert(len(await cursor.fetchall()) == 0)
+
+
 
 
 

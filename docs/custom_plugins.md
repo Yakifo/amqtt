@@ -86,7 +86,7 @@ none
 - `async def on_broker_client_connected(self, *, client_id:str) -> None`
 - `async def on_broker_client_disconnected(self, *, client_id:str) -> None`
 
-- `async def on_broker_retained_message(self, *, client_id: str | None, retained_message: RetainedMessage) -> None`
+- `async def on_broker_retained_message(self, *, client_id: str | None, retained_message: RetainedApplicationMessage) -> None`
 
 - `async def on_broker_client_subscribed(self, *, client_id: str, topic: str, qos: int) -> None`
 - `async def on_broker_client_unsubscribed(self, *, client_id: str, topic: str) -> None`
