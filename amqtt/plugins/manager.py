@@ -84,14 +84,45 @@ class PluginManager(Generic[C]):
         return self.context
 
     def _load_plugins(self, namespace: str | None = None) -> None:
+        """Load plugins from entrypoint or config dictionary.
+
+        config style is now recommended; entrypoint has been deprecated
+        Example:
+            config = {
+                'listeners':...,
+                'plugins': {
+                    'myproject.myfile.MyPlugin': {}
+            }
+        """
         if self.app_context.config and self.app_context.config.get("plugins", None) is not None:
+            # plugins loaded directly from config dictionary
+
+
             if "auth" in self.app_context.config:
                 self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
             if "topic-check" in self.app_context.config:
                 self.logger.warning("Loading plugins from config will ignore 'topic-check' section of config")
 
-            plugin_list: list[Any] = self.app_context.config.get("plugins", [])
-            self._load_str_plugins(plugin_list)
+            plugins_config: list[Any] | dict[str, Any] = self.app_context.config.get("plugins", [])
+
+            # if the config was generated from yaml, the plugins maybe a list instead of a dictionary; transform before loading
+            #
+            # plugins:
+            #   - myproject.myfile.MyPlugin:
+
+            if isinstance(plugins_config, list):
+                plugins_info: dict[str, Any] = {}
+                for plugin_config in plugins_config:
+                    if isinstance(plugin_config, str):
+                        plugins_info.update({plugin_config: {}})
+                    elif not isinstance(plugin_config, dict):
+                        msg = "malformed 'plugins' configuration"
+                        raise PluginLoadError(msg)
+                    else:
+                        plugins_info.update(plugin_config)
+                self._load_str_plugins(plugins_info)
+            elif isinstance(plugins_config, dict):
+                self._load_str_plugins(plugins_config)
         else:
             if not namespace:
                 msg = "Namespace needs to be provided for EntryPoint plugin definitions"
@@ -106,6 +137,7 @@ class PluginManager(Generic[C]):
 
             self._load_ep_plugins(namespace)
 
+        # for all the loaded plugins, find all event callbacks
         for plugin in self._plugins:
             for event in list(BrokerEvents) + list(MQTTEvents):
                 if awaitable := getattr(plugin, f"on_{event}", None):
@@ -116,7 +148,7 @@ class PluginManager(Generic[C]):
                     self._event_plugin_callbacks[event].append(awaitable)
 
     def _load_ep_plugins(self, namespace:str) -> None:
-
+        """Load plugins from `pyproject.toml` entrypoints. Deprecated."""
         self.logger.debug(f"Loading plugins for namespace {namespace}")
         auth_filter_list = []
         topic_filter_list = []
@@ -146,6 +178,7 @@ class PluginManager(Generic[C]):
                 self.logger.debug(f" Plugin {item.name} ready")
 
     def _load_ep_plugin(self, ep: EntryPoint) -> Plugin | None:
+        """Load plugins from `pyproject.toml` entrypoints. Deprecated."""
         try:
             self.logger.debug(f" Loading plugin {ep!s}")
             plugin = ep.load()
@@ -165,40 +198,31 @@ class PluginManager(Generic[C]):
             self.logger.debug(f"Plugin init failed: {ep!r}", exc_info=True)
             raise PluginInitError(ep) from e
 
-    def _load_str_plugins(self, plugin_list: list[Any]) -> None:
+    def _load_str_plugins(self, plugins_info: dict[str, Any]) -> None:
 
         self.logger.info("Loading plugins from config")
+        # legacy had a filtering 'enabled' flag, even if plugins were loaded/listed
         self._is_topic_filtering_enabled = True
         self._is_auth_filtering_enabled = True
-        for plugin_info in plugin_list:
+        for plugin_path, plugin_config in plugins_info.items():
 
-            if isinstance(plugin_info, dict):
-                if len(plugin_info.keys()) > 1:
-                    msg = f"config file should have only one key: {plugin_info.keys()}"
-                    raise ValueError(msg)
-                plugin_path = next(iter(plugin_info.keys()))
-                plugin_cfg = plugin_info[plugin_path]
-                plugin = self._load_str_plugin(plugin_path, plugin_cfg)
-            elif isinstance(plugin_info, str):
-                plugin = self._load_str_plugin(plugin_info, {})
-            else:
-                msg = "Unexpected entry in plugins config"
-                raise PluginLoadError(msg)
-
+            plugin = self._load_str_plugin(plugin_path, plugin_config)
             self._plugins.append(plugin)
+
+            # make sure that authenticate and topic filtering plugins have the appropriate async signature
             if isinstance(plugin, BaseAuthPlugin):
                 if not iscoroutinefunction(plugin.authenticate):
-                    msg = f"Auth plugin {plugin_info} has non-async authenticate method."
+                    msg = f"Auth plugin {plugin_path} has non-async authenticate method."
                     raise PluginCoroError(msg)
                 self._auth_plugins.append(plugin)
             if isinstance(plugin, BaseTopicPlugin):
                 if not iscoroutinefunction(plugin.topic_filtering):
-                    msg = f"Topic plugin {plugin_info} has non-async topic_filtering method."
+                    msg = f"Topic plugin {plugin_path} has non-async topic_filtering method."
                     raise PluginCoroError(msg)
                 self._topic_plugins.append(plugin)
 
     def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin[C]":
-
+        """Load plugin from string dotted path: mymodule.myfile.MyPlugin."""
         try:
             plugin_class: Any =  import_string(plugin_path)
         except ImportError as ep:
@@ -212,6 +236,8 @@ class PluginManager(Generic[C]):
         plugin_context = copy.copy(self.app_context)
         plugin_context.logger = self.logger.getChild(plugin_class.__name__)
         try:
+            # populate the config based on the inner dataclass called `Config`
+            #   use `dacite` package to type check
             plugin_context.config = from_dict(data_class=plugin_class.Config,
                                               data=plugin_cfg or {},
                                               config=DaciteConfig(strict=True))
@@ -231,6 +257,8 @@ class PluginManager(Generic[C]):
 
     def get_plugin(self, name: str) -> Optional["BasePlugin[C]"]:
         """Get a plugin by its name from the plugins loaded for the current namespace.
+
+        Only used for testing purposes to verify plugin loading correctly.
 
         :param name:
         :return:

@@ -40,9 +40,9 @@ dictionary passed to the `Broker` or `MQTTClient`).
 ...
 ...
 plugins:
-  - module.submodule.file.OneClassName:
-  - module.submodule.file.TwoClassName:
-      option1: 123
+  module.submodule.file.OneClassName:
+  module.submodule.file.TwoClassName:
+    option1: 123
 ```
 
 ??? warning "Deprecated: activating plugins using `EntryPoints`"
