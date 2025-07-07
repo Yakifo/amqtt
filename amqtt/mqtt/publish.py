@@ -12,7 +12,7 @@ class PublishVariableHeader(MQTTVariableHeader):
 
     def __init__(self, topic_name: str, packet_id: int | None = None) -> None:
         super().__init__()
-        if "*" in topic_name:
+        if "#" in topic_name or "+" in topic_name:
             msg = "[MQTT-3.3.2-2] Topic name in the PUBLISH Packet MUST NOT contain wildcard characters."
             raise MQTTError(msg)
         self.topic_name = topic_name

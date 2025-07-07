@@ -183,6 +183,8 @@ class Broker:
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
 
+        self._topic_filter_matchers: dict[str, re.Pattern[str]] = {}
+
         # Broadcast queue for outgoing messages
         self._broadcast_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self._broadcast_task: asyncio.Task[Any] | None = None
@@ -690,6 +692,11 @@ class Broker:
                 f"[MQTT-3.3.2-2] - {client_session.client_id} invalid TOPIC sent in PUBLISH message, closing connection",
             )
             return False
+        if app_message.topic.startswith("$"):
+            self.logger.warning(
+                f"[MQTT-4.7.2-1] - {client_session.client_id} cannot use a topic with a leading $ character."
+            )
+            return False
 
         permitted = await self._topic_filtering(client_session, topic=app_message.topic, action=Action.PUBLISH)
         if not permitted:
@@ -908,9 +915,6 @@ class Broker:
         self.logger.debug(f"Processing broadcast message: {broadcast}")
 
         for k_filter, subscriptions in self._subscriptions.items():
-            if broadcast["topic"].startswith("$") and (k_filter.startswith(("+", "#"))):
-                self.logger.debug("[MQTT-4.7.2-1] - ignoring broadcasting $ topic to subscriptions starting with + or #")
-                continue
 
             # Skip all subscriptions which do not match the topic
             if not self._matches(broadcast["topic"], k_filter):
@@ -1039,11 +1043,21 @@ class Broker:
         )
 
     def _matches(self, topic: str, a_filter: str) -> bool:
+        if topic.startswith("$") and (a_filter.startswith(("+", "#"))):
+            self.logger.debug("[MQTT-4.7.2-1] - ignoring broadcasting $ topic to subscriptions starting with + or #")
+            return False
+
         if "#" not in a_filter and "+" not in a_filter:
             # if filter doesn't contain wildcard, return exact match
             return a_filter == topic
-        # else use regex
-        match_pattern = re.compile(re.escape(a_filter).replace("\\#", "?.*").replace("\\+", "[^/]*").lstrip("?"))
+
+        # else use regex (re.compile is an expensive operation, store the matcher for future use)
+        if a_filter not in self._topic_filter_matchers:
+            self._topic_filter_matchers[a_filter] = re.compile(re.escape(a_filter)
+                                                               .replace("\\#", "?.*")
+                                                               .replace("\\+", "[^/]*")
+                                                               .lstrip("?"))
+        match_pattern = self._topic_filter_matchers[a_filter]
         return bool(match_pattern.fullmatch(topic))
 
     def _get_handler(self, session: Session) -> BrokerProtocolHandler | None:

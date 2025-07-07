@@ -1,7 +1,10 @@
 import asyncio
 import unittest
+import pytest
 
 from amqtt.adapters import BufferReader
+from amqtt.errors import AMQTTError
+from amqtt.mqtt import MQTTFixedHeader, PUBLISH
 from amqtt.mqtt.pubcomp import PacketIdVariableHeader, PubcompPacket
 
 
@@ -20,3 +23,21 @@ class PubcompPacketTest(unittest.TestCase):
         publish = PubcompPacket(variable_header=variable_header)
         out = publish.to_bytes()
         assert out == b"p\x02\x00\n"
+
+def test_incorrect_fixed_header():
+    header = MQTTFixedHeader(PUBLISH, 0x00)
+    with pytest.raises(AMQTTError):
+        _ = PubcompPacket(fixed=header)
+
+
+@pytest.mark.parametrize("prop", [
+    "packet_id"
+])
+def test_empty_variable_header(prop):
+    packet = PubcompPacket()
+
+    with pytest.raises(ValueError):
+        assert getattr(packet, prop) is not None
+
+    with pytest.raises(ValueError):
+        assert setattr(packet, prop, "a value")
