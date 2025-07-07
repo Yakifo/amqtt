@@ -25,6 +25,7 @@ class TestConfigPlugin(BasePlugin):
     class Config:
         option1: int
         option2: str
+        option3: int = 20
 
 
 class TestCoroErrorPlugin(BaseAuthPlugin):
