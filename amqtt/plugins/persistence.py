@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 import warnings
 
-from sqlalchemy import JSON, Boolean, Integer, LargeBinary, String, select
+from sqlalchemy import JSON, Boolean, Integer, LargeBinary, Result, String, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
@@ -174,7 +174,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
             logger.warning(f"'{client_id}' is subscribing but doesn't have a session")
             return
 
-        if not session.clean_session:
+        if session.clean_session:
             return
 
         async with self._db_session_maker() as db_session, db_session.begin():
@@ -240,6 +240,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
 
             restored_sessions = 0
             for stored_session in stored_sessions.scalars():
+                await self.context.add_subscription(stored_session.client_id, None, None)
                 for subscription in stored_session.subscriptions:
                     await self.context.add_subscription(stored_session.client_id,
                                                         subscription.topic,
@@ -266,7 +267,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
                 restored_sessions += 1
 
             stmt = select(StoredMessage)
-            stored_messages = await db_session.execute(stmt)
+            stored_messages: Result[tuple[StoredMessage]] = await db_session.execute(stmt)
 
             restored_messages = 0
             retained_messages = self.context.retained_messages
@@ -274,7 +275,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
                 retained_messages[stored_message.topic] = (RetainedApplicationMessage(
                     source_session=None,
                     topic=stored_message.topic,
-                    data=stored_message.data,
+                    data=stored_message.data or b"",
                     qos=stored_message.qos
                 ))
                 restored_messages += 1

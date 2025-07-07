@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 @pytest.fixture
 async def db_file():
     db_file = Path(__file__).parent / "amqtt.db"
+    if db_file.exists():
+        raise NotImplementedError("existing db file found, should it be cleaned up?")
+
     yield db_file
     if db_file.exists():
         db_file.unlink()
@@ -117,7 +120,7 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
 
     session = broker_context.get_session('test_client_1')
     assert session is not None
-    session.clean_session = True
+    session.clean_session = False
 
     session_db_plugin = SessionDBPlugin(broker_context)
     await session_db_plugin.on_broker_pre_start()
@@ -139,7 +142,7 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
 )"""
         await db.execute(sql)
         await db.commit()
-
+    
     await session_db_plugin.on_broker_client_subscribed(client_id='test_client_1', topic='my/topic', qos=2)
 
     # verify that the stored session has been updated with the new subscription
@@ -382,30 +385,160 @@ async def test_restoring_retained_message(db_file, broker_context, db_session_fa
     assert 'my/retained/topic3' in broker_context.retained_messages
 
 
-# @pytest.mark.asyncio
-# async def test_full_broker_and_client() -> None:
-#
-#     cfg = {
-#         'listeners': {
-#             'default': {
-#                 'type': 'tcp',
-#                 'bind': '127.0.0.1:1883'
-#             }
-#         },
-#         'plugins': {
-#             'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': False},
-#             'amqtt.plugins.persistence.SessionDBPlugin': {
-#                 'clean_on_shutdown': False,
-#             }
-#         }
-#     }
-#
-#     b = Broker(config=cfg)
-#     await b.start()
-#     await asyncio.sleep(1)
-#
-#     c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-#     await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
-#
-#     await c1.publish("my/topic", b'my retained message', retain=True)
-#     await c1.disconnect()
+@pytest.fixture
+def db_config(db_file):
+    return {
+        'listeners': {
+            'default': {
+                'type': 'tcp',
+                'bind': '127.0.0.1:1883'
+            }
+        },
+        'plugins': {
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': False},
+            'amqtt.plugins.persistence.SessionDBPlugin': {
+                'file': db_file,
+                'clear_on_shutdown': False
+
+            }
+        }
+    }
+
+
+
+
+@pytest.mark.asyncio
+async def test_broker_client_no_cleanup(db_file, db_config) -> None:
+
+    b1 = Broker(config=db_config)
+    await b1.start()
+    await asyncio.sleep(0.1)
+
+    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
+    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+
+    # test that this message is retained for the topic upon restore
+    await c1.publish("my/retained/topic", b'retained message for topic my/retained/topic', retain=True)
+    await asyncio.sleep(0.2)
+    await c1.disconnect()
+    await b1.shutdown()
+
+    # new broker should load the previous broker's db file since clean_on_shutdown is false in config
+    b2 = Broker(config=db_config)
+    await b2.start()
+    await asyncio.sleep(0.1)
+
+    # upon subscribing to topic with retained message, it should be received
+    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
+    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    await c2.subscribe([
+        ('my/retained/topic', QOS_1)
+    ])
+    msg = await c2.deliver_message(timeout_duration=1)
+    assert msg is not None
+    assert msg.topic == "my/retained/topic"
+    assert msg.data == b'retained message for topic my/retained/topic'
+
+    await c2.disconnect()
+    await b2.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_broker_client_retain_subscription(db_file, db_config) -> None:
+
+    b1 = Broker(config=db_config)
+    await b1.start()
+    await asyncio.sleep(0.1)
+
+    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
+    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+
+    # test to make sure the subscription is re-established upon reconnection after broker restart (clear_on_shutdown = False)
+    ret = await c1.subscribe([
+        ('my/offline/topic', QOS_1)
+    ])
+    assert ret == [QOS_1,]
+    await asyncio.sleep(0.2)
+    await c1.disconnect()
+    await asyncio.sleep(0.1)
+    await b1.shutdown()
+
+    # new broker should load the previous broker's db file
+    b2 = Broker(config=db_config)
+    await b2.start()
+    await asyncio.sleep(0.1)
+
+    # client1's subscription should have been restored, so when it connects, it should receive this message
+    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
+    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    await c2.publish('my/offline/topic', b'standard message to be retained for offline clients')
+    await asyncio.sleep(0.1)
+    await c2.disconnect()
+
+    await c1.reconnect(cleansession=False)
+    await asyncio.sleep(0.1)
+    msg = await c1.deliver_message(timeout_duration=2)
+    assert msg is not None
+    assert msg.topic == "my/offline/topic"
+    assert msg.data == b'standard message to be retained for offline clients'
+
+    await c1.disconnect()
+    await b2.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_broker_client_retain_message(db_file, db_config) -> None:
+    """test to make sure that the retained message because client1 is offline,
+     gets sent when back online after broker restart."""
+
+    b1 = Broker(config=db_config)
+    await b1.start()
+    await asyncio.sleep(0.1)
+
+    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
+    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+
+    # subscribe to a topic with QOS_1 so that we receive messages, even if we're disconnected when sent
+    ret = await c1.subscribe([
+        ('my/offline/topic', QOS_1)
+    ])
+    assert ret == [QOS_1,]
+    await asyncio.sleep(0.2)
+    # go offline
+    await c1.disconnect()
+    await asyncio.sleep(0.1)
+
+    # another client sends a message to previously subscribed to topic
+    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
+    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+
+    # this message should be delivered after broker stops and restarts (and client connects)
+    await c2.publish('my/offline/topic', b'standard message to be retained for offline clients')
+    await asyncio.sleep(0.1)
+    await c2.disconnect()
+    await asyncio.sleep(0.1)
+    await b1.shutdown()
+
+    # new broker should load the previous broker's db file since we declared clear_on_shutdown = False in config
+    b2 = Broker(config=db_config)
+    await b2.start()
+    await asyncio.sleep(0.1)
+
+    # when first client reconnects, it should receive the message that had been previously retained for it
+    await c1.reconnect(cleansession=False)
+    await asyncio.sleep(0.1)
+    msg = await c1.deliver_message(timeout_duration=2)
+    assert msg is not None
+    assert msg.topic == "my/offline/topic"
+    assert msg.data == b'standard message to be retained for offline clients'
+
+    # client should also receive a message if send on this topic
+    await c1.publish("my/offline/topic", b"online message should also be received")
+    await asyncio.sleep(0.1)
+    msg = await c1.deliver_message(timeout_duration=2)
+    assert msg is not None
+    assert msg.topic == "my/offline/topic"
+    assert msg.data == b'online message should also be received'
+
+    await c1.disconnect()
+    await b2.shutdown()

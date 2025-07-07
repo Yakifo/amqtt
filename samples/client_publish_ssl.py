@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import logging
 from pathlib import Path
@@ -23,13 +24,13 @@ config = {
     },
     "auto_reconnect": False,
     "check_hostname": False,
-    "certfile": "cert.pem",
+    "certfile": "",
 }
 
-client = MQTTClient(config=config)
 
-
-async def test_coro() -> None:
+async def test_coro(certfile: str) -> None:
+    config['certfile'] = certfile
+    client = MQTTClient(config=config)
 
     await client.connect("mqtts://localhost:8883")
     tasks = [
@@ -45,7 +46,11 @@ async def test_coro() -> None:
 def __main__():
     formatter = "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
-    asyncio.run(test_coro())
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cert', default='cert.pem', help="path & file to verify server's authenticity")
+    args = parser.parse_args()
+
+    asyncio.run(test_coro(args.cert))
 
 if __name__ == "__main__":
     __main__()

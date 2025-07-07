@@ -108,6 +108,9 @@ class BrokerContext(BaseContext):
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
+    async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
+        await self._broker_instance.retain_message(None, topic_name, data, qos)
+
     @property
     def sessions(self) -> Generator[Session]:
         for session in self._broker_instance.sessions.values():
@@ -454,7 +457,17 @@ class Broker:
         # Get session from cache
         elif client_session.client_id in self._sessions:
             self.logger.debug(f"Found old session {self._sessions[client_session.client_id]!r}")
-            client_session, _ = self._sessions[client_session.client_id]
+
+            # even though the session previously existed, the new connection can bring updated configuration and credentials
+            existing_client_session, _ = self._sessions[client_session.client_id]
+            existing_client_session.will_flag = client_session.will_flag
+            existing_client_session.will_message = client_session.will_message
+            existing_client_session.will_topic = client_session.will_topic
+            existing_client_session.will_qos = client_session.will_qos
+            existing_client_session.keep_alive = client_session.keep_alive
+            existing_client_session.username = client_session.username
+            existing_client_session.password = client_session.password
+            client_session = existing_client_session
             client_session.parent = 1
         else:
             client_session.parent = 0

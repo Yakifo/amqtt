@@ -186,7 +186,7 @@ class RetainedMessageEventPlugin(BasePlugin[BrokerContext]):
     async def on_broker_retained_message(self, *, client_id: str | None, retained_message: RetainedMessage) -> None:
         """retaining message event handler."""
         if client_id:
-            session, _ = self.context.get_session(client_id)
+            session = self.context.get_session(client_id)
             assert session.transitions.state != "connected"
             logger.debug("retained message event fired for offline client")
             self.session_retained_message_flag = True
