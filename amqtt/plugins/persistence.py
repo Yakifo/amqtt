@@ -265,6 +265,22 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
                     await session.retained_messages.put(retained_message)
                 restored_sessions += 1
 
+            stmt = select(StoredMessage)
+            stored_messages = await db_session.execute(stmt)
+
+            restored_messages = 0
+            retained_messages = self.context.retained_messages
+            for stored_message in stored_messages.scalars():
+                retained_messages[stored_message.topic] = (RetainedApplicationMessage(
+                    source_session=None,
+                    topic=stored_message.topic,
+                    data=stored_message.data,
+                    qos=stored_message.qos
+                ))
+                restored_messages += 1
+            logger.info(f"Retained messages restored: {restored_messages}")
+
+
         logger.info(f"Restored {restored_sessions} sessions.")
 
     async def on_broker_pre_shutdown(self) -> None:
@@ -280,7 +296,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
     class Config:
         """Configuration variables."""
 
-        file: str | Path = "amqtt.sqlite3"
+        file: str | Path = "amqtt.db"
         retain_interval: int = 5
         clear_on_shutdown: bool = True
 

@@ -108,9 +108,6 @@ class BrokerContext(BaseContext):
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
-    async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
-        await self._broker_instance.retain_message(None, topic_name, data, qos)
-
     @property
     def sessions(self) -> Generator[Session]:
         for session in self._broker_instance.sessions.values():
