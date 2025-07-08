@@ -1,6 +1,9 @@
 import asyncio
 from collections import deque  # pylint: disable=C0412
-from typing import SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
+from dataclasses import dataclass
+from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
+
+import psutil
 
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
@@ -26,7 +29,7 @@ except ImportError:
 
 import amqtt
 from amqtt.broker import BrokerContext
-from amqtt.codecs_amqtt import int_to_bytes_str
+from amqtt.codecs_amqtt import float_to_bytes_str, int_to_bytes_str
 from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 DOLLAR_SYS_ROOT = "$SYS/broker/"
@@ -40,9 +43,26 @@ STAT_START_TIME = "start_time"
 STAT_CLIENTS_MAXIMUM = "clients_maximum"
 STAT_CLIENTS_CONNECTED = "clients_connected"
 STAT_CLIENTS_DISCONNECTED = "clients_disconnected"
+MEMORY_USAGE_MAXIMUM = "memory_maximum"
+CPU_USAGE_MAXIMUM = "cpu_usage_maximum"
+CPU_USAGE_LAST = "cpu_usage_last"
 
 
 PACKET: TypeAlias = MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader]
+
+
+def val_to_bytes_str(value: Any) -> bytes:
+    """Convert an int, float or string to byte string."""
+    match value:
+        case int():
+            return int_to_bytes_str(value)
+        case float():
+            return float_to_bytes_str(value)
+        case str():
+            return value.encode("utf-8")
+        case _:
+            msg = f"Unsupported type {type(value)}"
+            raise NotImplementedError(msg)
 
 
 class BrokerSysPlugin(BasePlugin[BrokerContext]):
@@ -51,6 +71,10 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         # Broker statistics initialization
         self._stats: dict[str, int] = {}
         self._sys_handle: asyncio.Handle | None = None
+
+        self._sys_interval: int = 0
+        self._current_process = psutil.Process()
+
 
     def _clear_stats(self) -> None:
         """Initialize broker statistics data structures."""
@@ -64,6 +88,8 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             STAT_CLIENTS_DISCONNECTED,
             STAT_PUBLISH_RECEIVED,
             STAT_PUBLISH_SENT,
+            MEMORY_USAGE_MAXIMUM,
+            CPU_USAGE_MAXIMUM
         ):
             self._stats[stat] = 0
 
@@ -90,21 +116,21 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
 
         # Start $SYS topics management
         try:
-            sys_interval: int = 0
-            x = self.context.config.get("sys_interval") if self.context.config is not None else None
-            if isinstance(x, str | Buffer | SupportsInt | SupportsIndex):
-                sys_interval = int(x)
-            if sys_interval > 0:
-                self.context.logger.debug(f"Setup $SYS broadcasting every {sys_interval} seconds")
+            self._sys_interval = self._get_config_option("sys_interval", None)
+            if isinstance(self._sys_interval, str | Buffer | SupportsInt | SupportsIndex):
+                self._sys_interval = int(self._sys_interval)
+
+            if self._sys_interval > 0:
+                self.context.logger.debug(f"Setup $SYS broadcasting every {self._sys_interval} seconds")
                 self._sys_handle = (
-                    self.context.loop.call_later(sys_interval, self.broadcast_dollar_sys_topics)
+                    self.context.loop.call_later(self._sys_interval, self.broadcast_dollar_sys_topics)
                     if self.context.loop is not None
                     else None
                 )
             else:
                 self.context.logger.debug("$SYS disabled")
         except KeyError:
-            pass
+            self.context.logger.debug("could not find 'sys_interval' key: {e!r}")
             # 'sys_interval' config parameter not found
 
     async def on_broker_pre_shutdown(self) -> None:
@@ -127,6 +153,14 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             messages_stored += session.retained_messages_count
         messages_stored += len(self.context.retained_messages)
         subscriptions_count = sum(len(sub) for sub in self.context.subscriptions.values())
+        self._stats[STAT_CLIENTS_MAXIMUM] = client_connected
+
+        cpu_usage = self._current_process.cpu_percent(interval=0)
+        self._stats[CPU_USAGE_MAXIMUM] = max(self._stats[CPU_USAGE_MAXIMUM], cpu_usage)
+
+        mem_info_usage = self._current_process.memory_full_info()
+        mem_size = mem_info_usage.rss / (1024 ** 2)
+        self._stats[MEMORY_USAGE_MAXIMUM] = max(self._stats[MEMORY_USAGE_MAXIMUM], mem_size)
 
         # Broadcast updates
         tasks: deque[asyncio.Task[None]] = deque()
@@ -150,9 +184,13 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             "messages/publish/sent": self._stats[STAT_PUBLISH_SENT],
             "messages/retained/count": len(self.context.retained_messages),
             "messages/subscriptions/count": subscriptions_count,
+            "heap/size": mem_size,
+            "heap/maximum": self._stats[MEMORY_USAGE_MAXIMUM],
+            "cpu/percent": cpu_usage,
+            "cpu/maximum": self._stats[CPU_USAGE_MAXIMUM],
         }
         for stat_name, stat_value in stats.items():
-            data: bytes = int_to_bytes_str(stat_value) if isinstance(stat_value, int) else stat_value.encode("utf-8")
+            data: bytes = val_to_bytes_str(stat_value)
             tasks.append(self.schedule_broadcast_sys_topic(stat_name, data))
 
         # Wait until broadcasting tasks end
@@ -160,15 +198,9 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             tasks.popleft()
 
         # Reschedule
-        sys_interval: int = 0
-        x = self.context.config.get("sys_interval") if self.context.config is not None else None
-        if isinstance(x, str | Buffer | SupportsInt | SupportsIndex):
-            sys_interval = int(x)
-        self.context.logger.debug("Broadcasting $SYS topics")
-
-        self.context.logger.debug(f"Setup $SYS broadcasting every {sys_interval} seconds")
+        self.context.logger.debug(f"Broadcast $SYS topics again in {self._sys_interval} seconds.")
         self._sys_handle = (
-            self.context.loop.call_later(sys_interval, self.broadcast_dollar_sys_topics)
+            self.context.loop.call_later(self._sys_interval, self.broadcast_dollar_sys_topics)
             if self.context.loop is not None
             else None
         )
@@ -191,7 +223,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             if packet.fixed_header.packet_type == PUBLISH:
                 self._stats[STAT_PUBLISH_SENT] += 1
 
-    async def on_broker_client_connected(self, client_id: str) -> None:
+    async def on_broker_client_connected(self, client_id: str, client_session: Session) -> None:
         """Handle broker client connection."""
         self._stats[STAT_CLIENTS_CONNECTED] += 1
         self._stats[STAT_CLIENTS_MAXIMUM] = max(
@@ -199,7 +231,13 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             self._stats[STAT_CLIENTS_CONNECTED],
         )
 
-    async def on_broker_client_disconnected(self, client_id: str) -> None:
+    async def on_broker_client_disconnected(self, client_id: str, client_session: Session) -> None:
         """Handle broker client disconnection."""
         self._stats[STAT_CLIENTS_CONNECTED] -= 1
         self._stats[STAT_CLIENTS_DISCONNECTED] += 1
+
+    @dataclass
+    class Config:
+        """Configuration struct for plugin."""
+
+        sys_interval: int = 20

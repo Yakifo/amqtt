@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1
+
+- [PR #226](https://github.com/Yakifo/amqtt/pull/226) Consolidate super classes for plugins
+- [PR #227](https://github.com/Yakifo/amqtt/pull/227) Update sample files
+- [PR #229](https://github.com/Yakifo/amqtt/pull/229) & [PR #228](https://github.com/Yakifo/amqtt/pull/228) Broken pypi and test.amqtt.io links
+- [PR #232](https://github.com/Yakifo/amqtt/pull/234) $SYS additions for cpu & mem.
+
 ## 0.11.0
 
 - upgrades to support python 3.10, 3.11, 3.12 and 3.13

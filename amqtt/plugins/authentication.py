@@ -1,8 +1,10 @@
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from passlib.apps import custom_app_context as pwd_context
 
 from amqtt.broker import BrokerContext
+from amqtt.contexts import BaseContext
 from amqtt.plugins.base import BaseAuthPlugin
 from amqtt.session import Session
 
@@ -12,13 +14,19 @@ _PARTS_EXPECTED_LENGTH = 2  # Expected number of parts in a valid line
 class AnonymousAuthPlugin(BaseAuthPlugin):
     """Authentication plugin allowing anonymous access."""
 
+    def __init__(self, context: BaseContext) -> None:
+        super().__init__(context)
+
+        # Default to allowing anonymous
+        self._allow_anonymous = self._get_config_option("allow-anonymous", True)  # noqa: FBT003
+
     async def authenticate(self, *, session: Session) -> bool:
         authenticated = await super().authenticate(session=session)
         if authenticated:
-            # Default to allowing anonymous
-            allow_anonymous = self.auth_config.get("allow-anonymous", True) if isinstance(self.auth_config, dict) else True
-            if allow_anonymous:
+
+            if self._allow_anonymous:
                 self.context.logger.debug("Authentication success: config allows anonymous")
+                session.is_anonymous = True
                 return True
 
             if session and session.username:
@@ -26,6 +34,12 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
                 return True
             self.context.logger.debug("Authentication failure: session has no username")
         return False
+
+    @dataclass
+    class Config:
+        """Allow empty username."""
+
+        allow_anonymous: bool = field(default=True)
 
 
 class FileAuthPlugin(BaseAuthPlugin):
@@ -38,13 +52,16 @@ class FileAuthPlugin(BaseAuthPlugin):
 
     def _read_password_file(self) -> None:
         """Read the password file and populates the user dictionary."""
-        password_file = self.auth_config.get("password-file") if isinstance(self.auth_config, dict) else None
+        password_file = self._get_config_option("password-file", None)
         if not password_file:
             self.context.logger.warning("Configuration parameter 'password-file' not found")
             return
 
         try:
-            with Path(password_file).open(mode="r", encoding="utf-8") as file:
+            file = password_file
+            if isinstance(file, str):
+                file = Path(file)
+            with file.open(mode="r", encoding="utf-8") as file:
                 self.context.logger.debug(f"Reading user database from {password_file}")
                 for _line in file:
                     line = _line.strip()
@@ -87,3 +104,9 @@ class FileAuthPlugin(BaseAuthPlugin):
 
             self.context.logger.debug(f"Authentication failure: password mismatch for user '{session.username}'")
         return False
+
+    @dataclass
+    class Config:
+        """Path to the properly encoded password file."""
+
+        password_file: str | Path | None = None

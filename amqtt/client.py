@@ -19,11 +19,11 @@ from amqtt.adapters import (
     WebSocketsReader,
     WebSocketsWriter,
 )
+from amqtt.contexts import BaseContext
 from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
-from amqtt.plugins.contexts import BaseContext
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id, read_yaml_config
@@ -457,6 +457,8 @@ class MQTTClient:
         # if not self._handler:
         self._handler = ClientProtocolHandler(self.plugins_manager)
 
+        connection_timeout = self.config.get("connection_timeout", None)
+
         if secure:
             sc = ssl.create_default_context(
                 ssl.Purpose.SERVER_AUTH,
@@ -464,10 +466,12 @@ class MQTTClient:
                 capath=self.session.capath,
                 cadata=self.session.cadata,
             )
-            if "certfile" in self.config and "keyfile" in self.config:
-                sc.load_cert_chain(self.config["certfile"], self.config["keyfile"])
+
+            if "certfile" in self.config:
+                sc.load_verify_locations(cafile=self.config["certfile"])
             if "check_hostname" in self.config and isinstance(self.config["check_hostname"], bool):
                 sc.check_hostname = self.config["check_hostname"]
+                sc.verify_mode = ssl.CERT_REQUIRED
             kwargs["ssl"] = sc
 
         try:
@@ -477,21 +481,24 @@ class MQTTClient:
 
             # Open connection
             if scheme in ("mqtt", "mqtts"):
-                conn_reader, conn_writer = await asyncio.open_connection(
-                    self.session.remote_address,
-                    self.session.remote_port,
-                    **kwargs,
-                )
+                conn_reader, conn_writer = await asyncio.wait_for(
+                    asyncio.open_connection(
+                        self.session.remote_address,
+                        self.session.remote_port,
+                        **kwargs,
+                    ), timeout=connection_timeout)
 
                 reader = StreamReaderAdapter(conn_reader)
                 writer = StreamWriterAdapter(conn_writer)
             elif scheme in ("ws", "wss") and self.session.broker_uri:
-                websocket: ClientConnection = await websockets.connect(
-                    self.session.broker_uri,
-                    subprotocols=[websockets.Subprotocol("mqtt")],
-                    additional_headers=self.additional_headers,
-                    **kwargs,
-                )
+                websocket: ClientConnection = await asyncio.wait_for(
+                    websockets.connect(
+                        self.session.broker_uri,
+                        subprotocols=[websockets.Subprotocol("mqtt")],
+                        additional_headers=self.additional_headers,
+                        **kwargs,
+                    ), timeout=connection_timeout)
+
                 reader = WebSocketsReader(websocket)
                 writer = WebSocketsWriter(websocket)
             elif not self.session.broker_uri:
@@ -591,7 +598,7 @@ class MQTTClient:
         session.cadata = broker_conf.get("cadata")
 
         if cleansession is not None:
-            broker_conf["cleansession"] = cleansession
+            broker_conf["cleansession"] = cleansession  # noop?
             session.clean_session = cleansession
         else:
             session.clean_session = self.config.get("cleansession", True)

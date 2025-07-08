@@ -2,10 +2,8 @@ import logging
 
 from dataclasses import dataclass
 
-from amqtt.broker import Action
-
 from amqtt.plugins.base import BasePlugin, BaseAuthPlugin, BaseTopicPlugin
-from amqtt.plugins.contexts import BaseContext
+from amqtt.contexts import BaseContext, Action
 
 from amqtt.session import Session
 
@@ -27,6 +25,7 @@ class TestConfigPlugin(BasePlugin):
     class Config:
         option1: int
         option2: str
+        option3: int = 20
 
 
 class TestCoroErrorPlugin(BaseAuthPlugin):

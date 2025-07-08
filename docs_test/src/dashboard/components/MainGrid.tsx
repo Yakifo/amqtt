@@ -7,7 +7,7 @@ import SessionsChart from './SessionsChart';
 import {useEffect, useState} from "react";
 // @ts-ignore
 import useMqtt from '../../assets/usemqtt';
-import type {DataPoint} from '../../assets/helpers';
+import type {DataPoint, TopicMap} from '../../assets/helpers';
 import {Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faGithub, faPython, faDocker, faDiscord} from "@fortawesome/free-brands-svg-icons";
@@ -20,8 +20,12 @@ export default function MainGrid() {
   const [received, setReceived] = useState<DataPoint[]>([]);
   const [bytesIn, setBytesIn] = useState<DataPoint[]>([]);
   const [bytesOut, setBytesOut] = useState<DataPoint[]>([]);
+  const [clientsConnected, setClientsConnected] = useState<DataPoint[]>([]);
   const [serverStart, setServerStart] = useState<string>('');
   const [serverUptime, setServerUptime] = useState<string>('');
+  const [cpuPercent, setCpuPercent] = useState<DataPoint[]>([]);
+  const [memSize, setMemSize] = useState<DataPoint[]>([]);
+  const [version, setVersion] = useState<string>('');
 
   function getRandomInt(min: number, max: number) {
     min = Math.ceil(min);
@@ -59,12 +63,26 @@ export default function MainGrid() {
 
   useEffect(() => {
     if (isConnected) {
+      mqttSubscribe('$SYS/broker/version');
       mqttSubscribe('$SYS/broker/messages/publish/#');
       mqttSubscribe('$SYS/broker/load/bytes/#');
       mqttSubscribe('$SYS/broker/uptime/formatted');
       mqttSubscribe('$SYS/broker/uptime');
+      mqttSubscribe('$SYS/broker/clients/connected');
+      mqttSubscribe('$SYS/broker/cpu/percent');
+      mqttSubscribe('$SYS/broker/heap/size')
     }
   }, [isConnected, mqttSubscribe]);
+
+  const topic_map: TopicMap = {
+    '$SYS/broker/messages/publish/sent': {current: sent, update: setSent},
+    '$SYS/broker/messages/publish/received': {current: received, update: setReceived},
+    '$SYS/broker/load/bytes/received': {current: bytesIn, update: setBytesIn},
+    '$SYS/broker/load/bytes/sent': {current: bytesOut, update: setBytesOut},
+    '$SYS/broker/clients/connected': {current: clientsConnected, update: setClientsConnected},
+    '$SYS/broker/cpu/percent': {current: cpuPercent, update: setCpuPercent},
+    '$SYS/broker/heap/size': {current: memSize, update: setMemSize},
+  };
 
   useEffect(() => {
 
@@ -73,36 +91,22 @@ export default function MainGrid() {
       try {
 
         const d = payload.message;
-        if (payload.topic === '$SYS/broker/messages/publish/sent') {
+
+        if(payload.topic in topic_map) {
+          const { update } = topic_map[payload.topic];
           const newPoint: DataPoint = {
             timestamp: new Date().toISOString(),
             value: d
           };
-          setSent(sent => [...sent, newPoint]);
-        } else if (payload.topic === '$SYS/broker/messages/publish/received') {
-          const newPoint: DataPoint = {
-            timestamp: new Date().toISOString(),
-            value: d
-          }
-          setReceived(received => [...received, newPoint]);
-        } else if (payload.topic === '$SYS/broker/load/bytes/received') {
-          const newPoint: DataPoint = {
-            timestamp: new Date().toISOString(),
-            value: d
-          }
-          setBytesIn(bytesIn => [...bytesIn, newPoint]);
-        } else if (payload.topic === '$SYS/broker/load/bytes/sent') {
-          const newPoint: DataPoint = {
-            timestamp: new Date().toISOString(),
-            value: d
-          }
-          setBytesOut(bytesOut => [...bytesOut, newPoint]);
+          update(current => [...current, newPoint])
         } else if (payload.topic === '$SYS/broker/uptime/formatted') {
           const dt = new Date(d + "Z");
           setServerStart(dt.toLocaleString());
         } else if (payload.topic === '$SYS/broker/uptime') {
           const {days, hours, minutes, seconds} = secondsToDhms(d);
           setServerUptime(`${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`);
+        } else if(payload.topic === '$SYS/broker/version') {
+          setVersion(d);
         }
       } catch (e) {
         console.log(e);
@@ -138,7 +142,7 @@ export default function MainGrid() {
                 <td style={{width: 250}}>
                   <p style={{textAlign: 'left'}}>
                     <FontAwesomeIcon icon={faGithub} size="xl"/> github: <a
-                    href="https://github.com/Yakofo/amqtt">Yakifo/amqtt</a>
+                    href="https://github.com/Yakifo/amqtt">Yakifo/amqtt</a>
                   </p>
                   <p style={{textAlign: 'left'}}>
                     <FontAwesomeIcon icon={faPython} size="xl"/> PyPi: <a
@@ -220,22 +224,33 @@ export default function MainGrid() {
         columns={12}
         sx={{mb: (theme) => theme.spacing(2)}}
       ><Grid size={{xs: 12, md: 12}}>
-
-
-        <strong>broker started at </strong> {serverStart} &nbsp;&nbsp;&nbsp;&nbsp;
+        <strong>broker</strong> ('{version}') <strong>started at </strong> {serverStart} &nbsp;&nbsp;&nbsp;
         <strong>up for</strong> {serverUptime}
       </Grid>
         <Grid size={{xs: 12, md: 6}}>
-          <SessionsChart title={'Sent Messages'} label={'Messages'} data={sent} isConnected={isConnected}/>
+          <SessionsChart title={'Sent Messages'} label={''} data={sent} isConnected={isConnected}/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
-          <SessionsChart title={'Received Messages'} label={'Messages'} data={received} isConnected={isConnected}/>
+          <SessionsChart title={'Received Messages'} label={''} data={received} isConnected={isConnected}/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
           <SessionsChart title={'Bytes Out'} label={'Bytes'} data={bytesOut} isConnected={isConnected}/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
           <SessionsChart title={'Bytes In'} label={'Bytes'} data={bytesIn} isConnected={isConnected}/>
+        </Grid>
+        <Grid size={{xs: 12, md: 6}}>
+          <SessionsChart title={'Clients Connected'} label={''} data={clientsConnected} isConnected={isConnected}/>
+        </Grid>
+        <Grid size={{xs: 12, md: 6}}>
+          <Grid container spacing={2} columns={2}>
+            <Grid size={{lg:1}}>
+              <SessionsChart title={'CPU'} label={'%'} data={cpuPercent} decimals={2} isConnected={isConnected}/>
+            </Grid>
+            <Grid size={{lg:1}}>
+              <SessionsChart title={'Memory'} label={'MB'} data={memSize} decimals={1} isConnected={isConnected}/>
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
 

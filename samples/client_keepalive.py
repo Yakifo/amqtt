@@ -1,13 +1,12 @@
 import asyncio
 import logging
+from asyncio import CancelledError
 
 from amqtt.client import MQTTClient
 
-#
-# This sample shows a client running idle.
-# Meanwhile, keepalive is managed through PING messages sent every 5 seconds
-#
-
+"""
+This sample shows how to run an idle client
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -15,17 +14,26 @@ config = {
     "keep_alive": 5,
     "ping_delay": 1,
 }
-C = MQTTClient(config=config)
+
+async def main() -> None:
+    client = MQTTClient(config=config)
+
+    try:
+        await client.connect("mqtt://localhost:1883/")
+        logger.info("client connected")
+        await asyncio.sleep(15)
+    except CancelledError:
+        pass
+
+    await client.disconnect()
 
 
-async def test_coro() -> None:
-    await C.connect("mqtt://test.mosquitto.org:1883/")
-    await asyncio.sleep(18)
+def __main__():
 
-    await C.disconnect()
+    formatter = "[%(asctime)s] :: %(levelname)s :: %(name)s :: %(message)s"
+    logging.basicConfig(level=logging.INFO, format=formatter)
+    asyncio.run(main())
 
 
 if __name__ == "__main__":
-    formatter = "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
-    logging.basicConfig(level=logging.DEBUG, format=formatter)
-    asyncio.get_event_loop().run_until_complete(test_coro())
+    __main__()

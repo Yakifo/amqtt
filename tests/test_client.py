@@ -7,7 +7,7 @@ import pytest
 
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
-from amqtt.errors import ClientError, ConnectError
+from amqtt.errors import ClientError, ConnectError, MQTTError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -446,6 +446,15 @@ async def test_connect_incorrect_scheme():
         await client.connect('"mq://someplace')
 
 
+@pytest.mark.asyncio
+@pytest.mark.timeout(3)
+async def test_connect_timeout():
+    config = {"auto_reconnect": False, "connection_timeout": 2}
+    client = MQTTClient(config=config)
+    with pytest.raises(ClientError):
+        await client.connect("mqtt://localhost:8888")
+
+
 async def test_client_no_auth():
 
     class MockEntryPoints:
@@ -481,3 +490,17 @@ async def test_client_no_auth():
             await client.connect("mqtt://127.0.0.1:1883/")
 
         await broker.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_publish_to_incorrect_wildcard(broker_fixture):
+    client = MQTTClient(config={'auto_reconnect': False})
+    await client.connect("mqtt://127.0.0.1/")
+
+    with pytest.raises(MQTTError):
+        await client.publish("my/+/topic", b'plus-sign wildcard topic invalid publish')
+    with pytest.raises(MQTTError):
+        await client.publish("topic/#", b'hash wildcard topic invalid publish')
+
+    await client.publish("topic/*", b'asterisk topic normal publish')
+    await client.disconnect()
