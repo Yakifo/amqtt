@@ -47,8 +47,6 @@ By default, the `PacketLoggerPlugin` is  activated  and configured for the clien
 
 ```yaml
 plugins:
-  .
-  .
   amqtt.plugins.authentication.AnonymousAuthPlugin:
       allow_anonymous: false
 ```
@@ -242,3 +240,25 @@ and `on_mqtt_packet_received`.
 plugins:
   amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
 ```
+
+
+### Session Persistence
+
+`amqtt.plugins.persistence.SessionDBPlugin`
+
+Plugin to store session information and retained topic messages in the event that the broker terminates abnormally.
+
+**Configuration**
+
+- `file` - *(string)* path & filename to store the session db. default: `amqtt.db`
+- `clear_on_shutdown` *(bool)* if the broker shutdowns down normally, don't retain any information. default: `True`
+
+```yaml
+plugins:
+  amqtt.plugins.persistence.SessionDBPlugin:
+    file: 'amqtt.db'
+    clear_on_shutdown: True
+```
+
+
+

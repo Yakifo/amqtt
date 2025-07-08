@@ -142,7 +142,7 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
 )"""
         await db.execute(sql)
         await db.commit()
-    
+
     await session_db_plugin.on_broker_client_subscribed(client_id='test_client_1', topic='my/topic', qos=2)
 
     # verify that the stored session has been updated with the new subscription

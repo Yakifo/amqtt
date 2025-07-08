@@ -111,6 +111,14 @@ class StoredMessage(Base):
 
 
 class SessionDBPlugin(BasePlugin[BrokerContext]):
+    """Plugin to store session information and retained topic messages in the event that the broker terminates abnormally.
+
+    Configuration:
+        - file *(string)* path & filename to store the session db. default: `amqtt.db`
+        - clear_on_shutdown *(bool)* if the broker shutdowns down normally, don't retain any information. default: `True`
+
+    """
+
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
@@ -298,7 +306,6 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         """Configuration variables."""
 
         file: str | Path = "amqtt.db"
-        retain_interval: int = 5
         clear_on_shutdown: bool = True
 
         def __post_init__(self) -> None:
