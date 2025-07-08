@@ -133,6 +133,9 @@ dependencies = [
 ci = [
     { name = "coveralls" },
 ]
+contrib = [
+    { name = "aiohttp" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -176,6 +179,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.7" },
+    { name = "aiohttp", marker = "extra == 'contrib'", specifier = ">=3.12.13" },
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "passlib", specifier = "==1.7.4" },
@@ -185,7 +189,7 @@ requires-dist = [
     { name = "typer", specifier = "==0.15.4" },
     { name = "websockets", specifier = "==15.0.1" },
 ]
-provides-extras = ["ci"]
+provides-extras = ["ci", "contrib"]
 
 [package.metadata.requires-dev]
 dev = [

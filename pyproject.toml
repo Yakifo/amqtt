@@ -81,8 +81,9 @@ docs = [
 
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
-
-
+contrib = [
+    "aiohttp>=3.12.13",
+]
 
 [project.scripts]
 amqtt = "amqtt.scripts.broker_script:main"

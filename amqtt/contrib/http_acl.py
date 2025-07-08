@@ -3,11 +3,11 @@ from enum import StrEnum
 import logging
 from typing import Any
 
-from aiohttp import ClientResponse, ClientSession
+from aiohttp import ClientResponse, ClientSession, FormData
 
-from amqtt.broker import Action, BrokerContext
-from amqtt.plugins.authentication import BaseAuthPlugin
-from amqtt.plugins.topic_checking import BaseTopicPlugin
+from amqtt.broker import BrokerContext
+from amqtt.contexts import Action
+from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -37,13 +37,13 @@ HTTP_2xx_MIN = 200
 HTTP_2xx_MAX = 300
 
 
-class HttpACL(BaseAuthPlugin, BaseTopicPlugin):
+class HttpAuthACL(BaseAuthPlugin, BaseTopicPlugin):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
-        self.http = ClientSession()
+        self.http = ClientSession(headers = {"User-Agent": self.config.user_agent})
 
-        match self.context.config.request_method:
+        match self.config.request_method:
             case RequestMethod.GET:
                 self.method = self.http.get
             case RequestMethod.PUT:
@@ -51,42 +51,48 @@ class HttpACL(BaseAuthPlugin, BaseTopicPlugin):
             case _:
                 self.method = self.http.post
 
+    async def on_broker_pre_shutdown(self) -> None:
+        await self.http.close()
+
     @staticmethod
     def _is_2xx(r: ClientResponse) -> bool:
         return HTTP_2xx_MIN <= r.status < HTTP_2xx_MAX
 
     async def _send_request(self, url: str, payload: dict[str, Any]) -> bool:
 
-        match self.context.config.params_mode:
+        match self.config.params_mode:
             case ParamsMode.FORM:
-                kwargs = { "params": payload}
-            case _:
+                match self.config.request_method:
+                    case RequestMethod.GET:
+                        kwargs = { "params": payload }
+                    case _: # POST, PUT
+                        d: Any = FormData(payload)
+                        kwargs = {"data": d}
+            case _:  # JSON
                 kwargs = { "json": payload}
 
-        async with self.method(url, **kwargs) as r:
+        async with self.method(url, **kwargs) as r:  # type: ignore[arg-type]
             if not self._is_2xx(r):
                 return False
 
-            match self.context.config.response_mode:
-
+            match self.config.response_mode:
                 case ResponseMode.TEXT:
-                    raise NotImplementedError
+                    return (await r.text()).lower() == "ok"
                 case ResponseMode.STATUS:
                     return self._is_2xx(r)
                 case _:
                     data = await r.json()
-                    if "Ok" not in data:
-                        logger.debug('acl response is missing "Ok" field')
-                        return False
-                    if isinstance(data["Ok"], bool):
-                        return data["Ok"]
+                    for ok in ("OK", "Ok", "ok"):
+                        if ok in data and isinstance(data[ok], bool):
+                            return bool(data[ok])
             return False
 
+    def get_url(self, uri: str) -> str:
+        return f"{'https' if self.config.with_tls else 'http'}://{self.config.host}:{self.config.port}{uri}"
 
     async def authenticate(self, *, session: Session) -> bool | None:
-        # async with self.method() as response:
-
-        return False
+        d = {"username": session.username, "password": session.password, "client_id": session.client_id}
+        return await self._send_request(self.get_url(self.config.user_uri), d)
 
     async def topic_filtering(self, *,
                         session: Session | None = None,
@@ -96,14 +102,44 @@ class HttpACL(BaseAuthPlugin, BaseTopicPlugin):
 
     @dataclass
     class Config:
+        """Configuration for the HTTP Auth & ACL Plugin.
+
+        Members:
+            - host *(str) hostname of the server for the auth & acl check
+            - port *(int) port of the server for the auth & acl check
+            - user_uri *(str) uri of the topic check (e.g. '/user')
+            - acl_uri *(str) uri of the topic check (e.g. '/acl')
+            - request_method *(RequestMethod) send the request as a GET, POST or PUT
+            - params_mode *(ParamsMode) send the request with json or form data
+            - response_mode *(ResponseMode) expected response from the auth/acl server. STATUS (code), JSON, or TEXT.
+            - user_agent *(str) the 'User-Agent' header sent along with the request
+
+        ParamsMode:
+
+        for user authentication, the http server will receive in json or form format the following:
+            - username *(str)*
+            - password *(str)*
+            - client_id *(str)*
+
+        for superuser validation, the http server will receive in json or form format the following:
+            - username *(str)*
+
+        for acl check, the http server will receive in json or form format the following:
+            - username *(str)*
+            - client_id *(str)*
+            - topic *(str)*
+            - acc *(int)* read only = 1, write only = 2, read & write = 3 and subscribe = 4
+        """
+
         host: str
         port: int
-        get_user_uri: str
+        user_uri: str
         acl_uri: str
         request_method: RequestMethod = RequestMethod.GET
         params_mode: ParamsMode = ParamsMode.JSON
-        get_superuser_uri: str | None = None
-        with_tls: bool = False
         response_mode: ResponseMode = ResponseMode.JSON
-        timeout: int = 5
+        with_tls: bool = False
         user_agent: str = "amqtt"
+
+        superuser_uri: str | None = None
+        timeout: int = 5
