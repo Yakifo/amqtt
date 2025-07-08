@@ -25,6 +25,7 @@ export default function MainGrid() {
   const [serverUptime, setServerUptime] = useState<string>('');
   const [cpuPercent, setCpuPercent] = useState<DataPoint[]>([]);
   const [memSize, setMemSize] = useState<DataPoint[]>([]);
+  const [version, setVersion] = useState<string>('');
 
   function getRandomInt(min: number, max: number) {
     min = Math.ceil(min);
@@ -62,6 +63,7 @@ export default function MainGrid() {
 
   useEffect(() => {
     if (isConnected) {
+      mqttSubscribe('$SYS/broker/version');
       mqttSubscribe('$SYS/broker/messages/publish/#');
       mqttSubscribe('$SYS/broker/load/bytes/#');
       mqttSubscribe('$SYS/broker/uptime/formatted');
@@ -73,14 +75,14 @@ export default function MainGrid() {
   }, [isConnected, mqttSubscribe]);
 
   const topic_map: TopicMap = {
-  '$SYS/broker/messages/publish/sent': { current: sent, update: setSent },
-  '$SYS/broker/messages/publish/received': { current: received, update: setReceived },
-  '$SYS/broker/load/bytes/received': { current: bytesIn, update: setBytesIn },
-  '$SYS/broker/load/bytes/sent': { current: bytesOut, update: setBytesOut },
-  '$SYS/broker/clients/connected': { current: clientsConnected, update: setClientsConnected },
-    '$SYS/broker/cpu/percent': { current: cpuPercent, update: setCpuPercent},
-    '$SYS/broker/heap/size': { current: memSize, update: setMemSize}
-};
+    '$SYS/broker/messages/publish/sent': {current: sent, update: setSent},
+    '$SYS/broker/messages/publish/received': {current: received, update: setReceived},
+    '$SYS/broker/load/bytes/received': {current: bytesIn, update: setBytesIn},
+    '$SYS/broker/load/bytes/sent': {current: bytesOut, update: setBytesOut},
+    '$SYS/broker/clients/connected': {current: clientsConnected, update: setClientsConnected},
+    '$SYS/broker/cpu/percent': {current: cpuPercent, update: setCpuPercent},
+    '$SYS/broker/heap/size': {current: memSize, update: setMemSize},
+  };
 
   useEffect(() => {
 
@@ -103,6 +105,8 @@ export default function MainGrid() {
         } else if (payload.topic === '$SYS/broker/uptime') {
           const {days, hours, minutes, seconds} = secondsToDhms(d);
           setServerUptime(`${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`);
+        } else if(payload.topic === '$SYS/broker/version') {
+          setVersion(d);
         }
       } catch (e) {
         console.log(e);
@@ -220,9 +224,7 @@ export default function MainGrid() {
         columns={12}
         sx={{mb: (theme) => theme.spacing(2)}}
       ><Grid size={{xs: 12, md: 12}}>
-
-
-        <strong>broker started at </strong> {serverStart} &nbsp;&nbsp;&nbsp;&nbsp;
+        <strong>broker</strong> ('{version}') <strong>started at </strong> {serverStart} &nbsp;&nbsp;&nbsp;
         <strong>up for</strong> {serverUptime}
       </Grid>
         <Grid size={{xs: 12, md: 6}}>
