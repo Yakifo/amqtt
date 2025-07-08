@@ -95,10 +95,7 @@ class Server:
 
 
 class BrokerContext(BaseContext):
-    """BrokerContext is used as the context passed to plugins interacting with the broker.
-
-    It act as an adapter to broker services from plugins developed for HBMQTT broker.
-    """
+    """Used to provide the server's context as well as public methods for accessing internal state."""
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
@@ -106,6 +103,7 @@ class BrokerContext(BaseContext):
         self._broker_instance = broker
 
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
+        """Send message to all client sessions subscribing to `topic`."""
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
     async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
@@ -117,7 +115,7 @@ class BrokerContext(BaseContext):
             yield session[0]
 
     def get_session(self, client_id: str) -> Session | None:
-        # only return the session, not the broker handler
+        """Return the session associated with `client_id`, if it exists."""
         return self._broker_instance.sessions.get(client_id, (None, None))[0]
 
     @property
@@ -129,7 +127,11 @@ class BrokerContext(BaseContext):
         return self._broker_instance.subscriptions
 
     async def add_subscription(self, client_id: str, topic: str|None, qos: int|None) -> None:
+        """Create a topic subscription for the given `client_id`.
 
+        If a client session doesn't exist for `client_id`, create a disconnected session.
+        If `topic` and `qos` are both `None`, only create the client session.
+        """
         if client_id not in self._broker_instance.sessions:
             broker_handler, session = self._broker_instance.create_offline_session(client_id)
             self._broker_instance._sessions[client_id] = (session, broker_handler)  # noqa: SLF001

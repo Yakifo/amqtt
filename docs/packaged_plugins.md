@@ -248,6 +248,10 @@ plugins:
 
 Plugin to store session information and retained topic messages in the event that the broker terminates abnormally.
 
+This plugin requires additional dependencies:
+
+`pip install amqtt[db]`
+
 **Configuration**
 
 - `file` - *(string)* path & filename to store the session db. default: `amqtt.db`
