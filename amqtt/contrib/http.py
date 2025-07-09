@@ -80,6 +80,7 @@ class HttpAuthACL(BaseAuthPlugin, BaseTopicPlugin):
                 kwargs = { "json": payload}
 
         async with self.method(url, **kwargs) as r:  # type: ignore[arg-type]
+            logger.debug(f"http request returned {r.status}")
             if not self._is_2xx(r):
                 return False
 

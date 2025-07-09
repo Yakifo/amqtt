@@ -56,7 +56,7 @@ class FormAuthView(web.View):
 
 @pytest.fixture
 async def empty_broker():
-    config = {'listeners': {'default': { 'type': 'tcp', 'bind': 'localhost:1883'}}, 'plugins': {}}
+    config = {'listeners': {'default': { 'type': 'tcp', 'bind': '127.0.0.1:1883'}}, 'plugins': {}}
     broker = Broker(config)
     yield broker
 
@@ -70,10 +70,10 @@ async def http_auth_server():
     ])
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", 8080)
+    site = web.TCPSite(runner, "127.0.0.1", 8080)
     await site.start()
 
-    yield f"http://localhost:8080"
+    yield f"http://127.0.0.1:8080"
 
     await runner.cleanup()
 
@@ -92,7 +92,7 @@ def generate_use_cases(root_url):
                 url = f'/{root_url}/json' if params == ParamsMode.JSON else f'/{root_url}/form'
                 for is_authenticated in [True, False]:
                     prefix = '' if is_authenticated else 'not'
-                    case = (url, request, params, response, str(response), f"{prefix}{str(response)}", is_authenticated)
+                    case = (url, request, params, response, response.value, f"{prefix}{response.value}", is_authenticated)
                     cases.append(case)
     return cases
 
@@ -110,7 +110,7 @@ async def test_request_auth_response(empty_broker, http_auth_server, url,
 
     context = BrokerContext(broker=empty_broker)
     context.config = HttpAuthACL.Config(
-        host="localhost",
+        host="127.0.0.1",
         port=8080,
         user_uri=url,
         acl_uri="/acl",
@@ -181,10 +181,10 @@ async def http_acl_server():
     ])
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", 8080)
+    site = web.TCPSite(runner, "127.0.0.1", 8080)
     await site.start()
 
-    yield f"http://localhost:8080"
+    yield f"http://127.0.0.1:8080"
 
     await runner.cleanup()
 
@@ -203,7 +203,7 @@ async def test_request_acl_response(empty_broker, http_acl_server, url,
 
     context = BrokerContext(broker=empty_broker)
     context.config = HttpAuthACL.Config(
-        host="localhost",
+        host="127.0.0.1",
         port=8080,
         user_uri='/user',
         acl_uri=url,
@@ -218,5 +218,5 @@ async def test_request_acl_response(empty_broker, http_acl_server, url,
     s.client_id = client_id
     t = 'my/topic'
     a = Action.PUBLISH
-
+    logger.debug(f"username: {username}, client_id: {client_id}, topic: {t}")
     assert await http_acl.topic_filtering(session=s, topic=t, action=a) == is_authenticated
