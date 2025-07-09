@@ -2,12 +2,10 @@ import asyncio
 import inspect
 import logging
 from functools import partial
-from importlib.metadata import EntryPoint
 from logging import getLogger
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Coroutine
-from unittest.mock import patch
 
 import pytest
 
@@ -16,10 +14,10 @@ from amqtt.broker import Broker, BrokerContext
 from amqtt.client import MQTTClient
 from amqtt.errors import PluginInitError, PluginImportError
 from amqtt.events import MQTTEvents, BrokerEvents
-from amqtt.mqtt.constants import QOS_0, QOS_2, QOS_1
+from amqtt.mqtt.constants import QOS_0, QOS_1
 from amqtt.plugins.base import BasePlugin
 from amqtt.contexts import BaseContext
-from amqtt.plugins.persistence import RetainedMessage
+from amqtt.contrib.persistence import RetainedMessage
 
 _INVALID_METHOD: str = "invalid_foo"
 _PLUGIN: str = "Plugin"

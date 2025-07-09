@@ -10,9 +10,8 @@ from sqlalchemy import select
 
 from amqtt.broker import Broker, BrokerContext, RetainedApplicationMessage
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_0, QOS_1
-from amqtt.plugins.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage, \
-    StoredMessage
+from amqtt.mqtt.constants import QOS_1
+from amqtt.contrib.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -396,7 +395,7 @@ def db_config(db_file):
         },
         'plugins': {
             'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': False},
-            'amqtt.plugins.persistence.SessionDBPlugin': {
+            'amqtt.contrib.SessionDBPlugin': {
                 'file': db_file,
                 'clear_on_shutdown': False
 
