@@ -1,0 +1,7 @@
+docs/**
+docs_test/**
+docs_web/**
+tests/**
+htmlcov/**
+cache/**
+dist/**
