@@ -97,8 +97,20 @@ class HttpAuthACL(BaseAuthPlugin, BaseTopicPlugin):
     async def topic_filtering(self, *,
                         session: Session | None = None,
                         topic: str | None = None,
-                        action: Action | None = None) -> bool:
-        return False
+                        action: Action | None = None) -> bool | None:
+        if not session:
+            return None
+        acc = 0
+        match action:
+            case Action.PUBLISH:
+                acc = 2
+            case Action.SUBSCRIBE:
+                acc = 4
+            case Action.RECEIVE:
+                acc = 1
+
+        d = {"username": session.username, "client_id": session.client_id, "topic": topic, "acc": acc}
+        return await self._send_request(self.get_url(self.config.acl_uri), d)
 
     @dataclass
     class Config:
@@ -128,7 +140,7 @@ class HttpAuthACL(BaseAuthPlugin, BaseTopicPlugin):
             - username *(str)*
             - client_id *(str)*
             - topic *(str)*
-            - acc *(int)* read only = 1, write only = 2, read & write = 3 and subscribe = 4
+            - acc *(int)* client can receive (1), can publish(2), can receive & publish (3) and can subscribe (4)
         """
 
         host: str

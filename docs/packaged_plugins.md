@@ -134,13 +134,18 @@ plugins:
 
 **Configuration**
 
-- `acl` *(mapping)*: determines subscription access
+- `subscribe-acl` *(mapping)*: determines subscription access. If absent, no restrictions are placed on client subscriptions.
    The list should be a key-value pair, where:
-        `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+      `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
 
+- `acl` *(mapping)*: Deprecated and replaced by `subscribe-acl`.
 
-- `publish-acl` *(mapping)*: determines publish access. If absent, no restrictions are placed on client publishing. 
-        `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+- `publish-acl` *(mapping)*: determines publish access. If absent, no restrictions are placed on client publishing.
+     `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+
+- `receive-acl` *(mapping)*: determines if a message can be sent. If absent, no restrictions are placed on client's receiving messages. 
+      `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+ 
 
     !!! info "Reserved usernames"
 

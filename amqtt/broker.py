@@ -681,7 +681,7 @@ class Broker:
 
         permitted = await self._topic_filtering(client_session, topic=app_message.topic, action=Action.PUBLISH)
         if not permitted:
-            self.logger.info(f"{client_session.client_id} forbidden TOPIC {app_message.topic} sent in PUBLISH message.")
+            self.logger.info(f"{client_session.client_id} not allowed to publish to TOPIC {app_message.topic}.")
         else:
             await self.plugins_manager.fire_event(
                 BrokerEvents.MESSAGE_RECEIVED,
@@ -891,6 +891,12 @@ class Broker:
 
             for target_session, sub_qos in subscriptions:
                 qos = broadcast.get("qos", sub_qos)
+
+                sendable = await self._topic_filtering(target_session, topic=broadcast["topic"], action=Action.RECEIVE)
+                if not sendable:
+                    self.logger.info(
+                        f"{target_session.client_id} not allowed to receive messages from TOPIC {broadcast['topic']}.")
+                    continue
 
                 # Retain all messages which cannot be broadcasted, due to the session not being connected
                 #  but only when clean session is false and qos is 1 or 2 [MQTT 3.1.2.4]

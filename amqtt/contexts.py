@@ -20,3 +20,4 @@ class Action(Enum):
 
     SUBSCRIBE = "subscribe"
     PUBLISH = "publish"
+    RECEIVE = "receive"
