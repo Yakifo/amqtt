@@ -1,16 +1,13 @@
 import logging
-from ast import Param
-from asyncio import new_event_loop
-from typing import Awaitable
 
 import pytest
 import pytest_asyncio
 from aiohttp import web
-from aiohttp.web import Response, Request
+from aiohttp.web import Response
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.contexts import Action
-from amqtt.contrib.http_acl import HttpAuthACL, ParamsMode, ResponseMode, RequestMethod
+from amqtt.contrib.http import HttpAuthACL, ParamsMode, ResponseMode, RequestMethod
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
