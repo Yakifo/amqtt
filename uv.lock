@@ -37,7 +37,7 @@ dependencies = [
 ci = [
     { name = "coveralls" },
 ]
-db = [
+contrib = [
     { name = "aiosqlite" },
     { name = "greenlet" },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -84,19 +84,19 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiosqlite", marker = "extra == 'db'", specifier = ">=0.21.0" },
+    { name = "aiosqlite", marker = "extra == 'contrib'", specifier = ">=0.21.0" },
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
     { name = "dacite", specifier = ">=1.9.2" },
-    { name = "greenlet", marker = "extra == 'db'", specifier = ">=3.2.3" },
+    { name = "greenlet", marker = "extra == 'contrib'", specifier = ">=3.2.3" },
     { name = "passlib", specifier = "==1.7.4" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
-    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'db'", specifier = ">=2.0.41" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'contrib'", specifier = ">=2.0.41" },
     { name = "transitions", specifier = "==0.9.2" },
     { name = "typer", specifier = "==0.15.4" },
     { name = "websockets", specifier = "==15.0.1" },
 ]
-provides-extras = ["ci", "db"]
+provides-extras = ["ci", "db", "contrib"]
 
 [package.metadata.requires-dev]
 dev = [

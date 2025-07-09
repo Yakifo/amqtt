@@ -80,7 +80,7 @@ docs = [
 
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
-db = [
+contrib = [
     "aiosqlite>=0.21.0",
     "greenlet>=3.2.3",
     "sqlalchemy[asyncio]>=2.0.41",

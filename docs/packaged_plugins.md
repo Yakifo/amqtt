@@ -1,4 +1,4 @@
-# Existing Plugins
+# Packaged Plugins
 
 With the aMQTT plugins framework, one can add additional functionality without
 having to rewrite core logic in the broker or client. Plugins can be loaded and configured using
@@ -240,29 +240,3 @@ and `on_mqtt_packet_received`.
 plugins:
   amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
 ```
-
-
-### Session Persistence
-
-`amqtt.plugins.persistence.SessionDBPlugin`
-
-Plugin to store session information and retained topic messages in the event that the broker terminates abnormally.
-
-This plugin requires additional dependencies:
-
-`pip install amqtt[db]`
-
-**Configuration**
-
-- `file` - *(string)* path & filename to store the session db. default: `amqtt.db`
-- `clear_on_shutdown` *(bool)* if the broker shutdowns down normally, don't retain any information. default: `True`
-
-```yaml
-plugins:
-  amqtt.plugins.persistence.SessionDBPlugin:
-    file: 'amqtt.db'
-    clear_on_shutdown: True
-```
-
-
-
