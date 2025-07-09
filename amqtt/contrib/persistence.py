@@ -2,7 +2,6 @@ from dataclasses import asdict, dataclass, is_dataclass
 import logging
 from pathlib import Path
 from typing import Any, TypeVar
-import warnings
 
 from sqlalchemy import JSON, Boolean, Integer, LargeBinary, Result, String, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -15,13 +14,6 @@ from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
-
-
-class SQLitePlugin(BasePlugin[BrokerContext]):
-
-    def __init__(self, context: BrokerContext) -> None:
-        super().__init__(context)
-        warnings.warn("SQLitePlugin is deprecated, use amqtt.plugins.persistence.SessionDBPlugin", stacklevel=1)
 
 
 class Base(DeclarativeBase):
