@@ -96,7 +96,7 @@ requires-dist = [
     { name = "typer", specifier = "==0.15.4" },
     { name = "websockets", specifier = "==15.0.1" },
 ]
-provides-extras = ["ci", "db", "contrib"]
+provides-extras = ["ci", "contrib"]
 
 [package.metadata.requires-dev]
 dev = [
