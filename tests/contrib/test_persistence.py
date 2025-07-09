@@ -395,7 +395,7 @@ def db_config(db_file):
         },
         'plugins': {
             'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': False},
-            'amqtt.contrib.SessionDBPlugin': {
+            'amqtt.contrib.persistence.SessionDBPlugin': {
                 'file': db_file,
                 'clear_on_shutdown': False
 
