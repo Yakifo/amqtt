@@ -14,8 +14,6 @@ Plugin to store session information and retained topic messages in the event tha
 
 This plugin requires additional dependencies:
 
-
-
 **Configuration**
 
 - `file` - *(string)* path & filename to store the session db. default: `amqtt.db`

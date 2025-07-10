@@ -1,1 +1,1 @@
-"""Package for plugins contributed by community members."""
+"""Module for plugins requiring additional dependencies."""

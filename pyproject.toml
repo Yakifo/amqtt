@@ -20,7 +20,7 @@ classifiers = [
   "Programming Language :: Python :: 3.13"
 ]
 
-version = "0.11.1"
+version = "0.11.3-rc.1"
 requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }
@@ -211,7 +211,6 @@ log_level = "DEBUG"
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]
 exclude = ["^tests/.*", "^docs/.*", "^samples/.*"]
-plugins = ['sqlalchemy.ext.mypy.plugin']
 follow_imports = "silent"
 show_error_codes = true
 ignore_missing_imports = true
