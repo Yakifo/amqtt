@@ -5,7 +5,7 @@ Plugins that are not part of the core functionality of the aMQTT broker or clien
 
 ## Authentication & Topic Access via external HTTP server
 
-`amqtt.contrib.http.HttpAuthACLPlugin`
+`amqtt.contrib.http.HttpAuthTopicPlugin`
 
 If clients accessing the broker are managed by another application, implement API endpoints
 that allows the broker to check if a client is authenticated and what topics that client
@@ -15,8 +15,8 @@ is authorized to access.
 
 - `host` *(str) hostname of the server for the auth & acl check
 - `port` *(int) port of the server for the auth & acl check
-- `user_uri` *(str) uri of the topic check (e.g. '/user')
-- `acl_uri` *(str) uri of the topic check (e.g. '/acl')
+- `user_uri` *(str) uri of the user auth check (e.g. '/user')
+- `topic_uri` *(str) uri of the topic check (e.g. '/acl')
 - `request_method` *(RequestMethod) send the request as a GET, POST or PUT
 - `params_mode` *(ParamsMode) send the request with json or form data
 - `response_mode` *(ResponseMode) expected response from the auth/acl server. STATUS (code), JSON, or TEXT.

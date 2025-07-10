@@ -8,7 +8,7 @@ from aiohttp.web import Response
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.contexts import Action
-from amqtt.contrib.http import HttpAuthACLPlugin, ParamsMode, ResponseMode, RequestMethod
+from amqtt.contrib.http import HttpAuthTopicPlugin, ParamsMode, ResponseMode, RequestMethod
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -135,16 +135,16 @@ async def test_request_acl_response(empty_broker, http_server, kind, url,
                                      username, matcher, is_allowed):
 
     context = BrokerContext(broker=empty_broker)
-    context.config = HttpAuthACLPlugin.Config(
+    context.config = HttpAuthTopicPlugin.Config(
         host="127.0.0.1",
         port=8080,
         user_uri=url,
-        acl_uri=url,
+        topic_uri=url,
         request_method=request_method,
         params_mode=params_mode,
         response_mode=response_mode,
     )
-    http_acl = HttpAuthACLPlugin(context)
+    http_acl = HttpAuthTopicPlugin(context)
     logger.warning(f'kind is {kind}')
     if kind == TestKind.ACL:
         s = Session()
