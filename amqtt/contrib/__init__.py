@@ -1,1 +1,1 @@
-"""additional plugin and other contributions."""
+"""Module for plugins requiring additional dependencies."""
