@@ -137,7 +137,7 @@ class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
                 acc = 1
 
         d = {"username": session.username, "client_id": session.client_id, "topic": topic, "acc": acc}
-        return await self._send_request(self.get_url(self.config.acl_uri), d)
+        return await self._send_request(self.get_url(self.config.topic_uri), d)
 
     @dataclass
     class Config:
@@ -147,7 +147,7 @@ class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
             - host *(str) hostname of the server for the auth & acl check
             - port *(int) port of the server for the auth & acl check
             - user_uri *(str) uri of the topic check (e.g. '/user')
-            - acl_uri *(str) uri of the topic check (e.g. '/acl')
+            - topic_uri *(str) uri of the topic check (e.g. '/acl')
             - request_method *(RequestMethod) send the request as a GET, POST or PUT
             - params_mode *(ParamsMode) send the request with json or form data
             - response_mode *(ResponseMode) expected response from the auth/acl server. STATUS (code), JSON, or TEXT.
