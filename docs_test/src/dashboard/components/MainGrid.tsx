@@ -95,7 +95,8 @@ export default function MainGrid() {
         if(payload.topic in topic_map) {
           const { update } = topic_map[payload.topic];
           const newPoint: DataPoint = {
-            timestamp: new Date().toISOString(),
+            time: new Date().toISOString(),
+            timestamp: Date.now(),
             value: d
           };
           update(current => [...current, newPoint])
@@ -228,10 +229,10 @@ export default function MainGrid() {
         <strong>up for</strong> {serverUptime}
       </Grid>
         <Grid size={{xs: 12, md: 6}}>
-          <SessionsChart title={'Sent Messages'} label={''} data={sent} isConnected={isConnected}/>
+          <SessionsChart title={'Sent Messages'} label={''} data={sent} isConnected={isConnected} isPerSecond/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
-          <SessionsChart title={'Received Messages'} label={''} data={received} isConnected={isConnected}/>
+          <SessionsChart title={'Received Messages'} label={''} data={received} isConnected={isConnected} isPerSecond/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
           <SessionsChart title={'Bytes Out'} label={'Bytes'} data={bytesOut} isConnected={isConnected}/>
