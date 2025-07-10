@@ -56,7 +56,7 @@ class WriterAdapter(ABC):
 
     @abstractmethod
     def get_ssl_info(self) -> ssl.SSLObject | None:
-        """Return peer socket info (remote address and remote port as tuple)."""
+        """Return peer certificate information (if available) used to establish a TLS session."""
         raise NotImplementedError
 
     @abstractmethod
