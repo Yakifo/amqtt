@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def determine_response(d, matcher_field) -> Response:
+    """The request's parameters determine what response is expected."""
     if d['username'] == 'json':
         # special case, i_am_null respond with None
         if d[matcher_field] == 'i_am_null':
@@ -37,7 +38,7 @@ async def empty_broker():
 
 
 async def all_request_handler(request: web.Request) -> Response:
-
+    """The url and method type is used determine how the data was passed to the request."""
     if 'form' in str(request.url):
         if request.method == 'GET':
             d = request.query
@@ -66,7 +67,7 @@ async def all_request_handler(request: web.Request) -> Response:
 async def http_server():
     app = web.Application()
 
-    # create all the routes for the various configuration options
+    # create all the routes for the various configuration options to handle the various use cases
     routes = []
     for test_kind in ('user', 'acl'):
         for test_data in ('json', 'form'):
@@ -96,8 +97,8 @@ class TestKind(Enum):
 
 
 def generate_use_cases():
-    # generate all variations of:
-    # (TestKind.AUTH, '/user/json', RequestMethod.GET, ParamsMode.JSON, ResponseMode.JSON, 'json', 'json', True),
+    # generate all variations of the plugin's configuration options for both auth and topic
+    # e.g. (TestKind.AUTH, '/user/json', RequestMethod.GET, ParamsMode.JSON, ResponseMode.JSON, 'json', 'json', True),
 
     cases: list[tuple[str, str, RequestMethod, ParamsMode, ResponseMode, str, str, bool]] = []
     for kind in TestKind:
