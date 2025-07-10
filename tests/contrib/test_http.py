@@ -12,55 +12,19 @@ from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
 
-
-def determine_auth_response(d) -> Response:
-    # check that auth response contains the correct params
-    assert 'username' in d
-    assert 'password' in d
-    assert 'client_id' in d
-    # use the username to determine response kind
+def determine_response(d, matcher_field) -> Response:
     if d['username'] == 'json':
         # special case, i_am_null respond with None
-        if d['password'] == 'i_am_null':
+        if d[matcher_field] == 'i_am_null':
             return web.json_response({'Ok': None})
         # otherwise, respond depending on if username and client_id match
-        return web.json_response({'Ok': d['username'] == d['password']})
+        return web.json_response({'Ok': d['username'] == d[matcher_field]})
     elif d['username'] == 'status':
-        if d['password'] == 'i_am_null':
+        if d[matcher_field] == 'i_am_null':
             return web.Response(status=500)
-        return web.Response(status=200) if d['username'] == d['password'] else web.Response(status=400)
+        return web.Response(status=200) if d['username'] == d[matcher_field] else web.Response(status=400)
     else: # text
-        return web.Response(text='ok' if d['username'] == d['password'] else 'error')
-
-# aiohttp doesn't have a common `dispatch` method like django; therefore, need to take the non-DRY approach...
-class JsonAuthView(web.View):
-
-    async def get(self) -> Response:
-        d = await self.request.json()
-        return determine_auth_response(d)
-
-    async def post(self) -> Response:
-        d = dict(await self.request.json())
-        return determine_auth_response(d)
-
-    async def put(self) -> Response:
-        d = dict(await self.request.json())
-        return determine_auth_response(d)
-
-class FormAuthView(web.View):
-
-    async def get(self) -> Response:
-        d = self.request.query
-        return determine_auth_response(d)
-
-    async def post(self) -> Response:
-        d = dict(await self.request.post())
-        return determine_auth_response(d)
-
-    async def put(self) -> Response:
-        d = dict(await self.request.post())
-        return determine_auth_response(d)
-
+        return web.Response(text='ok' if d['username'] == d[matcher_field] else 'error')
 
 @pytest.fixture
 async def empty_broker():
@@ -68,13 +32,48 @@ async def empty_broker():
     broker = Broker(config)
     yield broker
 
+async def all_request_handler(request: web.Request) -> Response:
+
+    if 'form' in str(request.url):
+        if request.method == 'GET':
+            d = request.query
+        else:
+            d = dict(await request.post())
+    else:
+        d = dict(await request.json())
+
+    if '/user' in str(request.url):
+        matcher = 'password'
+        assert 'username' in d
+        assert 'password' in d
+        assert 'client_id' in d
+    else:
+        assert 'username' in d
+        assert 'client_id' in d
+        assert 'topic' in d
+        assert 'acc' in d
+        assert 1 <= int(d['acc']) <= 4
+        matcher = 'client_id'
+
+    return determine_response(d, matcher)
+
 
 @pytest_asyncio.fixture
-async def http_auth_server():
+async def http_server():
     app = web.Application()
     app.add_routes([
-        web.view('/user/json', JsonAuthView),
-        web.view('/user/form', FormAuthView),
+        web.get('/user/json', all_request_handler),
+        web.post('/user/json', all_request_handler),
+        web.put('/user/json', all_request_handler),
+        web.get('/user/form', all_request_handler),
+        web.post('/user/form', all_request_handler),
+        web.put('/user/form', all_request_handler),
+        web.get('/acl/json', all_request_handler),
+        web.post('/acl/json', all_request_handler),
+        web.put('/acl/json', all_request_handler),
+        web.get('/acl/form', all_request_handler),
+        web.post('/acl/form', all_request_handler),
+        web.put('/acl/form', all_request_handler),
     ])
     runner = web.AppRunner(app)
     await runner.setup()
@@ -86,8 +85,9 @@ async def http_auth_server():
     await runner.cleanup()
 
 
-def test_server_up_and_down(http_auth_server):
+def test_server_up_and_down(http_server):
     pass
+
 
 def generate_use_cases(root_url):
     # generate all variations of:
@@ -118,12 +118,12 @@ def test_generated_use_cases():
     assert len(cases) == 54
 
 
-@pytest.mark.parametrize("url,request_method,params_mode,response_mode,username,password,is_authenticated",
+@pytest.mark.parametrize("url,request_method,params_mode,response_mode,username,password,is_allowed",
                          generate_use_cases('user'))
 @pytest.mark.asyncio
-async def test_request_auth_response(empty_broker, http_auth_server, url,
-                                       request_method, params_mode, response_mode,
-                                       username, password, is_authenticated):
+async def test_request_auth_response(empty_broker, http_server, url,
+                                     request_method, params_mode, response_mode,
+                                     username, password, is_allowed):
 
     context = BrokerContext(broker=empty_broker)
     context.config = HttpAuthACLPlugin.Config(
@@ -141,91 +141,17 @@ async def test_request_auth_response(empty_broker, http_auth_server, url,
     session.client_id = "my_client_id"
     session.username = username
     session.password = password
-    assert await http_acl.authenticate(session=session) == is_authenticated
+    assert await http_acl.authenticate(session=session) == is_allowed
 
     await http_acl.on_broker_pre_shutdown()
 
 
-def determine_acl_response(d) -> Response:
-    # make sure the params have the right categories
-    assert 'username' in d
-    assert 'client_id' in d
-    assert 'topic' in d
-    assert 'acc' in d
-    assert 1 <= int(d['acc']) <= 4
-    # use the username to determine response kind
-    if d['username'] == 'json':
-        # special case, i_am_null respond with None
-        if d['client_id'] == 'i_am_null':
-            return web.json_response({'Ok': None})
-        # otherwise, respond depending on if username and client_id match
-        return web.json_response({'Ok': d['username'] == d['client_id']})
-    elif d['username'] == 'status':
-        if d['client_id'] == 'i_am_null':
-            return web.Response(status=500)
-        return web.Response(status=200) if d['username'] == d['client_id'] else web.Response(status=400)
-    else: # text
-        return web.Response(text='ok' if d['username'] == d['client_id'] else 'error')
-
-
-class JsonACLView(web.View):
-
-    async def get(self) -> Response:
-        d = await self.request.json()
-        return determine_acl_response(d)
-
-    async def post(self) -> Response:
-        d = dict(await self.request.json())
-        return determine_acl_response(d)
-
-    async def put(self) -> Response:
-        d = dict(await self.request.json())
-        return determine_acl_response(d)
-
-
-class FormACLView(web.View):
-
-    async def get(self) -> Response:
-        d = self.request.query
-        return determine_acl_response(d)
-
-    async def post(self) -> Response:
-        d = dict(await self.request.post())
-        return determine_acl_response(d)
-
-    async def put(self) -> Response:
-        d = dict(await self.request.post())
-        return determine_acl_response(d)
-
-
-@pytest_asyncio.fixture
-async def http_acl_server():
-    app = web.Application()
-    app.add_routes([
-        web.view('/acl/json', JsonACLView),
-        web.view('/acl/form', FormACLView),
-    ])
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "127.0.0.1", 8080)
-    await site.start()
-
-    yield f"http://127.0.0.1:8080"
-
-    await runner.cleanup()
-
-
-@pytest.mark.parametrize("url,request_method,params_mode,response_mode,username,client_id,is_authenticated",
+@pytest.mark.parametrize("url,request_method,params_mode,response_mode,username,client_id,is_allowed",
                              generate_use_cases('acl'))
 @pytest.mark.asyncio
-async def test_request_acl_response(empty_broker, http_acl_server, url,
+async def test_request_acl_response(empty_broker, http_server, url,
                                      request_method, params_mode, response_mode,
-                                     username, client_id, is_authenticated):
-
-    # url = '/acl/json'
-    # request_method = RequestMethod.GET
-    # params_mode = ParamsMode.JSON
-    # response_mode = ResponseMode.JSON
+                                     username, client_id, is_allowed):
 
     context = BrokerContext(broker=empty_broker)
     context.config = HttpAuthACLPlugin.Config(
@@ -244,5 +170,5 @@ async def test_request_acl_response(empty_broker, http_acl_server, url,
     s.client_id = client_id
     t = 'my/topic'
     a = Action.PUBLISH
-    logger.debug(f"username: {username}, client_id: {client_id}, topic: {t}")
-    assert await http_acl.topic_filtering(session=s, topic=t, action=a) == is_authenticated
+    
+    assert await http_acl.topic_filtering(session=s, topic=t, action=a) == is_allowed
