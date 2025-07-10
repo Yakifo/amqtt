@@ -7,51 +7,59 @@ from aiohttp.web import Response
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.contexts import Action
-from amqtt.contrib.http import HttpAuthACL, ParamsMode, ResponseMode, RequestMethod
+from amqtt.contrib.http import HttpAuthACLPlugin, ParamsMode, ResponseMode, RequestMethod
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
 
 
-def determine_auth_response_mode(d) -> Response:
+def determine_auth_response(d) -> Response:
+    # check that auth response contains the correct params
     assert 'username' in d
     assert 'password' in d
     assert 'client_id' in d
+    # use the username to determine response kind
     if d['username'] == 'json':
+        # special case, i_am_null respond with None
+        if d['password'] == 'i_am_null':
+            return web.json_response({'Ok': None})
+        # otherwise, respond depending on if username and client_id match
         return web.json_response({'Ok': d['username'] == d['password']})
     elif d['username'] == 'status':
+        if d['password'] == 'i_am_null':
+            return web.Response(status=500)
         return web.Response(status=200) if d['username'] == d['password'] else web.Response(status=400)
     else: # text
         return web.Response(text='ok' if d['username'] == d['password'] else 'error')
 
-
+# aiohttp doesn't have a common `dispatch` method like django; therefore, need to take the non-DRY approach...
 class JsonAuthView(web.View):
 
     async def get(self) -> Response:
         d = await self.request.json()
-        return determine_auth_response_mode(d)
+        return determine_auth_response(d)
 
     async def post(self) -> Response:
         d = dict(await self.request.json())
-        return determine_auth_response_mode(d)
+        return determine_auth_response(d)
 
     async def put(self) -> Response:
         d = dict(await self.request.json())
-        return determine_auth_response_mode(d)
+        return determine_auth_response(d)
 
 class FormAuthView(web.View):
 
     async def get(self) -> Response:
         d = self.request.query
-        return determine_auth_response_mode(d)
+        return determine_auth_response(d)
 
     async def post(self) -> Response:
         d = dict(await self.request.post())
-        return determine_auth_response_mode(d)
+        return determine_auth_response(d)
 
     async def put(self) -> Response:
         d = dict(await self.request.post())
-        return determine_auth_response_mode(d)
+        return determine_auth_response(d)
 
 
 @pytest.fixture
@@ -90,15 +98,24 @@ def generate_use_cases(root_url):
         for params in ParamsMode:
             for response in ResponseMode:
                 url = f'/{root_url}/json' if params == ParamsMode.JSON else f'/{root_url}/form'
-                for is_authenticated in [True, False]:
-                    prefix = '' if is_authenticated else 'not'
-                    case = (url, request, params, response, response.value, f"{prefix}{response.value}", is_authenticated)
+                for is_authenticated in [True, False, None]:
+                    if is_authenticated is None:
+                        pwd = 'i_am_null'
+                    elif is_authenticated:
+                        pwd = f'{response.value}'
+                    else:
+                        pwd = f'not{response.value}'
+
+                    if response == ResponseMode.TEXT and is_authenticated is None:
+                        is_authenticated = False
+
+                    case = (url, request, params, response, response.value, f"{pwd}", is_authenticated)
                     cases.append(case)
     return cases
 
 def test_generated_use_cases():
     cases = generate_use_cases('user')
-    assert len(cases) == 36
+    assert len(cases) == 54
 
 
 @pytest.mark.parametrize("url,request_method,params_mode,response_mode,username,password,is_authenticated",
@@ -109,7 +126,7 @@ async def test_request_auth_response(empty_broker, http_auth_server, url,
                                        username, password, is_authenticated):
 
     context = BrokerContext(broker=empty_broker)
-    context.config = HttpAuthACL.Config(
+    context.config = HttpAuthACLPlugin.Config(
         host="127.0.0.1",
         port=8080,
         user_uri=url,
@@ -118,7 +135,7 @@ async def test_request_auth_response(empty_broker, http_auth_server, url,
         params_mode=params_mode,
         response_mode=response_mode,
     )
-    http_acl = HttpAuthACL(context)
+    http_acl = HttpAuthACLPlugin(context)
 
     session = Session()
     session.client_id = "my_client_id"
@@ -130,13 +147,22 @@ async def test_request_auth_response(empty_broker, http_auth_server, url,
 
 
 def determine_acl_response(d) -> Response:
+    # make sure the params have the right categories
     assert 'username' in d
     assert 'client_id' in d
     assert 'topic' in d
     assert 'acc' in d
+    assert 1 <= int(d['acc']) <= 4
+    # use the username to determine response kind
     if d['username'] == 'json':
+        # special case, i_am_null respond with None
+        if d['client_id'] == 'i_am_null':
+            return web.json_response({'Ok': None})
+        # otherwise, respond depending on if username and client_id match
         return web.json_response({'Ok': d['username'] == d['client_id']})
     elif d['username'] == 'status':
+        if d['client_id'] == 'i_am_null':
+            return web.Response(status=500)
         return web.Response(status=200) if d['username'] == d['client_id'] else web.Response(status=400)
     else: # text
         return web.Response(text='ok' if d['username'] == d['client_id'] else 'error')
@@ -202,7 +228,7 @@ async def test_request_acl_response(empty_broker, http_acl_server, url,
     # response_mode = ResponseMode.JSON
 
     context = BrokerContext(broker=empty_broker)
-    context.config = HttpAuthACL.Config(
+    context.config = HttpAuthACLPlugin.Config(
         host="127.0.0.1",
         port=8080,
         user_uri='/user',
@@ -211,7 +237,7 @@ async def test_request_acl_response(empty_broker, http_acl_server, url,
         params_mode=params_mode,
         response_mode=response_mode,
     )
-    http_acl = HttpAuthACL(context)
+    http_acl = HttpAuthACLPlugin(context)
 
     s = Session()
     s.username = username

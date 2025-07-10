@@ -44,8 +44,11 @@ class ACLError(Exception):
 HTTP_2xx_MIN = 200
 HTTP_2xx_MAX = 300
 
+HTTP_4xx_MIN = 400
+HTTP_4xx_MAX = 500
 
-class HttpAuthACL(BaseAuthPlugin, BaseTopicPlugin):
+
+class HttpAuthACLPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
@@ -66,8 +69,11 @@ class HttpAuthACL(BaseAuthPlugin, BaseTopicPlugin):
     def _is_2xx(r: ClientResponse) -> bool:
         return HTTP_2xx_MIN <= r.status < HTTP_2xx_MAX
 
-    async def _send_request(self, url: str, payload: dict[str, Any]) -> bool:
+    @staticmethod
+    def _is_4xx(r: ClientResponse) -> bool:
+        return HTTP_4xx_MIN <= r.status < HTTP_4xx_MAX
 
+    def _get_params(self, payload: dict[str, Any]) -> dict[str, Any]:
         match self.config.params_mode:
             case ParamsMode.FORM:
                 match self.config.request_method:
@@ -78,20 +84,32 @@ class HttpAuthACL(BaseAuthPlugin, BaseTopicPlugin):
                         kwargs = {"data": d}
             case _:  # JSON
                 kwargs = { "json": payload}
+        return kwargs
 
-        async with self.method(url, **kwargs) as r:  # type: ignore[arg-type]
+    async def _send_request(self, url: str, payload: dict[str, Any]) -> bool|None: # pylint: disable=R0911
+
+        kwargs = self._get_params(payload)
+
+        async with self.method(url, **kwargs) as r:
             logger.debug(f"http request returned {r.status}")
-            if not self._is_2xx(r):
-                return False
 
             match self.config.response_mode:
                 case ResponseMode.TEXT:
-                    return (await r.text()).lower() == "ok"
+                    return self._is_2xx(r) and (await r.text()).lower() == "ok"
                 case ResponseMode.STATUS:
-                    return self._is_2xx(r)
+                    if self._is_2xx(r):
+                        return True
+                    if self._is_4xx(r):
+                        return False
+                    # any other code
+                    return None
                 case _:
+                    if not self._is_2xx(r):
+                        return False
                     data = await r.json()
                     for ok in ("OK", "Ok", "ok"):
+                        if ok in data and data[ok] is None:
+                            return None
                         if ok in data and isinstance(data[ok], bool):
                             return bool(data[ok])
             return False
