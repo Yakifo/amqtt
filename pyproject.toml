@@ -47,6 +47,7 @@ dev = [
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
   "psutil>=7.0.0", # https://pypi.org/project/psutil
   "pylint>=3.3.6", # https://pypi.org/project/pylint
+  "pyopenssl>=25.1.0",
   "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
   "pytest-cov>=6.1.0", # https://pypi.org/project/pytest-cov
   "pytest-logdog>=0.1.0", # https://pypi.org/project/pytest-logdog
@@ -80,6 +81,9 @@ docs = [
 
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
+contrib = [
+    "cryptography>=45.0.3",
+]
 
 
 
@@ -87,6 +91,8 @@ ci = ["coveralls==4.0.1"]
 amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
+server_creds = "amqtt.scripts.server_creds:main"
+device_creds = "amqtt.scripts.device_creds:main"
 
 [tool.hatch.build]
 exclude = [
@@ -194,13 +200,13 @@ max-returns = 10
 
 # ----------------------------------- PYTEST -----------------------------------
 [tool.pytest.ini_options]
-addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
+#addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 10
 asyncio_default_fixture_loop_scope = "function"
-#addopts = ["--tb=short", "--capture=tee-sys"]
-#log_cli = true
+addopts = ["--tb=short", "--capture=tee-sys"]
+log_cli = true
 log_level = "DEBUG"
 
 # ------------------------------------ MYPY ------------------------------------
