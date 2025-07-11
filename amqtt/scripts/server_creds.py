@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 import sys
+
 import typer
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ def server_creds(
         country:str = typer.Option(..., "--country", help="x509 'country_name' attribute"),
         org_name:str = typer.Option(..., "--org-name", help="x509 'organization_name' attribute"),
         cn: str = typer.Option(..., "--cn", help="x509 'common_name' attribute"),
-        output_dir: str = typer.Option(Path('.').resolve().absolute(), "--output-dir", help="output directory"),
+        output_dir: str = typer.Option(Path().resolve().absolute(), "--output-dir", help="output directory"),
         ca_key_fn:str = typer.Option("ca.key", "--ca-key", help="server key output filename."),
         ca_crt_fn:str = typer.Option("ca.crt", "--ca-crt", help="server cert output filename."),
 ) -> None:
@@ -25,7 +26,12 @@ def server_creds(
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
     try:
-        from amqtt.contrib.cert import generate_server_csr, sign_csr, write_key_and_crt, load_ca  # pylint: disable=import-outside-toplevel
+        from amqtt.contrib.cert import (  # pylint: disable=import-outside-toplevel
+            generate_server_csr,
+            load_ca,
+            sign_csr,
+            write_key_and_crt,
+        )
     except ImportError:
         msg = "Requires installation of the optional 'contrib' package: `pip install amqtt[contrib]`"
         logger.critical(msg)
@@ -36,7 +42,7 @@ def server_creds(
     server_key, server_csr = generate_server_csr(country=country, org_name=org_name, cn=cn)
     server_crt = sign_csr(server_csr, ca_key, ca_crt)
 
-    write_key_and_crt(server_key, server_crt, 'server', Path(output_dir))
+    write_key_and_crt(server_key, server_crt, "server", Path(output_dir))
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-import logging
-import re
 from ipaddress import IPv4Address
+import logging
 from pathlib import Path
+import re
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -56,6 +56,7 @@ class CertificateAuthPlugin(BaseAuthPlugin):
             - uri_domain *(str)* the domain that is expected as part of the device certificate's spiffe
 
         """
+
         uri_domain: str
 
 def generate_root_creds(country:str, state:str, locality:str,
@@ -200,7 +201,7 @@ def load_ca(ca_key_fn:str, ca_crt_fn:str) -> tuple[rsa.RSAPrivateKey, Certificat
 
 def write_key_and_crt(key, crt, prefix, path: Path | None = None) -> None:
 
-    path = path or Path('.')
+    path = path or Path()
 
     crt_fn = path / f"{prefix}.crt"
     key_fn = path / f"{prefix}.key"

@@ -466,9 +466,9 @@ class MQTTClient:
 
             )
 
-            if "certfile" in self.config and 'keyfile' in self.config:
-                sc.load_cert_chain(certfile=self.config['certfile'], keyfile=self.config['keyfile'])
-            if 'cafile' in self.config:
+            if "certfile" in self.config and "keyfile" in self.config:
+                sc.load_cert_chain(certfile=self.config["certfile"], keyfile=self.config["keyfile"])
+            if "cafile" in self.config:
                 sc.load_verify_locations(cafile=self.config["cafile"])
             if "check_hostname" in self.config and isinstance(self.config["check_hostname"], bool):
                 sc.check_hostname = self.config["check_hostname"]

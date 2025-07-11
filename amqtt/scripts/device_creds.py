@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 import sys
+
 import typer
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def device_creds( # pylint: disable=too-many-locals
         org_name: str = typer.Option(..., "--org-name", help="x509 'organization_name' attribute"),
         device_id: str = typer.Option(..., "--device-id", help="device id for the SAN"),
         uri: str = typer.Option(..., "--uri", help="domain name for device SAN"),
-        output_dir: str = typer.Option(Path('.').resolve().absolute(), "--output-dir", help="output directory"),
+        output_dir: str = typer.Option(Path().resolve().absolute(), "--output-dir", help="output directory"),
         ca_key_fn: str = typer.Option("ca.key", "--ca-key", help="root key filename used for signing."),
         ca_crt_fn: str = typer.Option("ca.crt", "--ca-crt", help="root cert filename used for signing."),
 ) -> None:
@@ -28,7 +29,12 @@ def device_creds( # pylint: disable=too-many-locals
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
     try:
-        from amqtt.contrib.cert import generate_device_csr, sign_csr, load_ca, write_key_and_crt  # pylint: disable=import-outside-toplevel
+        from amqtt.contrib.cert import (  # pylint: disable=import-outside-toplevel
+            generate_device_csr,
+            load_ca,
+            sign_csr,
+            write_key_and_crt,
+        )
     except ImportError:
         msg = "Requires installation of the optional 'contrib' package: `pip install amqtt[contrib]`"
         logger.critical(msg)

@@ -20,7 +20,7 @@ def ca_creds(
         locality:str = typer.Option(..., "--locality", help="x509 'locality_name' attribute"),
         org_name:str = typer.Option(..., "--org-name", help="x509 'organization_name' attribute"),
         cn: str = typer.Option(..., "--cn", help="x509 'common_name' attribute"),
-        output_dir: str = typer.Option(Path('.').resolve().absolute(), "--output-dir", help="output directory"),
+        output_dir: str = typer.Option(Path().resolve().absolute(), "--output-dir", help="output directory"),
 ) -> None:
     """Generate a self-signed key and certificate for the broker."""
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
@@ -34,7 +34,7 @@ def ca_creds(
 
     ca_key, ca_crt = generate_root_creds(country=country, state=state, locality=locality, org_name=org_name, cn=cn)
 
-    write_key_and_crt(ca_key, ca_crt, 'ca', Path(output_dir))
+    write_key_and_crt(ca_key, ca_crt, "ca", Path(output_dir))
 
 
 if __name__ == "__main__":
