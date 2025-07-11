@@ -2,13 +2,14 @@ import asyncio
 from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
-import copy
+from enum import StrEnum
 from functools import partial
 import logging
 from pathlib import Path
 import re
 import ssl
 from typing import Any, ClassVar, TypeAlias
+from dacite import from_dict as dict_to_dataclass, Config as DaciteConfig
 
 from transitions import Machine, MachineError
 import websockets.asyncio.server
@@ -22,7 +23,7 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-from amqtt.contexts import Action, BaseContext
+from amqtt.contexts import Action, BaseContext, BrokerConfig
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -37,8 +38,8 @@ _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
 
 
-_defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
-
+_default_broker = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
+_defaults = dict_to_dataclass(BrokerConfig, _default_broker, config=DaciteConfig(cast=[StrEnum]))
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
@@ -156,13 +157,20 @@ class Broker:
     ) -> None:
         """Initialize the broker."""
         self.logger = logging.getLogger(__name__)
-        self.config = copy.deepcopy(_defaults or {})
-        if config is not None:
-            # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
-            if ("auth" in config or "topic-check" in config) and "plugins" not in config:
-                # set to None so that the config isn't updated with the new-style default plugin list
-                config["plugins"] = None  # type: ignore[assignment]
-            self.config.update(config)
+
+        self.config = dict_to_dataclass(BrokerConfig, config, config=DaciteConfig(cast=[StrEnum]))
+
+        self.config |= _defaults
+
+        # if config is not None:
+        #     # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
+        #     if ("auth" in config or "topic-check" in config) and "plugins" not in config:
+        #         # set to None so that the config isn't updated with the new-style default plugin list
+        #         config["plugins"] = None  # type: ignore[assignment]
+        #     self.config.update(config)
+
+
+
         self._build_listeners_config(self.config)
 
         self._loop = loop or asyncio.get_running_loop()
@@ -202,9 +210,8 @@ class Broker:
                 raise BrokerError(msg)
 
             for listener_name, listener_conf in listeners_config.items():
-                config = defaults.copy()
-                config.update(listener_conf)
-                self.listeners_config[listener_name] = config
+                listener_conf |= defaults
+                self.listeners_config[listener_name] = listener_conf
         except KeyError as ke:
             msg = f"Listener config not found or invalid: {ke}"
             raise BrokerError(msg) from ke

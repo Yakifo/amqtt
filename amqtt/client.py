@@ -3,12 +3,14 @@ from collections import deque
 from collections.abc import Callable, Coroutine
 import contextlib
 import copy
+from enum import StrEnum
 from functools import wraps
 import logging
 from pathlib import Path
 import ssl
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 from urllib.parse import urlparse, urlunparse
+from dacite import from_dict as dict_to_dataclass, Config as DaciteConfig
 
 import websockets
 from websockets import HeadersLike, InvalidHandshake, InvalidURI
@@ -19,7 +21,7 @@ from amqtt.adapters import (
     WebSocketsReader,
     WebSocketsWriter,
 )
-from amqtt.contexts import BaseContext
+from amqtt.contexts import BaseContext, ClientConfig, ConnectionConfig
 from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
@@ -31,7 +33,8 @@ from amqtt.utils import gen_client_id, read_yaml_config
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-_defaults: dict[str, Any] | None = read_yaml_config(Path(__file__).parent / "scripts/default_client.yaml")
+_default_client = read_yaml_config(Path(__file__).parent / "scripts/default_client.yaml")
+_defaults = dict_to_dataclass(ClientConfig, _default_client, config=DaciteConfig(cast=[StrEnum]))
 
 
 class ClientContext(BaseContext):
@@ -96,9 +99,9 @@ class MQTTClient:
 
     def __init__(self, client_id: str | None = None, config: dict[str, Any] | None = None) -> None:
         self.logger = logging.getLogger(__name__)
-        self.config = copy.deepcopy(_defaults or {})
-        if config is not None:
-            self.config.update(config)
+        self.config = dict_to_dataclass(ClientConfig, config or {}, config=DaciteConfig(cast=[StrEnum]))
+
+        self.config |= _defaults
         self.client_id = client_id if client_id is not None else gen_client_id()
 
         self.session: Session | None = None
@@ -582,9 +585,7 @@ class MQTTClient:
     ) -> Session:
         """Initialize the MQTT session."""
         broker_conf = self.config.get("broker", {}).copy()
-        broker_conf.update(
-            {k: v for k, v in {"uri": uri, "cafile": cafile, "capath": capath, "cadata": cadata}.items() if v is not None},
-        )
+        broker_conf.update(ConnectionConfig(uri=uri, cafile=cafile, capath=capath, cadata=cadata))
 
         if not broker_conf.get("uri"):
             msg = "Missing connection parameter 'uri'"
