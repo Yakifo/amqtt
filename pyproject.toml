@@ -91,6 +91,7 @@ contrib = [
 amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
+ca_creds = "amqtt.scripts.ca_creds:main"
 server_creds = "amqtt.scripts.server_creds:main"
 device_creds = "amqtt.scripts.device_creds:main"
 

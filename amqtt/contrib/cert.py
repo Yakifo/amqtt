@@ -2,10 +2,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 import logging
 import re
+from ipaddress import IPv4Address
+from pathlib import Path
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509 import Certificate, CertificateSigningRequest
 from cryptography.x509.oid import NameOID
@@ -54,14 +56,13 @@ class CertificateAuthPlugin(BaseAuthPlugin):
             - uri_domain *(str)* the domain that is expected as part of the device certificate's spiffe
 
         """
-
         uri_domain: str
 
-def generate_server_creds(country:str, state:str, locality:str,
+def generate_root_creds(country:str, state:str, locality:str,
                           org_name:str, cn: str) -> tuple[rsa.RSAPrivateKey, Certificate]:
     """Generate server key and certificate."""
     # generate private key for the server
-    key = rsa.generate_private_key(
+    ca_key = rsa.generate_private_key(
         public_exponent=65537,
         key_size=4096,
     )
@@ -79,13 +80,17 @@ def generate_server_creds(country:str, state:str, locality:str,
         x509.CertificateBuilder()
         .subject_name(subject)
         .issuer_name(issuer)
-        .public_key(key.public_key())
+        .public_key(ca_key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(datetime.now(UTC))
         .not_valid_after(datetime.now(UTC) + timedelta(days=3650))  # 10 years
         .add_extension(
             x509.BasicConstraints(ca=True, path_length=None),
             critical=True,
+        )
+        .add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(ca_key.public_key()),
+            critical=False,
         )
         .add_extension(
             x509.KeyUsage(
@@ -101,10 +106,34 @@ def generate_server_creds(country:str, state:str, locality:str,
             ),
             critical=True,
         )
+        .sign(ca_key, hashes.SHA256())
+    )
+
+    return ca_key, cert
+
+
+def generate_server_csr(country:str, org_name: str, cn:str):
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+    csr = (
+        x509.CertificateSigningRequestBuilder()
+        .subject_name(x509.Name([
+            x509.NameAttribute(NameOID.COUNTRY_NAME, country),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, org_name),
+            x509.NameAttribute(NameOID.COMMON_NAME, cn),
+        ]))
+        .add_extension(
+            x509.SubjectAlternativeName([
+                x509.DNSName(cn),
+                x509.IPAddress(IPv4Address("127.0.0.1")),
+            ]),
+            critical=False,
+        )
         .sign(key, hashes.SHA256())
     )
 
-    return key, cert
+    return key, csr
+
 
 
 def generate_device_csr(country: str, org_name: str, common_name: str,
@@ -133,9 +162,9 @@ def generate_device_csr(country: str, org_name: str, common_name: str,
 
     return key, csr
 
-def sign_device_csr(csr: CertificateSigningRequest,
-                    ca_key: rsa.RSAPrivateKey,
-                    ca_cert: Certificate, validity_days: int=365) -> Certificate:
+def sign_csr(csr: CertificateSigningRequest,
+             ca_key: rsa.RSAPrivateKey,
+             ca_cert: Certificate, validity_days: int=365) -> Certificate:
     """Sign the device csr with a server certificate."""
     return (
         x509.CertificateBuilder()
@@ -153,5 +182,34 @@ def sign_device_csr(csr: CertificateSigningRequest,
             csr.extensions.get_extension_for_class(x509.SubjectAlternativeName).value,
             critical=False,
         )
+        .add_extension(
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_cert.public_key()),
+            critical=False,
+        )
         .sign(ca_key, hashes.SHA256())
     )
+
+def load_ca(ca_key_fn:str, ca_crt_fn:str) -> tuple[rsa.RSAPrivateKey, Certificate]:
+    """Load server key and certificate."""
+    with Path(ca_key_fn).open("rb") as f:
+        ca_key: rsa.RSAPrivateKey = serialization.load_pem_private_key(f.read(), password=None)  # type: ignore[assignment]
+    with Path(ca_crt_fn).open("rb") as f:
+        ca_cert = x509.load_pem_x509_certificate(f.read())
+    return ca_key, ca_cert
+
+
+def write_key_and_crt(key, crt, prefix, path: Path | None = None) -> None:
+
+    path = path or Path('.')
+
+    crt_fn = path / f"{prefix}.crt"
+    key_fn = path / f"{prefix}.key"
+
+    with crt_fn.open("wb") as f:
+        f.write(crt.public_bytes(serialization.Encoding.PEM))
+    with key_fn.open("wb") as f:
+        f.write(key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.TraditionalOpenSSL,
+            serialization.NoEncryption()
+        ))
