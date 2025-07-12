@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, fields, replace, asdict
 from enum import Enum, StrEnum
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, LiteralString, Literal
 
 from amqtt.mqtt.constants import QOS_0
 
@@ -34,7 +34,7 @@ class ListenerType(StrEnum):
 
 class Dictable:
     def __getitem__(self, key):
-        return getattr(self, key)
+        return self.get(key)
 
     def get(self, name, default=None):
         if hasattr(self, name):
@@ -42,34 +42,6 @@ class Dictable:
         if default is not None:
             return default
         raise ValueError(f"'{name}' is not defined")
-
-    def copy(self):
-        return replace(self)
-
-    def update(self, other):
-        if not isinstance(other, self.__class__):
-            raise TypeError(f'must update with another {self.__class__.__name__}')
-        for f in fields(self):
-            if isinstance(getattr(self, f.name), Dictable):
-                setattr(self, f.name, getattr(self, f.name).update(getattr(other, f.name)))
-            if getattr(self, f.name) == f.default:
-                setattr(self, f.name, other[f.name])
-
-        # if not isinstance(other, self.__class__):
-        #     raise TypeError(f'must update with another {self.__class__.__name__}')
-        #
-        # valids = { k:v for k,v in asdict(self).items() if v is not None }
-        # return replace(other, **valids)
-
-    def __ior__(self, other):
-        self.update(other)
-        return self
-        # if not isinstance(other, self.__class__):
-        #     raise TypeError(f'must update with another {self.__class__.__name__}')
-        # for f in fields(self):
-        #     if getattr(self, f.name) == f.default:
-        #         setattr(self, f.name, other[f.name])
-        # return self
 
     def __contains__(self, name):
         return getattr(self, name, None) is not None
@@ -80,10 +52,13 @@ class Dictable:
 
 
 @dataclass
-class ListenerConfig(Dictable):
+class ListenerConfig:
     type: ListenerType = ListenerType.TCP
+    """listener type: 'tcp' or 'ws'"""
     bind: str | None = "0.0.0.0:1883"
+    """address and port for the listener to bind to"""
     max_connections: int = 0
+    """"""
     ssl: bool = False
     cafile: str | Path | None = None
     capath: str | Path | None = None
@@ -95,6 +70,15 @@ class ListenerConfig(Dictable):
         for fn in ('cafile', 'capath', 'certfile', 'keyfile'):
             if isinstance(getattr(self, fn), str):
                 setattr(self, fn, Path(getattr(self, fn)))
+
+    def apply(self, other):
+        """Apply the field from 'other', if 'self' field is default."""
+        if not isinstance(other, ListenerConfig):
+            msg = f'cannot apply {self.__class__.__name__} to {other.__class__.__name__}'
+            raise TypeError(msg)
+        for f in fields(self):
+            if getattr(self, f.name) == f.default:
+                setattr(self, f.name, other[f.name])
 
 def default_listeners():
     return {
@@ -112,12 +96,20 @@ def default_broker_plugins():
 
 @dataclass
 class BrokerConfig(Dictable):
-    listeners: dict[str, ListenerConfig] = field(default_factory=dict)
+    """Structured configuration for a broker. Can be passed directly to `amqtt.broker.Broker` or created from a dictionary.
+    """
+    listeners: dict[Literal['default'] | str, ListenerConfig] = field(default_factory=default_listeners)
+    """Network of listeners used by the services."""
     sys_interval: int | None = None
+    """Deprecated field to configure the `BrokerSysPlugin`"""
     timeout_disconnect_delay: int | None = 0
-    plugins: dict | list | None = None
+    """Client disconnect timeout without a keep-alive."""
     auth: dict[str, Any] | None = None
+    """Deprecated field used to config EntryPoint-loaded plugins."""
     topic_check: dict[str, Any] | None = None
+    """Deprecated field used to config EntryPoint-loaded plugins."""
+    plugins: dict | list | None = None
+    """A list of strings representing the modules and class name of `BasePlugin`, `BaseAuthPlugin` and `BaseTopicPlugins`."""
 
     def __post__init__(self) -> None:
         if self.sys_interval is not None:
@@ -130,7 +122,9 @@ class BrokerConfig(Dictable):
 
         default_listener = self.listeners['default']
         for listener_name, listener in self.listeners.items():
-            listener.update(default_listener)
+            if listener_name == 'default':
+                continue
+            listener.apply(default_listener)
 
         if isinstance(self.plugins, list):
             _plugins = {}

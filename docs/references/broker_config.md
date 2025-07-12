@@ -3,6 +3,22 @@
 This configuration structure is valid as a python dictionary passed to the `amqtt.broker.Broker` class's `__init__` method or
 as a yaml formatted file passed to the `amqtt` script.
 
+
+::: amqtt.contexts.BrokerConfig
+    options:
+      heading_level: 3
+      extra:
+        class_style: "simple"
+
+::: amqtt.contexts.ListenerConfig
+
+
+
+
+
+
+#### Manual docs
+
 ### `listeners` *(list[dict[str, Any]])*
 
 Defines the network listeners used by the service. Items defined in the `default` listener will be
