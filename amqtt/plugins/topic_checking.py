@@ -58,7 +58,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
 
         req_topic = topic
         if not req_topic:
-            return False\
+            return False
 
         username = session.username if session else None
         if username is None:

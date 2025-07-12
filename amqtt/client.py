@@ -33,9 +33,6 @@ from amqtt.utils import gen_client_id, read_yaml_config
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
 
-_default_client = read_yaml_config(Path(__file__).parent / "scripts/default_client.yaml")
-_defaults = dict_to_dataclass(ClientConfig, _default_client, config=DaciteConfig(cast=[StrEnum]))
-
 
 class ClientContext(BaseContext):
     """ClientContext is used as the context passed to plugins interacting with the client.
@@ -99,9 +96,8 @@ class MQTTClient:
 
     def __init__(self, client_id: str | None = None, config: dict[str, Any] | None = None) -> None:
         self.logger = logging.getLogger(__name__)
-        self.config = dict_to_dataclass(ClientConfig, config or {}, config=DaciteConfig(cast=[StrEnum]))
+        self.config = ClientConfig.from_dict(config)
 
-        self.config |= _defaults
         self.client_id = client_id if client_id is not None else gen_client_id()
 
         self.session: Session | None = None
@@ -585,7 +581,17 @@ class MQTTClient:
     ) -> Session:
         """Initialize the MQTT session."""
         broker_conf = self.config.get("broker", {}).copy()
-        broker_conf.update(ConnectionConfig(uri=uri, cafile=cafile, capath=capath, cadata=cadata))
+
+        if uri is not None:
+            broker_conf.uri = uri
+        if cleansession is not None:
+            self.config.cleansession = cleansession
+        if cafile is not None:
+            broker_conf.cafile = cafile
+        if capath is not None:
+            broker_conf.capath = capath
+        if cadata is not None:
+            broker_conf.cadata = cadata
 
         if not broker_conf.get("uri"):
             msg = "Missing connection parameter 'uri'"
@@ -594,15 +600,12 @@ class MQTTClient:
         session = Session()
         session.broker_uri = broker_conf["uri"]
         session.client_id = self.client_id
+
         session.cafile = broker_conf.get("cafile")
         session.capath = broker_conf.get("capath")
         session.cadata = broker_conf.get("cadata")
 
-        if cleansession is not None:
-            broker_conf["cleansession"] = cleansession  # noop?
-            session.clean_session = cleansession
-        else:
-            session.clean_session = self.config.get("cleansession", True)
+        session.clean_session = self.config.get("cleansession", True)
 
         session.keep_alive = self.config["keep_alive"] - self.config["ping_delay"]
 

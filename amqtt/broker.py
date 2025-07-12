@@ -37,10 +37,6 @@ from .plugins.manager import PluginManager
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
 
-
-_default_broker = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
-_defaults = dict_to_dataclass(BrokerConfig, _default_broker, config=DaciteConfig(cast=[StrEnum]))
-
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
@@ -103,7 +99,7 @@ class BrokerContext(BaseContext):
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
-        self.config: _CONFIG_LISTENER | None = None
+        self.config: BrokerConfig | None = None
         self._broker_instance = broker
 
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
@@ -158,20 +154,10 @@ class Broker:
         """Initialize the broker."""
         self.logger = logging.getLogger(__name__)
 
-        self.config = dict_to_dataclass(BrokerConfig, config, config=DaciteConfig(cast=[StrEnum]))
+        self.config = BrokerConfig.from_dict(config)
 
-        self.config |= _defaults
-
-        # if config is not None:
-        #     # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
-        #     if ("auth" in config or "topic-check" in config) and "plugins" not in config:
-        #         # set to None so that the config isn't updated with the new-style default plugin list
-        #         config["plugins"] = None  # type: ignore[assignment]
-        #     self.config.update(config)
-
-
-
-        self._build_listeners_config(self.config)
+        # listeners are populated from default within BrokerConfig
+        self.listeners_config = self.config.listeners
 
         self._loop = loop or asyncio.get_running_loop()
         self._servers: dict[str, Server] = {}
@@ -196,25 +182,6 @@ class Broker:
         context.config = self.config
         namespace = plugin_namespace or "amqtt.broker.plugins"
         self.plugins_manager = PluginManager(namespace, context, self._loop)
-
-    def _build_listeners_config(self, broker_config: _CONFIG_LISTENER) -> None:
-        self.listeners_config = {}
-        try:
-            listeners_config = broker_config.get("listeners")
-            if not isinstance(listeners_config, dict):
-                msg = "Listener config not found or invalid"
-                raise BrokerError(msg)
-            defaults = listeners_config.get("default")
-            if defaults is None:
-                msg = "Listener config has not default included or is invalid"
-                raise BrokerError(msg)
-
-            for listener_name, listener_conf in listeners_config.items():
-                listener_conf |= defaults
-                self.listeners_config[listener_name] = listener_conf
-        except KeyError as ke:
-            msg = f"Listener config not found or invalid: {ke}"
-            raise BrokerError(msg) from ke
 
     def _init_states(self) -> None:
         self.transitions = Machine(states=Broker.states, initial="new")

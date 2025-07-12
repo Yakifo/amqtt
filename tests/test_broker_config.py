@@ -1,39 +1,40 @@
 import logging
+from typing import Any
+
 import pytest
 from dataclasses import dataclass, field
 from pathlib import Path
+from yaml import CLoader as Loader
 
+
+import yaml
 from dacite import from_dict, Config, UnexpectedDataError
 from enum import StrEnum
 
+from amqtt.broker import BrokerContext
 from amqtt.contexts import BrokerConfig, ListenerConfig, Dictable
 
 logger = logging.getLogger(__name__)
 
 
-def _test_broker_config():
-    # Parse with dacite
-    config = from_dict(data_class=BrokerConfig, data=data, config=Config(cast=[StrEnum]))
+def test_entrypoint_broker_config(caplog):
+    test_cfg: dict[str, Any] = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'sys_interval': 1,
+        'auth': {
+            'allow_anonymous': True
+        }
+    }
+    if 'plugins' not in test_cfg:
+        test_cfg['plugins'] = None
+    # cfg: dict[str, Any] = yaml.load(config, Loader=Loader)
 
-    assert isinstance(config, BrokerConfig)
-    assert isinstance(config.listeners['default'], ListenerConfig)
-    assert isinstance(config.listeners['secure'], ListenerConfig)
 
-    default = config.listeners['default']
-    secure = config.listeners['secure']
-    secure_one = secure.copy()
-    secure_two = secure.copy()
+    broker_config = from_dict(data_class=BrokerConfig, data=test_cfg, config=Config(cast=[StrEnum]))
+    assert isinstance(broker_config, BrokerConfig)
 
-    secure_one |= default
-
-    assert secure_one.max_connections == 50
-    assert secure_one.bind == '0.0.0.0:8883'
-    assert secure_one.cafile == Path('ca.key')
-
-    secure_two.update(default)
-    assert secure_two.max_connections == 50
-    assert secure_two.bind == '0.0.0.0:8883'
-    assert secure_two.cafile == Path('ca.key')
-
+    assert broker_config.plugins is None
 
 

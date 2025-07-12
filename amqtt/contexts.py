@@ -12,6 +12,10 @@ _LOGGER = logging.getLogger(__name__)
 if TYPE_CHECKING:
     import asyncio
 
+logger = logging.getLogger(__name__)
+
+from dacite import from_dict as dict_to_dataclass, Config as DaciteConfig, UnexpectedDataError
+
 
 class BaseContext:
     def __init__(self) -> None:
@@ -47,15 +51,18 @@ class Dictable:
         raise ValueError(f"'{name}' is not defined")
 
     def __contains__(self, name):
-        return getattr(self, name, None) is not None
+        return getattr(self, name.replace('-', '_'), None) is not None
 
     def __iter__(self):
         for field in fields(self):
             yield getattr(self, field.name)
 
+    def copy(self):
+        return replace(self)
+
 
 @dataclass
-class ListenerConfig:
+class ListenerConfig(Dictable):
     """Structured configuration for a broker's listeners."""
 
     type: ListenerType = ListenerType.TCP
@@ -132,19 +139,17 @@ class BrokerConfig(Dictable):
     """Deprecated field used to config EntryPoint-loaded plugins. See 
     [`TopicTabooPlugin`](#taboo-topic-plugin) and
     [`TopicACLPlugin`](#acl-topic-plugin) for more information.*"""
-    plugins: dict | list[dict] | None = field(default_factory=default_broker_plugins)
+    plugins: dict | list | None = field(default_factory=default_broker_plugins)
     """The dictionary has a key of the dotted-module path of a class derived from `BasePlugin`, `BaseAuthPlugin`
      or `BaseTopicPlugin`; the value is a dictionary of configuration options for that plugin. See 
      [Plugins](http://localhost:8000/custom_plugins/) for more information."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         if self.sys_interval is not None:
-            warnings.warn("sys_interval is deprecated, use 'plugins' to define configuration",
-                          DeprecationWarning, stacklevel=1)
+            logger.warning("sys_interval is deprecated, use 'plugins' to define configuration")
 
         if self.auth is not None or self.topic_check is not None:
-            warnings.warn("'auth' and 'topic-check' are deprecated, use 'plugins' to define configuration",
-                          DeprecationWarning, stacklevel=1)
+            logger.warning("'auth' and 'topic-check' are deprecated, use 'plugins' to define configuration")
 
         default_listener = self.listeners['default']
         for listener_name, listener in self.listeners.items():
@@ -155,13 +160,35 @@ class BrokerConfig(Dictable):
         if isinstance(self.plugins, list):
             _plugins = {}
             for plugin in self.plugins:
+                if isinstance(plugin, str):
+                    _plugins |= {plugin:{}}
+                    continue
                 _plugins |= plugin
             self.plugins = _plugins
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any] | None) -> 'BrokerConfig':
+        if d is None:
+            return BrokerConfig()
+
+        if 'topic-check' in d:
+            d['topic_check'] = d['topic-check']
+            del d['topic-check']
+
+        if ('auth' in d or 'topic-check' in d) and 'plugins' not in d:
+            d['plugins'] = None
+
+        return dict_to_dataclass(data_class=BrokerConfig,
+                                 data=d,
+                                 config=DaciteConfig(
+                                     cast=[StrEnum],
+                                     strict=True)
+                                 )
 
 
 @dataclass
 class ConnectionConfig(Dictable):
-    uri: str | None = "mqtt://127.0.0.1"
+    uri: str | None = "mqtt://127.0.0.1:1883"
     """URI of the broker"""
     cafile: str | Path | None = None
     """Path to a file of concatenated CA certificates in PEM format to verify broker's authenticity. See
@@ -188,7 +215,7 @@ class ConnectionConfig(Dictable):
                 setattr(self, fn, Path(getattr(self, fn)))
 
 @dataclass
-class TopicConfig:
+class TopicConfig(Dictable):
     """Configuration of how messages to specific topics are published. The topic name is
     specified as the key in the dictionary of the `ClientConfig.topics."""
     qos: int = 0
@@ -203,7 +230,7 @@ class TopicConfig:
 
 
 @dataclass
-class WillConfig:
+class WillConfig(Dictable):
     """Configuration of the 'last will & testament' of the client upon improper disconnection."""
 
     topic: str
@@ -266,4 +293,17 @@ class ClientConfig(Dictable):
         if self.default_qos is not None and (self.default_qos < QOS_0 or self.default_qos > QOS_2):
             msg = "Client config: default QoS must be 0, 1 or 2."
             raise ValueError(msg)
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any] | None) -> 'ClientConfig':
+        if d is None:
+            return ClientConfig()
+
+        return dict_to_dataclass(data_class=ClientConfig,
+                                 data=d,
+                                 config=DaciteConfig(
+                                     cast=[StrEnum],
+                                     strict=True)
+                                 )
+
 
