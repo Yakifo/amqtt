@@ -1,7 +1,25 @@
 # Broker Configuration
 
-This configuration structure is valid as a python dictionary passed to the `amqtt.broker.Broker` class's `__init__` method or
-as a yaml formatted file passed to the `amqtt` script.
+This configuration structure is a `amqtt.contexts.BrokerConfig` or a python dictionary with the same structure 
+when instantiating `amqtt.broker.Broker` or as a yaml formatted file passed to the `amqtt` script.
+
+If not specified, the `Broker()` will be started with the default `BrokerConfig()`, as represented in yaml format:
+
+```yaml
+---
+listeners:
+  default:
+    type: tcp
+    bind: 0.0.0.0:1883
+timeout_disconnect_delay: 0
+plugins:
+  amqtt.plugins.logging_amqtt.EventLoggerPlugin:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
+  amqtt.plugins.authentication.AnonymousAuthPlugin:
+    allow_anonymous: true
+  amqtt.plugins.sys.broker.BrokerSysPlugin:
+    sys_interval: 20
+```
 
 ::: amqtt.contexts.BrokerConfig
     options:
@@ -73,7 +91,7 @@ as a yaml formatted file passed to the `amqtt` script.
 
 ## Example
   
-When a configuration is passed to the `amqtt` script, here is the equivalent format for the structures above:
+When a configuration is passed to the `amqtt` script, here is the equivalent format based on the structures above:
 
 ```yaml
 listeners:

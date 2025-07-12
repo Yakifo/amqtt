@@ -91,17 +91,24 @@ class MyExtension(griffe.Extension):
         if not hasattr(node, "value"):
             return
         if isinstance(node.value, ast.Call):
+            default_factory_value: str | None = None
             for kw in node.value.keywords:
                 if kw.arg == "default_factory":
-                    if get_callable_name(kw.value) != "dict":
-                        callable_name = get_callable_name(kw.value)
-                        if callable_name in default_factory_map:
-                            print(default_factory_map[callable_name])
-                            if "factory" not in attr.extra:
-                                attr.extra["factory"] = {}
-                            attr.extra["dataclass_ext"]["has_default_factory"] = True
-                            f = f"{pprint.pformat(default_factory_map[callable_name], indent=4, width=80, sort_dicts=False)}"
-                            attr.extra["dataclass_ext"]["default_factory"] = f
-                    else:
-                        attr.extra["factory"]["has_badge"] = True
-                        attr.extra["factory"]["eval"] = "{}"
+                    match get_callable_name(kw.value):
+                        case 'dict':
+                            default_factory_value = "{}"
+                        case 'list':
+                            default_factory_value = "[]"
+                        case _:
+                            callable_name = get_callable_name(kw.value)
+                            if callable_name in default_factory_map:
+                                default_factory_value = pprint.pformat(default_factory_map[callable_name], indent=4, width=80, sort_dicts=False)
+                            else:
+                                default_factory_value = f"{callable_name}()"
+
+            if "factory" not in attr.extra:
+                attr.extra["factory"] = {}
+            attr.extra["dataclass_ext"]["has_default_factory"] = False
+            if default_factory_value is not None:
+                attr.extra["dataclass_ext"]["has_default_factory"] = True
+                attr.extra["dataclass_ext"]["default_factory"] = default_factory_value
