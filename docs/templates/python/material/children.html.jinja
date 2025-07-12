@@ -1,7 +1,7 @@
 {% extends "_base/children.html.jinja" %}
 
-        {% block logs scoped %}
-  <p style="color:red">children.html.jinja</p>
+{% block logs scoped %}
+{% if config.extra.template_log_display %}<p style="color:red">children.html.jinja</p>{% endif %}
 {% endblock logs %}
 
         

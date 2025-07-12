@@ -99,18 +99,9 @@ class MyExtension(griffe.Extension):
                             print(default_factory_map[callable_name])
                             if "factory" not in attr.extra:
                                 attr.extra["factory"] = {}
-                            attr.extra["factory"]["has_badge"] = True
-                            pprint.pprint(default_factory_map[callable_name])
+                            attr.extra["dataclass_ext"]["has_default_factory"] = True
                             f = f"{pprint.pformat(default_factory_map[callable_name], indent=4, width=80, sort_dicts=False)}"
-                            attr.extra["factory"]["eval"] = f
+                            attr.extra["dataclass_ext"]["default_factory"] = f
                     else:
                         attr.extra["factory"]["has_badge"] = True
                         attr.extra["factory"]["eval"] = "{}"
-
-                    # print(f'callable name: {get_callable_name(kw.value)}')
-                    # # print(evaluate_callable_node(kw.value))
-                    # print(f'type of node {type(kw.value)}')
-                    # print(f'qualified name: {get_qualified_name(kw.value)}')
-                    # # print(f'fully qualified name: {get_fully_qualified_name(node.value)}')
-                    # factory = evaluate_callable_node(kw.value)
-                    # attribute.extensions["default_factory"] = factory

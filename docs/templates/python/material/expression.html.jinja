@@ -1,1 +1,1 @@
-{% if 'default_factory' in expression.__str__() %}{{  obj.extra.factory.eval | safe }}{% else %}{{ expression | safe }}{%  endif  %}
+{% if 'default_factory' in expression.__str__() %}{{  obj.extra.dataclass_ext.default_factory | safe }}{% else %}{{ expression | safe }}{%  endif  %}

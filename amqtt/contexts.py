@@ -39,6 +39,7 @@ class Dictable:
         return self.get(key)
 
     def get(self, name, default=None):
+        name = name.replace("-", "_")
         if hasattr(self, name):
             return getattr(self, name)
         if default is not None:
@@ -55,18 +56,25 @@ class Dictable:
 
 @dataclass
 class ListenerConfig:
+    """Structured configuration for a broker's listeners."""
     type: ListenerType = ListenerType.TCP
-    """listener type: 'tcp' or 'ws'"""
+    """Type of listener: `tcp` for 'mqtt' or `ws` for 'websocket' when specified in dictionary or yaml.'"""
     bind: str | None = "0.0.0.0:1883"
     """address and port for the listener to bind to"""
     max_connections: int = 0
-    """"""
+    """max number of connections allowed for this listener"""
     ssl: bool = False
+    """secured by ssl"""
     cafile: str | Path | None = None
+    """Path to a file of concatenated CA certificates in PEM format. See <a href="https://docs.python.org/3/library/ssl.html#ssl-certificates">Certificates</a> for more info. """
     capath: str | Path | None = None
+    """Path to a directory containing several CA certificates in PEM format, following an <a href="https://docs.openssl.org/master/man3/SSL_CTX_load_verify_locations/">OpenSSL specific layout</a>."""
     cadata: str | Path | None = None
+    """Either an ASCII string of one or more PEM-encoded certificates or a bytes-like object of DER-encoded certificates."""
     certfile: str | Path | None = None
+    """Full path to file in PEM format containing the certificate (as well as any number of CA certificates needed to establish the certificate's authenticity.)"""
     keyfile: str | Path | None = None
+    """Full path to file in PEM format containing the private key."""
 
     def __post_init__(self):
         for fn in ('cafile', 'capath', 'certfile', 'keyfile'):
@@ -98,20 +106,19 @@ def default_broker_plugins():
 
 @dataclass
 class BrokerConfig(Dictable):
-    """Structured configuration for a broker. Can be passed directly to `amqtt.broker.Broker` or created from a dictionary.
-    """
+    """Structured configuration for a broker. Can be passed directly to `amqtt.broker.Broker` or created from a dictionary."""
     listeners: dict[Literal['default'] | str, ListenerConfig] = field(default_factory=default_listeners)
-    """Network of listeners used by the services."""
+    """Network of listeners used by the services. See <a href="/references/broker_config/#amqtt.contexts.ListenerConfig">ListenerConfig</a> for more information."""
     sys_interval: int | None = None
-    """Deprecated field to configure the `BrokerSysPlugin`"""
+    """*Deprecated field to configure the `BrokerSysPlugin`. See [`BrokerSysPlugin`](/packaged_plugins/#sys-topics) configuration instead.*"""
     timeout_disconnect_delay: int | None = 0
     """Client disconnect timeout without a keep-alive."""
     auth: dict[str, Any] | None = None
-    """Deprecated field used to config EntryPoint-loaded plugins."""
+    """*Deprecated field used to config EntryPoint-loaded plugins. See [`AnonymousAuthPlugin`](/packaged_plugins/#anonymous-auth-plugin) or [`FileAuthPlugin`](/packaged_plugins/#password-file-auth-plugin) for more information.*"""
     topic_check: dict[str, Any] | None = None
-    """Deprecated field used to config EntryPoint-loaded plugins."""
-    plugins: dict | list | None = None
-    """A list of strings representing the modules and class name of `BasePlugin`, `BaseAuthPlugin` and `BaseTopicPlugins`."""
+    """Deprecated field used to config EntryPoint-loaded plugins. See [`TopicTabooPlugin`](/packaged_plugins/#taboo-topic-plugin) and [`TopicACLPlugin`](/packaged_plugins/#acl-topic-plugin) for more information.*"""
+    plugins: dict | list[dict] | None = field(default_factory=default_broker_plugins)
+    """The dictionary is the representing the modules and class name of `BasePlugin`, `BaseAuthPlugin` and `BaseTopicPlugins`; the value is a dictionary of configuration options. """
 
     def __post__init__(self) -> None:
         if self.sys_interval is not None:

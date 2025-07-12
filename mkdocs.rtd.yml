@@ -132,6 +132,8 @@ plugins:
         python:
           paths: [amqtt]
           options:
+#            extra:
+#              template_log_display: true
             annotation_path: "full"
             docstring_options:
               ignore_init_summary: true
