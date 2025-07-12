@@ -1,8 +1,1 @@
-{% extends "_base/expression.html.jinja" %}
-
-{% block logs scoped %}
-
-  << expression.html.jinja >>
-{% endblock logs %}
-
-        
+{% if 'default_factory' in expression.__str__() %}{{  obj.extra.factory.eval | safe }}{% else %}{{ expression | safe }}{%  endif  %}

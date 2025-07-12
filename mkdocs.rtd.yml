@@ -151,7 +151,8 @@ plugins:
             signature_crossrefs: true
             summary: true
             extensions:
-              
+              - docs/scripts/exts.py:MyExtension:
+                paths: [mypkg.mymod.myobj]
   - git-revision-date-localized:
       enabled: !ENV [DEPLOY, false]
       enable_creation_date: true

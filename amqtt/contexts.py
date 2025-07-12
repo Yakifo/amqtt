@@ -31,6 +31,8 @@ class ListenerType(StrEnum):
     TCP = 'tcp'
     WS = 'ws'
 
+    def __repr__(self) -> str:
+        return f'"{str(self.value)}"'
 
 class Dictable:
     def __getitem__(self, key):
