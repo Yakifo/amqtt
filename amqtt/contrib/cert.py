@@ -61,7 +61,7 @@ class CertificateAuthPlugin(BaseAuthPlugin):
 
 def generate_root_creds(country:str, state:str, locality:str,
                           org_name:str, cn: str) -> tuple[rsa.RSAPrivateKey, Certificate]:
-    """Generate server key and certificate."""
+    """Generate CA key and certificate."""
     # generate private key for the server
     ca_key = rsa.generate_private_key(
         public_exponent=65537,
@@ -113,7 +113,8 @@ def generate_root_creds(country:str, state:str, locality:str,
     return ca_key, cert
 
 
-def generate_server_csr(country:str, org_name: str, cn:str):
+def generate_server_csr(country:str, org_name: str, cn:str) -> tuple[rsa.RSAPrivateKey, CertificateSigningRequest]:
+    """Generate server private key and server certificate-signing-request."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
     csr = (
@@ -166,7 +167,7 @@ def generate_device_csr(country: str, org_name: str, common_name: str,
 def sign_csr(csr: CertificateSigningRequest,
              ca_key: rsa.RSAPrivateKey,
              ca_cert: Certificate, validity_days: int=365) -> Certificate:
-    """Sign the device csr with a server certificate."""
+    """Sign a csr with CA credentials."""
     return (
         x509.CertificateBuilder()
         .subject_name(csr.subject)
@@ -184,7 +185,7 @@ def sign_csr(csr: CertificateSigningRequest,
             critical=False,
         )
         .add_extension(
-            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_cert.public_key()),
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_cert.public_key()),  # type: ignore[arg-type]
             critical=False,
         )
         .sign(ca_key, hashes.SHA256())
@@ -199,8 +200,9 @@ def load_ca(ca_key_fn:str, ca_crt_fn:str) -> tuple[rsa.RSAPrivateKey, Certificat
     return ca_key, ca_cert
 
 
-def write_key_and_crt(key, crt, prefix, path: Path | None = None) -> None:
-
+def write_key_and_crt(key:rsa.RSAPrivateKey, crt:Certificate,
+                      prefix:str, path: Path | None = None) -> None:
+    """Create pem-encoded files for key and certificate."""
     path = path or Path()
 
     crt_fn = path / f"{prefix}.crt"

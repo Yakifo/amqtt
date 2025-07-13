@@ -18,7 +18,7 @@ def server_creds(
         country:str = typer.Option(..., "--country", help="x509 'country_name' attribute"),
         org_name:str = typer.Option(..., "--org-name", help="x509 'organization_name' attribute"),
         cn: str = typer.Option(..., "--cn", help="x509 'common_name' attribute"),
-        output_dir: str = typer.Option(Path().resolve().absolute(), "--output-dir", help="output directory"),
+        output_dir: str = typer.Option(Path.cwd().absolute(), "--output-dir", help="output directory"),
         ca_key_fn:str = typer.Option("ca.key", "--ca-key", help="server key output filename."),
         ca_crt_fn:str = typer.Option("ca.crt", "--ca-crt", help="server cert output filename."),
 ) -> None:

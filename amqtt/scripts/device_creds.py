@@ -21,7 +21,7 @@ def device_creds( # pylint: disable=too-many-locals
         org_name: str = typer.Option(..., "--org-name", help="x509 'organization_name' attribute"),
         device_id: str = typer.Option(..., "--device-id", help="device id for the SAN"),
         uri: str = typer.Option(..., "--uri", help="domain name for device SAN"),
-        output_dir: str = typer.Option(Path().resolve().absolute(), "--output-dir", help="output directory"),
+        output_dir: str = typer.Option(Path.cwd().absolute(), "--output-dir", help="output directory"),
         ca_key_fn: str = typer.Option("ca.key", "--ca-key", help="root key filename used for signing."),
         ca_crt_fn: str = typer.Option("ca.crt", "--ca-crt", help="root cert filename used for signing."),
 ) -> None:
