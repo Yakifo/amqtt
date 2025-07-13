@@ -2,14 +2,11 @@ import asyncio
 from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
-from enum import StrEnum
 from functools import partial
 import logging
-from pathlib import Path
 import re
 import ssl
 from typing import Any, ClassVar, TypeAlias
-from dacite import from_dict as dict_to_dataclass, Config as DaciteConfig
 
 from transitions import Machine, MachineError
 import websockets.asyncio.server
@@ -23,18 +20,17 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-from amqtt.contexts import Action, BaseContext, BrokerConfig
+from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
-from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
+from amqtt.utils import format_client_message, gen_client_id
 
 from .events import BrokerEvents
 from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import PluginManager
 
-_CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
 
 # Default port numbers
@@ -147,14 +143,17 @@ class Broker:
 
     def __init__(
         self,
-        config: _CONFIG_LISTENER | None = None,
+        config: BrokerConfig | dict[str, Any] | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         plugin_namespace: str | None = None,
     ) -> None:
         """Initialize the broker."""
         self.logger = logging.getLogger(__name__)
 
-        self.config = BrokerConfig.from_dict(config)
+        if isinstance(config, dict):
+            self.config = BrokerConfig.from_dict(config)
+        else:
+            self.config = config or BrokerConfig()
 
         # listeners are populated from default within BrokerConfig
         self.listeners_config = self.config.listeners
@@ -247,7 +246,8 @@ class Broker:
 
             self.logger.info(f"Listener '{listener_name}' bind to {listener['bind']} (max_connections={max_connections})")
 
-    def _create_ssl_context(self, listener: dict[str, Any]) -> ssl.SSLContext:
+    @staticmethod
+    def _create_ssl_context(listener: ListenerConfig) -> ssl.SSLContext:
         """Create an SSL context for a listener."""
         try:
             ssl_context = ssl.create_default_context(
@@ -680,7 +680,7 @@ class Broker:
         except Exception:
             self.logger.exception("Failed to stop handler")
 
-    async def _authenticate(self, session: Session, _: dict[str, Any]) -> bool:
+    async def _authenticate(self, session: Session, _: ListenerConfig) -> bool:
         """Call the authenticate method on registered plugins to test user authentication.
 
         User is considered authenticated if all plugins called returns True.
