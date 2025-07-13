@@ -1,18 +1,17 @@
 import logging
 from typing import Any
 
-import pytest
-from dataclasses import dataclass, field
-from pathlib import Path
-from yaml import CLoader as Loader
+try:
+    from enum import Enum, StrEnum
+except ImportError:
+    # support for python 3.10
+    from enum import Enum
+    class StrEnum(str, Enum):  #type: ignore[no-redef]
+        pass
 
+from dacite import from_dict, Config
 
-import yaml
-from dacite import from_dict, Config, UnexpectedDataError
-from enum import StrEnum
-
-from amqtt.broker import BrokerContext
-from amqtt.contexts import BrokerConfig, ListenerConfig, Dictable
+from amqtt.contexts import BrokerConfig, ListenerType
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ def test_entrypoint_broker_config(caplog):
     # cfg: dict[str, Any] = yaml.load(config, Loader=Loader)
 
 
-    broker_config = from_dict(data_class=BrokerConfig, data=test_cfg, config=Config(cast=[StrEnum]))
+    broker_config = from_dict(data_class=BrokerConfig, data=test_cfg, config=Config(cast=[StrEnum, ListenerType]))
     assert isinstance(broker_config, BrokerConfig)
 
     assert broker_config.plugins is None

@@ -207,7 +207,7 @@ class BrokerConfig(Dictable):
         return dict_to_dataclass(data_class=BrokerConfig,
                                  data=d,
                                  config=DaciteConfig(
-                                     cast=[StrEnum],
+                                     cast=[StrEnum, ListenerType],
                                      strict=True)
                                  )
 
