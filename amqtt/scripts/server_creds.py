@@ -10,7 +10,7 @@ app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
 
 def main() -> None:
-    """Generate a server key and certificate for the broker, signed by ca credentials."""
+    """Run the `server_creds` cli."""
     app()
 
 @app.command()
@@ -22,7 +22,7 @@ def server_creds(
         ca_key_fn:str = typer.Option("ca.key", "--ca-key", help="server key output filename."),
         ca_crt_fn:str = typer.Option("ca.crt", "--ca-crt", help="server cert output filename."),
 ) -> None:
-    """Generate a self-signed key and certificate for the broker."""
+    """Generate a key and certificate for the broker in pem format, signed by the provided CA credentials. With a key size of 2048 and a 1-year expiration."""  # noqa : E501
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
     try:

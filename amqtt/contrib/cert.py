@@ -28,9 +28,34 @@ logger = logging.getLogger(__name__)
 
 
 class CertificateAuthPlugin(BaseAuthPlugin):
+    """Used a *signed* x509 certificate's `Subject AlternativeName` or `SAN` to verify client authentication.
+
+    Often used for IoT devices, this method provides the most secure form of identification. A root
+    certificate, often referenced as a CA certificate -- either issued by a known authority (such as LetsEncrypt)
+    or a self-signed certificate) is used to sign a private key and certificate for the server. Each device/client
+    also gets a unique private key and certificate signed by the same CA certificate; also included in the device
+    certificate is a 'SAN' or SubjectAlternativeName which is the device's unique identifier.
+
+    Since both server and device certificates are signed by the same CA certificate, the client can
+    verify the server's authenticity; and the server can verify the client's authenticity. And since
+    the device's certificate contains a x509 SAN, the server (with this plugin) can identify the device securely.
+
+    !!! note "URI and Client ID configuration"
+        `uri_domain` configuration must be set to the same uri used to generate the device credentials
+
+        when a device is connecting with private key and certificate, the `client_id` must
+        match the device id used to generate the device credentials.
+
+    Available ore three scripts to help with the key generation and certificate signing: `ca_creds`, `server_creds`
+    and `device_creds`.
+
+    !!! note "Configuring broker & client for using Self-signed root CA"
+        If using self-signed root credentials, the `cafile` configuration for both broker and client need to be
+        configured with `cafile` set to the `ca.crt`.
+    """
 
     async def authenticate(self, *, session: Session) -> bool | None:
-
+        """Verify the client's session using the provided client's x509 certificate."""
         if not session.ssl_object:
             return False
 
@@ -59,14 +84,10 @@ class CertificateAuthPlugin(BaseAuthPlugin):
 
     @dataclass
     class Config:
-        """Configuration for the CertificateAuthPlugin.
-
-        Members:
-            - uri_domain *(str)* the domain that is expected as part of the device certificate's spiffe
-
-        """
+        """Configuration for the CertificateAuthPlugin."""
 
         uri_domain: str
+        """The domain that is expected as part of the device certificate's spiffe (e.g. test.amqtt.io)"""
 
 def generate_root_creds(country:str, state:str, locality:str,
                           org_name:str, cn: str) -> tuple[rsa.RSAPrivateKey, Certificate]:

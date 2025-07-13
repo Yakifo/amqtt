@@ -10,7 +10,7 @@ app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
 
 def main() -> None:
-    """Generate a self-signed key and certificate for the broker."""
+    """Run the cli for `ca_creds`."""
     app()
 
 @app.command()
@@ -22,7 +22,7 @@ def ca_creds(
         cn: str = typer.Option(..., "--cn", help="x509 'common_name' attribute"),
         output_dir: str = typer.Option(Path.cwd().absolute(), "--output-dir", help="output directory"),
 ) -> None:
-    """Generate a self-signed key and certificate for the broker."""
+    """Generate a self-signed key and certificate to be used as the root CA, with a key size of 2048 and a 1-year expiration."""
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
     try:
