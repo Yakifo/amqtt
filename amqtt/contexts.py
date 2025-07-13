@@ -80,6 +80,15 @@ class Dictable:
         """Return a copy of the dataclass."""
         return replace(self)  # type: ignore[type-var]
 
+    @staticmethod
+    def _coerce_lists(value: list[Any] | dict[str, Any] | Any) -> list[dict[str, Any]]:
+        if isinstance(value, list):
+            return value  # It's already a list of dicts
+        if isinstance(value, dict):
+            return [value]  # Promote single dict to a list
+        msg = "Could not convert 'list' to 'list[dict[str, Any]]'"
+        raise ValueError(msg)
+
 
 @dataclass
 class ListenerConfig(Dictable):
@@ -160,10 +169,11 @@ class BrokerConfig(Dictable):
     """Deprecated field used to config EntryPoint-loaded plugins. See
     [`TopicTabooPlugin`](#taboo-topic-plugin) and
     [`TopicACLPlugin`](#acl-topic-plugin) for more information.*"""
-    plugins: dict[str, Any] | list[dict[str,Any]] | None = field(default_factory=default_broker_plugins)
+    plugins: dict[str, Any] | list[str | dict[str,Any]] | None = field(default_factory=default_broker_plugins)
     """The dictionary has a key of the dotted-module path of a class derived from `BasePlugin`, `BaseAuthPlugin`
      or `BaseTopicPlugin`; the value is a dictionary of configuration options for that plugin. See
-     [Plugins](http://localhost:8000/custom_plugins/) for more information."""
+     [Plugins](http://localhost:8000/custom_plugins/) for more information. `list[str | dict[str,Any]]` is not
+     recommended but available to support legacy use cases."""
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
@@ -182,9 +192,9 @@ class BrokerConfig(Dictable):
         if isinstance(self.plugins, list):
             _plugins: dict[str, Any] = {}
             for plugin in self.plugins:
-                # in case a plugin in a yaml file is listed without config
-                if isinstance(plugin, str): # type: ignore[unreachable]
-                    _plugins |= {plugin:{}}  # type: ignore[unreachable]
+                # in case a plugin in a yaml file is listed without config map
+                if isinstance(plugin, str):
+                    _plugins |= {plugin:{}}
                     continue
                 _plugins |= plugin
             self.plugins = _plugins
@@ -208,8 +218,9 @@ class BrokerConfig(Dictable):
                                  data=d,
                                  config=DaciteConfig(
                                      cast=[StrEnum, ListenerType],
-                                     strict=True)
-                                 )
+                                     strict=True,
+                                     type_hooks={list[dict[str, Any]]: cls._coerce_lists}
+                                 ))
 
 
 @dataclass
