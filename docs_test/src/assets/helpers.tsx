@@ -1,7 +1,8 @@
 import React from "react";
 
 export type DataPoint = {
-  timestamp: string; // ISO format
+  time: string // ISO format
+  timestamp: number; // epoch milliseconds
   value: number;
 };
 
