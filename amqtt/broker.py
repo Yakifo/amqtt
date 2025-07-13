@@ -3,7 +3,6 @@ from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
 import copy
-from enum import Enum
 from functools import partial
 import logging
 from pathlib import Path
@@ -23,14 +22,16 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
+from amqtt.contexts import Action, BaseContext
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
 
 from .events import BrokerEvents
+from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
-from .plugins.manager import BaseContext, PluginManager
+from .plugins.manager import PluginManager
 
 _CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
@@ -42,13 +43,6 @@ _defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yam
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
-
-
-class Action(Enum):
-    """Actions issued by the broker."""
-
-    SUBSCRIBE = "subscribe"
-    PUBLISH = "publish"
 
 
 class RetainedApplicationMessage(ApplicationMessage):
@@ -164,6 +158,10 @@ class Broker:
         self.logger = logging.getLogger(__name__)
         self.config = copy.deepcopy(_defaults or {})
         if config is not None:
+            # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
+            if ("auth" in config or "topic-check" in config) and "plugins" not in config:
+                # set to None so that the config isn't updated with the new-style default plugin list
+                config["plugins"] = None  # type: ignore[assignment]
             self.config.update(config)
         self._build_listeners_config(self.config)
 
@@ -173,6 +171,8 @@ class Broker:
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
+
+        self._topic_filter_matchers: dict[str, re.Pattern[str]] = {}
 
         # Broadcast queue for outgoing messages
         self._broadcast_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -438,6 +438,7 @@ class Broker:
                 await self._delete_session(client_session.client_id)
             else:
                 client_session.client_id = gen_client_id()
+
             client_session.parent = 0
         # Get session from cache
         elif client_session.client_id in self._sessions:
@@ -491,12 +492,23 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
         self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
+
+        # publish messages that were retained because the client session was disconnected
         self.logger.debug(f"Retained messages queue size: {client_session.retained_messages.qsize()}")
         await self._publish_session_retained_messages(client_session)
+
+        # if this is not a new session, there are subscriptions associated with them; publish any topic retained messages
+        self.logger.debug("Publish retained messages to a pre-existing session's subscriptions.")
+        for topic in self._subscriptions:
+            await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
+
+
 
         await self._client_message_loop(client_session, handler)
 
@@ -594,7 +606,9 @@ class Broker:
         self.logger.debug(f"{client_session.client_id} Disconnecting session")
         await self._stop_handler(handler)
         client_session.transitions.disconnect()
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED, client_id=client_session.client_id)
+        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED,
+                                              client_id=client_session.client_id,
+                                              client_session=client_session)
 
 
     async def _handle_subscription(
@@ -659,6 +673,11 @@ class Broker:
                 f"[MQTT-3.3.2-2] - {client_session.client_id} invalid TOPIC sent in PUBLISH message, closing connection",
             )
             return False
+        if app_message.topic.startswith("$"):
+            self.logger.warning(
+                f"[MQTT-4.7.2-1] - {client_session.client_id} cannot use a topic with a leading $ character."
+            )
+            return False
 
         permitted = await self._topic_filtering(client_session, topic=app_message.topic, action=Action.PUBLISH)
         if not permitted:
@@ -699,17 +718,20 @@ class Broker:
         :return:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
-        auth_result = True
-        if returns:
-            for plugin in returns:
-                res = returns[plugin]
-                if res is False:
-                    auth_result = False
-                    self.logger.debug(f"Authentication failed due to '{plugin.__class__}' plugin result: {res}")
-                else:
-                    self.logger.debug(f"'{plugin.__class__}' plugin result: {res}")
-        # If all plugins returned True, authentication is success
-        return auth_result
+
+        results = [ result for _, result in returns.items() if result is not None] if returns else []
+        if len(results) < 1:
+            self.logger.debug("Authentication failed: no plugin responded with a boolean")
+            return False
+
+        if all(results):
+            self.logger.debug("Authentication succeeded")
+            return True
+
+        for plugin, result in returns.items():
+            self.logger.debug(f"Authentication '{plugin.__class__.__name__}' result: {result}")
+
+        return False
 
     def retain_message(
         self,
@@ -766,13 +788,7 @@ class Broker:
         :param action: What is being done with the topic?  subscribe or publish
         :return:
         """
-        topic_config = self.config.get("topic-check", {})
-        enabled = False
-
-        if isinstance(topic_config, dict):
-            enabled = topic_config.get("enabled", False)
-
-        if not enabled:
+        if not self.plugins_manager.is_topic_filtering_enabled():
             return True
 
         results = await self.plugins_manager.map_plugin_topic(session=session, topic=topic, action=action)
@@ -867,9 +883,6 @@ class Broker:
         self.logger.debug(f"Processing broadcast message: {broadcast}")
 
         for k_filter, subscriptions in self._subscriptions.items():
-            if broadcast["topic"].startswith("$") and (k_filter.startswith(("+", "#"))):
-                self.logger.debug("[MQTT-4.7.2-1] - ignoring broadcasting $ topic to subscriptions starting with + or #")
-                continue
 
             # Skip all subscriptions which do not match the topic
             if not self._matches(broadcast["topic"], k_filter):
@@ -880,9 +893,18 @@ class Broker:
                 qos = broadcast.get("qos", sub_qos)
 
                 # Retain all messages which cannot be broadcasted, due to the session not being connected
-                if target_session.transitions.state != "connected":
+                #  but only when clean session is false and qos is 1 or 2 [MQTT 3.1.2.4]
+                #  and, if a client used anonymous authentication, there is no expectation that messages should be retained
+                if (target_session.transitions.state != "connected"
+                        and not target_session.clean_session
+                        and qos in (QOS_1, QOS_2)
+                        and not target_session.is_anonymous):
                     self.logger.debug(f"Session {target_session.client_id} is not connected, retaining message.")
                     await self._retain_broadcast_message(broadcast, qos, target_session)
+                    continue
+
+                # Only broadcast the message to connected clients
+                if target_session.transitions.state != "connected":
                     continue
 
                 self.logger.debug(
@@ -985,11 +1007,21 @@ class Broker:
         )
 
     def _matches(self, topic: str, a_filter: str) -> bool:
+        if topic.startswith("$") and (a_filter.startswith(("+", "#"))):
+            self.logger.debug("[MQTT-4.7.2-1] - ignoring broadcasting $ topic to subscriptions starting with + or #")
+            return False
+
         if "#" not in a_filter and "+" not in a_filter:
             # if filter doesn't contain wildcard, return exact match
             return a_filter == topic
-        # else use regex
-        match_pattern = re.compile(re.escape(a_filter).replace("\\#", "?.*").replace("\\+", "[^/]*").lstrip("?"))
+
+        # else use regex (re.compile is an expensive operation, store the matcher for future use)
+        if a_filter not in self._topic_filter_matchers:
+            self._topic_filter_matchers[a_filter] = re.compile(re.escape(a_filter)
+                                                               .replace("\\#", "?.*")
+                                                               .replace("\\+", "[^/]*")
+                                                               .lstrip("?"))
+        match_pattern = self._topic_filter_matchers[a_filter]
         return bool(match_pattern.fullmatch(topic))
 
     def _get_handler(self, session: Session) -> BrokerProtocolHandler | None:

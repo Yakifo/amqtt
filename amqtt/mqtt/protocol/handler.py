@@ -20,6 +20,7 @@ import logging
 from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
+from amqtt.contexts import BaseContext
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
@@ -57,7 +58,7 @@ from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
-from amqtt.plugins.manager import BaseContext, PluginManager
+from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 C = TypeVar("C", bound=BaseContext)
@@ -519,8 +520,9 @@ class ProtocolHandler(Generic[C]):
                 elif packet.fixed_header.packet_type == DISCONNECT and isinstance(packet, DisconnectPacket):
                     task = asyncio.create_task(self.handle_disconnect(packet))
                 elif packet.fixed_header.packet_type == CONNECT and isinstance(packet, ConnectPacket):
-                    # TODO: why is this not like all other inside create_task?
-                    await self.handle_connect(packet)  # task = asyncio.create_task(self.handle_connect(packet))
+                    # q: why is this not like all other inside a create_task?
+                    # a: the connection needs to be established before any other packet tasks for this new session are scheduled
+                    await self.handle_connect(packet)
                 if task:
                     running_tasks.append(task)
             except MQTTError:

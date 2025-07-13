@@ -2,10 +2,8 @@ import logging
 
 from dataclasses import dataclass
 
-from amqtt.broker import Action
-
-from amqtt.plugins.base import BasePlugin, BaseTopicPlugin, BaseAuthPlugin
-from amqtt.plugins.manager import BaseContext
+from amqtt.plugins.base import BasePlugin, BaseAuthPlugin, BaseTopicPlugin
+from amqtt.contexts import BaseContext, Action
 
 from amqtt.session import Session
 
@@ -27,27 +25,46 @@ class TestConfigPlugin(BasePlugin):
     class Config:
         option1: int
         option2: str
+        option3: int = 20
 
 
-class AuthPlugin(BaseAuthPlugin):
+class TestCoroErrorPlugin(BaseAuthPlugin):
+
+    def authenticate(self, *, session: Session) -> bool | None:
+        return True
+
+
+class TestAuthPlugin(BaseAuthPlugin):
 
     async def authenticate(self, *, session: Session) -> bool | None:
         return True
 
 
-class NoAuthPlugin(BaseAuthPlugin):
+class TestNoAuthPlugin(BaseAuthPlugin):
 
 
     async def authenticate(self, *, session: Session) -> bool | None:
         return False
 
 
-class TestTopicPlugin(BaseTopicPlugin):
+class TestAllowTopicPlugin(BaseTopicPlugin):
 
     def __init__(self, context: BaseContext):
         super().__init__(context)
 
-    def topic_filtering(
+    async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
     ) -> bool:
         return True
+
+
+class TestBlockTopicPlugin(BaseTopicPlugin):
+
+    def __init__(self, context: BaseContext):
+        super().__init__(context)
+
+    async def topic_filtering(
+        self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
+    ) -> bool:
+        logger.debug("topic filtering plugin is returning false")
+        return False

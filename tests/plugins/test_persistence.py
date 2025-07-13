@@ -4,7 +4,7 @@ from pathlib import Path
 import sqlite3
 import unittest
 
-from amqtt.plugins.manager import BaseContext
+from amqtt.contexts import BaseContext
 from amqtt.plugins.persistence import SQLitePlugin
 from amqtt.session import Session
 

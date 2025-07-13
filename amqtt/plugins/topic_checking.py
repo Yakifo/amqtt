@@ -1,8 +1,8 @@
+from dataclasses import dataclass, field
 from typing import Any
 
-from amqtt.broker import Action
+from amqtt.contexts import Action, BaseContext
 from amqtt.plugins.base import BaseTopicPlugin
-from amqtt.plugins.manager import BaseContext
 from amqtt.session import Session
 
 
@@ -52,26 +52,34 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
             return False
 
         # hbmqtt and older amqtt do not support publish filtering
-        if action == Action.PUBLISH and self.topic_config is not None and "publish-acl" not in self.topic_config:
+        if action == Action.PUBLISH and not self._get_config_option("publish-acl", {}):
             # maintain backward compatibility, assume permitted
             return True
 
         req_topic = topic
         if not req_topic:
-            return False
+            return False\
 
         username = session.username if session else None
         if username is None:
             username = "anonymous"
 
         acl: dict[str, Any] = {}
-        if self.topic_config is not None and action == Action.PUBLISH:
-            acl = self.topic_config.get("publish-acl", {})
-        elif self.topic_config is not None and action == Action.SUBSCRIBE:
-            acl = self.topic_config.get("acl", {})
+        match action:
+            case Action.PUBLISH:
+                acl = self._get_config_option("publish-acl", {})
+            case Action.SUBSCRIBE:
+                acl = self._get_config_option("acl", {})
 
         allowed_topics = acl.get(username, [])
         if not allowed_topics:
             return False
 
         return any(self.topic_ac(req_topic, allowed_topic) for allowed_topic in allowed_topics)
+
+    @dataclass
+    class Config:
+        """Mappings of username and list of approved topics."""
+
+        publish_acl: dict[str, list[str]] = field(default_factory=dict)
+        acl: dict[str, list[str]] = field(default_factory=dict)

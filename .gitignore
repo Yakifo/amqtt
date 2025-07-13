@@ -34,3 +34,8 @@ site/
 _build/
 .hypothesis/
 coverage.xml
+
+#----- generated files -----
+*.log
+*memray*
+.coverage*

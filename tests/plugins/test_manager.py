@@ -2,10 +2,11 @@ import asyncio
 import logging
 import unittest
 
-from amqtt.broker import Action
 from amqtt.events import BrokerEvents
-from amqtt.plugins.manager import BaseContext, PluginManager
-from amqtt.plugins.base import BaseTopicPlugin, BaseAuthPlugin
+
+from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
+from amqtt.plugins.manager import PluginManager
+from amqtt.contexts import BaseContext, Action
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -30,7 +31,7 @@ class EventTestPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
     async def authenticate(self, *, session: Session) -> bool | None:
         self.test_auth_flag = True
-        return None
+        return True
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
@@ -83,8 +84,11 @@ class TestPluginManager(unittest.TestCase):
         assert plugin.test_close_flag
 
     def test_plugin_auth_coro(self) -> None:
+        # provide context that activates auth plugins
+        context = BaseContext()
+        context.config = {'auth':{}}
 
-        manager = PluginManager("amqtt.test.plugins", context=None)
+        manager = PluginManager("amqtt.test.plugins", context=context)
         self.loop.run_until_complete(manager.map_plugin_auth(session=Session()))
         self.loop.run_until_complete(asyncio.sleep(0.5))
         plugin = manager.get_plugin("EventTestPlugin")
@@ -92,8 +96,11 @@ class TestPluginManager(unittest.TestCase):
         assert plugin.test_auth_flag
 
     def test_plugin_topic_coro(self) -> None:
+        # provide context that activates topic check plugins
+        context = BaseContext()
+        context.config = {'topic-check':{}}
 
-        manager = PluginManager("amqtt.test.plugins", context=None)
+        manager = PluginManager("amqtt.test.plugins", context=context)
         self.loop.run_until_complete(manager.map_plugin_topic(session=Session(), topic="test", action=Action.PUBLISH))
         self.loop.run_until_complete(asyncio.sleep(0.5))
         plugin = manager.get_plugin("EventTestPlugin")
