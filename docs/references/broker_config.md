@@ -108,9 +108,9 @@ listeners:
         ssl: on
         cafile: /some/cafile
         capath: /some/folder
-        capath: certificate data
+        capath: 'certificate data'
         certfile: /some/certfile
-        keyfile: /some/key
+        keyfile: /some/keyfile
     my-ws-1:
         bind: 0.0.0.0:8080
         type: ws
@@ -119,7 +119,7 @@ listeners:
         type: ws
         ssl: on
         certfile: /some/certfile
-        keyfile: /some/key
+        keyfile: /some/keyfile
 timeout-disconnect-delay: 2
 plugins:
   - amqtt.plugins.authentication.AnonymousAuthPlugin:
@@ -129,7 +129,7 @@ plugins:
   - amqtt.plugins.topic_checking.TopicAccessControlListPlugin:
       acl:
         username1: ['repositories/+/master', 'calendar/#', 'data/memes']
-        username2: [ 'calendar/2025/#', 'data/memes']
+        username2: ['calendar/2025/#', 'data/memes']
         anonymous: ['calendar/2025/#']
 ```
 

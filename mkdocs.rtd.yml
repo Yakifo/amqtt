@@ -40,6 +40,7 @@ nav:
       - Plugins:
           - Packaged: packaged_plugins.md
           - Custom: custom_plugins.md
+          - Contributed: contrib_plugins.md
       - Configuration:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
@@ -139,7 +140,7 @@ plugins:
               ignore_init_summary: true
             docstring_section_style: list
             filters: ["!^_"]
-            heading_level: 1
+            heading_level: 2
             inherited_members: true
             merge_init_into_class: true
             parameter_headings: true

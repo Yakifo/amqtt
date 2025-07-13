@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.11.2
+
+-  config-file based plugin loading   [PR #240](https://github.com/Yakifo/amqtt/pull/240)
+-  dockerfile build update to support psutils   [PR #239](https://github.com/Yakifo/amqtt/pull/239)
+-  pass client session info to event callbacks   [PR #241](https://github.com/Yakifo/amqtt/pull/241)
+-  Require at least one auth   [PR #244](https://github.com/Yakifo/amqtt/pull/244)
+-  improvements in retaining messages   [PR #248](https://github.com/Yakifo/amqtt/pull/248)
+-  updating docker compose with resource limits   [PR #253](https://github.com/Yakifo/amqtt/pull/253)
+-  improve static type checking for plugin's `Config` class   [PR #249](https://github.com/Yakifo/amqtt/pull/249)
+-  broker shouldn't allow clients to publish to '$' topics   [PR #254](https://github.com/Yakifo/amqtt/pull/254)
+-  publishing to a topic with `*` is allowed, while `#` and `+` are not   [PR #251](https://github.com/Yakifo/amqtt/pull/251)
+-  updated samples; plugin config consistency (yaml and python dict)   [PR #252](https://github.com/Yakifo/amqtt/pull/252)
+-  add cpu, mem and broker version to dashboard   [PR #257](https://github.com/Yakifo/amqtt/pull/257)
+- [Issue 246](https://github.com/Yakifo/amqtt/issues/246) don't retain QoS 1 or 2 messages if client connects with clean session true
+- [Issue 175](https://github.com/Yakifo/amqtt/issues/175) plugin examples
+- [Issue 81](https://github.com/Yakifo/amqtt/issues/81) Abstract factory for plugins
+- [Issue 74](https://github.com/Yakifo/amqtt/issues/74) 模拟500个客户端并发，连接broker。
+- [Issue 60](https://github.com/Yakifo/amqtt/issues/60) amqtt server not relaying traffic
+- [Issue 31](https://github.com/Yakifo/amqtt/issues/31) Plugin config in yaml file not under - plugins entry
+- [Issue 27](https://github.com/Yakifo/amqtt/issues/27) don't retain messages from anonymous clients
+- [Issue 250](https://github.com/Yakifo/amqtt/issues/250) client doesn't prevent publishing to wildcard topics
+- [Issue 245](https://github.com/Yakifo/amqtt/issues/245) prevent clients from publishing to `$` topics
+- [Issue 196](https://github.com/Yakifo/amqtt/issues/196) proposal: enhancement to broker plugin configuration
+- [Issue 187](https://github.com/Yakifo/amqtt/issues/187) anonymous login allowed even if plugin isn't enabled
+- [Issue 123](https://github.com/Yakifo/amqtt/issues/123) Messages sent to mqtt can be consumed in time, but they occupy more and more memory
+
 ## 0.11.1
 
 - [PR #226](https://github.com/Yakifo/amqtt/pull/226) Consolidate super classes for plugins
