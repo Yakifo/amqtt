@@ -1,5 +1,14 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+
+try:
+    from datetime import UTC
+except ImportError:
+    # support for python 3.10
+    from datetime import timezone
+    UTC = timezone.utc
+
+
 from ipaddress import IPv4Address
 import logging
 from pathlib import Path
