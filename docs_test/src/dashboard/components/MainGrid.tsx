@@ -2,7 +2,7 @@ import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import Copyright from '../internals/components/Copyright';
+import Copyright from '../Copyright';
 import SessionsChart from './SessionsChart';
 import {useEffect, useState} from "react";
 // @ts-ignore
