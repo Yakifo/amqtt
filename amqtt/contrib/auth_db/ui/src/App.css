@@ -43,3 +43,14 @@
 .read-the-docs {
   color: #888;
 }
+
+.user-button-edit, .user-button-delete {
+  width: 48px;
+  height: 48px !important;
+  margin-top:-6px !important;
+  background-color: #ddd !important;
+}
+
+.user-button-edit:hover, .user-button-delete:hover {
+  background-color: #ccc !important;
+}
