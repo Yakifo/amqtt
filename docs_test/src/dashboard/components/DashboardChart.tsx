@@ -116,7 +116,7 @@
           </LineChart>
   }
 
-  export default function SessionsChart(props: any) {
+  export default function DashboardChart(props: any) {
 
     const lastCalc = useRef<number>(0);
 
