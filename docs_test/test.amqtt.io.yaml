@@ -18,10 +18,10 @@ listeners:
     ssl: on
     certfile: /etc/letsencrypt/live/test.amqtt.io/fullchain.pem
     keyfile: /etc/letsencrypt/live/test.amqtt.io/privkey.pem
-sys_interval: 2
-auth:
-  plugins:
-    - auth_anonymous
-  allow-anonymous: true
-topic-check:
-  enabled: False
+plugins:
+  amqtt.plugins.logging_amqtt.EventLoggerPlugin:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
+  amqtt.plugins.authentication.AnonymousAuthPlugin:
+    allow_anonymous: true
+  amqtt.plugins.sys.broker.BrokerSysPlugin:
+    sys_interval: 2
