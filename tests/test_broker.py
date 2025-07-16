@@ -236,7 +236,7 @@ async def test_client_connect_clean_session_false(broker):
     client = MQTTClient(client_id="", config={"auto_reconnect": False})
     return_code = None
     try:
-        await client.connect("mqtt://127.0.0.1/", cleansession=False)
+        await client.connect("mqtt://127.0.0.1", cleansession=False)
     except ConnectError as ce:
         return_code = ce.return_code
     assert return_code == 0x02
@@ -431,11 +431,11 @@ async def test_client_publish_acl_forbidden(acl_broker):
 
 @pytest.mark.asyncio
 async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
-    sub_client1 = MQTTClient()
+    sub_client1 = MQTTClient(client_id="sub_client1")
     ret_conn = await sub_client1.connect("mqtt://user2:user2password@127.0.0.1:1884/")
     assert ret_conn == 0
 
-    sub_client2 = MQTTClient()
+    sub_client2 = MQTTClient(client_id="sub_client2")
     ret_conn = await sub_client2.connect("mqtt://user3:user3password@127.0.0.1:1884/")
     assert ret_conn == 0
 
@@ -445,7 +445,7 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     ret_sub = await sub_client2.subscribe([("public/subtopic/test", QOS_0)])
     assert ret_sub == [128]
 
-    pub_client = MQTTClient()
+    pub_client = MQTTClient(client_id="pub_client")
     ret_conn = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret_conn == 0
 
