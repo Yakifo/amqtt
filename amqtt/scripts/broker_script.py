@@ -41,9 +41,12 @@ def broker_main(
 ) -> None:
     """Command-line script for running a MQTT 3.1.1 broker."""
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
+    if debug:
+        formatter = "[%(asctime)s] %(name)s:%(lineno)d :: %(levelname)s - %(message)s"
 
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)
+    logging.getLogger("transitions").setLevel(logging.WARNING)
     try:
         if config_file:
             config = read_yaml_config(config_file)

@@ -40,6 +40,7 @@ nav:
       - Plugins:
           - Packaged: packaged_plugins.md
           - Custom: custom_plugins.md
+          - Contributed: contrib_plugins.md
       - Configuration:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
