@@ -4,8 +4,8 @@ __pycache__
 node_modules
 .vite
 *.pem
-*.key
 *.crt
+*.key
 *.patch
 
 #------- Environment Files -------

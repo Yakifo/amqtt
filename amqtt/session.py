@@ -1,6 +1,6 @@
 from asyncio import Queue
 from collections import OrderedDict
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from transitions import Machine
 
@@ -9,6 +9,9 @@ from amqtt.mqtt.publish import PublishPacket
 
 OUTGOING = 0
 INCOMING = 1
+
+if TYPE_CHECKING:
+    import ssl
 
 
 class ApplicationMessage:
@@ -138,6 +141,7 @@ class Session:
         self.cadata: bytes | None = None
         self._packet_id: int = 0
         self.parent: int = 0
+        self.ssl_object: ssl.SSLObject | None = None
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
         self.inflight_out: OrderedDict[int, OutgoingApplicationMessage] = OrderedDict()
