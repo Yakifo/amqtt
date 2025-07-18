@@ -111,10 +111,10 @@ export default function MainGrid() {
           <DashboardChart title={'Received Messages'} label={''} data={received} isConnected={isConnected} isPerSecond/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
-          <DashboardChart title={'Bytes Out'} label={'Bytes'} data={bytesOut} isConnected={isConnected}/>
+          <DashboardChart title={'Bytes Out'} label={''} data={bytesOut} isConnected={isConnected} isBytes/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
-          <DashboardChart title={'Bytes In'} label={'Bytes'} data={bytesIn} isConnected={isConnected}/>
+          <DashboardChart title={'Bytes In'} label={''} data={bytesIn} isConnected={isConnected} isBytes/>
         </Grid>
         <Grid size={{xs: 12, md: 6}}>
           <DashboardChart title={'Clients Connected'} label={''} data={clientsConnected} isConnected={isConnected}/>

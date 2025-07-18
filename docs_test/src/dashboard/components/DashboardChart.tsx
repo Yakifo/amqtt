@@ -4,9 +4,10 @@
   import Typography from '@mui/material/Typography';
   import Stack from '@mui/material/Stack';
   import { LineChart } from '@mui/x-charts/LineChart';
-  import CountUp from 'react-countup';
+
   import type { DataPoint } from '../../assets/helpers.jsx';
   import {CircularProgress} from "@mui/material";
+  import {StandardCounter, ByteCounter} from "./Counter.tsx";
   import {useRef} from "react";
 
   const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -153,13 +154,9 @@
               <Typography variant="h4" component="p">
 
                 { props.data.length < 2 ? "" :
-                <CountUp
-                  start={props.data[props.data.length - 2].value}
-                  end={props.data[props.data.length - 1].value}
-                  duration={5}
-                  decimals={props.decimals}
-
-                />} {props.label}
+                  props.isBytes ? <ByteCounter start={props.data[props.data.length - 2].value} end={props.data[props.data.length - 1].value}/> :
+                    <StandardCounter start={props.data[props.data.length - 2].value} end={props.data[props.data.length - 1].value} />
+                } {props.label}
               </Typography>
               <p>
                 { calc_per_second(props.data[props.data.length-1], props.data[props.data.length-2]) }
