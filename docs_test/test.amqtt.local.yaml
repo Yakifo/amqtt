@@ -1,0 +1,16 @@
+---
+listeners:
+  default:
+    type: tcp
+    bind: 0.0.0.0:1883
+  std-ws:
+    type: ws
+    bind: 0.0.0.0:8080
+session_expiry_interval: 60
+plugins:
+  amqtt.plugins.logging_amqtt.EventLoggerPlugin:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
+  amqtt.plugins.authentication.AnonymousAuthPlugin:
+    allow_anonymous: true
+  amqtt.plugins.sys.broker.BrokerSysPlugin:
+    sys_interval: 2
