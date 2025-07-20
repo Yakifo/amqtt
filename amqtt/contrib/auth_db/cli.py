@@ -1,24 +1,20 @@
-#
-# import logging
-# from dataclasses import dataclass
-# from enum import StrEnum
-#
-# from typing import Annotated
-# from rich.prompt import Prompt
-#
-#
-# import typer
-# import typer_di
-# import click
-#
-#
-# logger = logging.getLogger(__name__)
-#
-#
-# app = typer_di.TyperDI(add_completion=False, rich_markup_mode=None)
-#
-#
+import asyncio
+import logging
+from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
+from typing import Annotated
+import typer
+from amqtt.contrib.auth_db.plugin import UserManager
+from amqtt.errors import MQTTError
+# from enum import StrEnum
+
+from rich.prompt import Prompt, Confirm
+import passlib
+
+
+logger = logging.getLogger(__name__)
+app = typer.Typer(no_args_is_help=True)
 
 
 class DBType(StrEnum):
@@ -27,213 +23,154 @@ class DBType(StrEnum):
     POSTGRESQL = "postgresql"
     SQLITE = "sqlite"
 
-#
-# @dataclass
-# class DBInfo:
-#     connect_str: str
-#     connect_port: int | None
-#
-#
-# _db_map = {
-#     DBType.MARIA: DBInfo('mysql+aiomysql', 8888),
-#     DBType.MYSQL: DBInfo('mysql+aiomysql', 8888),
-#     DBType.POSTGRESQL: DBInfo('postgresql+asyncpg', 8888),
-#     DBType.SQLITE: DBInfo('sqlite+aiosqlite', None)
-# }
-#
-# required_options = {
-#     DBType.MARIA: 'host,username',
-#     DBType.SQLITE: 'filename'
-# }
-#
-#
-#
-#
-# def command_required_option_from_option(require_name, require_map):
-#
-#     class CommandOptionRequiredClass(click.Command):
-#
-#         def invoke(self, ctx):
-#             require = ctx.params[require_name]
-#             if require not in require_map:
-#                 raise click.ClickException(
-#                     "Unexpected value for --'{}': {}".format(
-#                         require_name, require))
-#             if ctx.params[require_map[require].lower()] is None:
-#                 raise click.ClickException(
-#                     "With {}={} must specify option --{}".format(
-#                         require_name, require, require_map[require]))
-#             super(CommandOptionRequiredClass, self).invoke(ctx)
-#
-# # @dataclass(kw_only=True)
-# # class CommonArgs:
-# #     db_type: Annotated[DBType, typer.Option("--db", "-d", help="db type")]
-# #     db_username: Annotated[str, typer.Option("--username", "-u", help="set the username", prompt="Enter db username")]
-# #     db_host: Annotated[str, typer.Option("--host", "-h", help="database host", prompt="Enter db username")] = "localhost"
-# #     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output.")] = False
-# #     config_path: Annotated[str, typer.Option("--config", "-c", help="Path to configuration file.")] = "config.ini"
-# #
-#
-#
-#
-# @app.command(name="list")
-# def list_clients(db_type: Annotated[DBType, typer.Option("--db", "-d", help="db type")]):
-#     """List all Client IDs."""
-#
-#
-# @app.command(name="add")
-# def create_username(debug: bool = typer.Option(False, "-d", help="Enable debug messages")):
-#     """create a username"""
-#     password = Prompt.ask("Enter the db password", password=True)
-#
-# @app.command(name="rm")
-# def remove_usernames(debug: bool = typer.Option(False, "-d", help="Enable debug messages")):
-#     """remove a username"""
-#     password = Prompt.ask("Enter the db password", password=True)
-#
-# @app.command(name="pwd")
-# def change_password(debug: bool = typer.Option(False, "-d", help="Enable debug messages")):
-#     """update a user's password"""
-#     password = Prompt.ask("Enter the db password", password=True)
 
-import click
-import typer
-
-_app = typer.Typer()
+@dataclass
+class DBInfo:
+    connect_str: str
+    connect_port: int | None
 
 
-@_app.command()
-def top():
-    """
-    Top level command, form Typer
-    """
-    print("The Typer app is at the top level")
-
-
-@_app.callback()
-def callback():
-    """
-    Typer app, including Click subapp
-    """
-
-
-def command_required_option_from_option(require_name, require_map):
-
-    class CommandOptionRequiredClass(click.Command):
-
-        def invoke(self, ctx):
-            require = ctx.params[require_name]
-            if require not in require_map:
-                raise click.ClickException(
-                    "Unexpected value for --'{}': {}".format(
-                        require_name, require))
-            if ctx.params[require_map[require].lower()] is None:
-                raise click.ClickException(
-                    "With {}={} must specify option --{}".format(
-                        require_name, require, require_map[require]))
-            super(CommandOptionRequiredClass, self).invoke(ctx)
-
-    return CommandOptionRequiredClass
-
-
-required_options = {
-    1: 'generator_string',
-    2: 'number_of_sample_points',
-    3: 'number_of_center_points',
+_db_map = {
+    DBType.MARIA: DBInfo('mysql+aiomysql', 3306),
+    DBType.MYSQL: DBInfo('mysql+aiomysql', 3306),
+    DBType.POSTGRESQL: DBInfo('postgresql+asyncpg', 5432),
+    DBType.SQLITE: DBInfo('sqlite+aiosqlite', None)
 }
 
 
-@click.command(context_settings=dict(max_content_width=800),
-               cls=command_required_option_from_option('doe', required_options))
-@click.option('--input', required=True,
-              type=click.Path(exists=True))
-@click.option('--doe', required=True, type=int)
-@click.option('--generator_string', required=False, type=str, is_eager=True)
-@click.option('--number_of_sample_points', required=False, type=int, is_eager=True)
-@click.option('--number_of_center_points', required=False, type=int, is_eager=True)
-def hello(name):
-    """Simple program that greets NAME for a total of COUNT times."""
-    click.echo(f"Hello {name}!")
+@dataclass(kw_only=True)
+class CommonArgs:
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output.")] = False
+    config_path: Annotated[str, typer.Option("--config", "-c", help="Path to configuration file.")] = "config.ini"
 
 
-from amqtt.scripts.constrained_option import ConstrainedOption
+def db_connection_str(db_type: DBType, db_username: str, db_host:str, db_port: int|None, db_filename: str) -> str:
+    db_info = _db_map[db_type]
+    if db_type == DBType.SQLITE:
+        return f"{db_info.connect_str}:///{db_filename}"
+    db_password = Prompt.ask("Enter the db password (press enter for none)", password=True)
+    pwd = f':{db_password}' if db_password else ''
+    return f"{db_info.connect_str}://{db_username}:{pwd}@{db_host}:{db_port or db_info.connect_port}"
 
 
-@click.command()
-@click.option(cls=ConstrainedOption,
-              group_require_one=["apple", "orange", "pear"])
-@click.option("--apple",
-              cls=ConstrainedOption,
-              is_flag=True)
-@click.option("--orange",
-              cls=ConstrainedOption,
-              is_flag=True)
-@click.option("--pear",
-              cls=ConstrainedOption,
-              is_flag=True)
-def cli(**kwargs):
-    click.echo(kwargs)
+@app.callback()
+def main(
+        ctx: typer.Context,
+        db_type: Annotated[DBType, typer.Option("--db", "-d", help="db type", count=False)],
+        db_username: Annotated[str, typer.Option("--username", "-u", help="db username")] = None,
+        db_port: Annotated[int, typer.Option("--port", "-p", help="database port (defaults to db type)")] = None,
+        db_host: Annotated[str, typer.Option("--host", "-h", help="database host")] = "localhost",
+        db_filename: Annotated[str, typer.Option("--file", "-f", help="database file name (sqlite only)")] = "auth.db",
+        verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output.")] = False,
+
+):
+    if db_type == DBType.SQLITE and ctx.invoked_subcommand == "sync" and not Path(db_filename).exists():
+        pass
+    elif db_type == DBType.SQLITE and not Path(db_filename).exists():
+        logger.error(f"SQLite option could not find '{db_filename}'")
+        raise typer.Exit()
+    elif db_type != DBType.SQLITE and not db_username:
+        logger.error("DB access requires a username be provided.")
+        raise typer.Exit()
+
+    ctx.obj = {'type': db_type, 'username': db_username, 'host': db_host, 'port': db_port, 'filename': db_filename}
 
 
+@app.command(name='sync')
+def db_sync(ctx: typer.Context):
+    async def run_sync():
+        connect = db_connection_str(ctx.obj['type'], ctx.obj['username'], ctx.obj['host'], ctx.obj['port'], ctx.obj['filename'])
+        mgr = UserManager(connect)
+        try:
+            await mgr.db_sync()
+        except MQTTError:
+            logger.error("Could not sync schema on db.")
+            raise typer.Exit()
 
-def my_command_function(count, name):
-    for _ in range(count):
-        click.echo(f"Hello {name}!")
-
-my_command = click.command(name="cmd")(my_command_function)
-
-count_option = click.Option(
-    ["--db", "-d"],
-    default=1,
-    type=click.Choice(DBType),
-    help="type of database",
-)
-my_command.params.append(count_option)
-
-name_option = click.Option(
-    ["--name", "-n"],
-    prompt="Your name",
-    help="The person to greet.",
-)
-my_command.params.append(name_option)
+    asyncio.run(run_sync())
 
 
-import cloup
-from cloup.constraints import (
-    If, require_one, Equal
-)
+@app.command(name="list")
+def list_clients(ctx: typer.Context) -> None:
+    """List all Client IDs."""
+    async def run_list() -> None:
+        connect = db_connection_str(ctx.obj['type'], ctx.obj['username'], ctx.obj['host'], ctx.obj['port'], ctx.obj['filename'])
+        mgr = UserManager(connect)
+        user_count = 0
+        for user in await mgr.list_users():
+            user_count += 1
+            print(user)
 
-@cloup.command(show_constraints=True)
-@click.option('-f', '--format', required=True,
-              type=click.Choice(['csv', 'json']))
-@click.option('-d', '--delimiter', required=False, type=click.Choice(['\t', ', ']))
-@click.option('-i', '--indent', required=False, type=int)
-@cloup.constraint(If(Equal('format', 'csv'), then=require_one.hidden()), ['delimiter'])
-@cloup.constraint(If(Equal('format', 'json'), then=require_one.hidden()), ['indent'])
-def formatter(format, delimiter, indent):
-    pass
+        if not user_count:
+            print("No users exist.")
 
+    asyncio.run(run_list())
 
 
 
+@app.command(name="add")
+def create_client(
+        ctx: typer.Context,
+        client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the new client")],
+        ) -> None:
+    """create a username"""
+    async def run_create() -> None:
+        connect = db_connection_str(ctx.obj['type'], ctx.obj['username'], ctx.obj['host'], ctx.obj['port'],
+                                    ctx.obj['filename'])
+        mgr = UserManager(connect)
+        client_password = Prompt.ask("Enter the client password", password=True)
+        if not client_password:
+            logger.error("Client password cannot be empty.")
+            raise typer.Exit()
+        try:
+            user = await mgr.create_user(client_id, client_password)
+        except passlib.exc.MissingBackendError as mbe:
+            logger.error(f"Please install backend: {mbe}")
+            raise typer.Exit()
+
+        if not user:
+            logger.error(f"Could not create user: {client_id}")
+            raise typer.Exit()
+
+        print(f"User created: {user}")
+
+    asyncio.run(run_create())
 
 
 
-auth_app = typer.main.get_command(_app)
+@app.command(name="rm")
+def remove_username(ctx: typer.Context,
+                    client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the client to remove")]) -> None:
+    """remove a username"""
+    async def run_remove() -> None:
+        connect = db_connection_str(ctx.obj['type'], ctx.obj['username'], ctx.obj['host'], ctx.obj['port'],
+                                    ctx.obj['filename'])
+        mgr = UserManager(connect)
+        user = await mgr.delete_user(client_id)
+        print(f"'{user.username}' was removed.")
 
-auth_app.add_command(hello, "hello")
-auth_app.add_command(cli, "cli")
-auth_app.add_command(my_command, "cmd")
-auth_app.add_command(formatter, "formatter")
+    if not Confirm.ask(f"Please confirm the removal of '{client_id}'?"):
+        raise typer.Exit()
+
+    asyncio.run(run_remove())
 
 
 
+@app.command(name="pwd")
+def change_password(
+        ctx: typer.Context,
+        client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the new client")],
+        ) -> None:
+    """update a user's password"""
+    async def run_password() -> None:
+        client_password = Prompt.ask("Enter the client's new password", password=True)
+        if not client_password:
+            logger.error("Client password cannot be empty.")
+            raise typer.Exit()
+        connect = db_connection_str(ctx.obj['type'], ctx.obj['username'], ctx.obj['host'], ctx.obj['port'],
+                                    ctx.obj['filename'])
+        mgr = UserManager(connect)
+        await mgr.update_password(client_id, client_password)
 
-
-
-
-
-
-# if __name__ == "__main__":
-#     typer_click_object()
+    asyncio.run(run_password())
 
