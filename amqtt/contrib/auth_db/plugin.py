@@ -1,6 +1,7 @@
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 import logging
-from typing import Generator
+from typing import Any, Optional
 
 from passlib.context import CryptContext
 from sqlalchemy import String, select
@@ -22,21 +23,22 @@ class Base(DeclarativeBase):
 class PasswordHasher:
     """singleton to initialize the CryptContext and then use it elsewhere in the code."""
 
-    _instance: "PasswordHasher" = None
+    _instance: Optional["PasswordHasher"] = None
 
-    def __init__(self):
-        if not hasattr(self, '_crypt_context'):
+    def __init__(self) -> None:
+        if not hasattr(self, "_crypt_context"):
             self._crypt_context: CryptContext | None = None
 
-    def __new__(cls, *args: list, **kwargs: dict) -> "PasswordHasher":
+    def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> "PasswordHasher":
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
     @property
     def crypt_context(self) -> "CryptContext":
         if not self._crypt_context:
-            raise ValueError("CryptContext is empty")
+            msg = "CryptContext is empty"
+            raise ValueError(msg)
         return self._crypt_context
 
     @crypt_context.setter
@@ -52,28 +54,31 @@ class UserAuth(Base):
     _password_hash: Mapped[str] = mapped_column("password_hash", String(128))
 
     @hybrid_property
-    def password(self):
-        raise AttributeError("Password is write-only")
+    def password(self) -> None:
+        msg = "Password is write-only"
+        raise AttributeError(msg)
 
-    @password.setter
-    def password(self, plain_password: str):
+    @password.inplace.setter  # type: ignore[arg-type]
+    def _password_setter(self, plain_password: str) -> None:
         self._password_hash = PasswordHasher().crypt_context.hash(plain_password)
 
     def verify_password(self, plain_password: str) -> bool:
-        return PasswordHasher().crypt_context.verify(plain_password, self._password_hash)
+        return bool(PasswordHasher().crypt_context.verify(plain_password, self._password_hash))
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Display client id and password hash."""
         return f"Client: '{self.username}': password hash: {self._password_hash}"
 
 
 
-def default_hash_scheme():
+def default_hash_scheme() -> list[str]:
+    """Create config dataclass defaults."""
     return ["argon2", "bcrypt", "pbkdf2_sha256", "scrypt"]
 
 
 class DBAuthPlugin(BaseAuthPlugin):
 
-    def __init__(self, context: BrokerContext):
+    def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
         # access the singleton and set the proper crypt context
@@ -84,14 +89,14 @@ class DBAuthPlugin(BaseAuthPlugin):
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
 
     async def on_broker_pre_start(self) -> None:
-        """Sync the schema (if configured)"""
+        """Sync the schema (if configured)."""
         if not self.config.sync_schema:
             return
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
     async def authenticate(self, *, session: Session) -> bool | None:
-
+        """Authenticate a client's session."""
         if not session.username:
             return False
 
@@ -104,10 +109,10 @@ class DBAuthPlugin(BaseAuthPlugin):
                 return False
 
             await db_session.flush()
-            if not user_auth.verify_password(session.password):
-                logger.info(f"Username '{session.username}' password mismatch.")
-                return False
-            return True
+            if session.password and user_auth.verify_password(session.password):
+                return True
+            logger.info(f"Username '{session.username}' password mismatch.")
+            return False
 
 
     @dataclass
@@ -128,32 +133,37 @@ class DBAuthPlugin(BaseAuthPlugin):
 
 class UserManager:
 
-    def __init__(self, connection: str):
+    def __init__(self, connection: str) -> None:
         self._engine = create_async_engine(connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
         pwd_hasher = PasswordHasher()
         pwd_hasher.crypt_context = CryptContext(schemes=default_hash_scheme(), deprecated="auto")
 
-    async def db_sync(self):
+    async def db_sync(self) -> None:
+        """Sync the database schema."""
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    async def list_users(self):
+    async def list_users(self) -> Iterator[UserAuth]:
+        """Return list of all clients."""
         async with self._db_session_maker() as db_session, db_session.begin():
             stmt = select(UserAuth).order_by(UserAuth.username)
             users = await db_session.scalars(stmt)
             if not users:
-                logger.info("No users exist.")
-                raise MQTTError("No users exist.")
+                msg = "No users exist."
+                logger.info(msg)
+                raise MQTTError(msg)
             return users
 
     async def create_user(self, username: str, plain_password:str) -> UserAuth | None:
+        """Create a new user."""
         async with self._db_session_maker() as db_session, db_session.begin():
             stmt = select(UserAuth).filter(UserAuth.username == username)
             user_auth = await db_session.scalar(stmt)
             if user_auth:
-                logger.info(f"Username '{username}' already exists.")
-                raise MQTTError("Username already exists.")
+                msg = f"Username '{username}' already exists."
+                logger.info(msg)
+                raise MQTTError(msg)
 
             user_auth = UserAuth(username=username)
             user_auth.password = plain_password
@@ -162,34 +172,32 @@ class UserManager:
             await db_session.flush()
             return user_auth
 
-        return None
-
-
     async def delete_user(self, username: str) -> UserAuth | None:
+        """Delete a user."""
         async with self._db_session_maker() as db_session, db_session.begin():
             stmt = select(UserAuth).filter(UserAuth.username == username)
             user_auth = await db_session.scalar(stmt)
             if not user_auth:
-                logger.info(f"'{username}' doesn't exists.")
-                raise MQTTError(f"'{username}' doesn't exists.")
+                msg = f"'{username}' doesn't exists."
+                logger.info(msg)
+                raise MQTTError(msg)
 
             await db_session.delete(user_auth)
             await db_session.commit()
             await db_session.flush()
             return user_auth
 
-        return None
-
     async def update_password(self, username: str, plain_password: str) -> UserAuth | None:
+        """Change a user's password."""
         async with self._db_session_maker() as db_session, db_session.begin():
             stmt = select(UserAuth).filter(UserAuth.username == username)
             user_auth = await db_session.scalar(stmt)
             if not user_auth:
-                logger.debug(f"Username '{username}' doesn't exist.")
-                raise MQTTError(f"Username '{username}' doesn't exist.")
+                msg = f"Username '{username}' doesn't exist."
+                logger.debug(msg)
+                raise MQTTError(msg)
 
             user_auth.password = plain_password
             await db_session.commit()
             await db_session.flush()
             return user_auth
-        return None
