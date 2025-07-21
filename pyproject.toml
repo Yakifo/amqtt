@@ -35,10 +35,13 @@ dependencies = [
   "typer==0.15.4",
   "dacite>=1.9.2",
   "psutil>=7.0.0",
+  "argon2-cffi>=25.1.0",
 ]
 
 [dependency-groups]
 dev = [
+  "aiosqlite>=0.21.0",
+  "greenlet>=3.2.3",
   "hatch>=1.14.1",
   "hypothesis>=6.130.8",
   "mypy>=1.15.0",

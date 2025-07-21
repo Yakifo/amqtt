@@ -9,7 +9,7 @@ import passlib
 from rich.prompt import Confirm, Prompt
 import typer
 
-from amqtt.contrib.auth_db.plugin import UserManager
+from amqtt.contrib.auth_db.managers import UserManager
 from amqtt.errors import MQTTError
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,14 @@ def main(
         db_host: Annotated[str, typer.Option("--host", "-h", help="database host")] = "localhost",
         db_filename: Annotated[str, typer.Option("--file", "-f", help="database file name (sqlite only)")] = "auth.db",
 ) -> None:
-    """Establish and check cli arguments for all subcommands."""
+    """Command line interface to list, create, remove and add clients.
+
+    Passwords are not allowed to be passed via the command line for security reasons. You will be prompted for database
+    password (if applicable) and the client id's password.
+
+    If you need to create users programmatically, see `amqtt.contrib.auth_db.managers.UserManager` which provides
+    the underlying functionality to this command line interface.
+    """
     if db_type == DBType.SQLITE and ctx.invoked_subcommand == "sync" and not Path(db_filename).exists():
         pass
     elif db_type == DBType.SQLITE and not Path(db_filename).exists():
@@ -75,7 +82,10 @@ def main(
 
 @app.command(name="sync")
 def db_sync(ctx: typer.Context) -> None:
-    """Sync the database schema."""
+    """Create the table and schema for username and hashed password.
+
+    Non-destructive if run multiple times. To clear the whole table, need to drop it manually.
+    """
     async def run_sync() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"], ctx.obj["filename"])
         mgr = UserManager(connect)
@@ -90,7 +100,7 @@ def db_sync(ctx: typer.Context) -> None:
 
 @app.command(name="list")
 def list_clients(ctx: typer.Context) -> None:
-    """List all Client IDs."""
+    """List all Client IDs (in alphabetical order). Will also display the hashed passwords."""
 
     async def run_list() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"], ctx.obj["filename"])
@@ -111,7 +121,7 @@ def create_client(
         ctx: typer.Context,
         client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the new client")],
         ) -> None:
-    """Create a client id and password."""
+    """Create a new user with a client id and password (prompted)."""
     async def run_create() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
@@ -138,7 +148,7 @@ def create_client(
 @app.command(name="rm")
 def remove_username(ctx: typer.Context,
                     client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the client to remove")]) -> None:
-    """Remove a client."""
+    """Remove a client from the authentication database."""
     async def run_remove() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
@@ -160,7 +170,7 @@ def change_password(
         ctx: typer.Context,
         client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the new client")],
         ) -> None:
-    """Update a user's password."""
+    """Update a user's password (prompted)."""
     async def run_password() -> None:
         client_password = Prompt.ask("Enter the client's new password", password=True)
         if not client_password:
@@ -172,3 +182,7 @@ def change_password(
         await mgr.update_password(client_id, client_password)
 
     asyncio.run(run_password())
+
+
+if __name__ == "__main__":
+    app()
