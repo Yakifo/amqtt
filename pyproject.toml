@@ -35,7 +35,6 @@ dependencies = [
   "typer==0.15.4",
   "dacite>=1.9.2",
   "psutil>=7.0.0",
-  "argon2-cffi>=25.1.0",
 ]
 
 [dependency-groups]
@@ -85,16 +84,15 @@ docs = [
 ci = ["coveralls==4.0.1"]
 contrib = [
     "sqlalchemy>=2.0.41",
-    "typer>=0.15.4",
+    "argon2-cffi>=25.1.0",
 ]
-
-
 
 [project.scripts]
 amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
-user_mgr = "amqtt.scripts.manage_user:main"
+
+user_mgr = "amqtt.scripts.manage_users:main"
 topic_mgr = "amqtt.scripts.manage_topics:main"
 
 [tool.hatch.build]

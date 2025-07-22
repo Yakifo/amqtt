@@ -1,6 +1,7 @@
 import asyncio
 import sqlite3
 import tempfile
+from pathlib import Path
 
 import pytest
 import aiosqlite
@@ -16,8 +17,9 @@ from argon2.exceptions import VerifyMismatchError
 
 @pytest.fixture
 def db_file():
-    with tempfile.NamedTemporaryFile(mode='wb', delete=True) as tmp:
-        yield f"{tmp}.db"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with tempfile.NamedTemporaryFile(mode='wb', delete=True) as tmp:
+            yield Path(temp_dir) / f"{tmp.name}.db"
 
 
 @pytest.fixture
