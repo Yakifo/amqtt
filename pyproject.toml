@@ -35,7 +35,6 @@ dependencies = [
   "typer==0.15.4",
   "dacite>=1.9.2",
   "psutil>=7.0.0",
-  "argon2-cffi>=25.1.0",
 ]
 
 [dependency-groups]
@@ -85,7 +84,7 @@ docs = [
 ci = ["coveralls==4.0.1"]
 contrib = [
     "sqlalchemy>=2.0.41",
-    "typer>=0.15.4",
+    "argon2-cffi>=25.1.0",
 ]
 
 [project.scripts]
