@@ -88,13 +88,11 @@ contrib = [
     "typer>=0.15.4",
 ]
 
-
-
 [project.scripts]
 amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
-auth_db = "amqtt.scripts.auth_db:main"
+user_mgr = "amqtt.scripts.auth_db:main"
 
 [tool.hatch.build]
 exclude = [
