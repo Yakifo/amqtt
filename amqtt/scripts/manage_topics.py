@@ -9,14 +9,14 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     """Run the auth db cli."""
     try:
-        from amqtt.contrib.auth_db.cli import app  #  pylint: disable=import-outside-toplevel
+        from amqtt.contrib.auth_db.cli import user_app  #  pylint: disable=import-outside-toplevel
     except ImportError:
         logger.critical("optional 'contrib' library is missing, please install: `pip install amqtt[contrib]`")
         sys.exit(1)
 
-    from amqtt.contrib.auth_db.cli import app  #  pylint: disable=import-outside-toplevel
+    from amqtt.contrib.auth_db.cli import user_app  #  pylint: disable=import-outside-toplevel
     try:
-        app()
+        user_app()
     except ModuleNotFoundError as mnfe:
         logger.critical(f"Please install database-specific dependencies: {mnfe}")
         sys.exit(1)

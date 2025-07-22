@@ -13,7 +13,7 @@ from amqtt.contrib.auth_db.managers import UserManager
 from amqtt.errors import MQTTError
 
 logger = logging.getLogger(__name__)
-app = typer.Typer(no_args_is_help=True)
+user_app = typer.Typer(no_args_is_help=True)
 
 
 class DBType(StrEnum):
@@ -51,7 +51,7 @@ def db_connection_str(db_type: DBType, db_username: str, db_host:str, db_port: i
     return f"{db_info.connect_str}://{db_username}:{pwd}@{db_host}:{db_port or db_info.connect_port}"
 
 
-@app.callback()
+@user_app.callback()
 def main(
         ctx: typer.Context,
         db_type: Annotated[DBType, typer.Option("--db", "-d", help="db type", count=False)],
@@ -80,7 +80,7 @@ def main(
     ctx.obj = {"type": db_type, "username": db_username, "host": db_host, "port": db_port, "filename": db_filename}
 
 
-@app.command(name="sync")
+@user_app.command(name="sync")
 def db_sync(ctx: typer.Context) -> None:
     """Create the table and schema for username and hashed password.
 
@@ -98,7 +98,7 @@ def db_sync(ctx: typer.Context) -> None:
     asyncio.run(run_sync())
 
 
-@app.command(name="list")
+@user_app.command(name="list")
 def list_clients(ctx: typer.Context) -> None:
     """List all Client IDs (in alphabetical order). Will also display the hashed passwords."""
 
@@ -116,7 +116,7 @@ def list_clients(ctx: typer.Context) -> None:
     asyncio.run(run_list())
 
 
-@app.command(name="add")
+@user_app.command(name="add")
 def create_client(
         ctx: typer.Context,
         client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the new client")],
@@ -145,7 +145,7 @@ def create_client(
     asyncio.run(run_create())
 
 
-@app.command(name="rm")
+@user_app.command(name="rm")
 def remove_username(ctx: typer.Context,
                     client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the client to remove")]) -> None:
     """Remove a client from the authentication database."""
@@ -165,7 +165,7 @@ def remove_username(ctx: typer.Context,
     asyncio.run(run_remove())
 
 
-@app.command(name="pwd")
+@user_app.command(name="pwd")
 def change_password(
         ctx: typer.Context,
         client_id: Annotated[str, typer.Option("--client-id", "-c", help="id for the new client")],
@@ -185,4 +185,4 @@ def change_password(
 
 
 if __name__ == "__main__":
-    app()
+    user_app()

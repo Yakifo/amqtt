@@ -94,7 +94,8 @@ contrib = [
 amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
-auth_db = "amqtt.scripts.auth_db:main"
+user_mgr = "amqtt.scripts.manage_user:main"
+topic_mgr = "amqtt.scripts.manage_topics:main"
 
 [tool.hatch.build]
 exclude = [
