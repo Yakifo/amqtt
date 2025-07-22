@@ -151,7 +151,7 @@ async def test_client_authentication(user_manager, db_connection):
     broker_cfg = {
         'listeners': { 'default': {'type': 'tcp', 'bind': '127.0.0.1:1883'}},
         'plugins': {
-            'amqtt.contrib.auth_db.plugin.DBAuthPlugin': {
+            'amqtt.contrib.auth_db.AuthDBPlugin': {
                 'connection': db_connection,
             }
         }
@@ -187,7 +187,7 @@ async def test_client_blocked(user_manager, db_connection, client_pwd):
     broker_cfg = {
         'listeners': { 'default': {'type': 'tcp', 'bind': '127.0.0.1:1883'}},
         'plugins': {
-            'amqtt.contrib.auth_db.plugin.DBAuthPlugin': {
+            'amqtt.contrib.auth_db.AuthDBPlugin': {
                 'connection': db_connection,
             }
         }
