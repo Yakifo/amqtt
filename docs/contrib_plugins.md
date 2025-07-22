@@ -14,8 +14,8 @@ For ease of use, there is a [command-line utility](contrib_plugins.md/#auth_db) 
 
 ::: amqtt.contrib.auth_db.plugin.AuthDBPlugin.Config
 
-## Command line utility for auth via database
+## Command line for auth via database
 
 ::: mkdocs-typer2
-    :module: amqtt.contrib.auth_db.cli
-    :name: auth_db
+    :module: amqtt.contrib.auth_db.user_mgr_cli
+    :name: usermgr
