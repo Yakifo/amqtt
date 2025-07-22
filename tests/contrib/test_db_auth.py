@@ -172,6 +172,10 @@ async def test_client_authentication(user_manager, db_connection):
     await asyncio.sleep(0.1)
     message = await client.deliver_message(timeout_duration=1)
     assert message.topic == "my/topic"
+    await asyncio.sleep(0.1)
+    await client.disconnect()
+    await asyncio.sleep(0.1)
+    await broker.shutdown()
 
 
 @pytest.mark.parametrize("client_pwd", [
