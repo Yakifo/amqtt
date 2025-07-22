@@ -33,7 +33,7 @@ jobs:
           python-version: "3.13"
 
       - name: 🏗 Install the project
-        run: uv sync --locked --dev --optional contrib
+        run: uv sync --locked --dev --extra contrib
 
       - name: Run mypy
         run: uv run --frozen mypy ${{ env.PROJECT_PATH }}/
