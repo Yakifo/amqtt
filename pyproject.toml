@@ -38,6 +38,9 @@ dependencies = [
 ]
 
 [dependency-groups]
+contrib = [
+    "pyopenssl>=25.1.0",
+]
 dev = [
   "hatch>=1.14.1",
   "hypothesis>=6.130.8",

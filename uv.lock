@@ -30,6 +30,9 @@ contrib = [
 ]
 
 [package.dev-dependencies]
+contrib = [
+    { name = "pyopenssl" },
+]
 dev = [
     { name = "hatch" },
     { name = "hypothesis" },
@@ -84,6 +87,7 @@ requires-dist = [
 provides-extras = ["ci", "contrib"]
 
 [package.metadata.requires-dev]
+contrib = [{ name = "pyopenssl", specifier = ">=25.1.0" }]
 dev = [
     { name = "hatch", specifier = ">=1.14.1" },
     { name = "hypothesis", specifier = ">=6.130.8" },

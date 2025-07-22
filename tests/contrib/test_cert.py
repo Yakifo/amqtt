@@ -14,6 +14,7 @@ import pytest
 from amqtt.broker import BrokerContext, Broker
 from amqtt.client import MQTTClient
 from amqtt.contrib.cert import CertificateAuthPlugin
+from amqtt.errors import ConnectError
 from amqtt.scripts.server_creds import server_creds as get_server_creds
 from amqtt.scripts.device_creds import device_creds as get_device_creds
 from amqtt.scripts.ca_creds import ca_creds as get_ca_creds
@@ -144,7 +145,66 @@ async def test_client_broker_cert_authentication(ca_creds, server_creds, device_
 
     c = MQTTClient(config=client_config, client_id='mydeviceid')
     await c.connect('mqtts://127.0.0.1:8883')
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.1)
+
+    assert 'mydeviceid' in b._sessions
+    s, _ = b._sessions['mydeviceid']
+    assert s.transitions.state == "connected"
+
+    await asyncio.sleep(0.1)
     await c.disconnect()
+    await asyncio.sleep(0.1)
+    await b.shutdown()
+
+
+def ssl_error_logger(loop, context):
+    logger.critical("Asyncio SSL error:", context.get("message"))
+    assert "exception" not in context, f"Exception: {repr(context["exception"])}"
+
+
+@pytest.mark.asyncio
+async def test_client_broker_wrong_certs(ca_creds, server_creds, device_creds):
+    loop = asyncio.get_event_loop()
+    loop.set_exception_handler(ssl_error_logger)
+    loop.set_debug(True)
+
+    ca_key, ca_crt = ca_creds
+    server_key, server_crt = server_creds
+    device_key, device_crt = device_creds
+    broker_config = {
+        'listeners': {
+            'default': {
+                'type':'tcp',
+                'bind':'127.0.0.1:8883',
+                'ssl': True,
+                'keyfile': server_key,
+                'certfile': server_crt,
+                'cafile': ca_crt,
+            }
+        },
+        'plugins': {
+            'amqtt.plugins.logging_amqtt.PacketLoggerPlugin':{},
+            'amqtt.contrib.cert.CertificateAuthPlugin': {'uri_domain': 'test.amqtt.io'},
+        }
+    }
+
+    b = Broker(config=broker_config)
+    await b.start()
+    await asyncio.sleep(1)
+
+    # generate a different ca certificate and make sure the connection fails
+    temp_dir = Path(tempfile.mkdtemp(prefix="amqtt-test-"))
+    get_ca_creds(country='US', state="NY", locality="NYC", org_name="aMQTT", cn="aMQTT", output_dir=str(temp_dir))
+    wrong_ca_crt = temp_dir / 'ca.crt'
+    client_config = {
+        'auto_reconnect': False,
+        'cafile': wrong_ca_crt,
+        'certfile': device_crt,
+        'keyfile': device_key,
+    }
+
+    c = MQTTClient(config=client_config, client_id='mydeviceid')
+    with pytest.raises(ConnectError, match='.+?SSL: CERTIFICATE_VERIFY_FAILED.+?'):
+        await c.connect('mqtts://127.0.0.1:8883')
 
     await b.shutdown()
