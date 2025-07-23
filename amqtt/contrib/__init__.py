@@ -3,8 +3,7 @@
 from dataclasses import asdict, is_dataclass
 from typing import Any, TypeVar
 
-from sqlalchemy import JSON
-from sqlalchemy import TypeDecorator
+from sqlalchemy import JSON, TypeDecorator
 
 T = TypeVar("T")
 

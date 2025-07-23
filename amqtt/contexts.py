@@ -1,6 +1,13 @@
-from enum import Enum, StrEnum
 import logging
 from typing import TYPE_CHECKING, Any
+
+try:
+    from enum import StrEnum
+except ImportError:
+    # support for python 3.10
+    from enum import Enum
+    class StrEnum(str, Enum):  #type: ignore[no-redef]
+        pass
 
 _LOGGER = logging.getLogger(__name__)
 

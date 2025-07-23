@@ -13,13 +13,13 @@ class TopicTabooPlugin(BaseTopicPlugin):
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool:
+    ) -> bool | None:
         filter_result = await super().topic_filtering(session=session, topic=topic, action=action)
         if filter_result:
             if session and session.username == "admin":
                 return True
             return not (topic and topic in self._taboo)
-        return filter_result
+        return bool(filter_result)
 
 
 class TopicAccessControlListPlugin(BaseTopicPlugin):
@@ -46,7 +46,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool:
+    ) -> bool | None:
         filter_result = await super().topic_filtering(session=session, topic=topic, action=action)
         if not filter_result:
             return False
@@ -58,7 +58,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
 
         req_topic = topic
         if not req_topic:
-            return False\
+            return False
 
         username = session.username if session else None
         if username is None:

@@ -2,7 +2,6 @@ import asyncio
 import sqlite3
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 import aiosqlite
@@ -12,7 +11,7 @@ from amqtt.broker import BrokerContext, Broker
 from amqtt.client import MQTTClient
 from amqtt.contexts import Action
 from amqtt.contrib.auth_db.models import AllowedTopic, PasswordHasher
-from amqtt.contrib.auth_db.plugin import AuthDBPlugin
+from amqtt.contrib.auth_db.plugin import UserAuthDBPlugin, TopicAuthDBPlugin
 from amqtt.contrib.auth_db.managers import UserManager, TopicManager
 from amqtt.errors import ConnectError, MQTTError
 from amqtt.mqtt.constants import QOS_1, QOS_0
@@ -56,9 +55,13 @@ async def topic_manager(password_hasher, db_connection):
     yield tm
 
 
+# ######################################
+# Tests for the UserAuthDBPlugin
+
+
 @pytest.mark.asyncio
 async def test_create_user(user_manager, db_file, db_connection):
-    await user_manager.create_user("myuser", "mypassword")
+    await user_manager.create_user_auth("myuser", "mypassword")
 
     async with aiosqlite.connect(db_file) as db_conn:
         db_conn.row_factory = sqlite3.Row  # Set the row_factory
@@ -82,24 +85,24 @@ async def test_create_user(user_manager, db_file, db_connection):
 
 @pytest.mark.asyncio
 async def test_list_users(user_manager, db_file, db_connection):
-    await user_manager.create_user("myuser", "mypassword")
-    await user_manager.create_user("otheruser", "mypassword")
-    await user_manager.create_user("anotheruser", "mypassword")
+    await user_manager.create_user_auth("myuser", "mypassword")
+    await user_manager.create_user_auth("otheruser", "mypassword")
+    await user_manager.create_user_auth("anotheruser", "mypassword")
 
-    assert len(list(await user_manager.list_users())) == 3
+    assert len(list(await user_manager.list_user_auths())) == 3
 
 
 @pytest.mark.asyncio
 async def test_list_empty_users(user_manager, db_file, db_connection):
 
-    assert len(list(await user_manager.list_users())) == 0
+    assert len(list(await user_manager.list_user_auths())) == 0
 
 
 @pytest.mark.asyncio
 async def test_password_change(user_manager, db_file, db_connection):
-    new_user = await user_manager.create_user("myuser", "mypassword")
+    new_user = await user_manager.create_user_auth("myuser", "mypassword")
 
-    await user_manager.update_password("myuser", "mynewpassword")
+    await user_manager.update_user_auth_password("myuser", "mynewpassword")
     async with aiosqlite.connect(db_file) as db_conn:
         db_conn.row_factory = sqlite3.Row  # Set the row_factory
 
@@ -118,15 +121,15 @@ async def test_password_change(user_manager, db_file, db_connection):
 
 @pytest.mark.asyncio
 async def test_remove_users(user_manager, db_file, db_connection):
-    await user_manager.create_user("myuser", "mypassword")
-    await user_manager.create_user("otheruser", "mypassword")
-    await user_manager.create_user("anotheruser", "mypassword")
+    await user_manager.create_user_auth("myuser", "mypassword")
+    await user_manager.create_user_auth("otheruser", "mypassword")
+    await user_manager.create_user_auth("anotheruser", "mypassword")
 
-    assert len(list(await user_manager.list_users())) == 3
+    assert len(list(await user_manager.list_user_auths())) == 3
 
-    await user_manager.delete_user("myuser")
+    await user_manager.delete_user_auth("myuser")
 
-    assert len(list(await user_manager.list_users())) == 2
+    assert len(list(await user_manager.list_user_auths())) == 2
 
     async with aiosqlite.connect(db_file) as db_conn:
         db_conn.row_factory = sqlite3.Row  # Set the row_factory
@@ -147,13 +150,13 @@ async def test_remove_users(user_manager, db_file, db_connection):
 @pytest.mark.asyncio
 async def test_db_auth(db_connection, user_manager, user_pwd, session_pwd, outcome):
 
-    await user_manager.create_user("myuser", user_pwd)
+    await user_manager.create_user_auth("myuser", user_pwd)
 
     broker_context = BrokerContext(broker=Broker())
-    broker_context.config = AuthDBPlugin.Config(
+    broker_context.config = UserAuthDBPlugin.Config(
         connection=db_connection
     )
-    db_auth_plugin = AuthDBPlugin(context=broker_context)
+    db_auth_plugin = UserAuthDBPlugin(context=broker_context)
 
     s = Session()
     s.username = "myuser"
@@ -165,13 +168,13 @@ async def test_db_auth(db_connection, user_manager, user_pwd, session_pwd, outco
 @pytest.mark.asyncio
 async def test_client_authentication(user_manager, db_connection):
 
-    user = await user_manager.create_user("myuser", "mypassword")
+    user = await user_manager.create_user_auth("myuser", "mypassword")
     assert user is not None
 
     broker_cfg = {
         'listeners': { 'default': {'type': 'tcp', 'bind': '127.0.0.1:1883'}},
         'plugins': {
-            'amqtt.contrib.auth_db.AuthDBPlugin': {
+            'amqtt.contrib.auth_db.UserAuthDBPlugin': {
                 'connection': db_connection,
             }
         }
@@ -179,26 +182,24 @@ async def test_client_authentication(user_manager, db_connection):
 
     broker = Broker(config=broker_cfg)
 
-    with patch.object(AuthDBPlugin, 'topic_filtering', return_value=True):
+    await broker.start()
+    await asyncio.sleep(0.1)
 
-        await broker.start()
-        await asyncio.sleep(0.1)
+    client = MQTTClient(client_id='myclientid', config={'auto_reconnect': False})
+    await client.connect("mqtt://myuser:mypassword@127.0.0.1:1883")
 
-        client = MQTTClient(client_id='myclientid', config={'auto_reconnect': False})
-        await client.connect("mqtt://myuser:mypassword@127.0.0.1:1883")
-
-        await client.subscribe([
-            ("my/topic", QOS_1)
-        ])
-        await asyncio.sleep(0.1)
-        await client.publish("my/topic", b"test")
-        await asyncio.sleep(0.1)
-        message = await client.deliver_message(timeout_duration=1)
-        assert message.topic == "my/topic"
-        await asyncio.sleep(0.1)
-        await client.disconnect()
-        await asyncio.sleep(0.1)
-        await broker.shutdown()
+    await client.subscribe([
+        ("my/topic", QOS_1)
+    ])
+    await asyncio.sleep(0.1)
+    await client.publish("my/topic", b"test")
+    await asyncio.sleep(0.1)
+    message = await client.deliver_message(timeout_duration=1)
+    assert message.topic == "my/topic"
+    await asyncio.sleep(0.1)
+    await client.disconnect()
+    await asyncio.sleep(0.1)
+    await broker.shutdown()
 
 
 @pytest.mark.parametrize("client_pwd", [
@@ -208,31 +209,33 @@ async def test_client_authentication(user_manager, db_connection):
 @pytest.mark.asyncio
 async def test_client_blocked(user_manager, db_connection, client_pwd):
 
-    user = await user_manager.create_user("myuser", "mypassword")
+    user = await user_manager.create_user_auth("myuser", "mypassword")
     assert user is not None
 
     broker_cfg = {
         'listeners': { 'default': {'type': 'tcp', 'bind': '127.0.0.1:1883'}},
         'plugins': {
-            'amqtt.contrib.auth_db.AuthDBPlugin': {
+            'amqtt.contrib.auth_db.UserAuthDBPlugin': {
                 'connection': db_connection,
             }
         }
     }
 
     broker = Broker(config=broker_cfg)
-    with patch.object(AuthDBPlugin, 'topic_filtering', return_value=True):
 
-        await broker.start()
-        await asyncio.sleep(0.1)
+    await broker.start()
+    await asyncio.sleep(0.1)
 
-        client = MQTTClient(client_id='myclientid', config={'auto_reconnect': False})
-        with pytest.raises(ConnectError):
-            await client.connect(f"mqtt://myuser:{client_pwd}@127.0.0.1:1883")
+    client = MQTTClient(client_id='myclientid', config={'auto_reconnect': False})
+    with pytest.raises(ConnectError):
+        await client.connect(f"mqtt://myuser:{client_pwd}@127.0.0.1:1883")
 
-        await broker.shutdown()
-        await asyncio.sleep(0.1)
+    await broker.shutdown()
+    await asyncio.sleep(0.1)
 
+
+# ######################################
+# Tests for the TopicAuthDBPlugin
 
 def test_allowed_topic_match():
 
@@ -240,100 +243,46 @@ def test_allowed_topic_match():
     assert "my/topic" in at
 
     at2 = AllowedTopic(topic="my/other/topic")
-    assert at2 not in at
+    assert "my/other/topic" in at2
+    assert "my/another/topic" not in at2
 
-    at3 = AllowedTopic(topic="my/topic")
-    assert at3 in at
+    at3 = AllowedTopic(topic="my/#")
+    assert "my/other" in at3
+    assert "my/other/topic" in at3
+    assert "other/topic" not in at3
 
-    assert at == at3
-    assert at != at2
+    at4 = AllowedTopic(topic="my/other/#")
+    assert "my/other" in at4
+    assert "my/other/topic" in at4
+    assert "other/topic" not in at4
+    assert "/my/other/topic" not in at4
 
+    at5 = AllowedTopic(topic="my/+/topic")
+    assert "my/other/topic" in at5
+    assert "my/another/topic" in at5
+    assert "my/other/another/topic" not in at5
 
-def test_allowed_hash_topic_match():
+    at6 = AllowedTopic(topic="my/other/topic")
+    assert at6 == at2
+    assert at2 == at6
+    assert at6 != at
+    assert at6 not in at5
 
-    at = AllowedTopic(topic="my/#")
-
-    at2 = AllowedTopic(topic="my/topic")
-    assert "my/topic" in at
-    assert at2 in at
-
-    at3 = AllowedTopic(topic="my/other/topic")
-    assert "my/other/topic" in at
-    assert at3 in at
-
-    at4 = AllowedTopic(topic="my/#")
-    assert "my/#" in at
-    assert at4 in at
-
-
-def test_allowed_plus_topic_match():
-
-    at = AllowedTopic(topic="my/+/topic")
-
-    at2 = AllowedTopic(topic="my/other/topic")
-    assert "my/other/topic" in at
-    assert at2 in at
-
-    at3 = AllowedTopic(topic="my/another/topic")
-    assert "my/another/topic" in at
-    assert at3 in at
-
-    at4 = AllowedTopic(topic="my/+/topic")
-    assert "my/+/topic" in at
-    assert at4 in at
 
 def test_allowed_topic_list_match():
-    at1 = AllowedTopic(topic="my/topic")
-    at2 = AllowedTopic(topic="my/other/topic")
-    at3 = AllowedTopic(topic="my/another/topic")
+    at1 = AllowedTopic(topic="one/topic")
+    at2 = AllowedTopic(topic="one/other/topic")
+    at3 = AllowedTopic(topic="two/+/topic")
+    at4 = AllowedTopic(topic="three/topic/#")
 
-    at_list = [at1, at2, at3]
+    at_list = [at1, at2, at3, at4]
 
-    at4 = AllowedTopic(topic="my/topic")
-    at5 = AllowedTopic(topic="my/not/topic")
+    assert "one/topic" in at_list
+    assert "two/other/topic" in at_list
+    assert "two/another/topic" in at_list
+    assert "three/topic" in at_list
+    assert "three/topic/other" in at_list
 
-    assert at4 in at_list
-    assert "my/topic" in at_list
-
-    assert at5 not in at_list
-    assert "my/not/topic" not in at_list
-
-def test_allowed_topic_hash_list_match():
-    at1 = AllowedTopic(topic="my/other/#")
-    at2 = AllowedTopic(topic="my/another/#")
-    at3 = AllowedTopic(topic="my/not/topic")
-
-    at_list = [at1, at2, at3]
-
-    at4 = AllowedTopic(topic="my/other/topic")
-    at5 = AllowedTopic(topic="my/other/topic/extended")
-
-    assert at4 in at_list
-    assert "my/other/topic" in at_list
-    assert at5 in at_list
-    assert "my/other/topic/extended" in at_list
-
-    at6 = AllowedTopic(topic="my/negative/topic")
-    assert at6 not in at_list
-
-def test_allowed_topic_plus_list_match():
-    at1 = AllowedTopic(topic="my/+/other")
-    at2 = AllowedTopic(topic="my/+/another")
-    at3 = AllowedTopic(topic="my/not/topic")
-
-    at_list = [at1, at2, at3]
-
-    at4 = AllowedTopic(topic="my/topic/other")
-    at5 = AllowedTopic(topic="my/topic/another")
-
-    assert at4 in at_list
-    assert "my/topic/other" in at_list
-    assert at5 in at_list
-    assert "my/topic/another" in at_list
-
-    at6 = AllowedTopic(topic="my/extended/topic/another")
-    assert at6 not in at_list
-    assert "my/extended/topic/another" not in at_list
 
 def test_remove_topic_list():
     at1 = AllowedTopic(topic="my/topic")
@@ -352,17 +301,17 @@ def test_remove_topic_list():
 @pytest.mark.asyncio
 async def test_add_topic_to_client(db_file, user_manager, topic_manager, db_connection):
     client_id = "myuser"
-    user = await user_manager.create_user(client_id, "mypassword")
-    assert user is not None
 
-    topic_list = await topic_manager.add_topic(client_id, "my/topic", Action.PUBLISH)
+    topic_auth = await topic_manager.create_topic_auth(client_id)
+    assert topic_auth is not None
+    topic_list = await topic_manager.add_allowed_topic(client_id, "my/topic", Action.PUBLISH)
     assert len(topic_list) > 0
 
     async with aiosqlite.connect(db_file) as db_conn:
         db_conn.row_factory = sqlite3.Row  # Set the row_factory
 
         user_found = False
-        async with await db_conn.execute("SELECT * FROM user_auth") as cursor:
+        async with await db_conn.execute("SELECT * FROM topic_auth") as cursor:
             for row in await cursor.fetchall():
                 assert row['username'] == client_id
                 assert "my/topic" in row['publish_acl']
@@ -372,21 +321,45 @@ async def test_add_topic_to_client(db_file, user_manager, topic_manager, db_conn
 
 
 @pytest.mark.asyncio
+async def test_invalid_dollar_topic_for_publish(db_file, user_manager, topic_manager, db_connection):
+    client_id = "myuser"
+
+    topic_auth = await topic_manager.create_topic_auth(client_id)
+    assert topic_auth is not None
+    with pytest.raises(MQTTError):
+        await topic_manager.add_allowed_topic(client_id, "$MY/topic", Action.PUBLISH)
+
+    async with aiosqlite.connect(db_file) as db_conn:
+        db_conn.row_factory = sqlite3.Row  # Set the row_factory
+
+        auth_topic_found = False
+        async with await db_conn.execute("SELECT * FROM topic_auth") as cursor:
+            for row in await cursor.fetchall():
+                assert row['username'] == client_id
+                assert "$MY/topic" not in row['publish_acl']
+                auth_topic_found = True
+
+        assert auth_topic_found
+
+
+@pytest.mark.asyncio
 async def test_remove_topic_from_client(db_file, user_manager, topic_manager, db_connection):
     client_id = "myuser"
-    user = await user_manager.create_user(client_id, "mypassword")
+    topic_auth = await topic_manager.create_topic_auth(client_id)
+    assert topic_auth is not None
+    user = await user_manager.create_user_auth(client_id, "mypassword")
     assert user is not None
 
-    await topic_manager.add_topic(client_id, "my/topic", Action.PUBLISH)
-    await topic_manager.add_topic(client_id, "my/other/topic", Action.PUBLISH)
-    topic_list = await topic_manager.add_topic(client_id, "my/another/topic", Action.PUBLISH)
+    await topic_manager.add_allowed_topic(client_id, "my/topic", Action.PUBLISH)
+    await topic_manager.add_allowed_topic(client_id, "my/other/topic", Action.PUBLISH)
+    topic_list = await topic_manager.add_allowed_topic(client_id, "my/another/topic", Action.PUBLISH)
     assert len(topic_list) == 3
 
     async with aiosqlite.connect(db_file) as db_conn:
         db_conn.row_factory = sqlite3.Row  # Set the row_factory
 
         user_found = False
-        async with await db_conn.execute("SELECT * FROM user_auth") as cursor:
+        async with await db_conn.execute("SELECT * FROM topic_auth") as cursor:
             for row in await cursor.fetchall():
                 assert row['username'] == client_id
                 assert "my/topic" in row['publish_acl']
@@ -395,14 +368,14 @@ async def test_remove_topic_from_client(db_file, user_manager, topic_manager, db
                 user_found = True
         assert user_found
 
-    topic_list = await topic_manager.remove_topic(client_id, "my/other/topic", Action.PUBLISH)
+    topic_list = await topic_manager.remove_allowed_topic(client_id, "my/other/topic", Action.PUBLISH)
     assert len(topic_list) == 2
 
     async with aiosqlite.connect(db_file) as db_conn:
         db_conn.row_factory = sqlite3.Row  # Set the row_factory
 
         user_found = False
-        async with await db_conn.execute("SELECT * FROM user_auth") as cursor:
+        async with await db_conn.execute("SELECT * FROM topic_auth") as cursor:
             for row in await cursor.fetchall():
                 assert row['username'] == client_id
                 assert "my/topic" in row['publish_acl']
@@ -415,85 +388,86 @@ async def test_remove_topic_from_client(db_file, user_manager, topic_manager, db
 @pytest.mark.asyncio
 async def test_remove_missing_topic(db_file, user_manager, topic_manager, db_connection):
     client_id = "myuser"
-    user = await user_manager.create_user(client_id, "mypassword")
+    topic_auth = await topic_manager.create_topic_auth(client_id)
+    assert topic_auth is not None
+    user = await user_manager.create_user_auth(client_id, "mypassword")
     assert user is not None
 
-    await topic_manager.add_topic(client_id, "my/topic", Action.PUBLISH)
-    await topic_manager.add_topic(client_id, "my/other/topic", Action.PUBLISH)
-    topic_list = await topic_manager.add_topic(client_id, "my/another/topic", Action.PUBLISH)
+    await topic_manager.add_allowed_topic(client_id, "my/topic", Action.PUBLISH)
+    await topic_manager.add_allowed_topic(client_id, "my/other/topic", Action.PUBLISH)
+    topic_list = await topic_manager.add_allowed_topic(client_id, "my/another/topic", Action.PUBLISH)
     assert len(topic_list) == 3
 
     with pytest.raises(MQTTError):
-        await topic_manager.remove_topic(client_id, "my/not/topic", Action.PUBLISH)
+        await topic_manager.remove_allowed_topic(client_id, "my/not/topic", Action.PUBLISH)
 
 
 @pytest.mark.asyncio
 async def test_remove_topic_wrong_action(db_file, user_manager, topic_manager, db_connection):
     client_id = "myuser"
-    user = await user_manager.create_user(client_id, "mypassword")
+    topic_auth = await topic_manager.create_topic_auth(client_id)
+    assert topic_auth is not None
+    user = await user_manager.create_user_auth(client_id, "mypassword")
     assert user is not None
 
-    await topic_manager.add_topic(client_id, "my/topic", Action.PUBLISH)
-    await topic_manager.add_topic(client_id, "my/other/topic", Action.PUBLISH)
-    topic_list = await topic_manager.add_topic(client_id, "my/another/topic", Action.PUBLISH)
+    await topic_manager.add_allowed_topic(client_id, "my/topic", Action.PUBLISH)
+    await topic_manager.add_allowed_topic(client_id, "my/other/topic", Action.PUBLISH)
+    topic_list = await topic_manager.add_allowed_topic(client_id, "my/another/topic", Action.PUBLISH)
     assert len(topic_list) == 3
 
     with pytest.raises(MQTTError):
-        await topic_manager.remove_topic(client_id, "my/other/topic", Action.SUBSCRIBE)
+        await topic_manager.remove_allowed_topic(client_id, "my/other/topic", Action.SUBSCRIBE)
 
 
-@pytest.mark.parametrize("acl_topic,msg_topic,disabled,outcome", [
-    ("my/topic", "my/topic", False, True),
-    ("my/topic", "my/other/topic", False, False),
-    ("my/topic", "my/other/topic", True, True),
+@pytest.mark.parametrize("acl_topic,msg_topic,outcome", [
+    ("my/topic", "my/topic", True),
+    ("my/topic", "my/other/topic", False),
+    ("my/#", "my/other/topic", True),
+    ("my/#", "my/another/topic", True),
 ])
 @pytest.mark.asyncio
-async def test_plugin_topic_filter_plugin(db_file, user_manager, topic_manager, db_connection, acl_topic, msg_topic, disabled, outcome):
+async def test_topic_publish_filter_plugin(db_file, topic_manager, db_connection, acl_topic, msg_topic, outcome):
     client_id = "myuser"
-    user = await user_manager.create_user(client_id, "mypassword")
+
+    user = await topic_manager.create_topic_auth(client_id)
     assert user is not None
 
-    await topic_manager.add_topic(client_id, acl_topic, Action.PUBLISH)
+    await topic_manager.add_allowed_topic(client_id, acl_topic, Action.PUBLISH)
 
     broker_context = BrokerContext(broker=Broker())
-    broker_context.config = AuthDBPlugin.Config(
-        connection=db_connection,
-        disable_topic_filtering=disabled
+    broker_context.config = TopicAuthDBPlugin.Config(
+        connection=db_connection
     )
-    db_auth_plugin = AuthDBPlugin(context=broker_context)
+    db_auth_plugin = TopicAuthDBPlugin(context=broker_context)
 
     s = Session()
     s.username = client_id
-    assert await db_auth_plugin.topic_filtering(session=s, topic=msg_topic, action=Action.PUBLISH) == outcome
+    assert await db_auth_plugin.topic_filtering(session=s, topic=msg_topic, action=Action.PUBLISH) == outcome,\
+        f"topic filter responded incorrectly: {not outcome} vs {outcome}."
 
 
-@pytest.mark.parametrize("sub_topic,is_subscribed,pub_topic,msg_topic,is_disabled,is_received", [
-    ("my/topic", True, "my/topic", "my/topic", False, True),
-    ("my/#", True, "my/topic", "my/topic", False, True),
-    # ("my/topic", True, "my/other/topic", "my/topic", False, False),
-    # ("my/topic", False, "my/topic", "my/other/topic", False, False),
-    # ("my/topic", True, "my/other/topic", "my/topic", True, True),
-    # ("my/topic", True, "my/topic", "my/other/topic", True, True),
-])
+
 @pytest.mark.asyncio
-async def test_topic_filtering(db_file, user_manager, topic_manager, db_connection, sub_topic, is_subscribed, pub_topic, msg_topic, is_disabled, is_received):
+async def test_topic_subscribe(db_file, topic_manager, db_connection):
 
     broker_cfg = {
         'listeners': { 'default': {'type': 'tcp', 'bind': '127.0.0.1:1883'}},
         'plugins': {
-            'amqtt.contrib.auth_db.AuthDBPlugin': {
-                'connection': db_connection,
-                'disable_topic_filtering': is_disabled
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {},
+            'amqtt.contrib.auth_db.TopicAuthDBPlugin': {
+                'connection': db_connection
+            },
+            'amqtt.plugins.sys.broker.BrokerSysPlugin': {
+                'sys_interval' : 2
             }
         }
     }
     client_id = "myuser"
 
-    user = await user_manager.create_user(client_id, "mypassword")
-    assert user is not None
-    pub_topic_list = await topic_manager.add_topic(client_id, pub_topic, Action.PUBLISH)
-    assert len(pub_topic_list) > 0
-    sub_topic_list = await topic_manager.add_topic(client_id, sub_topic, Action.SUBSCRIBE)
+    topic_auth = await topic_manager.create_topic_auth(client_id)
+    assert topic_auth is not None
+
+    sub_topic_list = await topic_manager.add_allowed_topic(client_id, '$SYS/#', Action.SUBSCRIBE)
     assert len(sub_topic_list) > 0
 
     broker = Broker(config=broker_cfg)
@@ -505,30 +479,23 @@ async def test_topic_filtering(db_file, user_manager, topic_manager, db_connecti
     await client.connect("mqtt://myuser:mypassword@127.0.0.1:1883")
 
     ret = await client.subscribe([
-        (msg_topic, QOS_0)
+        ('$SYS/broker/clients/connected', QOS_0)
     ])
-    if is_subscribed:
-        assert ret == [0x0,]
-    else:
-        assert ret == [0x80,]
 
+    assert ret == [0x0,]
 
-    await asyncio.sleep(0.1)
-    await client.publish(msg_topic, b"test")
     await asyncio.sleep(0.1)
 
     message_received = False
     try:
-        message = await client.deliver_message(timeout_duration=1)
-        assert message.topic == msg_topic
+        message = await client.deliver_message(timeout_duration=4)
+        assert message.topic == '$SYS/broker/clients/connected'
         message_received = True
     except asyncio.TimeoutError:
         pass
 
-    assert message_received == is_received
+    assert message_received, "Did not receive a $SYS message"
     await asyncio.sleep(0.1)
     await client.disconnect()
     await asyncio.sleep(0.1)
     await broker.shutdown()
-
-

@@ -525,7 +525,7 @@ class MQTTClient:
             self._connected_state.set()
             self.logger.debug(f"Connected to {self.session.remote_address}:{self.session.remote_port}")
 
-        except (InvalidURI, InvalidHandshake, ProtocolHandlerError, ConnectionError, OSError) as e:
+        except (InvalidURI, InvalidHandshake, ProtocolHandlerError, ConnectionError, OSError, asyncio.TimeoutError) as e:
             self.logger.debug(f"Connection failed : {self.session.broker_uri} [{e!r}]")
             self.session.transitions.disconnect()
             raise ConnectError(e) from e

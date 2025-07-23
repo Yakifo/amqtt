@@ -24,7 +24,6 @@ name = "amqtt"
 version = "0.11.3rc1"
 source = { editable = "." }
 dependencies = [
-    { name = "argon2-cffi" },
     { name = "dacite" },
     { name = "passlib" },
     { name = "psutil" },
@@ -39,8 +38,8 @@ ci = [
     { name = "coveralls" },
 ]
 contrib = [
+    { name = "argon2-cffi" },
     { name = "sqlalchemy" },
-    { name = "typer" },
 ]
 
 [package.dev-dependencies]
@@ -86,7 +85,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "argon2-cffi", specifier = ">=25.1.0" },
+    { name = "argon2-cffi", marker = "extra == 'contrib'", specifier = ">=25.1.0" },
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "passlib", specifier = "==1.7.4" },
@@ -95,7 +94,6 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'contrib'", specifier = ">=2.0.41" },
     { name = "transitions", specifier = "==0.9.2" },
     { name = "typer", specifier = "==0.15.4" },
-    { name = "typer", marker = "extra == 'contrib'", specifier = ">=0.15.4" },
     { name = "websockets", specifier = "==15.0.1" },
 ]
 provides-extras = ["ci", "contrib"]
