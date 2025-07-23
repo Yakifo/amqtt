@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, StrEnum
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -15,7 +15,7 @@ class BaseContext:
         self.config: dict[str, Any] | None = None
 
 
-class Action(Enum):
+class Action(StrEnum):
     """Actions issued by the broker."""
 
     SUBSCRIBE = "subscribe"

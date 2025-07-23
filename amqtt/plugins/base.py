@@ -88,7 +88,7 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool:
+    ) -> bool | None:
         """Logic for filtering out topics.
 
         Args:
