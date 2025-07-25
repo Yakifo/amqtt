@@ -135,7 +135,6 @@ plugins:
           options:
 #            extra:
 #              template_log_display: true
-            annotation_path: "full"
             docstring_options:
               ignore_init_summary: true
             docstring_section_style: list
@@ -154,7 +153,7 @@ plugins:
             signature_crossrefs: true
             summary: true
             extensions:
-              - docs/scripts/exts.py:MyExtension:
+              - docs/scripts/exts.py:DataclassDefaultFactoryExtension:
                 paths: [mypkg.mymod.myobj]
   - git-revision-date-localized:
       enabled: !ENV [DEPLOY, false]

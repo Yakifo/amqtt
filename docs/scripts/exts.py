@@ -68,7 +68,37 @@ def evaluate_callable_node(node):
     except Exception as e:
         return f"<unresolvable: {e}>"
 
-class MyExtension(griffe.Extension):
+class DataclassDefaultFactoryExtension(griffe.Extension):
+    """Renders the output of a dataclasses field which uses a default factory.
+
+    def other_field_defaults():
+        return {'item1': 'value1', 'item2': 'value2'}
+
+    @dataclass
+    class MyDataClass:
+        my_field: dict[str, Any] = field(default_factory=dict)
+        my_other_field: dict[str, Any] = field(default_factory=other_field_defaults)
+
+    instead of documentation rendering this as:
+
+    ```
+      class MyDataClass:
+        my_field: dict[str, Any] = dict()
+        my_other_field: dict[str, Any] = other_field_defaults()
+    ```
+
+    it will be displayed with the output of factory functions for more clarity:
+
+    ```
+    class MyDataClass:
+        my_field: dict[str, Any] = {}
+        my_other_field: dict[str, Any] = {'item1': 'value1', 'item2': 'value2'}
+    ```
+
+    _note_ : for any custom default factory function, it must be added to the `default_factory_map`
+    in this file as `griffe` doesn't provide a straightforward mechanism with its AST to dynamically
+    import/call the function.
+    """
     def on_instance(
         self,
         node: ast.AST | griffe.ObjectNode,
