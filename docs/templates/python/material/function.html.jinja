@@ -1,21 +1,6 @@
-{% extends "_base/function.html.jinja" %}
+{% if config.extra.class_style == 'simple' %}{% else %}{% extends "_base/function.html.jinja" %}{% endif %}
+
 
 {% block logs scoped %}
 {% if config.extra.template_log_display %}<p style="color:red">function.html.jinja</p>{% endif %}
 {% endblock logs %}
-
-{% block heading scoped %}
-{% if config.extra.class_style != 'simple' %}{{ super() }}{% endif %}
-{% endblock heading %}
-
-{%  block labels scoped %}
-{% if config.extra.class_style != 'simple' %}{{ super() }}{% endif %}
-{%  endblock labels %}
-
-{%  block signature scoped %}
-{% if config.extra.class_style != 'simple' %}{{ super() }}{% endif %}
-{%  endblock signature %}
-
-{% block contents scoped %}{% if config.extra.class_style != 'simple' %}{{ super() }}{% endif %}
-{% endblock contents %}
-        

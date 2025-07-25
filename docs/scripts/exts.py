@@ -99,16 +99,6 @@ class DataclassDefaultFactoryExtension(griffe.Extension):
     in this file as `griffe` doesn't provide a straightforward mechanism with its AST to dynamically
     import/call the function.
     """
-    def on_instance(
-        self,
-        node: ast.AST | griffe.ObjectNode,
-        obj: griffe.Object,
-        agent: griffe.Visitor | griffe.Inspector,
-        **kwargs,
-    ) -> None:
-        """Do something with `node` and/or `obj`."""
-        if obj.kind == griffe.Kind.FUNCTION and obj.name == 'default_broker_plugins':
-            print(f"my extension on instance {node} > {obj}")
 
     def on_attribute_instance(
         self,
@@ -118,26 +108,34 @@ class DataclassDefaultFactoryExtension(griffe.Extension):
         agent: Visitor | Inspector,
         **kwargs: Any,
     ) -> None:
+        """Called for every `node` and/or `attr` on a file's AST."""
         if not hasattr(node, "value"):
             return
         if isinstance(node.value, ast.Call):
+            # Search for all of the `default_factory` fields.
             default_factory_value: str | None = None
             for kw in node.value.keywords:
                 if kw.arg == "default_factory":
+                    # based on the node type, return the proper function name
                     match get_callable_name(kw.value):
+                        # `dict` and `list` are common default factory functions
                         case 'dict':
                             default_factory_value = "{}"
                         case 'list':
                             default_factory_value = "[]"
+
                         case _:
+                            # otherwise, see the nodes is in our map for the custom default factory function
                             callable_name = get_callable_name(kw.value)
                             if callable_name in default_factory_map:
                                 default_factory_value = pprint.pformat(default_factory_map[callable_name], indent=4, width=80, sort_dicts=False)
                             else:
+                                # if not, display as the default
                                 default_factory_value = f"{callable_name}()"
 
-            if "factory" not in attr.extra:
-                attr.extra["factory"] = {}
+            # store the information in the griffe attribute, which is what is passed to the template for rendering
+            if "dataclass_ext" not in attr.extra:
+                attr.extra["dataclass_ext"] = {}
             attr.extra["dataclass_ext"]["has_default_factory"] = False
             if default_factory_value is not None:
                 attr.extra["dataclass_ext"]["has_default_factory"] = True
