@@ -17,7 +17,7 @@
 - Communication over TCP and/or websocket, including support for SSL/TLS
 - Support QoS 0, QoS 1 and QoS 2 messages flow
 - Client auto-reconnection on network lost
-- Functionality expansion; plugins included: authentication and `$SYS` topic publishing
+- Custom functionality expansion; plugins included: authentication, `$SYS` topic publishing, session persistence
 
 ## Installation
 

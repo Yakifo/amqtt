@@ -1,4 +1,4 @@
-# Existing Plugins
+# Packaged Plugins
 
 With the aMQTT plugins framework, one can add additional functionality without
 having to rewrite core logic in the broker or client. Plugins can be loaded and configured using
@@ -47,8 +47,6 @@ By default, the `PacketLoggerPlugin` is  activated  and configured for the clien
 
 ```yaml
 plugins:
-  .
-  .
   amqtt.plugins.authentication.AnonymousAuthPlugin:
       allow_anonymous: false
 ```
