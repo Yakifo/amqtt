@@ -98,9 +98,9 @@ class PluginManager(Generic[C]):
             # plugins loaded directly from config dictionary
 
 
-            if "auth" in self.app_context.config:
+            if "auth" in self.app_context.config and self.app_context.config["auth"] is not None:
                 self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
-            if "topic-check" in self.app_context.config:
+            if "topic-check" in self.app_context.config and self.app_context.config["topic-check"] is not None:
                 self.logger.warning("Loading plugins from config will ignore 'topic-check' section of config")
 
             plugins_config: list[Any] | dict[str, Any] = self.app_context.config.get("plugins", [])

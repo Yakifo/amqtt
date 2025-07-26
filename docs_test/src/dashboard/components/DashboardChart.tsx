@@ -4,9 +4,11 @@
   import Typography from '@mui/material/Typography';
   import Stack from '@mui/material/Stack';
   import { LineChart } from '@mui/x-charts/LineChart';
-  import CountUp from 'react-countup';
+
   import type { DataPoint } from '../../assets/helpers.jsx';
   import {CircularProgress} from "@mui/material";
+  import {StandardCounter, ByteCounter} from "./Counter.tsx";
+  import {useRef} from "react";
 
   const currentTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -115,7 +117,24 @@
           </LineChart>
   }
 
-  export default function SessionsChart(props: any) {
+  export default function DashboardChart(props: any) {
+
+    const lastCalc = useRef<number>(0);
+
+    const calc_per_second = (curValue: DataPoint, lastValue: DataPoint) => {
+      if(!props.isPerSecond) { return ''; }
+
+      if(!curValue || !lastValue) {
+        return '';
+      }
+
+      if(curValue.timestamp - lastValue.timestamp > 0) {
+        const per_second =  (curValue.value - lastValue.value) / ((curValue.timestamp - lastValue.timestamp) / 1000);
+        lastCalc.current = Math.trunc(per_second * 10) / 10;
+      }
+
+      return `${lastCalc.current} / sec`;
+    }
 
     return (
       <Card variant="outlined" sx={{ width: '100%' }}>
@@ -135,14 +154,13 @@
               <Typography variant="h4" component="p">
 
                 { props.data.length < 2 ? "" :
-                <CountUp
-                  start={props.data[props.data.length - 2].value}
-                  end={props.data[props.data.length - 1].value}
-                  duration={5}
-                  decimals={props.decimals}
-
-                />} {props.label}
+                  props.isBytes ? <ByteCounter start={props.data[props.data.length - 2].value} end={props.data[props.data.length - 1].value}/> :
+                    <StandardCounter start={props.data[props.data.length - 2].value} end={props.data[props.data.length - 1].value} />
+                } {props.label}
               </Typography>
+              <p>
+                { calc_per_second(props.data[props.data.length-1], props.data[props.data.length-2]) }
+              </p>
             </Stack>
           </Stack>
           { props.data.length < 2 ? <NoDataDisplay isConnected={props.isConnected}/> :

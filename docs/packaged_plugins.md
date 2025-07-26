@@ -132,13 +132,26 @@ plugins:
 
 **Configuration**
 
-- `acl` *(mapping)*: determines subscription access
-   The list should be a key-value pair, where:
-        `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+Each acl category are a list a key-value pair, where:
 
+> `<username>:["<topic1>", "<topic2>", ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
 
-- `publish-acl` *(mapping)*: determines publish access. If absent, no restrictions are placed on client publishing. 
-        `<username>:[<topic1>, <topic2>, ...]` *(string, list[string])*: username of the client followed by a list of allowed topics (wildcards are supported: `#`, `+`).
+!!! info "`#` and `$SYS` topics"
+
+    Per the MQTT 3.1.1 spec 4.7.2, a single `#` will not allow access to `$` broker 
+    topics; need to additionally specify `$SYS/#` to allow a client full access subscribe & receive.
+
+    Also MQTT spec prevents clients from publishing to topics starting with `$`; these will be ignored.  
+
+If set to `None`, no restrictions are placed on client subscriptions (legacy behavior). An empty list will block clients from using any topics.
+
+- `subscribe-acl` *(mapping)*: determines subscription access.
+
+- `acl` *(mapping)*: Deprecated and replaced by `subscribe-acl`.
+
+- `publish-acl` *(mapping)*: determines publish access.
+
+- `receive-acl` *(mapping)*: determines if a message can be sent to a client.
 
     !!! info "Reserved usernames"
 

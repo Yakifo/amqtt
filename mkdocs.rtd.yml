@@ -128,15 +128,18 @@ plugins:
   - coverage
   - mkdocs-typer2
   - mkdocstrings:
+      custom_templates: 'docs/templates'
       handlers:
         python:
           paths: [amqtt]
           options:
+#            extra:
+#              template_log_display: true
             docstring_options:
               ignore_init_summary: true
             docstring_section_style: list
             filters: ["!^_"]
-            heading_level: 1
+            heading_level: 2
             inherited_members: true
             merge_init_into_class: true
             parameter_headings: true
@@ -149,6 +152,9 @@ plugins:
             show_symbol_type_toc: true
             signature_crossrefs: true
             summary: true
+            extensions:
+              - docs/scripts/exts.py:DataclassDefaultFactoryExtension:
+                paths: [mypkg.mymod.myobj]
   - git-revision-date-localized:
       enabled: !ENV [DEPLOY, false]
       enable_creation_date: true

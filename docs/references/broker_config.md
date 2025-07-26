@@ -1,42 +1,31 @@
 # Broker Configuration
 
-This configuration structure is valid as a python dictionary passed to the `amqtt.broker.Broker` class's `__init__` method or
-as a yaml formatted file passed to the `amqtt` script.
+This configuration structure is a `amqtt.contexts.BrokerConfig` or a python dictionary with the same structure 
+when instantiating `amqtt.broker.Broker` or as a yaml formatted file passed to the `amqtt` script.
 
-### `listeners` *(list[dict[str, Any]])*
+If not specified, the `Broker()` will be started with the default `BrokerConfig()`, as represented in yaml format:
 
-Defines the network listeners used by the service. Items defined in the `default` listener will be
-applied to all other listeners, unless they are overridden by the configuration for the specific
-listener.
+```yaml
+---
+listeners:
+  default:
+    type: tcp
+    bind: 0.0.0.0:1883
+timeout_disconnect_delay: 0
+plugins:
+  amqtt.plugins.logging_amqtt.EventLoggerPlugin:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
+  amqtt.plugins.authentication.AnonymousAuthPlugin:
+    allow_anonymous: true
+  amqtt.plugins.sys.broker.BrokerSysPlugin:
+    sys_interval: 20
+```
 
-- `default` | `<listener_name>`: Named listener
-    - `type` *(string)*: Transport type. Can be `tcp` or `ws`.
-    - `bind` *(string)*: IP address and port (e.g., `0.0.0.0:1883`)
-    - `max-connections` *(integer)*: Maximum number of clients that can connect to this interface
-    - `ssl` *(string)*: Enable SSL connection. Can be `on` or `off` (default: off).
-    - `cafile` *(string)*:  Path to a file of concatenated CA certificates in PEM format. See [Certificates](https://docs.python.org/3/library/ssl.html#ssl-certificates) for more info.
-    - `capath` *(string)*:  Path to a directory containing several CA certificates in PEM format, following an [OpenSSL specific layout](https://docs.openssl.org/master/man3/SSL_CTX_load_verify_locations/).
-    - `cadata` *(string)*:    Either an ASCII string of one or more PEM-encoded certificates or a bytes-like object of DER-encoded certificates.
-    - `certfile` *(string)*: Path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the certificate's authenticity.
-    - `keyfile` *(string): A file containing the private key. Otherwise the private key will be taken from `certfile` as well.
-
-### `timeout-disconnect-delay` *(int)*
-
-Client disconnect timeout without a keep-alive. 
-
-### `plugins` *(mapping)*
-
-A list of strings representing the modules and class name of `BasePlugin`, `BaseAuthPlugin` and `BaseTopicPlugins`. Each
-entry may have one or more configuration settings. For more information, see the [configuration of the included plugins](../packaged_plugins.md)
-
-
-??? warning "Deprecated: `sys_interval` "
-    **`sys_interval`** *(int)*
-    
-    System status report interval in seconds, used by the `amqtt.plugins.sys.broker.BrokerSysPlugin`.
-
-
-
+::: amqtt.contexts.BrokerConfig
+    options:
+      heading_level: 3
+      extra:
+        class_style: "simple"
 
 ??? warning "Deprecated: `auth` configuration settings"
 
@@ -64,6 +53,13 @@ entry may have one or more configuration settings. For more information, see the
 
     - `password-file` *(string)*. Path to sha-512 encoded password file, used by `amqtt.plugins.authentication.FileAuthPlugin`.
 
+
+??? warning "Deprecated: `sys_interval` "
+    **`sys_interval`** *(int)*
+    
+    System status report interval in seconds, used by the `amqtt.plugins.sys.broker.BrokerSysPlugin`.
+
+
 ??? warning "Deprecated: `topic-check` configuration settings"
 
 
@@ -88,19 +84,17 @@ entry may have one or more configuration settings. For more information, see the
               - The username `admin` is allowed access to all topic.
               - The username `anonymous` will control allowed topics if using the `auth_anonymous` plugin.
       
-      
-       
 
-
-
-## Default Configuration
-
-```yaml
---8<-- "amqtt/scripts/default_broker.yaml"
-```
+::: amqtt.contexts.ListenerConfig
+    options:
+      heading_level: 3
+      extra:
+        class_style: "simple"
 
 ## Example
   
+When a configuration is passed to the `amqtt` script, here is the equivalent format based on the structures above:
+
 ```yaml
 listeners:
     default:
@@ -116,9 +110,9 @@ listeners:
         ssl: on
         cafile: /some/cafile
         capath: /some/folder
-        capath: certificate data
+        capath: 'certificate data'
         certfile: /some/certfile
-        keyfile: /some/key
+        keyfile: /some/keyfile
     my-ws-1:
         bind: 0.0.0.0:8080
         type: ws
@@ -127,7 +121,7 @@ listeners:
         type: ws
         ssl: on
         certfile: /some/certfile
-        keyfile: /some/key
+        keyfile: /some/keyfile
 timeout-disconnect-delay: 2
 plugins:
   - amqtt.plugins.authentication.AnonymousAuthPlugin:
@@ -137,7 +131,7 @@ plugins:
   - amqtt.plugins.topic_checking.TopicAccessControlListPlugin:
       acl:
         username1: ['repositories/+/master', 'calendar/#', 'data/memes']
-        username2: [ 'calendar/2025/#', 'data/memes']
+        username2: ['calendar/2025/#', 'data/memes']
         anonymous: ['calendar/2025/#']
 ```
 
@@ -149,7 +143,7 @@ This configuration file would create the following listeners:
 - `my-ws-1`: an unsecured websocket listener on port 9001 allowing `500` clients connections simultaneously
 - `my-wss-1`: a secured websocket listener on port 9003 allowing `500`
 
-And enable the following access controls:
+And enable the following topic access:
 
 - `username1` to login and subscribe/publish to topics `repositories/+/master`, `calendar/#` and `data/memes`
 - `username2` to login and subscribe/publish to topics `calendar/2025/#` and `data/memes`
