@@ -1,7 +1,7 @@
 from dataclasses import dataclass, is_dataclass
 from typing import Any, Generic, TypeVar, cast
 
-from amqtt.contexts import Action, BaseContext
+from amqtt.contexts import Action, BaseContext, BrokerConfig
 from amqtt.session import Session
 
 C = TypeVar("C", bound=BaseContext)
@@ -52,7 +52,7 @@ class BasePlugin(Generic[C]):
 
         if is_dataclass(self.context.config):
             # overloaded context.config for BasePlugin `Config` class, so ignoring static type check
-            return getattr(self.context.config, option_name.replace("-", "_"), default) # type: ignore[unreachable]
+            return getattr(self.context.config, option_name.replace("-", "_"), default)
         if option_name in self.context.config:
             return self.context.config[option_name]
         return default
@@ -79,9 +79,10 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
         if not self.context.config:
             return default
 
-        if is_dataclass(self.context.config):
+        # overloaded context.config with either BrokerConfig or plugin's Config
+        if is_dataclass(self.context.config) and not isinstance(self.context.config, BrokerConfig):
             # overloaded context.config for BasePlugin `Config` class, so ignoring static type check
-            return getattr(self.context.config, option_name.replace("-", "_"), default) # type: ignore[unreachable]
+            return getattr(self.context.config, option_name.replace("-", "_"), default)
         if self.topic_config and option_name in self.topic_config:
             return self.topic_config[option_name]
         return default
@@ -110,9 +111,9 @@ class BaseAuthPlugin(BasePlugin[BaseContext]):
         if not self.context.config:
             return default
 
-        if is_dataclass(self.context.config):
+        if is_dataclass(self.context.config) and not isinstance(self.context.config, BrokerConfig):
             # overloaded context.config for BasePlugin `Config` class, so ignoring static type check
-            return getattr(self.context.config, option_name.replace("-", "_"), default)  # type: ignore[unreachable]
+            return getattr(self.context.config, option_name.replace("-", "_"), default)
         if self.auth_config and option_name in self.auth_config:
             return self.auth_config[option_name]
         return default
