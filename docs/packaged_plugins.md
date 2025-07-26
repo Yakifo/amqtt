@@ -140,10 +140,10 @@ Each acl category are a list a key-value pair, where:
 
 !!! info "`#` and `$SYS` topics"
 
-    Per the MQTT 3.1.1 standard, a single `#` will no allow access to `$` broker 
+    Per the MQTT 3.1.1 spec 4.7.2, a single `#` will not allow access to `$` broker 
     topics; need to additionally specify `$SYS/#` to allow a client full access subscribe & receive.
 
-    Also MQTT specs prevent clients from publishing to topics starting with `$`; these will be ignored.  
+    Also MQTT spec prevents clients from publishing to topics starting with `$`; these will be ignored.  
 
 If set to `None`, no restrictions are placed on client subscriptions (legacy behavior). An empty list will block clients from using any topics.
 
