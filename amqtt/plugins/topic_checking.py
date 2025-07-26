@@ -21,7 +21,7 @@ class TopicTabooPlugin(BaseTopicPlugin):
             if session and session.username == "admin":
                 return True
             return not (topic and topic in self._taboo)
-        return filter_result
+        return bool(filter_result)
 
 
 class TopicAccessControlListPlugin(BaseTopicPlugin):

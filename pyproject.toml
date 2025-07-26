@@ -43,6 +43,8 @@ contrib = [
     "pyopenssl>=25.1.0",
 ]
 dev = [
+  "aiosqlite>=0.21.0",
+  "greenlet>=3.2.3",
   "hatch>=1.14.1",
   "hypothesis>=6.130.8",
   "mypy>=1.15.0",
@@ -87,6 +89,8 @@ docs = [
 ci = ["coveralls==4.0.1"]
 contrib = [
     "cryptography>=45.0.3",
+    "sqlalchemy>=2.0.41",
+    "argon2-cffi>=25.1.0",
     "aiohttp>=3.12.13",
 ]
 
@@ -98,6 +102,9 @@ amqtt_sub = "amqtt.scripts.sub_script:main"
 ca_creds = "amqtt.scripts.ca_creds:main"
 server_creds = "amqtt.scripts.server_creds:main"
 device_creds = "amqtt.scripts.device_creds:main"
+
+user_mgr = "amqtt.scripts.manage_users:main"
+topic_mgr = "amqtt.scripts.manage_topics:main"
 
 [tool.hatch.build]
 exclude = [
