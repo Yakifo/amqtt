@@ -48,11 +48,11 @@ async def test_clear_session_expiration(caplog, session_broker_config, username,
     c = MQTTClient(config=ClientConfig(cleansession=clean_session, auto_reconnect=False))
     await c.connect(f'mqtt://{username}127.0.0.1:1883')
     await asyncio.sleep(0.1)
-    assert len(broker._sessions) == 1
+    assert len(broker._sessions) == 1, "client should be connected"
     await asyncio.sleep(0.1)
     await c.disconnect()
     await asyncio.sleep(2)
-    assert len(broker._sessions) == session_count
+    assert len(broker._sessions) == session_count, f"session counts don't match {len(broker._sessions)} v {session_count}"
 
     if not session_count:
         assert any([record for record in caplog.records if "Expired 1 sessions" in record.message]) == (session_count == 0)
