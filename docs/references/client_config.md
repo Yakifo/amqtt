@@ -1,96 +1,56 @@
 # Client Configuration
 
-This configuration structure is valid as a python dictionary passed to the `amqtt.broker.MQTTClient` class's `__init__` method or
-as a yaml formatted file passed to the `amqtt_pub` script.
+This configuration structure is either a `amqtt.contexts.ClientConfig` or a python dictionary with identical structure
+when instantiating `amqtt.broker.MQTTClient` or as a yaml formatted file passed to the `amqtt_pub` script.
 
-### `keep_alive` *(int)*
-
-Keep-alive timeout sent to the broker. Defaults to `10` seconds.
-
-### `ping_delay` *(int)*
-
-Auto-ping delay before keep-alive timeout. Defaults to 1. Setting to `0` will disable to 0 and may lead to broker disconnection.
-
-### `default_qos` *(int: 0-2)*
-
-Default QoS for messages published. Defaults to 0.
-
-
-### `default_retain` *(bool)*
-
-Default retain value to messages published. Defaults to `false`.
-
-
-### `auto_reconnect` *(bool)*
-
-Enable or disable auto-reconnect if connection with the broker is interrupted. Defaults to `false`.
-
-
-### `connect_timeout` *(int)*
-
-If specified, the number of seconds before a connection times out 
-
-### `reconnect_retries` *(int)*
- 
-Maximum reconnection retries. Defaults to `2`. Negative value will cause client to reconnect infinitely.
-
-### `reconnect_max_interval` *(int)*
-
-Maximum interval between 2 connection retry. Defaults to `10`.
-
-### `cleansession` *(bool)*
-
-Upon reconnect, should subscriptions be cleared. Defaults to `true`.
-
-### `topics` *(list[mapping])*
-
-Specify the topics and what flags should be set for messages published to them.
-
-- `<topic>`: Named listener
-    - `qos` *(int, 0-3)*: 
-    - `retain` *(bool)*: 
-
-### `will` *(mapping)*
-
-If included, the message that should be sent if the client disconnects.
-
-- `topic` *(string)*:
-- `message` *(string)*:
-- `qos` *(int): 0, 1 or 2
-- `retain`: *(bool)* new clients subscribing to `topic` will receive this message
-
-### `broker` *(mapping)*
-
-- `uri` *(string)*: Broker connection URL, *must conform to MQTT or URI scheme: `[mqtt(s)|ws(s)]://<username:password>@HOST:port`*
-
-TLS certificates used to verify the broker's authenticity.
-
-- `cafile` *(string)*:  Path to a file of concatenated CA certificates in PEM format. See [Certificates](https://docs.python.org/3/library/ssl.html#ssl-certificates) for more info.
-- `capath` *(string)*:  Path to a directory containing several CA certificates in PEM format, following an [OpenSSL specific layout](https://docs.openssl.org/master/man3/SSL_CTX_load_verify_locations/).
-- `cadata` *(string)*:  Either an ASCII string of one or more PEM-encoded certificates or a bytes-like object of DER-encoded certificates.
-
-
-### `certfile` *(string)*
-
-Path to a single file in PEM format containing the certificate as well as any number of CA certificates needed to establish the server certificate's authenticity.
-
-### `check_hostname` *(bool)*
-
-Bypass ssl host certificate verification, allowing self-signed certificates
-
-### `plugins` *(mapping)*
-
-A list of strings representing the modules and class name of any `BasePlugin`s. Each  entry may have one or more
-configuration settings. For more information, see the [configuration of the included plugins](../packaged_plugins.md)
-
-
-## Default Configuration
+If not specified, the `MQTTClient()` will be started with the default `ClientConfig()`, as represented in yaml format:
 
 ```yaml
---8<-- "amqtt/scripts/default_client.yaml"
+---
+keep_alive: 10
+ping_delay: 1
+default_qos: 0
+default_retain: false
+auto_reconnect: true
+connection_timeout: 60
+reconnect_retries: 2
+reconnect_max_interval: 10
+cleansession: true
+broker:
+  uri: "mqtt://127.0.0.1"
+plugins:
+  amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
 ```
 
+::: amqtt.contexts.ClientConfig
+    options:
+      heading_level: 3
+      extra:
+        class_style: "simple"
+
+::: amqtt.contexts.TopicConfig
+    options:
+      heading_level: 3
+      extra:
+        class_style: "simple"
+
+::: amqtt.contexts.WillConfig
+    options:
+      heading_level: 3
+      extra:
+        class_style: "simple"
+
+::: amqtt.contexts.ConnectionConfig
+    options:
+      heading_level: 3
+      extra:
+        class_style: "simple"
+
+
+
 ## Example
+
+A more expansive `ClientConfig` in equivalent yaml format:
 
 ```yaml
 
@@ -102,9 +62,9 @@ auto_reconnect: true
 reconnect_max_interval: 5
 reconnect_retries: 10
 topics:
-   test:
+   topic/subtopic:
     qos: 0
-   some_topic:
+   topic/other:
      qos: 2
      retain: true
 will:
@@ -113,9 +73,8 @@ will:
    qos: 1
    retain: false
 broker:
-   uri: mqtt://localhost:1883
-   cafile: /path/to/ca/file
+   uri: 'mqtt://localhost:1883'
+   cafile: '/path/to/ca/file'
 plugins:
   - amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
-
 ```

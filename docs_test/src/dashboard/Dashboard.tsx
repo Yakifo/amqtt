@@ -7,17 +7,10 @@ import MainGrid from './components/MainGrid';
 import AppTheme from '../shared-theme/AppTheme';
 import AmqttLogo from './amqtt_bw.svg';
 
-import {
-  chartsCustomizations,
-  treeViewCustomizations,
-} from './theme/customizations';
 import AppBar from "@mui/material/AppBar";
 import {Toolbar} from "@mui/material";
 
-const xThemeComponents = {
-  ...chartsCustomizations,
-  ...treeViewCustomizations,
-};
+const xThemeComponents = {};
 
 export default function Dashboard(props: { disableCustomTheme?: boolean }) {
   return (

@@ -4,6 +4,7 @@ source = bumper
 
 omit =
     tests/*
+    amqtt/scripts/*.py
 
 [report]
 exclude_lines =

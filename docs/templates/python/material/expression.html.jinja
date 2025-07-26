@@ -1,0 +1,5 @@
+{% if 'default_factory' in expression.__str__() %}
+{{  obj.extra.dataclass_ext.default_factory | safe }}
+{% else %}
+{% extends "_base/expression.html.jinja" %}
+{%  endif  %}

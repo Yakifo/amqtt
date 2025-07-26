@@ -1,0 +1,22 @@
+{% extends "_base/docstring/functions.html.jinja" %}
+
+{% block logs scoped %}
+{% if config.extra.template_log_display %}<p style="color:red">docstring/functions.html.jinja</p>{% endif %}
+{% endblock logs %}
+
+{% block table_style scoped %}
+  {% if config.extra.class_style == 'simple' %}{% else %}
+    {{ super() }}
+  {% endif %}
+{%  endblock %}
+{% block list_style scoped %}
+  {% if config.extra.class_style == 'simple' %}{% else %}
+    {{ super() }}
+  {% endif %}
+{% endblock %}
+{% block spacy_style scoped %}
+  {% if config.extra.class_style == 'simple' %}{% else %}
+    {{ super() }}
+  {% endif %}
+{% endblock %}
+
