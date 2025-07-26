@@ -117,16 +117,31 @@ none
 
 In addition to receiving any of the event callbacks, a plugin which subclasses from `BaseAuthPlugin`
 is used by the aMQTT `Broker` to determine if a connection from a client is allowed by 
-implementing the `authenticate` method and returning `True` if the session is allowed or `False` otherwise.
+implementing the `authenticate` method and returning:
+- `True` if the session is allowed
+- `False` if not allowed
+- `None` if plugin can't determine authentication
+
+If there are multiple authentication plugins:
+- at least one plugin must return `True` to allow access
+- `False` from any plugin will deny access (i.e. all plugins must return `True` to allow access)
+- `None` gets ignored from the determination
 
 ::: amqtt.plugins.base.BaseAuthPlugin
 
 ## Topic Filter Plugins
 
 In addition to receiving any of the event callbacks, a plugin which is subclassed from `BaseTopicPlugin`
-is used by the aMQTT `Broker` to determine if a connected client can send (PUBLISH) or receive (SUBSCRIBE)
-messages to a particular topic by implementing the `topic_filtering` method and returning `True` if allowed or
-`False` otherwise.
+is used by the aMQTT `Broker` to determine if a connected client can send (PUBLISH), receive (RECEIVE)
+and/or subscribe (SUBSCRIBE) messages to a particular topic by implementing the `topic_filtering` method and returning:
+- `True` if topic is allowed 
+- `False` if not allowed
+- `None` will be ignored
+
+If there are multiple topic plugins:
+- at least one plugin must return `True` to allow access
+- `False` from any plugin will deny access (i.e. all plugins must return `True` to allow access)
+- `None` will be ignored
 
 ::: amqtt.plugins.base.BaseTopicPlugin
 
