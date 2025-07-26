@@ -318,6 +318,7 @@ class Broker:
                 self.logger.warning(f"sessions expiring due to time. before: {session_count_before}")
                 retain_after = floor(time.time() - self.config.session_expiry_interval)
                 for client_id, (session, _) in self._sessions.items():
+                    self.logger.info(f"id: {client_id}")
                     self.logger.info(f"state: {session.transitions.state}")
                     self.logger.info(f"session disconnect time: {session.last_disconnect_time}")
                     self.logger.info(f"retain after: {retain_after}")
