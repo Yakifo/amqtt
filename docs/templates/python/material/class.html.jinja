@@ -1,0 +1,11 @@
+{% extends "_base/class.html.jinja" %}
+
+{% block logs scoped %}
+{% if config.extra.template_log_display %}<p style="color:red">class.html.jinja</p>{% endif %}
+{% endblock logs %}
+
+{%  block signature scoped %}
+  {% if config.extra.class_style == 'simple' %}{% else %}
+    {{ super() }}
+  {% endif %}
+{%  endblock signature %}
