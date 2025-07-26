@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Any
+import warnings
 
 from amqtt.contexts import Action, BaseContext
+from amqtt.errors import PluginInitError
 from amqtt.plugins.base import BaseTopicPlugin
 from amqtt.session import Session
 
@@ -13,7 +15,7 @@ class TopicTabooPlugin(BaseTopicPlugin):
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool:
+    ) -> bool | None:
         filter_result = await super().topic_filtering(session=session, topic=topic, action=action)
         if filter_result:
             if session and session.username == "admin":
@@ -23,6 +25,16 @@ class TopicTabooPlugin(BaseTopicPlugin):
 
 
 class TopicAccessControlListPlugin(BaseTopicPlugin):
+
+    def __init__(self, context: BaseContext) -> None:
+        super().__init__(context)
+
+        if self._get_config_option("acl", None):
+            warnings.warn("The 'acl' option is deprecated, please use 'subscribe-acl' instead.", stacklevel=1)
+
+        if self._get_config_option("acl", None) and self._get_config_option("subscribe-acl", None):
+            msg = "'acl' has been replaced with 'subscribe-acl'; only one may be included"
+            raise PluginInitError(msg)
 
     @staticmethod
     def topic_ac(topic_requested: str, topic_allowed: str) -> bool:
@@ -46,7 +58,7 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool:
+    ) -> bool | None:
         filter_result = await super().topic_filtering(session=session, topic=topic, action=action)
         if not filter_result:
             return False
@@ -64,12 +76,20 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
         if username is None:
             username = "anonymous"
 
-        acl: dict[str, Any] = {}
+        acl: dict[str, Any] | None = None
         match action:
             case Action.PUBLISH:
-                acl = self._get_config_option("publish-acl", {})
+                acl = self._get_config_option("publish-acl", None)
             case Action.SUBSCRIBE:
-                acl = self._get_config_option("acl", {})
+                acl = self._get_config_option("subscribe-acl", self._get_config_option("acl", None))
+            case Action.RECEIVE:
+                acl = self._get_config_option("receive-acl", None)
+            case _:
+                msg = "Received an invalid action type."
+                raise ValueError(msg)
+
+        if acl is None:
+            return True
 
         allowed_topics = acl.get(username, [])
         if not allowed_topics:

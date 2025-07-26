@@ -33,6 +33,7 @@ dependencies = [
   "passlib==1.7.4", # https://pypi.org/project/passlib
   "PyYAML==6.0.2", # https://pypi.org/project/PyYAML
   "typer==0.15.4",
+  "aiohttp>=3.12.7",
   "dacite>=1.9.2",
   "psutil>=7.0.0",
 ]
@@ -80,8 +81,9 @@ docs = [
 
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
-
-
+contrib = [
+    "aiohttp>=3.12.13",
+]
 
 [project.scripts]
 amqtt = "amqtt.scripts.broker_script:main"

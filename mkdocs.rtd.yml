@@ -154,7 +154,7 @@ plugins:
             signature_crossrefs: true
             summary: true
             extensions:
-              - docs/scripts/exts.py:MyExtension:
+              - docs/scripts/exts.py:DataclassDefaultFactoryExtension:
                 paths: [mypkg.mymod.myobj]
   - git-revision-date-localized:
       enabled: !ENV [DEPLOY, false]

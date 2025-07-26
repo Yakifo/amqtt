@@ -17,8 +17,6 @@ from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
 from amqtt.mqtt.constants import QOS_0, QOS_2
 
-_LOGGER = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     import asyncio
 
@@ -28,7 +26,7 @@ logger = logging.getLogger(__name__)
 class BaseContext:
     def __init__(self) -> None:
         self.loop: asyncio.AbstractEventLoop | None = None
-        self.logger: logging.Logger = _LOGGER
+        self.logger: logging.Logger = logging.getLogger(__name__)
         # cleanup with a `Generic` type
         self.config: ClientConfig | BrokerConfig | dict[str, Any] | None = None
 
@@ -38,6 +36,7 @@ class Action(Enum):
 
     SUBSCRIBE = "subscribe"
     PUBLISH = "publish"
+    RECEIVE = "receive"
 
 
 class ListenerType(StrEnum):
@@ -158,7 +157,7 @@ class BrokerConfig(Dictable):
      [ListenerConfig](./#amqtt.contexts.ListenerConfig) for more information."""
     sys_interval: int | None = None
     """*Deprecated field to configure the `BrokerSysPlugin`. See [`BrokerSysPlugin`](../packaged_plugins.md/#sys-topics)
-    configuration instead.*"""
+    for recommended configuration.*"""
     timeout_disconnect_delay: int | None = 0
     """Client disconnect timeout without a keep-alive."""
     session_expiry_interval: int | None = None
@@ -166,11 +165,11 @@ class BrokerConfig(Dictable):
     auth: dict[str, Any] | None = None
     """*Deprecated field used to config EntryPoint-loaded plugins. See
     [`AnonymousAuthPlugin`](./#anonymous-auth-plugin) and
-    [`FileAuthPlugin`](/packaged_plugins/#password-file-auth-plugin) for more information.*"""
+    [`FileAuthPlugin`](/packaged_plugins/#password-file-auth-plugin) for recommended configuration.*"""
     topic_check: dict[str, Any] | None = None
-    """Deprecated field used to config EntryPoint-loaded plugins. See
+    """*Deprecated field used to config EntryPoint-loaded plugins. See
     [`TopicTabooPlugin`](#taboo-topic-plugin) and
-    [`TopicACLPlugin`](#acl-topic-plugin) for more information.*"""
+    [`TopicACLPlugin`](#acl-topic-plugin) for recommended configuration method.*"""
     plugins: dict[str, Any] | list[str | dict[str,Any]] | None = field(default_factory=default_broker_plugins)
     """The dictionary has a key of the dotted-module path of a class derived from `BasePlugin`, `BaseAuthPlugin`
      or `BaseTopicPlugin`; the value is a dictionary of configuration options for that plugin. See

@@ -27,11 +27,6 @@ plugins:
       extra:
         class_style: "simple"
 
-??? warning "Deprecated: `sys_interval` "
-    **`sys_interval`** *(int)*
-    
-    System status report interval in seconds, used by the `amqtt.plugins.sys.broker.BrokerSysPlugin`.
-
 ??? warning "Deprecated: `auth` configuration settings"
 
     **`auth`**
@@ -57,6 +52,13 @@ plugins:
       
 
     - `password-file` *(string)*. Path to sha-512 encoded password file, used by `amqtt.plugins.authentication.FileAuthPlugin`.
+
+
+??? warning "Deprecated: `sys_interval` "
+    **`sys_interval`** *(int)*
+    
+    System status report interval in seconds, used by the `amqtt.plugins.sys.broker.BrokerSysPlugin`.
+
 
 ??? warning "Deprecated: `topic-check` configuration settings"
 

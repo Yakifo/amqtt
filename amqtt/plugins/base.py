@@ -89,7 +89,7 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool:
+    ) -> bool | None:
         """Logic for filtering out topics.
 
         Args:
@@ -98,7 +98,7 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
             action: amqtt.broker.Action
 
         Returns:
-            bool: `True` if topic is allowed, `False` otherwise
+            bool: `True` if topic is allowed, `False` otherwise. `None` if it can't be determined
 
         """
         return bool(self.topic_config) or is_dataclass(self.context.config)
