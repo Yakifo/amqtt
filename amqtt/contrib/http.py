@@ -106,13 +106,9 @@ class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
                 case _:
                     if not self._is_2xx(r):
                         return False
-                    data = await r.json()
-                    for ok in ("OK", "Ok", "ok"):
-                        if ok in data and data[ok] is None:
-                            return None
-                        if ok in data and isinstance(data[ok], bool):
-                            return bool(data[ok])
-            return False
+                    data: dict[str, Any] = await r.json()
+                    data = {k.lower():v for k,v in data.items()}
+                    return data.get("ok", None)
 
     def get_url(self, uri: str) -> str:
         return f"{'https' if self.config.with_tls else 'http'}://{self.config.host}:{self.config.port}{uri}"
