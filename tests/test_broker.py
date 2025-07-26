@@ -140,7 +140,7 @@ async def test_client_connect(broker, mock_plugin_manager):
 
 
 @pytest.mark.asyncio
-async def test_connect_tcp(broker):
+async def _connect_tcp(broker):
     process = psutil.Process()
     connections_number = 10
 

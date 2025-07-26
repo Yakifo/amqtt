@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field, fields, replace
 
 try:
@@ -8,14 +9,14 @@ except ImportError:
     class StrEnum(str, Enum):  #type: ignore[no-redef]
         pass
 
-from collections.abc import Iterator
-import logging
 from pathlib import Path
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, Literal
 
 from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
 from amqtt.mqtt.constants import QOS_0, QOS_2
+
 
 if TYPE_CHECKING:
     import asyncio
@@ -31,7 +32,7 @@ class BaseContext:
         self.config: ClientConfig | BrokerConfig | dict[str, Any] | None = None
 
 
-class Action(Enum):
+class Action(StrEnum):
     """Actions issued by the broker."""
 
     SUBSCRIBE = "subscribe"
