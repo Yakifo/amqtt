@@ -468,7 +468,10 @@ async def test_topic_subscribe(db_file, topic_manager, db_connection):
     assert topic_auth is not None
 
     sub_topic_list = await topic_manager.add_allowed_topic(client_id, '$SYS/#', Action.SUBSCRIBE)
+    rcv_topic_list = await topic_manager.add_allowed_topic(client_id, '$SYS/#', Action.RECEIVE)
+
     assert len(sub_topic_list) > 0
+    assert len(rcv_topic_list) > 0
 
     broker = Broker(config=broker_cfg)
 
