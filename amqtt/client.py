@@ -462,15 +462,14 @@ class MQTTClient:
             sc = ssl.create_default_context(
                 ssl.Purpose.SERVER_AUTH,
                 cafile=self.session.cafile
-
             )
 
-            if "certfile" in self.config and "keyfile" in self.config:
-                sc.load_cert_chain(certfile=self.config["certfile"], keyfile=self.config["keyfile"])
-            if "cafile" in self.config:
-                sc.load_verify_locations(cafile=self.config["cafile"])
-            if "check_hostname" in self.config and isinstance(self.config["check_hostname"], bool):
-                sc.check_hostname = self.config["check_hostname"]
+            if self.config.connection.certfile and self.config.connection.keyfile:
+                sc.load_cert_chain(certfile=self.config.connection.certfile, keyfile=self.config.connection.keyfile)
+            if self.config.connection.cafile:
+                sc.load_verify_locations(cafile=self.config.connection.cafile)
+            if self.config.check_hostname is not None:
+                sc.check_hostname = self.config.check_hostname
                 sc.verify_mode = ssl.CERT_REQUIRED
             kwargs["ssl"] = sc
 

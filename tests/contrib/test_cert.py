@@ -138,9 +138,11 @@ async def test_client_broker_cert_authentication(ca_creds, server_creds, device_
 
     client_config = {
         'auto_reconnect': False,
-        'cafile': ca_crt,
-        'certfile': device_crt,
-        'keyfile': device_key,
+        'broker': {
+            'cafile': ca_crt,
+            'certfile': device_crt,
+            'keyfile': device_key
+        }
     }
 
     c = MQTTClient(config=client_config, client_id='mydeviceid')
@@ -159,7 +161,8 @@ async def test_client_broker_cert_authentication(ca_creds, server_creds, device_
 
 def ssl_error_logger(loop, context):
     logger.critical("Asyncio SSL error:", context.get("message"))
-    assert "exception" not in context, f"Exception: {repr(context["exception"])}"
+    exc = repr(context.get("exception"))
+    assert "exception" not in context, f"Exception: {exc}"
 
 
 @pytest.mark.asyncio
@@ -198,9 +201,11 @@ async def test_client_broker_wrong_certs(ca_creds, server_creds, device_creds):
     wrong_ca_crt = temp_dir / 'ca.crt'
     client_config = {
         'auto_reconnect': False,
-        'cafile': wrong_ca_crt,
-        'certfile': device_crt,
-        'keyfile': device_key,
+        'connection': {
+            'cafile': wrong_ca_crt,
+            'certfile': device_crt,
+            'keyfile': device_key,
+        }
     }
 
     c = MQTTClient(config=client_config, client_id='mydeviceid')

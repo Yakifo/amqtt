@@ -325,8 +325,10 @@ class ClientConfig(Dictable):
     topics: dict[str, TopicConfig] | None = field(default_factory=dict)
     """Specify the topics and what flags should be set for messages published to them."""
     broker: ConnectionConfig | None = field(default_factory=ConnectionConfig)
+    """*Deprecated* Configuration for connecting to the broker. Use `connection` field instead."""
+    connection: ConnectionConfig | None = field(default_factory=ConnectionConfig)
     """Configuration for connecting to the broker. See
-     [ConnectionConfig](./#amqtt.contexts.ConnectionConfig) for more information."""
+         [ConnectionConfig](./#amqtt.contexts.ConnectionConfig) for more information."""
     plugins: dict[str, Any] | list[dict[str, Any]] | None = field(default_factory=default_client_plugins)
     """The dictionary has a key of the dotted-module path of a class derived from `BasePlugin`; the value is
      a dictionary of configuration options for that plugin. See [Plugins](http://localhost:8000/custom_plugins/)
@@ -337,11 +339,18 @@ class ClientConfig(Dictable):
     """Message, topic and flags that should be sent to if the client disconnects. See
     [WillConfig](./#amqtt.contexts.WillConfig)"""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.default_qos is not None and (self.default_qos < QOS_0 or self.default_qos > QOS_2):
             msg = "Client config: default QoS must be 0, 1 or 2."
             raise ValueError(msg)
+
+        if self.broker is not None:
+            self.connection = self.broker
+
+        if bool(not self.connection.keyfile) ^ bool(not self.connection.certfile):
+            raise ValueError("Connection key and certificate files are _both_ required.")
+
 
     @classmethod
     def from_dict(cls, d: dict[str, Any] | None) -> "ClientConfig":
