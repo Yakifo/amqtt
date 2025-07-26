@@ -1,5 +1,5 @@
-import logging
 from dataclasses import dataclass, field, fields, replace
+import logging
 
 try:
     from enum import Enum, StrEnum
@@ -9,14 +9,13 @@ except ImportError:
     class StrEnum(str, Enum):  #type: ignore[no-redef]
         pass
 
-from pathlib import Path
 from collections.abc import Iterator
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
 from amqtt.mqtt.constants import QOS_0, QOS_2
-
 
 if TYPE_CHECKING:
     import asyncio
@@ -326,7 +325,7 @@ class ClientConfig(Dictable):
     """Specify the topics and what flags should be set for messages published to them."""
     broker: ConnectionConfig | None = field(default_factory=ConnectionConfig)
     """*Deprecated* Configuration for connecting to the broker. Use `connection` field instead."""
-    connection: ConnectionConfig | None = field(default_factory=ConnectionConfig)
+    connection: ConnectionConfig = field(default_factory=ConnectionConfig)
     """Configuration for connecting to the broker. See
          [ConnectionConfig](./#amqtt.contexts.ConnectionConfig) for more information."""
     plugins: dict[str, Any] | list[dict[str, Any]] | None = field(default_factory=default_client_plugins)
@@ -349,8 +348,8 @@ class ClientConfig(Dictable):
             self.connection = self.broker
 
         if bool(not self.connection.keyfile) ^ bool(not self.connection.certfile):
-            raise ValueError("Connection key and certificate files are _both_ required.")
-
+            msg = "Connection key and certificate files are _both_ required."
+            raise ValueError(msg)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any] | None) -> "ClientConfig":
