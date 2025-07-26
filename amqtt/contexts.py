@@ -17,8 +17,6 @@ from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
 from amqtt.mqtt.constants import QOS_0, QOS_2
 
-_LOGGER = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     import asyncio
 
@@ -28,7 +26,7 @@ logger = logging.getLogger(__name__)
 class BaseContext:
     def __init__(self) -> None:
         self.loop: asyncio.AbstractEventLoop | None = None
-        self.logger: logging.Logger = _LOGGER
+        self.logger: logging.Logger = logging.getLogger(__name__)
         # cleanup with a `Generic` type
         self.config: ClientConfig | BrokerConfig | dict[str, Any] | None = None
 
