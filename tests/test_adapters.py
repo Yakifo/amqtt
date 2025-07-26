@@ -1,3 +1,5 @@
+import ssl
+
 import pytest
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
@@ -30,6 +32,9 @@ class BrokerWriterAdapter(WriterAdapter):
 
     def get_peer_info(self) -> tuple[str, int] | None:
         return super().get_peer_info()
+
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        return None
 
     async def close(self) -> None:
         await super().close()
