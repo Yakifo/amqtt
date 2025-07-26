@@ -161,6 +161,8 @@ class BrokerConfig(Dictable):
     for recommended configuration.*"""
     timeout_disconnect_delay: int | None = 0
     """Client disconnect timeout without a keep-alive."""
+    session_expiry_interval: int | None = None
+    """Seconds for an inactive session to be retained."""
     auth: dict[str, Any] | None = None
     """*Deprecated field used to config EntryPoint-loaded plugins. See
     [`AnonymousAuthPlugin`](./#anonymous-auth-plugin) and

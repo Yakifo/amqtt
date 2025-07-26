@@ -6,6 +6,7 @@ listeners:
   std-ws:
     type: ws
     bind: 0.0.0.0:8080
+session_expiry_interval: 60
 plugins:
   amqtt.plugins.logging_amqtt.EventLoggerPlugin:
   amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
