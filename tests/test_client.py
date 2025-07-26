@@ -52,6 +52,8 @@ async def test_reconnect_ws_retain_username_password(broker_fixture):
     client = MQTTClient()
     await client.connect("ws://fred:password@127.0.0.1:8080/")
     assert client.session is not None
+    assert client.session.username is not None
+    assert client.session.password is not None
     await client.disconnect()
     await client.reconnect()
 
