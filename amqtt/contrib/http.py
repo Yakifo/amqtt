@@ -42,10 +42,10 @@ class ACLError(Exception):
 
 
 HTTP_2xx_MIN = 200
-HTTP_2xx_MAX = 300
+HTTP_2xx_MAX = 299
 
 HTTP_4xx_MIN = 400
-HTTP_4xx_MAX = 500
+HTTP_4xx_MAX = 499
 
 
 class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
@@ -67,11 +67,11 @@ class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
     @staticmethod
     def _is_2xx(r: ClientResponse) -> bool:
-        return HTTP_2xx_MIN <= r.status < HTTP_2xx_MAX
+        return HTTP_2xx_MIN <= r.status <= HTTP_2xx_MAX
 
     @staticmethod
     def _is_4xx(r: ClientResponse) -> bool:
-        return HTTP_4xx_MIN <= r.status < HTTP_4xx_MAX
+        return HTTP_4xx_MIN <= r.status <= HTTP_4xx_MAX
 
     def _get_params(self, payload: dict[str, Any]) -> dict[str, Any]:
         match self.config.params_mode:
