@@ -302,12 +302,11 @@ class Broker:
 
     async def _session_monitor(self) -> None:
 
-        self.logger.info("Starting session monitor.")
+        self.logger.info("Starting session expiration monitor.")
 
         while True:
 
             session_count_before = len(self._sessions)
-            self.logger.warning("evaluating session expiration")
 
             # clean or anonymous sessions don't retain messages (or subscriptions); the session can be filtered out
             sessions_to_remove = [ client_id for client_id, (session, _) in self._sessions.items()
@@ -315,22 +314,14 @@ class Broker:
 
             # if session expiration is enabled, check to see if any of the sessions are disconnected and past expiration
             if self.config.session_expiry_interval is not None:
-                self.logger.warning(f"sessions expiring due to time. before: {session_count_before}")
                 retain_after = floor(time.time() - self.config.session_expiry_interval)
-                for client_id, (session, _) in self._sessions.items():
-                    self.logger.info(f"id: {client_id}")
-                    self.logger.info(f"state: {session.transitions.state}")
-                    self.logger.info(f"session disconnect time: {session.last_disconnect_time}")
-                    self.logger.info(f"retain after: {retain_after}")
 
                 sessions_to_remove += [ client_id for client_id, (session, _) in self._sessions.items()
                                         if session.transitions.state == "disconnected" and
                                         session.last_disconnect_time and
                                         session.last_disconnect_time < retain_after ]
-                self.logger.warning(f"need to remove these sessions: {sessions_to_remove}")
 
             for client_id in sessions_to_remove:
-                self.logger.warning(f"removing session: {client_id}")
                 await self._cleanup_session(client_id)
 
             if session_count_before > (session_count_after := len(self._sessions)):
