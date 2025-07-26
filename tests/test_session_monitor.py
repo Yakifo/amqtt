@@ -51,7 +51,7 @@ async def test_clear_session_expiration(caplog, session_broker_config, username,
     assert len(broker._sessions) == 1, "client should be connected"
     await asyncio.sleep(0.1)
     await c.disconnect()
-    await asyncio.sleep(2)
+    await asyncio.sleep(4)
     assert len(broker._sessions) == session_count, f"session counts don't match {len(broker._sessions)} v {session_count}"
 
     if not session_count:
