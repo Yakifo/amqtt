@@ -4,8 +4,10 @@ from collections import deque
 from collections.abc import Generator
 from functools import partial
 import logging
+from math import floor
 import re
 import ssl
+import time
 from typing import Any, ClassVar, TypeAlias
 
 from transitions import Machine, MachineError
@@ -175,6 +177,9 @@ class Broker:
         # Tasks queue for managing broadcasting tasks
         self._tasks_queue: deque[asyncio.Task[OutgoingApplicationMessage]] = deque()
 
+        # Task for session monitor
+        self._session_monitor_task: asyncio.Task[Any] | None = None
+
         # Initialize plugins manager
 
         context = BrokerContext(self)
@@ -218,6 +223,7 @@ class Broker:
             self.transitions.starting_success()
             await self.plugins_manager.fire_event(BrokerEvents.POST_START)
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
+            self._session_monitor_task = asyncio.create_task(self._session_monitor())
             self.logger.debug("Broker started")
         except Exception as e:
             self.logger.exception("Broker startup failed")
@@ -294,6 +300,35 @@ class Broker:
         msg = f"Unsupported listener type: {listener_type}"
         raise BrokerError(msg)
 
+    async def _session_monitor(self) -> None:
+
+        self.logger.info("Starting session expiration monitor.")
+
+        while True:
+
+            session_count_before = len(self._sessions)
+
+            # clean or anonymous sessions don't retain messages (or subscriptions); the session can be filtered out
+            sessions_to_remove = [ client_id for client_id, (session, _) in self._sessions.items()
+                if session.transitions.state == "disconnected" and (session.is_anonymous or session.clean_session) ]
+
+            # if session expiration is enabled, check to see if any of the sessions are disconnected and past expiration
+            if self.config.session_expiry_interval is not None:
+                retain_after = floor(time.time() - self.config.session_expiry_interval)
+
+                sessions_to_remove += [ client_id for client_id, (session, _) in self._sessions.items()
+                                        if session.transitions.state == "disconnected" and
+                                        session.last_disconnect_time and
+                                        session.last_disconnect_time < retain_after ]
+
+            for client_id in sessions_to_remove:
+                await self._cleanup_session(client_id)
+
+            if session_count_before > (session_count_after := len(self._sessions)):
+                self.logger.debug(f"Expired {session_count_before - session_count_after} sessions")
+
+            await asyncio.sleep(1)
+
     async def shutdown(self) -> None:
         """Stop broker instance."""
         self.logger.info("Shutting down broker...")
@@ -311,6 +346,8 @@ class Broker:
         self.transitions.shutdown()
 
         await self._shutdown_broadcast_loop()
+        if self._session_monitor_task:
+            self._session_monitor_task.cancel()
 
         for server in self._servers.values():
             await server.close_instance()
