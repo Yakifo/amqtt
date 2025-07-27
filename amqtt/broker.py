@@ -671,6 +671,13 @@ class Broker:
         self.logger.debug(f"{client_session.client_id} handling message delivery")
         app_message = wait_deliver.result()
 
+        # notify of a message's receipt, even if a client isn't necessarily allowed to send it
+        await self.plugins_manager.fire_event(
+            BrokerEvents.MESSAGE_RECEIVED,
+            client_id=client_session.client_id,
+            message=app_message,
+        )
+
         if app_message is None:
             self.logger.debug("app_message was empty!")
             return True
@@ -694,8 +701,9 @@ class Broker:
         if not permitted:
             self.logger.info(f"{client_session.client_id} not allowed to publish to TOPIC {app_message.topic}.")
         else:
+            # notify that a received message is valid and is allowed to be distributed to other clients
             await self.plugins_manager.fire_event(
-                BrokerEvents.MESSAGE_RECEIVED,
+                BrokerEvents.MESSAGE_BROADCAST,
                 client_id=client_session.client_id,
                 message=app_message,
             )

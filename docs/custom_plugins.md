@@ -111,7 +111,7 @@ none
 - `async def on_broker_client_unsubscribed(self, *, client_id: str, topic: str) -> None`
 
 - `async def on_broker_message_received(self, *, client_id: str, message: ApplicationMessage) -> None`
-
+- `async def on_broker_message_broadcast(self, *, client_id: str, message: ApplicationMessage) -> None`
 
 ## Authentication Plugins
 

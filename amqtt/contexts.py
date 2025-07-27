@@ -1,5 +1,5 @@
-import logging
 from dataclasses import dataclass, field, fields, replace
+import logging
 
 try:
     from enum import Enum, StrEnum
@@ -9,14 +9,13 @@ except ImportError:
     class StrEnum(str, Enum):  #type: ignore[no-redef]
         pass
 
-from pathlib import Path
 from collections.abc import Iterator
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
 from amqtt.mqtt.constants import QOS_0, QOS_2
-
 
 if TYPE_CHECKING:
     import asyncio

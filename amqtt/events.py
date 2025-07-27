@@ -32,3 +32,4 @@ class BrokerEvents(Events):
     CLIENT_SUBSCRIBED = "broker_client_subscribed"
     CLIENT_UNSUBSCRIBED = "broker_client_unsubscribed"
     MESSAGE_RECEIVED = "broker_message_received"
+    MESSAGE_BROADCAST = "broker_message_broadcast"
