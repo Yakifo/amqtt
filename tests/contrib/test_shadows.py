@@ -1,16 +1,21 @@
+import json
 import sqlite3
 import tempfile
 from pathlib import Path
+from unittest.mock import patch, call, ANY
 
 import aiosqlite
 import pytest
-from requests import session
+from jsonschema import validate
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.contrib.shadows import ShadowPlugin
 from amqtt.contrib.shadows.models import Shadow, ShadowUpdateError
 from amqtt.contrib.shadows.states import StateDocument, State
+from amqtt.mqtt.constants import QOS_0
+from amqtt.session import IncomingApplicationMessage
+from tests.contrib.test_shadows_schema import *
 
 
 @pytest.fixture
@@ -173,3 +178,114 @@ async def test_shadow_update_state(db_connection, db_session_maker, shadow_plugi
         assert shadow.version == 2
         assert shadow.state.state.desired == {'item1': 'value1a', 'item2': 'value2', 'item6': 'value6'}
         assert shadow.state.state.reported == {'item3': 'value3', 'item4': 'value4'}
+
+
+@pytest.mark.asyncio
+async def test_shadow_plugin_get_rejected(shadow_plugin):
+    """test """
+
+    with patch.object(BrokerContext, 'broadcast_message', return_value=None) as mock_method:
+        msg = IncomingApplicationMessage(packet_id=1,
+                                             topic='$shadow/myClient123/myShadow/get',
+                                             qos=QOS_0,
+                                             data=json.dumps({}).encode('utf-8'),
+                                             retain=False)
+        await shadow_plugin.on_broker_message_received(client_id="myClient123", message=msg)
+
+        mock_method.assert_called()
+        topic, message = mock_method.call_args[0]
+        assert topic == '$shadow/myClient123/myShadow/get/rejected'
+        validate(instance=json.loads(message.decode('utf-8')), schema=get_rejected_schema)
+
+@pytest.mark.asyncio
+async def test_shadow_plugin_update_accepted(shadow_plugin):
+    with patch.object(BrokerContext, 'broadcast_message', return_value=None) as mock_method:
+
+        update_msg = {
+            'state': {
+                'desired': {
+                    'item1': 'value1',
+                    'item2': 'value2'
+                }
+            }
+        }
+
+        validate(instance=update_msg, schema=update_schema)
+
+
+        msg = IncomingApplicationMessage(packet_id=1,
+                                         topic='$shadow/myClient123/myShadow/update',
+                                         qos=QOS_0,
+                                         data=json.dumps(update_msg).encode('utf-8'),
+                                         retain=False)
+        await shadow_plugin.on_broker_message_received(client_id="myClient123", message=msg)
+
+        accepted_call = call('$shadow/myClient123/myShadow/update/accepted', ANY)
+        document_call = call('$shadow/myClient123/myShadow/update/documents', ANY)
+        delta_call = call('$shadow/myClient123/myShadow/update/delta', ANY)
+        iota_call = call('$shadow/myClient123/myShadow/update/iota', ANY)
+
+        mock_method.assert_has_calls(
+            [
+                accepted_call,
+                document_call,
+                delta_call,
+                iota_call,
+            ],
+            any_order=True,
+        )
+
+        for actual in mock_method.call_args_list:
+            if actual == accepted_call:
+                validate(instance=json.loads(actual.args[1].decode('utf-8')), schema=update_accepted_schema)
+            elif actual == document_call:
+                validate(instance=json.loads(actual.args[1].decode('utf-8')), schema=update_documents_schema)
+            elif actual == delta_call:
+                validate(instance=json.loads(actual.args[1].decode('utf-8')), schema=delta_schema)
+            elif actual == iota_call:
+                validate(instance=json.loads(actual.args[1].decode('utf-8')), schema=delta_schema)
+            else:
+                assert False, "unknown call made to broadcast"
+
+
+@pytest.mark.asyncio
+async def test_shadow_plugin_get_accepted(shadow_plugin):
+    with patch.object(BrokerContext, 'broadcast_message', return_value=None) as mock_method:
+
+        update_msg = {
+            'state': {
+                'desired': {
+                    'item1': 'value1',
+                    'item2': 'value2'
+                }
+            }
+        }
+
+        update_msg = IncomingApplicationMessage(packet_id=1,
+                                         topic='$shadow/myClient123/myShadow/update',
+                                         qos=QOS_0,
+                                         data=json.dumps(update_msg).encode('utf-8'),
+                                         retain=False)
+        await shadow_plugin.on_broker_message_received(client_id="myClient123", message=update_msg)
+
+        mock_method.reset_mock()
+
+        get_msg = IncomingApplicationMessage(packet_id=1,
+                                         topic='$shadow/myClient123/myShadow/get',
+                                         qos=QOS_0,
+                                         data=json.dumps({}).encode('utf-8'),
+                                         retain=False)
+        await shadow_plugin.on_broker_message_received(client_id="myClient123", message=get_msg)
+
+        get_accepted = call('$shadow/myClient123/myShadow/get/accepted', ANY)
+
+        mock_method.assert_has_calls(
+            [get_accepted]
+        )
+
+        has_msg = False
+        for actual in mock_method.call_args_list:
+            if actual == get_accepted:
+                validate(instance=json.loads(actual.args[1].decode('utf-8')), schema=get_accepted_schema)
+                has_msg = True
+        assert has_msg, "could not find the broadcast call for get accepted"

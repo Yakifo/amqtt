@@ -8,7 +8,8 @@ from hamcrest import equal_to, assert_that, close_to, has_key, instance_of, has_
 
 
 from amqtt.contrib.shadows import ShadowPlugin, ShadowOperation
-from amqtt.contrib.shadows.states import State, StateDocument, calculate_delta_update, calculate_iota_update
+from amqtt.contrib.shadows.states import State, StateDocument, calculate_delta_update, calculate_iota_update, \
+    MetaTimestamp
 
 
 @pytest.mark.parametrize("topic,client_id,shadow_name,message_type,is_match", [
@@ -21,10 +22,10 @@ def test_shadow_topic_match(topic, client_id, shadow_name, message_type, is_matc
     # shadow_plugin = ShadowPlugin(context=broker_context)
     shadow_topic = ShadowPlugin.shadow_topic_match(topic)
     if is_match:
-        assert shadow_topic.client_id == client_id
+        assert shadow_topic.device_id == client_id
         assert shadow_topic.name == shadow_name
-        assert shadow_topic.message_type in ShadowOperation
-        assert shadow_topic.message_type == message_type
+        assert shadow_topic.message_op in ShadowOperation
+        assert shadow_topic.message_op == message_type
     else:
         assert shadow_topic is None
 
@@ -48,7 +49,7 @@ async def test_state_add():
     }
 
     meta = {
-        'meta': {
+        'metadata': {
             'desired': {
                 'item1': 10,
                 'item2': 20
@@ -61,9 +62,9 @@ async def test_state_add():
     }
 
     data_state = State.from_dict(data['state'])
-    meta_state = State.from_dict(meta['meta'])
+    meta_state = State.from_dict(meta['metadata'])
 
-    state_document_one = StateDocument(state=data_state, meta=meta_state)
+    state_document_one = StateDocument(state=data_state, metadata=meta_state)
     await asyncio.sleep(2)
 
     data_update = {
@@ -83,15 +84,15 @@ async def test_state_add():
     final_doc = state_document_one + state_document_two
 
     assert final_doc.state.desired['item1'] == 'value1a'
-    assert final_doc.meta.desired['item1'] == 10
+    assert final_doc.metadata.desired['item1'] == 10
 
     assert final_doc.state.desired['item2'] == 'value2a'
-    assert final_doc.meta.desired['item2'] > cur_time
+    assert final_doc.metadata.desired['item2'] > cur_time
 
     assert final_doc.state.reported['item1'] == 'value1c'
-    assert final_doc.meta.reported['item1'] > cur_time
+    assert final_doc.metadata.reported['item1'] > cur_time
     assert final_doc.state.reported['item1'] == 'value1c'
-    assert final_doc.meta.reported['item1'] > cur_time
+    assert final_doc.metadata.reported['item1'] > cur_time
 
 
 def test_state_from_dict() -> None:
@@ -124,13 +125,13 @@ def test_state_doc_from_dict() -> None:
     assert_that(state_doc.state.desired['keyA'], equal_to('valueA'))
     assert_that(state_doc.state.desired['keyB'], equal_to('valueB'))
 
-    assert_that(state_doc.meta.desired, has_key('keyA'))
-    assert_that(state_doc.meta.desired, has_key('keyB'))
+    assert_that(state_doc.metadata.desired, has_key('keyA'))  # noqa
+    assert_that(state_doc.metadata.desired, has_key('keyB'))  # noqa
 
-    assert_that(state_doc.meta.desired['keyA'], instance_of(int))
-    assert_that(state_doc.meta.desired['keyB'], instance_of(int))
-    assert_that(state_doc.meta.desired['keyA'], close_to(now, 0))
-    assert_that(state_doc.meta.desired['keyA'], equal_to(state_doc.meta.desired['keyB']))
+    assert_that(state_doc.metadata.desired['keyA'], instance_of(MetaTimestamp))  # noqa
+    assert_that(state_doc.metadata.desired['keyB'], instance_of(MetaTimestamp))  # noqa
+    assert_that(state_doc.metadata.desired['keyA'], close_to(now, 0))  # noqa
+    assert_that(state_doc.metadata.desired['keyA'], equal_to(state_doc.metadata.desired['keyB']))
 
 
 def test_state_doc_including_meta() -> None:
@@ -146,7 +147,7 @@ def test_state_doc_including_meta() -> None:
 
     state_doc1 = StateDocument(
         state=state1,
-        meta=meta1
+        metadata=meta1
     )
 
     state2 = State(
@@ -160,13 +161,13 @@ def test_state_doc_including_meta() -> None:
 
     state_doc2 = StateDocument(
         state=state2,
-        meta=meta2
+        metadata=meta2
     )
 
     new_doc = state_doc1 + state_doc2
 
-    assert_that(new_doc.meta.desired['keyA'], equal_to(now - 5))
-    assert_that(new_doc.meta.reported['keyC'], equal_to(now - 5))
+    assert_that(new_doc.metadata.desired['keyA'], equal_to(now - 5))
+    assert_that(new_doc.metadata.reported['keyC'], equal_to(now - 5))
 
 
 def test_state_doc_plus_new_key_update() -> None:
@@ -182,7 +183,7 @@ def test_state_doc_plus_new_key_update() -> None:
 
     state_doc = StateDocument(
         state=state,
-        meta=meta
+        metadata=meta
     )
 
     update_dict = {'state': {'reported': {'keyE': 'valueE', 'keyF': 'valueF'}}}
@@ -191,13 +192,13 @@ def test_state_doc_plus_new_key_update() -> None:
     next_doc = state_doc + update
 
     assert_that(next_doc.state.reported, has_key('keyC'))
-    assert_that(next_doc.meta.reported['keyC'], equal_to(now - 90))
-    assert_that(next_doc.meta.reported['keyD'], equal_to(now - 120))
+    assert_that(next_doc.metadata.reported['keyC'], equal_to(now - 90))
+    assert_that(next_doc.metadata.reported['keyD'], equal_to(now - 120))
 
     assert_that(next_doc.state.reported, has_key('keyE'))
     assert_that(next_doc.state.reported, has_key('keyF'))
-    assert_that(next_doc.meta.reported['keyE'], close_to(now, 1))
-    assert_that(next_doc.meta.reported['keyF'], close_to(now, 1))
+    assert_that(next_doc.metadata.reported['keyE'], close_to(now, 1))
+    assert_that(next_doc.metadata.reported['keyF'], close_to(now, 1))
 
 
 def test_state_with_updated_keys() -> None:
@@ -214,7 +215,7 @@ def test_state_with_updated_keys() -> None:
 
     state_doc = StateDocument(
         state=state,
-        meta=meta
+        metadata=meta
     )
 
     update_dict = {'state': {'reported': {'keyD': 'valueD'}}}
@@ -224,8 +225,8 @@ def test_state_with_updated_keys() -> None:
 
     assert_that(next_doc.state.reported, has_key('keyC'))
     assert_that(next_doc.state.reported, has_key('keyD'))
-    assert_that(next_doc.meta.reported['keyC'], equal_to(now - 90))
-    assert_that(next_doc.meta.reported['keyD'], close_to(now, 1))
+    assert_that(next_doc.metadata.reported['keyC'], equal_to(now - 90))
+    assert_that(next_doc.metadata.reported['keyD'], close_to(now, 1))
 
 
 def test_update_with_empty_initial_state() -> None:
@@ -243,8 +244,8 @@ def test_update_with_empty_initial_state() -> None:
 
     assert_that(state_doc.state.desired, equal_to(new_doc.state.desired))
     assert_that(state_doc.state.reported, equal_to(new_doc.state.reported))
-    assert_that(state_doc.meta.reported, has_key('keyC'))
-    assert_that(state_doc.meta.reported['keyC'], close_to(now, 1))
+    assert_that(state_doc.metadata.reported, has_key('keyC'))
+    assert_that(state_doc.metadata.reported['keyC'], close_to(now, 1))
 
 
 def test_update_with_clearing_key() -> None:

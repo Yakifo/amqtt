@@ -1,27 +1,83 @@
 from collections import Counter
 from collections.abc import MutableMapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
+from enum import StrEnum
 import time
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from mergedeep import merge
 
+C = TypeVar("C", bound=Any)
 
 class StateError(Exception):
     def __init__(self, msg: str = "'state' field is required") -> None:
         super().__init__(msg)
 
+@dataclass
+class MetaTimestamp:
+    timestamp: int = 0
 
-def create_meta(state: MutableMapping[str, Any], timestamp: int) -> dict[str, Any]:
-    """Create meta data (timestamps) for each of the keys in 'state'."""
+    def __eq__(self, other: object) -> bool:
+        """Compare timestamps."""
+        if isinstance(other, int):
+            return self.timestamp == other
+        if isinstance(other, self.__class__):
+            return self.timestamp == other.timestamp
+        msg = "needs to be int or MetaTimestamp"
+        raise ValueError(msg)
+
+    # numeric operations to make this dataclass transparent
+    def __abs__(self) -> int:
+        """Absolute timestamp."""
+        return self.timestamp
+
+    def __add__(self, other: int) -> int:
+        """Add to a timestamp."""
+        return self.timestamp + other
+
+    def __sub__(self, other: int) -> int:
+        """Subtract from a timestamp."""
+        return self.timestamp - other
+
+    def __mul__(self, other: int) -> int:
+        """Multiply a timestamp."""
+        return self.timestamp * other
+
+    def __float__(self) -> float:
+        """Convert timestamp to float."""
+        return float(self.timestamp)
+
+    def __int__(self) -> int:
+        """Convert timestamp to int."""
+        return int(self.timestamp)
+
+    def __lt__(self, other:int ) -> bool:
+        """Compare timestamp."""
+        return self.timestamp < other
+
+    def __le__(self, other: int) -> bool:
+        """Compare timestamp."""
+        return self.timestamp <= other
+
+    def __gt__(self, other: int) -> bool:
+        """Compare timestamp."""
+        return self.timestamp > other
+
+    def __ge__(self, other: int) -> bool:
+        """Compare timestamp."""
+        return self.timestamp >= other
+
+
+def create_metadata(state: MutableMapping[str, Any], timestamp: int) -> dict[str, Any]:
+    """Create metadata (timestamps) for each of the keys in 'state'."""
     metadata: dict[str, Any] = {}
     for key, value in state.items():
         if isinstance(value, dict):
-            metadata[key] = create_meta(value, timestamp)
+            metadata[key] = create_metadata(value, timestamp)
         elif value is None:
             metadata[key] = None
         else:
-            metadata[key] = timestamp
+            metadata[key] = MetaTimestamp(timestamp)
 
     return metadata
 
@@ -65,12 +121,12 @@ def calculate_iota_update(desired: MutableMapping[str, Any], reported: MutableMa
     return delta
 
 @dataclass
-class State:
-    desired: MutableMapping[str, Any] = field(default_factory=dict)
-    reported: MutableMapping[str, Any] = field(default_factory=dict)
+class State(Generic[C]):
+    desired: MutableMapping[str, C] = field(default_factory=dict)
+    reported: MutableMapping[str, C] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "State":
+    def from_dict(cls, data: dict[str, C]) -> "State[C]":
         """Create state from dictionary."""
         return cls(
             desired=data.get("desired", {}),
@@ -81,7 +137,7 @@ class State:
         """Determine if state is empty."""
         return bool(self.desired) or bool(self.reported)
 
-    def __add__(self, other: "State") -> "State":
+    def __add__(self, other: "State[C]") -> "State[C]":
         """Merge states together."""
         return State(
             desired=merge({}, self.desired, other.desired),
@@ -91,8 +147,10 @@ class State:
 
 @dataclass
 class StateDocument:
-    state: State = field(default_factory=State)
-    meta: State = field(default_factory=State)
+    state: State[dict[str, Any]] = field(default_factory=State)
+    metadata: State[MetaTimestamp] = field(default_factory=State)
+    version: int | None = None # only required when generating shadow messages
+    timestamp: int | None = None # only required when generating shadow messages
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "StateDocument":
@@ -102,28 +160,37 @@ class StateDocument:
             raise StateError
 
         state = State.from_dict(data.get("state", {}))
-        meta = State(
-            desired=create_meta(state.desired, now),
-            reported=create_meta(state.reported, now)
+        metadata = State(
+            desired=create_metadata(state.desired, now),
+            reported=create_metadata(state.reported, now)
         )
 
-        return cls(state=state, meta=meta)
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return cls(state=state, metadata=metadata)
 
     def __post_init__(self) -> None:
         """Initialize meta data if not provided."""
         now = int(time.time())
-        if not self.meta:
-            self.meta = State(
-                desired=create_meta(self.state.desired, now),
-                reported=create_meta(self.state.reported, now),
+        if not self.metadata:
+            self.metadata = State(
+                desired=create_metadata(self.state.desired, now),
+                reported=create_metadata(self.state.reported, now),
             )
 
     def __add__(self, other: "StateDocument") -> "StateDocument":
         """Merge two state documents together."""
         return StateDocument(
             state=self.state + other.state,
-            meta=self.meta + other.meta
+            metadata=self.metadata + other.metadata
         )
+
+
+class ShadowOperation(StrEnum):
+    GET = "get"
+    UPDATE = "update"
+    GET_ACCEPT = "get/accepted"
+    GET_REJECT = "get/rejected"
+    UPDATE_ACCEPT = "update/accepted"
+    UPDATE_REJECT = "update/rejected"
+    UPDATE_DOCUMENTS = "update/documents"
+    UPDATE_DELTA = "update/delta"
+    UPDATE_IOTA = "update/iota"

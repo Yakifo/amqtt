@@ -6,7 +6,7 @@ from typing import Any, Optional
 import uuid
 
 from sqlalchemy import JSON, CheckConstraint, Integer, String, UniqueConstraint, desc, event, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, Session, make_transient, mapped_column
 
 from amqtt.contrib.shadows.states import StateDocument
@@ -19,8 +19,13 @@ class ShadowUpdateError(Exception):
         super().__init__(message)
 
 
-class Base(DeclarativeBase):
+class ShadowBase(DeclarativeBase):
     pass
+
+
+async def sync_shadow_base(connection: AsyncConnection) -> None:
+    """Create tables and table schemas."""
+    await connection.run_sync(ShadowBase.metadata.create_all)
 
 
 def default_state_document() -> dict[str, Any]:
@@ -28,10 +33,10 @@ def default_state_document() -> dict[str, Any]:
     return asdict(StateDocument())
 
 
-class Shadow(Base):
+class Shadow(ShadowBase):
     __tablename__ = "shadows_shadow"
 
-    id: Mapped[str] | None = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str | None] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     device_id: Mapped[str] = mapped_column(String(128), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -48,6 +53,8 @@ class Shadow(Base):
 
     @property
     def state(self) -> StateDocument:
+        if not self._state:
+            return StateDocument()
         return StateDocument.from_dict(self._state)
 
     @state.setter
