@@ -112,13 +112,6 @@ class StateDocument:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
-    def __add__(self, other: "StateDocument") -> "StateDocument":
-        """Merge states together."""
-        return StateDocument(
-            state=self.state + other.state,
-            meta=self.meta + other.meta
-        )
-
     def __post_init__(self) -> None:
         """Initialize meta data if not provided."""
         now = int(time.time())
@@ -127,3 +120,10 @@ class StateDocument:
                 desired=create_meta(self.state.desired, now),
                 reported=create_meta(self.state.reported, now),
             )
+
+    def __add__(self, other: "StateDocument") -> "StateDocument":
+        """Merge two state documents together."""
+        return StateDocument(
+            state=self.state + other.state,
+            meta=self.meta + other.meta
+        )

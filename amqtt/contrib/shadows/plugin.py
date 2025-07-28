@@ -3,11 +3,11 @@ from enum import StrEnum
 import re
 from typing import Any
 
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from amqtt.broker import BrokerContext
-from amqtt.contrib.auth_db.models import Base
-from amqtt.contrib.shadows.states import StateDocument
+from amqtt.contrib.shadows.models import Base, Shadow
+from amqtt.contrib.shadows.states import StateDocument, calculate_delta_update, calculate_iota_update
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import ApplicationMessage
 
@@ -40,6 +40,8 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
         self._shadows: dict[ClientID, dict[ShadowName, StateDocument]] = {}
 
         self._engine = create_async_engine(f"{self.config.connection}")
+        self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
+
 
     async def on_broker_pre_start(self) -> None:
         """Sync the schemad."""
@@ -58,9 +60,23 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
 
     async def _handle_get(self, device_id: str, name: str) -> None:
         """Send 'accepted."""
-        await self.context.broadcast_message("topic", b"message")
+        async with self._db_session_maker() as db_session, db_session.begin():
+            _shadow = await Shadow.latest_version(db_session, device_id, name)
+            await self.context.broadcast_message("topic", b"message")
 
-    async def _handle_update(self, device_id: str, name: str, state: dict[str, Any]) -> None:
+    async def _handle_update(self, device_id: str, name: str, update: dict[str, Any]) -> None:
+        async with self._db_session_maker() as db_session, db_session.begin():
+            shadow = await Shadow.latest_version(db_session, device_id, name)
+            if not shadow:
+                shadow = Shadow(device_id=device_id, name=name)
+
+            state_update = StateDocument.from_dict(update)
+
+            prev_state = shadow.state or StateDocument()
+            next_state = prev_state + state_update
+
+            _delta = calculate_delta_update(next_state.state.desired, next_state.state.reported)
+            _iota = calculate_iota_update(next_state.state.desired, next_state.state.reported)
 
         await self.context.broadcast_message("topic", b"message")
 
@@ -85,3 +101,15 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
                 await self._handle_get(shadow_topic.client_id, shadow_topic.name)
             case ShadowOperation.UPDATE:
                 await self._handle_update(shadow_topic.client_id, "shadow name", {})
+
+
+    @dataclass
+    class Config:
+        """Configuration for shadow plugin."""
+
+        connection: str
+        """SQLAlchemy connection string for the asyncio version of the database connector:
+        - mysql+aiomysql://user:password@host:port/dbname
+        - postgresql+asyncpg://user:password@host:port/dbname
+        - sqlite+aiosqlite:///dbfilename.db
+        """

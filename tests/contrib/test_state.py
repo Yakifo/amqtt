@@ -262,15 +262,6 @@ def test_update_with_clearing_key() -> None:
     assert_that(new_doc.state.reported, has_entry(equal_to('keyC'), equal_to(None)))
 
 
-
-
-
-
-
-
-
-
-
 def test_empty_desired_state() -> None:
 
     state_doc = StateDocument.from_dict({
