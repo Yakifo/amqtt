@@ -1,6 +1,6 @@
 from collections import Counter
 from collections.abc import MutableMapping
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 import time
 from typing import Any
 
@@ -108,6 +108,9 @@ class StateDocument:
         )
 
         return cls(state=state, meta=meta)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
     def __add__(self, other: "StateDocument") -> "StateDocument":
         """Merge states together."""

@@ -1,8 +1,12 @@
 from dataclasses import dataclass
 from enum import StrEnum
 import re
+from typing import Any
+
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from amqtt.broker import BrokerContext
+from amqtt.contrib.auth_db.models import Base
 from amqtt.contrib.shadows.states import StateDocument
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import ApplicationMessage
@@ -35,6 +39,13 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
         super().__init__(context)
         self._shadows: dict[ClientID, dict[ShadowName, StateDocument]] = {}
 
+        self._engine = create_async_engine(f"{self.config.connection}")
+
+    async def on_broker_pre_start(self) -> None:
+        """Sync the schemad."""
+        async with self._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
     @staticmethod
     def shadow_topic_match(topic: str) -> ShadowTopic | None:
         """Check if topic matches the shadow topic format."""
@@ -45,8 +56,13 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
             return ShadowTopic(groups["client_id"], groups["shadow_name"], ShadowOperation(groups["request"]))
         return None
 
-    async def _send(self, shadow: StateDocument) -> None:
-        """Send 'accepted' and 'document' shadow messages."""
+    async def _handle_get(self, device_id: str, name: str) -> None:
+        """Send 'accepted."""
+        await self.context.broadcast_message("topic", b"message")
+
+    async def _handle_update(self, device_id: str, name: str, state: dict[str, Any]) -> None:
+
+        await self.context.broadcast_message("topic", b"message")
 
     async def on_broker_message_received(self, *, client_id: str, message: ApplicationMessage) -> None:
         """Process a message that was received from a client."""
@@ -63,6 +79,9 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
         if shadow_topic.name not in self._shadows[shadow_topic.client_id]:
             self._shadows[shadow_topic.client_id][shadow_topic.name] = StateDocument()
 
-        if shadow_topic.message_type == ShadowOperation.GET:
-            # send existing shadow
-            await self._send(self._shadows[shadow_topic.client_id][shadow_topic.name])
+        match shadow_topic.message_type:
+
+            case ShadowOperation.GET:
+                await self._handle_get(shadow_topic.client_id, shadow_topic.name)
+            case ShadowOperation.UPDATE:
+                await self._handle_update(shadow_topic.client_id, "shadow name", {})
