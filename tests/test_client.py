@@ -15,20 +15,22 @@ logging.basicConfig(level=logging.ERROR, format=formatter)
 log = logging.getLogger(__name__)
 
 
-# @pytest.mark.asyncio
-# async def test_connect_tcp():
-#     client = MQTTClient()
-#     await client.connect("mqtt://broker.hivemq.com:1883/")
-#     assert client.session is not None
-#     await client.disconnect()
-#
-#
-# @pytest.mark.asyncio
-# async def test_connect_tcp_secure(ca_file_fixture):
-#     client = MQTTClient(config={"check_hostname": False})
-#     await client.connect("mqtts://broker.hivemq.com:8883/")
-#     assert client.session is not None
-#     await client.disconnect()
+@pytest.mark.asyncio
+async def test_connect_tcp(broker_fixture):
+    client = MQTTClient()
+    await client.connect("mqtt://localhost:1883/")
+    assert client.session is not None
+    await client.disconnect()
+
+@pytest.mark.asyncio
+async def test_connect_tcp_secure(rsa_keys, broker_fixture):
+    certfile, _ = rsa_keys
+    client = MQTTClient(config={"check_hostname": False, "auto_reconnect": False})
+
+    # since we're using a self-signed certificate, need to provide the server's certificate to verify authenticity
+    await client.connect("mqtts://localhost:1884/", cafile=certfile)
+    assert client.session is not None
+    await client.disconnect()
 
 
 @pytest.mark.asyncio
@@ -62,9 +64,11 @@ async def test_reconnect_ws_retain_username_password(broker_fixture):
 
 
 @pytest.mark.asyncio
-async def test_connect_ws_secure(ca_file_fixture, broker_fixture):
-    client = MQTTClient()
-    await client.connect("ws://127.0.0.1:8081/", cafile=ca_file_fixture)
+async def test_connect_ws_secure(rsa_keys, broker_fixture):
+    certfile, _ = rsa_keys
+    client = MQTTClient(config={"auto_reconnect": False})
+    # since we're using a self-signed certificate, need to provide the server's certificate to verify authenticity
+    await client.connect("wss://localhost:8081/", cafile=certfile)
     assert client.session is not None
     await client.disconnect()
 
