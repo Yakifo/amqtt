@@ -1,5 +1,12 @@
+# Authentication Using Signed Certificates
 
-# Authentication Using Signed Certificates 
+Using client-specific certificates, signed by a common authority (even if self-signed) provides
+a highly secure way of authenticating mqtt clients. Often used with IoT devices where a unique
+certificate can be initialized on initial provisioning.
+
+With so many options, X509 certificates can be daunting to create with `openssl`. Included are 
+command line utilities to generate a root self-signed certificate and then the proper broker and
+device certificates with the correct X509 attributes to enable authenticity. 
 
 ### Quick start
 

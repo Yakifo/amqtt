@@ -44,6 +44,7 @@ nav:
             - plugins/contrib.md
             - Database Auth: plugins/auth_db.md
             - HTTP Auth: plugins/http.md
+            - Certificate Auth: plugins/cert.md
       - Configuration:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
