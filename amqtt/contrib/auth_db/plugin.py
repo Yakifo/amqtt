@@ -56,14 +56,15 @@ class UserAuthDBPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
         connection: str
         """SQLAlchemy connection string for the asyncio version of the database connector:
-        - mysql+aiomysql://user:password@host:port/dbname
-        - postgresql+asyncpg://user:password@host:port/dbname
-        - sqlite+aiosqlite:///dbfilename.db
+
+        - `mysql+aiomysql://user:password@host:port/dbname`
+        - `postgresql+asyncpg://user:password@host:port/dbname`
+        - `sqlite+aiosqlite:///dbfilename.db`
         """
         sync_schema: bool = False
         """Use SQLAlchemy to create / update the database schema."""
         hash_schemes: list[str] = field(default_factory=default_hash_scheme)
-
+        """list of hash schemes to use for passwords"""
 
 class TopicAuthDBPlugin(BaseTopicPlugin):
 
@@ -100,9 +101,10 @@ class TopicAuthDBPlugin(BaseTopicPlugin):
 
         connection: str
         """SQLAlchemy connection string for the asyncio version of the database connector:
-        - mysql+aiomysql://user:password@host:port/dbname
-        - postgresql+asyncpg://user:password@host:port/dbname
-        - sqlite+aiosqlite:///dbfilename.db
+
+        - `mysql+aiomysql://user:password@host:port/dbname`
+        - `postgresql+asyncpg://user:password@host:port/dbname`
+        - `sqlite+aiosqlite:///dbfilename.db`
         """
         sync_schema: bool = False
         """Use SQLAlchemy to create / update the database schema."""

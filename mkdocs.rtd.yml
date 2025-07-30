@@ -38,9 +38,12 @@ nav:
           - Client: references/client.md
           - Common: references/common.md
       - Plugins:
-          - Packaged: packaged_plugins.md
-          - Custom: custom_plugins.md
-          - Contributed: contrib_plugins.md
+          - Packaged: plugins/packaged_plugins.md
+          - Custom: plugins/custom_plugins.md
+          - Contributed:
+            - plugins/contrib.md
+            - Database Auth: plugins/auth_db.md
+            - HTTP Auth: plugins/http.md
       - Configuration:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
@@ -58,6 +61,7 @@ theme:
   name: material
   logo: assets/amqtt_bw.svg
   features:
+    - toc.integrate
     - announce.dismiss
     - content.action.edit
     - content.action.view
@@ -118,6 +122,7 @@ markdown_extensions:
   - pymdownx.tilde
   - toc:
       permalink: "¤"
+      toc_depth: 3
 
 plugins:
   - search
@@ -135,7 +140,6 @@ plugins:
           options:
 #            extra:
 #              template_log_display: true
-            annotation_path: "full"
             docstring_options:
               ignore_init_summary: true
             docstring_section_style: list
