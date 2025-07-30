@@ -23,7 +23,7 @@ and configured for the broker:
     --8<-- "pyproject.toml:included"
     ```
 
-    But the same 4 plugins were activated in the previous default config:
+    But the previous default config only caused 4 plugins to be active:
 
     ```yaml
     --8<-- "samples/legacy.yaml"
@@ -248,7 +248,7 @@ plugins:
 
 `amqtt.plugins.logging_amqtt.PacketLoggerPlugin`
 
-This plugin issues debug-level messages for [mqtt events](custom_plugins.md#client-and-broker): `on_mqtt_packet_sent`
+This plugin issues debug-level messages for [mqtt events](custom_plugins.md#events): `on_mqtt_packet_sent`
 and `on_mqtt_packet_received`.
 
 ```yaml

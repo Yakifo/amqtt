@@ -10,11 +10,13 @@ from _griffe.agents.visitor import Visitor
 from _griffe.models import Attribute
 
 from amqtt.contexts import default_listeners, default_broker_plugins, default_client_plugins
+from amqtt.contrib.auth_db.plugin import default_hash_scheme
 
 default_factory_map = {
     'default_listeners': default_listeners(),
     'default_broker_plugins': default_broker_plugins(),
-    'default_client_plugins': default_client_plugins()
+    'default_client_plugins': default_client_plugins(),
+    'default_hash_scheme': default_hash_scheme()
 }
 
 def get_qualified_name(node: ast.AST) -> str | None:

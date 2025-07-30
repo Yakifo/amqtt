@@ -48,7 +48,7 @@ HTTP_4xx_MIN = 400
 HTTP_4xx_MAX = 499
 
 
-class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
+class HttpAuthPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
@@ -167,7 +167,9 @@ class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
         """
 
         host: str
+        """hostname of the server for the auth & acl check"""
         port: int
+        """port of the server for the auth & acl check"""
         user_uri: str
         topic_uri: str
         request_method: RequestMethod = RequestMethod.GET
