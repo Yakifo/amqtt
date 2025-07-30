@@ -1,5 +1,8 @@
 from asyncio import Queue
 from collections import OrderedDict
+import logging
+from math import floor
+import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from transitions import Machine
@@ -12,6 +15,8 @@ INCOMING = 1
 
 if TYPE_CHECKING:
     import ssl
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationMessage:
@@ -141,7 +146,9 @@ class Session:
         self.cadata: bytes | None = None
         self._packet_id: int = 0
         self.parent: int = 0
+        self.last_connect_time: int | None = None
         self.ssl_object: ssl.SSLObject | None = None
+        self.last_disconnect_time: int | None = None
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
         self.inflight_out: OrderedDict[int, OutgoingApplicationMessage] = OrderedDict()
@@ -165,6 +172,7 @@ class Session:
             source="new",
             dest="connected",
         )
+        self.transitions.on_enter_connected(self._on_enter_connected)
         self.transitions.add_transition(
             trigger="connect",
             source="disconnected",
@@ -175,6 +183,7 @@ class Session:
             source="connected",
             dest="disconnected",
         )
+        self.transitions.on_enter_disconnected(self._on_enter_disconnected)
         self.transitions.add_transition(
             trigger="disconnect",
             source="new",
@@ -185,6 +194,20 @@ class Session:
             source="disconnected",
             dest="disconnected",
         )
+
+    def _on_enter_connected(self) -> None:
+        cur_time = floor(time.time())
+        if self.last_disconnect_time is not None:
+            logger.debug(f"Session reconnected after {cur_time - self.last_disconnect_time} seconds.")
+
+        self.last_connect_time = cur_time
+        self.last_disconnect_time = None
+
+    def _on_enter_disconnected(self) -> None:
+        cur_time = floor(time.time())
+        if self.last_connect_time is not None:
+            logger.debug(f"Session disconnected after {cur_time - self.last_connect_time} seconds.")
+        self.last_disconnect_time = cur_time
 
     @property
     def next_packet_id(self) -> int:
