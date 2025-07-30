@@ -145,7 +145,9 @@ class Broker:
         plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
     Raises:
-        BrokerError, ParserError, PluginError
+        BrokerError: problem with broker configuration
+        PluginImportError: if importing a plugin from configuration
+        PluginInitError: if initialization plugin fails
 
     """
 

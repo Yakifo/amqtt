@@ -257,7 +257,9 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         """Configuration variables."""
 
         file: str | Path = "amqtt.db"
+        """path & filename to store the sqlite session db."""
         clear_on_shutdown: bool = True
+        """if the broker shutdowns down normally, don't retain any information."""
 
         def __post_init__(self) -> None:
             """Create `Path` from string path."""

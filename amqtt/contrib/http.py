@@ -48,7 +48,7 @@ HTTP_4xx_MIN = 400
 HTTP_4xx_MAX = 499
 
 
-class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
+class HttpAuthPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
@@ -137,44 +137,27 @@ class HttpAuthTopicPlugin(BaseAuthPlugin, BaseTopicPlugin):
 
     @dataclass
     class Config:
-        """Configuration for the HTTP Auth & ACL Plugin.
-
-        Members:
-            - host *(str) hostname of the server for the auth & acl check
-            - port *(int) port of the server for the auth & acl check
-            - user_uri *(str) uri of the topic check (e.g. '/user')
-            - topic_uri *(str) uri of the topic check (e.g. '/acl')
-            - request_method *(RequestMethod) send the request as a GET, POST or PUT
-            - params_mode *(ParamsMode) send the request with json or form data
-            - response_mode *(ResponseMode) expected response from the auth/acl server. STATUS (code), JSON, or TEXT.
-            - user_agent *(str) the 'User-Agent' header sent along with the request
-
-        ParamsMode:
-
-        for user authentication, the http server will receive in json or form format the following:
-            - username *(str)*
-            - password *(str)*
-            - client_id *(str)*
-
-        for superuser validation, the http server will receive in json or form format the following:
-            - username *(str)*
-
-        for acl check, the http server will receive in json or form format the following:
-            - username *(str)*
-            - client_id *(str)*
-            - topic *(str)*
-            - acc *(int)* client can receive (1), can publish(2), can receive & publish (3) and can subscribe (4)
-        """
+        """Configuration for the HTTP Auth & ACL Plugin."""
 
         host: str
+        """hostname of the server for the auth & acl check"""
         port: int
+        """port of the server for the auth & acl check"""
         user_uri: str
+        """URI of the topic check (e.g. '/user')"""
         topic_uri: str
+        """URI of the topic check (e.g. '/acl')"""
         request_method: RequestMethod = RequestMethod.GET
-        params_mode: ParamsMode = ParamsMode.JSON
-        response_mode: ResponseMode = ResponseMode.JSON
+        """send the request as a GET, POST or PUT"""
+        params_mode: ParamsMode = ParamsMode.JSON  # see docs/plugins/http.md for additional details
+        """send the request with `JSON` or `FORM` data. *additional details below*"""
+        response_mode: ResponseMode = ResponseMode.JSON  # see docs/plugins/http.md for additional details
+        """expected response from the auth/acl server. `STATUS` (code), `JSON`, or `TEXT`. *additional details below*"""
         with_tls: bool = False
+        """http or https"""
         user_agent: str = "amqtt"
-
+        """the 'User-Agent' header sent along with the request"""
         superuser_uri: str | None = None
+        """URI to verify if the user is a superuser (e.g. '/superuser'), `None` if superuser is not supported"""
         timeout: int = 5
+        """duration, in seconds, to wait for the HTTP server to respond"""
