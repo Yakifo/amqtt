@@ -38,8 +38,12 @@ nav:
           - Client: references/client.md
           - Common: references/common.md
       - Plugins:
-          - Packaged: packaged_plugins.md
-          - Custom: custom_plugins.md
+          - Packaged: plugins/packaged_plugins.md
+          - Custom: plugins/custom_plugins.md
+          - Contributed:
+            - plugins/contrib.md
+            - Database Auth: plugins/auth_db.md
+            - HTTP Auth: plugins/http.md
       - Configuration:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
@@ -57,6 +61,7 @@ theme:
   name: material
   logo: assets/amqtt_bw.svg
   features:
+    - toc.integrate
     - announce.dismiss
     - content.action.edit
     - content.action.view
@@ -117,6 +122,7 @@ markdown_extensions:
   - pymdownx.tilde
   - toc:
       permalink: "¤"
+      toc_depth: 3
 
 plugins:
   - search
@@ -127,10 +133,13 @@ plugins:
   - coverage
   - mkdocs-typer2
   - mkdocstrings:
+      custom_templates: 'docs/templates'
       handlers:
         python:
           paths: [amqtt]
           options:
+#            extra:
+#              template_log_display: true
             docstring_options:
               ignore_init_summary: true
             docstring_section_style: list
@@ -148,6 +157,9 @@ plugins:
             show_symbol_type_toc: true
             signature_crossrefs: true
             summary: true
+            extensions:
+              - docs/scripts/exts.py:DataclassDefaultFactoryExtension:
+                paths: [mypkg.mymod.myobj]
   - git-revision-date-localized:
       enabled: !ENV [DEPLOY, false]
       enable_creation_date: true

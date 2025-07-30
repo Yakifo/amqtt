@@ -32,4 +32,5 @@ used by the included broker script: [broker configuration](broker_config.md)
 
 ::: amqtt.broker.Broker
 
+
 [^1]: See [PyYAML](http://pyyaml.org/wiki/PyYAMLDocumentation) for loading YAML files as Python dict.

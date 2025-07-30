@@ -1,0 +1,6 @@
+{% if config.extra.class_style == 'simple' %}{% else %}{% extends "_base/function.html.jinja" %}{% endif %}
+
+
+{% block logs scoped %}
+{% if config.extra.template_log_display %}<p style="color:red">function.html.jinja</p>{% endif %}
+{% endblock logs %}

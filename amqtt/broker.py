@@ -2,12 +2,12 @@ import asyncio
 from asyncio import CancelledError, futures
 from collections import deque
 from collections.abc import Generator
-import copy
 from functools import partial
 import logging
-from pathlib import Path
+from math import floor
 import re
 import ssl
+import time
 from typing import Any, ClassVar, TypeAlias
 
 from transitions import Machine, MachineError
@@ -22,23 +22,18 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-from amqtt.contexts import Action, BaseContext
+from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
-from amqtt.utils import format_client_message, gen_client_id, read_yaml_config
+from amqtt.utils import format_client_message, gen_client_id
 
 from .events import BrokerEvents
 from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import PluginManager
 
-_CONFIG_LISTENER: TypeAlias = dict[str, int | bool | dict[str, Any]]
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
-
-
-_defaults = read_yaml_config(Path(__file__).parent / "scripts/default_broker.yaml")
-
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
@@ -102,7 +97,7 @@ class BrokerContext(BaseContext):
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
-        self.config: _CONFIG_LISTENER | None = None
+        self.config: BrokerConfig | None = None
         self._broker_instance = broker
 
     async def broadcast_message(self, topic: str, data: bytes, qos: int | None = None) -> None:
@@ -134,7 +129,9 @@ class Broker:
         plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
     Raises:
-        BrokerError, ParserError, PluginError
+        BrokerError: problem with broker configuration
+        PluginImportError: if importing a plugin from configuration
+        PluginInitError: if initialization plugin fails
 
     """
 
@@ -150,20 +147,20 @@ class Broker:
 
     def __init__(
         self,
-        config: _CONFIG_LISTENER | None = None,
+        config: BrokerConfig | dict[str, Any] | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
         plugin_namespace: str | None = None,
     ) -> None:
         """Initialize the broker."""
         self.logger = logging.getLogger(__name__)
-        self.config = copy.deepcopy(_defaults or {})
-        if config is not None:
-            # if 'plugins' isn't in the config but 'auth'/'topic-check' is included, assume this is a legacy config
-            if ("auth" in config or "topic-check" in config) and "plugins" not in config:
-                # set to None so that the config isn't updated with the new-style default plugin list
-                config["plugins"] = None  # type: ignore[assignment]
-            self.config.update(config)
-        self._build_listeners_config(self.config)
+
+        if isinstance(config, dict):
+            self.config = BrokerConfig.from_dict(config)
+        else:
+            self.config = config or BrokerConfig()
+
+        # listeners are populated from default within BrokerConfig
+        self.listeners_config = self.config.listeners
 
         self._loop = loop or asyncio.get_running_loop()
         self._servers: dict[str, Server] = {}
@@ -182,32 +179,15 @@ class Broker:
         # Tasks queue for managing broadcasting tasks
         self._tasks_queue: deque[asyncio.Task[OutgoingApplicationMessage]] = deque()
 
+        # Task for session monitor
+        self._session_monitor_task: asyncio.Task[Any] | None = None
+
         # Initialize plugins manager
 
         context = BrokerContext(self)
         context.config = self.config
         namespace = plugin_namespace or "amqtt.broker.plugins"
         self.plugins_manager = PluginManager(namespace, context, self._loop)
-
-    def _build_listeners_config(self, broker_config: _CONFIG_LISTENER) -> None:
-        self.listeners_config = {}
-        try:
-            listeners_config = broker_config.get("listeners")
-            if not isinstance(listeners_config, dict):
-                msg = "Listener config not found or invalid"
-                raise BrokerError(msg)
-            defaults = listeners_config.get("default")
-            if defaults is None:
-                msg = "Listener config has not default included or is invalid"
-                raise BrokerError(msg)
-
-            for listener_name, listener_conf in listeners_config.items():
-                config = defaults.copy()
-                config.update(listener_conf)
-                self.listeners_config[listener_name] = config
-        except KeyError as ke:
-            msg = f"Listener config not found or invalid: {ke}"
-            raise BrokerError(msg) from ke
 
     def _init_states(self) -> None:
         self.transitions = Machine(states=Broker.states, initial="new")
@@ -245,6 +225,7 @@ class Broker:
             self.transitions.starting_success()
             await self.plugins_manager.fire_event(BrokerEvents.POST_START)
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
+            self._session_monitor_task = asyncio.create_task(self._session_monitor())
             self.logger.debug("Broker started")
         except Exception as e:
             self.logger.exception("Broker startup failed")
@@ -273,7 +254,8 @@ class Broker:
 
             self.logger.info(f"Listener '{listener_name}' bind to {listener['bind']} (max_connections={max_connections})")
 
-    def _create_ssl_context(self, listener: dict[str, Any]) -> ssl.SSLContext:
+    @staticmethod
+    def _create_ssl_context(listener: ListenerConfig) -> ssl.SSLContext:
         """Create an SSL context for a listener."""
         try:
             ssl_context = ssl.create_default_context(
@@ -320,6 +302,35 @@ class Broker:
         msg = f"Unsupported listener type: {listener_type}"
         raise BrokerError(msg)
 
+    async def _session_monitor(self) -> None:
+
+        self.logger.info("Starting session expiration monitor.")
+
+        while True:
+
+            session_count_before = len(self._sessions)
+
+            # clean or anonymous sessions don't retain messages (or subscriptions); the session can be filtered out
+            sessions_to_remove = [ client_id for client_id, (session, _) in self._sessions.items()
+                if session.transitions.state == "disconnected" and (session.is_anonymous or session.clean_session) ]
+
+            # if session expiration is enabled, check to see if any of the sessions are disconnected and past expiration
+            if self.config.session_expiry_interval is not None:
+                retain_after = floor(time.time() - self.config.session_expiry_interval)
+
+                sessions_to_remove += [ client_id for client_id, (session, _) in self._sessions.items()
+                                        if session.transitions.state == "disconnected" and
+                                        session.last_disconnect_time and
+                                        session.last_disconnect_time < retain_after ]
+
+            for client_id in sessions_to_remove:
+                await self._cleanup_session(client_id)
+
+            if session_count_before > (session_count_after := len(self._sessions)):
+                self.logger.debug(f"Expired {session_count_before - session_count_after} sessions")
+
+            await asyncio.sleep(1)
+
     async def shutdown(self) -> None:
         """Stop broker instance."""
         self.logger.info("Shutting down broker...")
@@ -337,6 +348,8 @@ class Broker:
         self.transitions.shutdown()
 
         await self._shutdown_broadcast_loop()
+        if self._session_monitor_task:
+            self._session_monitor_task.cancel()
 
         for server in self._servers.values():
             await server.close_instance()
@@ -681,7 +694,7 @@ class Broker:
 
         permitted = await self._topic_filtering(client_session, topic=app_message.topic, action=Action.PUBLISH)
         if not permitted:
-            self.logger.info(f"{client_session.client_id} forbidden TOPIC {app_message.topic} sent in PUBLISH message.")
+            self.logger.info(f"{client_session.client_id} not allowed to publish to TOPIC {app_message.topic}.")
         else:
             await self.plugins_manager.fire_event(
                 BrokerEvents.MESSAGE_RECEIVED,
@@ -706,7 +719,7 @@ class Broker:
         except Exception:
             self.logger.exception("Failed to stop handler")
 
-    async def _authenticate(self, session: Session, _: dict[str, Any]) -> bool:
+    async def _authenticate(self, session: Session, _: ListenerConfig) -> bool:
         """Call the authenticate method on registered plugins to test user authentication.
 
         User is considered authenticated if all plugins called returns True.
@@ -891,6 +904,12 @@ class Broker:
 
             for target_session, sub_qos in subscriptions:
                 qos = broadcast.get("qos", sub_qos)
+
+                sendable = await self._topic_filtering(target_session, topic=broadcast["topic"], action=Action.RECEIVE)
+                if not sendable:
+                    self.logger.info(
+                        f"{target_session.client_id} not allowed to receive messages from TOPIC {broadcast['topic']}.")
+                    continue
 
                 # Retain all messages which cannot be broadcasted, due to the session not being connected
                 #  but only when clean session is false and qos is 1 or 2 [MQTT 3.1.2.4]

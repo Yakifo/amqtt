@@ -2,10 +2,8 @@ import asyncio
 from collections import deque
 from collections.abc import Callable, Coroutine
 import contextlib
-import copy
 from functools import wraps
 import logging
-from pathlib import Path
 import ssl
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 from urllib.parse import urlparse, urlunparse
@@ -19,19 +17,17 @@ from amqtt.adapters import (
     WebSocketsReader,
     WebSocketsWriter,
 )
-from amqtt.contexts import BaseContext
+from amqtt.contexts import BaseContext, ClientConfig
 from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
-from amqtt.utils import gen_client_id, read_yaml_config
+from amqtt.utils import gen_client_id
 
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
-
-_defaults: dict[str, Any] | None = read_yaml_config(Path(__file__).parent / "scripts/default_client.yaml")
 
 
 class ClientContext(BaseContext):
@@ -42,7 +38,7 @@ class ClientContext(BaseContext):
 
     def __init__(self) -> None:
         super().__init__()
-        self.config = None
+        self.config: ClientConfig | None = None
 
 
 base_logger = logging.getLogger(__name__)
@@ -90,15 +86,19 @@ class MQTTClient:
         config: dictionary of configuration options (see [client configuration](client_config.md)).
 
     Raises:
-        PluginError
+        PluginImportError: if importing a plugin from configuration
+        PluginInitError: if initialization plugin fails
 
     """
 
-    def __init__(self, client_id: str | None = None, config: dict[str, Any] | None = None) -> None:
+    def __init__(self, client_id: str | None = None, config: ClientConfig | dict[str, Any] | None = None) -> None:
         self.logger = logging.getLogger(__name__)
-        self.config = copy.deepcopy(_defaults or {})
-        if config is not None:
-            self.config.update(config)
+
+        if isinstance(config, dict):
+            self.config = ClientConfig.from_dict(config)
+        else:
+            self.config = config or ClientConfig()
+
         self.client_id = client_id if client_id is not None else gen_client_id()
 
         self.session: Session | None = None
@@ -146,7 +146,7 @@ class MQTTClient:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
 
         Raises:
-            ClientError, ConnectError
+            ConnectError: could not connect to broker
 
         """
         additional_headers = additional_headers if additional_headers is not None else {}
@@ -381,6 +381,7 @@ class MQTTClient:
 
         Raises:
             asyncio.TimeoutError: if timeout occurs before a message is delivered
+            ClientError: if client is not connected
 
         """
         if self._handler is None:
@@ -525,7 +526,7 @@ class MQTTClient:
             self._connected_state.set()
             self.logger.debug(f"Connected to {self.session.remote_address}:{self.session.remote_port}")
 
-        except (InvalidURI, InvalidHandshake, ProtocolHandlerError, ConnectionError, OSError) as e:
+        except (InvalidURI, InvalidHandshake, ProtocolHandlerError, ConnectionError, OSError, asyncio.TimeoutError) as e:
             self.logger.debug(f"Connection failed : {self.session.broker_uri} [{e!r}]")
             self.session.transitions.disconnect()
             raise ConnectError(e) from e
@@ -582,9 +583,17 @@ class MQTTClient:
     ) -> Session:
         """Initialize the MQTT session."""
         broker_conf = self.config.get("broker", {}).copy()
-        broker_conf.update(
-            {k: v for k, v in {"uri": uri, "cafile": cafile, "capath": capath, "cadata": cadata}.items() if v is not None},
-        )
+
+        if uri is not None:
+            broker_conf.uri = uri
+        if cleansession is not None:
+            self.config.cleansession = cleansession
+        if cafile is not None:
+            broker_conf.cafile = cafile
+        if capath is not None:
+            broker_conf.capath = capath
+        if cadata is not None:
+            broker_conf.cadata = cadata
 
         if not broker_conf.get("uri"):
             msg = "Missing connection parameter 'uri'"
@@ -593,15 +602,12 @@ class MQTTClient:
         session = Session()
         session.broker_uri = broker_conf["uri"]
         session.client_id = self.client_id
+
         session.cafile = broker_conf.get("cafile")
         session.capath = broker_conf.get("capath")
         session.cadata = broker_conf.get("cadata")
 
-        if cleansession is not None:
-            broker_conf["cleansession"] = cleansession  # noop?
-            session.clean_session = cleansession
-        else:
-            session.clean_session = self.config.get("cleansession", True)
+        session.clean_session = self.config.get("cleansession", True)
 
         session.keep_alive = self.config["keep_alive"] - self.config["ping_delay"]
 
