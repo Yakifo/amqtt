@@ -77,7 +77,9 @@ and then run via `amqtt -c myBroker.yaml`.
     variables to configure its behavior.
 
 ::: amqtt.plugins.base.BasePlugin
-
+    options:
+      show_source: false
+      heading_level: 3
 
 
 ## Events
@@ -85,16 +87,13 @@ and then run via `amqtt -c myBroker.yaml`.
 
 All plugins are notified of events if the `BasePlugin` subclass implements one or more of these methods:
 
-### Client and Broker
+
+### Client
 
 - `async def on_mqtt_packet_sent(self, *, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
 - `async def on_mqtt_packet_received(self, *, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
 
-### Client Only
-
-none
-
-### Broker Only
+### Broker
 
 - `async def on_broker_pre_start(self) -> None`
 - `async def on_broker_post_start(self) -> None`
@@ -112,6 +111,9 @@ none
 
 - `async def on_broker_message_received(self, *, client_id: str, message: ApplicationMessage) -> None`
 - `async def on_broker_message_broadcast(self, *, client_id: str, message: ApplicationMessage) -> None`
+- `async def on_mqtt_packet_sent(self, *, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
+- `async def on_mqtt_packet_received(self, *, packet: MQTTPacket[MQTTVariableHeader, MQTTPayload[MQTTVariableHeader], MQTTFixedHeader], session: Session | None = None) -> None`
+
 
 ## Authentication Plugins
 
@@ -128,6 +130,9 @@ If there are multiple authentication plugins:
 - `None` gets ignored from the determination
 
 ::: amqtt.plugins.base.BaseAuthPlugin
+    options:
+      show_source: false
+      heading_level: 3
 
 ## Topic Filter Plugins
 
@@ -144,7 +149,9 @@ If there are multiple topic plugins:
 - `None` will be ignored
 
 ::: amqtt.plugins.base.BaseTopicPlugin
-
+    options:
+      show_source: false
+      heading_level: 3
 
 !!! note
     A custom plugin class can subclass from both `BaseAuthPlugin` and `BaseTopicPlugin` as long it defines

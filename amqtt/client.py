@@ -86,7 +86,8 @@ class MQTTClient:
         config: dictionary of configuration options (see [client configuration](client_config.md)).
 
     Raises:
-        PluginError
+        PluginImportError: if importing a plugin from configuration
+        PluginInitError: if initialization plugin fails
 
     """
 
@@ -145,7 +146,7 @@ class MQTTClient:
             [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
 
         Raises:
-            ClientError, ConnectError
+            ConnectError: could not connect to broker
 
         """
         additional_headers = additional_headers if additional_headers is not None else {}
@@ -380,6 +381,7 @@ class MQTTClient:
 
         Raises:
             asyncio.TimeoutError: if timeout occurs before a message is delivered
+            ClientError: if client is not connected
 
         """
         if self._handler is None:
