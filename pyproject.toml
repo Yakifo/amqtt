@@ -40,8 +40,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "aiosqlite>=0.21.0",
+  "greenlet>=3.2.3",
   "hatch>=1.14.1",
   "hypothesis>=6.130.8",
+  "mypy>=1.15.0",
   "paho-mqtt>=2.1.0",
   "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
@@ -85,12 +88,17 @@ contrib = [
     "aiosqlite>=0.21.0",
     "greenlet>=3.2.3",
     "sqlalchemy[asyncio]>=2.0.41",
+    "argon2-cffi>=25.1.0",
+    "aiohttp>=3.12.13",
 ]
 
 [project.scripts]
 amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
+
+user_mgr = "amqtt.scripts.manage_users:main"
+topic_mgr = "amqtt.scripts.manage_topics:main"
 
 [tool.hatch.build]
 exclude = [
