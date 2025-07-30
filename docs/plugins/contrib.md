@@ -17,3 +17,12 @@ These are fully supported plugins but require additional dependencies to be inst
 - [HTTP Auth](http.md)<br/>
   Determine client authentication and authorization based on response from a separate HTTP server.<br/>
   `amqtt.contrib.http.HttpAuthTopicPlugin`
+
+- [Certificate Auth](cert.md)<br/>
+  Using client-specific certificates, signed by a common authority (even if self-signed) provides
+   a highly secure way of authenticating mqtt clients. Often used with IoT devices where a unique
+   certificate can be initialized on initial provisioning. Includes command line utilities to generate
+   root, broker and device certificates with the correct X509 attributes to enable authenticity.
+
+   `amqtt.contrib.cert.CertificateAuthPlugin.Config`
+

@@ -235,6 +235,7 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
         incoming_session.password = connect.password
         incoming_session.remote_address = remote_address
         incoming_session.remote_port = remote_port
+        incoming_session.ssl_object = writer.get_ssl_info()
 
         incoming_session.keep_alive = max(connect.keep_alive, 0)
 
