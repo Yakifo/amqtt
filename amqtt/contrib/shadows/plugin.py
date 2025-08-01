@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 import re
 from typing import Any
@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from amqtt.broker import BrokerContext
+from amqtt.contexts import Action
 from amqtt.contrib.shadows.messages import (
     GetAcceptedMessage,
     GetRejectedMessage,
@@ -22,8 +23,8 @@ from amqtt.contrib.shadows.states import (
     calculate_delta_update,
     calculate_iota_update,
 )
-from amqtt.plugins.base import BasePlugin
-from amqtt.session import ApplicationMessage
+from amqtt.plugins.base import BasePlugin, BaseTopicPlugin
+from amqtt.session import ApplicationMessage, Session
 
 shadow_topic_re = re.compile(r"^\$shadow/(?P<client_id>[a-zA-Z0-9_-]+?)/(?P<shadow_name>[a-zA-Z0-9_-]+?)/(?P<request>get|update)")
 
@@ -163,7 +164,35 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
 
         connection: str
         """SQLAlchemy connection string for the asyncio version of the database connector:
-        - mysql+aiomysql://user:password@host:port/dbname
-        - postgresql+asyncpg://user:password@host:port/dbname
-        - sqlite+aiosqlite:///dbfilename.db
+
+        - `mysql+aiomysql://user:password@host:port/dbname`
+        - `postgresql+asyncpg://user:password@host:port/dbname`
+        - `sqlite+aiosqlite:///dbfilename.db`
         """
+
+
+class ShadowTopicAuthPlugin(BaseTopicPlugin):
+
+    async def topic_filtering(self, *,
+                        session: Session | None = None,
+                        topic: str | None = None,
+                        action: Action | None = None) -> bool | None:
+
+        session = session or Session()
+        if not topic:
+            return False
+
+        shadow_topic = ShadowPlugin.shadow_topic_match(topic)
+
+        if not shadow_topic:
+            return False
+
+        return shadow_topic.device_id == session.username or session.username in self.config.superusers
+
+    @dataclass
+    class Config:
+        """Configuration for only allowing devices access to their own shadow topics."""
+
+        superusers: list[str] = field(default_factory=list)
+        """A list of one or more usernames that can write to any device topic,
+         primarily for the central app sending updates to devices."""

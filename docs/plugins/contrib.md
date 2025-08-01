@@ -17,3 +17,9 @@ These are fully supported plugins but require additional dependencies to be inst
 - [HTTP Auth](http.md)<br/>
   Determine client authentication and authorization based on response from a separate HTTP server.<br/>
   `amqtt.contrib.http.HttpAuthTopicPlugin`
+
+- [Shadows](shadows.md)<br/>
+  Device shadows provide a persistent, cloud-based representation of the state of a device,
+   even when the device is offline. This plugin tracks the desired and reported state of a client
+   and provides MQTT topic-based communication channels to retrieve and update a shadow.<br/>
+   `amqtt.contrib.shadows.ShadowPlugin`

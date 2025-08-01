@@ -44,6 +44,7 @@ nav:
             - plugins/contrib.md
             - Database Auth: plugins/auth_db.md
             - HTTP Auth: plugins/http.md
+            - Shadows: plugins/shadows.md
       - Configuration:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
@@ -111,7 +112,11 @@ markdown_extensions:
   - pymdownx.snippets:
       base_path: !relative $config_dir
       check_paths: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
       slugify: !!python/object/apply:pymdownx.slugs.slugify
