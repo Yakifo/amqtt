@@ -1,7 +1,14 @@
 from collections import Counter
 from collections.abc import MutableMapping
 from dataclasses import dataclass, field
-from enum import StrEnum
+
+try:
+    from enum import StrEnum
+except ImportError:
+    # support for python 3.10
+    from enum import Enum
+    class StrEnum(str, Enum):  #type: ignore[no-redef]
+        pass
 import time
 from typing import Any, Generic, TypeVar
 
