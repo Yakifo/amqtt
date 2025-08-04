@@ -4,7 +4,7 @@ import random
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from paho.mqtt import client as mqtt_client
+from paho.mqtt import client as paho_client
 
 from amqtt.events import BrokerEvents
 from amqtt.client import MQTTClient
@@ -40,7 +40,7 @@ async def test_paho_connect(broker, mock_plugin_manager):
         assert rc == 0, f"Disconnect failed with result code {rc}"
         test_complete.set()
 
-    test_client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION2, client_id=client_id)
+    test_client = paho_client.Client(paho_client.CallbackAPIVersion.VERSION2, client_id=client_id)
     test_client.enable_logger(paho_logger)
 
     test_client.on_connect = on_connect
@@ -76,7 +76,7 @@ async def test_paho_qos1(broker, mock_plugin_manager):
     port = 1883
     client_id = f'python-mqtt-{random.randint(0, 1000)}'
 
-    test_client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION2, client_id=client_id)
+    test_client = paho_client.Client(paho_client.CallbackAPIVersion.VERSION2, client_id=client_id)
     test_client.enable_logger(paho_logger)
 
     test_client.connect(host, port)
@@ -107,7 +107,7 @@ async def test_paho_qos2(broker, mock_plugin_manager):
     port = 1883
     client_id = f'python-mqtt-{random.randint(0, 1000)}'
 
-    test_client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION2, client_id=client_id)
+    test_client = paho_client.Client(paho_client.CallbackAPIVersion.VERSION2, client_id=client_id)
     test_client.enable_logger(paho_logger)
 
     test_client.connect(host, port)
@@ -124,3 +124,21 @@ async def test_paho_qos2(broker, mock_plugin_manager):
     assert message.data == b"test message"
     await sub_client.disconnect()
     await asyncio.sleep(0.1)
+
+async def test_paho_ws():
+    client_id = 'websocket_client_1'
+    test_client = paho_client.Client(callback_api_version=paho_client.CallbackAPIVersion.VERSION2,
+                                     transport='websockets',
+                                     client_id=client_id)
+
+    test_client.ws_set_options('/ws')
+
+    test_client.connect('localhost', 8080)
+    test_client.loop_start()
+    await asyncio.sleep(0.1)
+    test_client.publish("/qos2", "test message", qos=2)
+    test_client.publish("/qos2", "test message", qos=2)
+    test_client.publish("/qos2", "test message", qos=2)
+    test_client.publish("/qos2", "test message", qos=2)
+    await asyncio.sleep(0.1)
+    test_client.loop_stop()

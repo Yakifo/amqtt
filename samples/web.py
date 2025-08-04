@@ -1,4 +1,5 @@
 import asyncio
+import io
 import logging
 
 import aiohttp
@@ -19,16 +20,18 @@ class AIOWebSocketsReader(ReaderAdapter):
     def __init__(self, ws: web.WebSocketResponse):
         self.ws = ws
         self.buffer = bytearray()
-        self.closed = False
 
     async def read(self, n: int = -1) -> bytes:
         print(f"attempting to read {n} bytes")
-        while not self.buffer and not self.closed or len(self.buffer) < n:
+        while not self.buffer or len(self.buffer) < n:
+            if self.ws.closed:
+                raise BrokenPipeError()
             msg = await self.ws.receive()
             if msg.type == aiohttp.WSMsgType.BINARY:
                 self.buffer.extend(msg.data)
             elif msg.type == aiohttp.WSMsgType.CLOSE:
-                self.closed = True
+                print("received a close message!")
+                break
         print(f"buffer size: {len(self.buffer)}")
         if n == -1:
             result = bytes(self.buffer)
@@ -47,14 +50,17 @@ class AIOWebSocketsWriter(WriterAdapter):
     def __init__(self, ws: web.WebSocketResponse):
         super().__init__()
         self.ws = ws
+        self._stream = io.BytesIO(b"")
 
     def write(self, data: bytes) -> None:
         print(f"broker wants to write data: {data}")
-        self.ws.send_bytes(data)
-
+        self._stream.write(data)
 
     async def drain(self) -> None:
-        pass
+        data = self._stream.getvalue()
+        if data and len(data):
+            await self.ws.send_bytes(data)
+        self._stream = io.BytesIO(b"")
 
     def get_peer_info(self) -> tuple[str, int] | None:
         return "aiohttp", 1234567

@@ -99,7 +99,7 @@ class OtherServer(Server):
     async def acquire_connection(self) -> None:
         pass
 
-    async def release_connection(self) -> None:
+    def release_connection(self) -> None:
         pass
 
     async def close_instance(self) -> None:
