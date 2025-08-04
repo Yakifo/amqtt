@@ -8,25 +8,38 @@ from aiohttp import web
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.broker import Broker
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
-from amqtt.errors import BrokerError
+
+
+logger = logging.getLogger(__name__)
 
 
 async def hello(request):
     return web.Response(text="Hello, world")
 
-class AIOWebSocketsReader(ReaderAdapter):
+class WebSocketResponseReader(ReaderAdapter):
+    """Interface to allow mqtt broker to read from an aiohttp websocket connection."""
+
     def __init__(self, ws: web.WebSocketResponse):
         self.ws = ws
         self.buffer = bytearray()
 
     async def read(self, n: int = -1) -> bytes:
+        """
+        Raises:
+            BrokerPipeError : if reading on a closed websocket connection
+        """
+        # continue until buffer contains at least the amount of data being requested
         while not self.buffer or len(self.buffer) < n:
             if self.ws.closed:
                 raise BrokenPipeError()
-            msg = await self.ws.receive()
-            if msg.type == aiohttp.WSMsgType.BINARY:
-                self.buffer.extend(msg.data)
-            elif msg.type == aiohttp.WSMsgType.CLOSE:
+            try:
+                async with asyncio.timeout(0.5):
+                    msg = await self.ws.receive()
+                    if msg.type == aiohttp.WSMsgType.BINARY:
+                        self.buffer.extend(msg.data)
+                    elif msg.type == aiohttp.WSMsgType.CLOSE:
+                        raise BrokenPipeError()
+            except asyncio.TimeoutError:
                 raise BrokenPipeError()
 
         if n == -1:
@@ -41,11 +54,24 @@ class AIOWebSocketsReader(ReaderAdapter):
     def feed_eof(self) -> None:
         pass
 
-class AIOWebSocketsWriter(WriterAdapter):
+class WebSocketResponseWriter(WriterAdapter):
+    """Interface to allow mqtt broker to write to an aiohttp websocket connection."""
 
-    def __init__(self, ws: web.WebSocketResponse):
+    def __init__(self, ws: web.WebSocketResponse, request: web.Request):
         super().__init__()
         self.ws = ws
+
+        # needed for `get_peer_info`
+        # https://docs.python.org/3/library/socket.html#socket.socket.getpeername
+        peer_name = request.transport.get_extra_info('peername')
+        if peer_name is not None:
+            self.client_ip, self.port = peer_name[0:2]
+        else:
+            self.client_ip, self.port = request.remote, 0
+
+        # interpret AF_INET6
+        self.client_ip = "localhost" if self.client_ip == "::1" else self.client_ip
+
         self._stream = io.BytesIO(b"")
 
     def write(self, data: bytes) -> None:
@@ -58,21 +84,25 @@ class AIOWebSocketsWriter(WriterAdapter):
         self._stream = io.BytesIO(b"")
 
     def get_peer_info(self) -> tuple[str, int] | None:
-        return "external", 0
+        return self.client_ip, self.port
 
     async def close(self) -> None:
         pass
 
 
-async def websocket_handler(request):
-    print()
+async def websocket_handler(request: web.Request) -> web.StreamResponse:
+
+    # respond to the websocket request with the 'mqtt' protocol
     ws = web.WebSocketResponse(protocols=['mqtt',])
     await ws.prepare(request)
 
+    # access the broker created when the server started and notify the broker of this new connection
     b: Broker = request.app['broker']
-    await b._client_connected('aiohttp', AIOWebSocketsReader(ws), AIOWebSocketsWriter(ws))
-    print('websocket connection closed')
 
+    # send/receive data to the websocket. must pass the name of the externalized listener in the broker config
+    await b.external_connected(WebSocketResponseReader(ws), WebSocketResponseWriter(ws, request), 'myAIOHttp')
+
+    logger.debug('websocket connection closed')
     return ws
 
 
@@ -89,16 +119,15 @@ def main():
 
 
 async def run_broker(_app):
+    """https://docs.aiohttp.org/en/stable/web_advanced.html#background-tasks"""
     loop = asyncio.get_event_loop()
 
     cfg = BrokerConfig(
         listeners={
-            'default':ListenerConfig(type=ListenerType.WS, bind='127.0.0.1:8883'),
-            'aiohttp': ListenerConfig(type=ListenerType.EXTERNAL),
+            'default':ListenerConfig(type=ListenerType.TCP, bind='127.0.0.1:1883'),
+            'myAIOHttp': ListenerConfig(type=ListenerType.EXTERNAL),
         }
     )
-
-
 
     broker = Broker(config=cfg, loop=loop)
     _app['broker'] = broker
@@ -107,8 +136,6 @@ async def run_broker(_app):
     yield
 
     await broker.shutdown()
-
-
 
 
 if __name__ == '__main__':

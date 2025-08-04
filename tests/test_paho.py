@@ -1,11 +1,19 @@
 import asyncio
 import logging
 import random
+import threading
+import time
+from pathlib import Path
+from threading import Thread
+from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+import yaml
 from paho.mqtt import client as paho_client
+from yaml import Loader
 
+from amqtt.broker import Broker
 from amqtt.events import BrokerEvents
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
@@ -125,20 +133,51 @@ async def test_paho_qos2(broker, mock_plugin_manager):
     await sub_client.disconnect()
     await asyncio.sleep(0.1)
 
-async def test_paho_ws():
+
+
+def run_paho_client(flag):
     client_id = 'websocket_client_1'
+    logging.info("creating paho client")
     test_client = paho_client.Client(callback_api_version=paho_client.CallbackAPIVersion.VERSION2,
                                      transport='websockets',
                                      client_id=client_id)
 
-    test_client.ws_set_options('/ws')
-
-    test_client.connect('localhost', 8080)
+    test_client.ws_set_options('')
+    logging.info("client connecting...")
+    test_client.connect('127.0.0.1', 8080)
+    logging.info("starting loop")
     test_client.loop_start()
-    await asyncio.sleep(0.1)
+    logging.info("client connected")
+    time.sleep(1)
+    logging.info("sending messages")
     test_client.publish("/qos2", "test message", qos=2)
     test_client.publish("/qos2", "test message", qos=2)
     test_client.publish("/qos2", "test message", qos=2)
     test_client.publish("/qos2", "test message", qos=2)
-    await asyncio.sleep(0.1)
+    time.sleep(1)
     test_client.loop_stop()
+    test_client.disconnect()
+    flag.set()
+
+
+@pytest.mark.asyncio
+async def test_paho_ws():
+    path = Path('docs_test/test.amqtt.local.yaml')
+    with path.open() as f:
+        cfg: dict[str, Any] = yaml.load(f, Loader=Loader)
+    logger.warning(cfg)
+    broker = Broker(config=cfg)
+    await broker.start()
+
+    # python websockets and paho mqtt don't play well with each other in the same thread
+    flag = threading.Event()
+    thread = Thread(target=run_paho_client, args=(flag,))
+    thread.start()
+
+    await asyncio.sleep(5)
+    thread.join(1)
+
+    assert flag.is_set(), "paho thread didn't execute completely"
+
+    logging.info("client disconnected")
+    await broker.shutdown()
