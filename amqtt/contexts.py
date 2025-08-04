@@ -44,7 +44,7 @@ class ListenerType(StrEnum):
 
     TCP = "tcp"
     WS = "ws"
-    AIOHTTP = "aiohttp"
+    EXTERNAL = "external"
 
     def __repr__(self) -> str:
         """Display the string value, instead of the enum member."""
@@ -115,6 +115,8 @@ class ListenerConfig(Dictable):
     certificates needed to establish the certificate's authenticity.)"""
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the server's private key."""
+    reader: str | None = None
+    writer: str | None = None
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
@@ -125,6 +127,10 @@ class ListenerConfig(Dictable):
         for fn in ("cafile", "capath", "certfile", "keyfile"):
             if isinstance(getattr(self, fn), str):
                 setattr(self, fn, Path(getattr(self, fn)))
+
+        # if self.type == ListenerType.EXTERNAL and not all([self.reader, self.writer]):
+        #     msg = "external type requires specifying reader, writer and server classes"
+        #     raise ValueError(msg)
 
     def apply(self, other: "ListenerConfig") -> None:
         """Apply the field from 'other', if 'self' field is default."""

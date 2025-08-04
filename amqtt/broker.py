@@ -10,9 +10,6 @@ import ssl
 import time
 from typing import Any, ClassVar, TypeAlias
 
-from aiohttp.pytest_plugin import AiohttpServer
-from aiohttp.web_ws import WebSocketResponse
-from pygments.token import Other
 from transitions import Machine, MachineError
 import websockets.asyncio.server
 from websockets.asyncio.server import ServerConnection
@@ -25,7 +22,7 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig
+from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -39,7 +36,7 @@ from .plugins.manager import PluginManager
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
 
 # Default port numbers
-DEFAULT_PORTS = {"tcp": 1883, "ws": 8883, 'aiohttp': 8080}
+DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
 
 
@@ -92,7 +89,7 @@ class Server:
             await self.instance.wait_closed()
 
 
-class OtherServer(Server):
+class ExternalServer(Server):
     def __init__(self):
         super().__init__('aiohttp', None)
 
@@ -260,19 +257,20 @@ class Broker:
             max_connections = listener.get("max_connections", -1)
             ssl_context = self._create_ssl_context(listener) if listener.get("ssl", False) else None
 
-            try:
-                address, port = self._split_bindaddr_port(listener["bind"], DEFAULT_PORTS[listener["type"]])
-            except ValueError as e:
-                msg = f"Invalid port value in bind value: {listener['bind']}"
-                raise BrokerError(msg) from e
-
-            if listener["type"] == 'aiohttp':
-                self._servers[listener_name] = OtherServer()
+            if listener.type == ListenerType.EXTERNAL:
+                self.logger.info(f"External listener exists for '{listener_name}' ")
+                self._servers[listener_name] = ExternalServer()
             else:
+                try:
+                    address, port = self._split_bindaddr_port(listener["bind"], DEFAULT_PORTS[listener["type"]])
+                except ValueError as e:
+                    msg = f"Invalid port value in bind value: {listener['bind']}"
+                    raise BrokerError(msg) from e
+
                 instance = await self._create_server_instance(listener_name, listener["type"], address, port, ssl_context)
                 self._servers[listener_name] = Server(listener_name, instance, max_connections)
 
-            self.logger.info(f"Listener '{listener_name}' bind to {listener['bind']} (max_connections={max_connections})")
+                self.logger.info(f"Listener '{listener_name}' bind to {listener['bind']} (max_connections={max_connections})")
 
     @staticmethod
     def _create_ssl_context(listener: ListenerConfig) -> ssl.SSLContext:
@@ -301,7 +299,7 @@ class Broker:
         address: str | None,
         port: int,
         ssl_context: ssl.SSLContext | None,
-    ) -> asyncio.Server | websockets.asyncio.server.Server | OtherServer:
+    ) -> asyncio.Server | websockets.asyncio.server.Server:
         """Create a server instance for a listener."""
         if listener_type == "tcp":
             return await asyncio.start_server(
@@ -319,8 +317,6 @@ class Broker:
                 ssl=ssl_context,
                 subprotocols=[websockets.Subprotocol("mqtt")],
             )
-        if listener_type == "aiohttp":
-            return OtherServer()
         msg = f"Unsupported listener type: {listener_type}"
         raise BrokerError(msg)
 

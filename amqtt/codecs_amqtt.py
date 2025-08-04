@@ -75,10 +75,8 @@ async def decode_string(reader: ReaderAdapter | asyncio.StreamReader) -> str:
     length_bytes = await read_or_raise(reader, 2)
     if len(length_bytes) < 1:
         raise ZeroLengthReadError
-    print(f"attempting to decode {length_bytes}")
     str_length = unpack("!H", length_bytes)[0]
     if str_length:
-        print(f"reading {str_length} bytes")
         byte_str = await read_or_raise(reader, str_length)
         try:
             return byte_str.decode(encoding="utf-8")
