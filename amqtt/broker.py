@@ -716,7 +716,8 @@ class Broker:
         """Stop a running handler and detach if from the session."""
         try:
             await handler.stop()
-        except Exception:
+        # a failure in stopping a handler shouldn't cause the broker to fail
+        except asyncio.QueueEmpty:
             self.logger.exception("Failed to stop handler")
 
     async def _authenticate(self, session: Session, _: ListenerConfig) -> bool:
@@ -866,7 +867,8 @@ class Broker:
                         task.result()
                     except CancelledError:
                         self.logger.info(f"Task has been cancelled: {task}")
-                    except Exception:
+                    # if a task fails, don't want it to cause the broker to fail
+                    except Exception:  # pylint: disable=W0718
                         self.logger.exception(f"Task failed and will be skipped: {task}")
 
                 run_broadcast_task = asyncio.ensure_future(self._run_broadcast(running_tasks))
