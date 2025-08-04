@@ -44,6 +44,7 @@ class ListenerType(StrEnum):
 
     TCP = "tcp"
     WS = "ws"
+    AIOHTTP = "aiohttp"
 
     def __repr__(self) -> str:
         """Display the string value, instead of the enum member."""
