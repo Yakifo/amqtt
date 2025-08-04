@@ -52,6 +52,8 @@ class RetainedApplicationMessage(ApplicationMessage):
 
 
 class Server:
+    """Used to encapsulate the server associated with a listener. Allows broker to interact with the connection lifecycle."""
+
     def __init__(
         self,
         listener_name: str,
@@ -90,8 +92,10 @@ class Server:
 
 
 class ExternalServer(Server):
-    def __init__(self):
-        super().__init__('aiohttp', None)
+    """For external listeners, the connection lifecycle is handled by that implementation so these are no-ops."""
+
+    def __init__(self) -> None:
+        super().__init__("aiohttp", None)  # type: ignore[arg-type]
 
     async def acquire_connection(self) -> None:
         pass
@@ -104,10 +108,7 @@ class ExternalServer(Server):
 
 
 class BrokerContext(BaseContext):
-    """BrokerContext is used as the context passed to plugins interacting with the broker.
-
-    It act as an adapter to broker services from plugins developed for HBMQTT broker.
-    """
+    """BrokerContext is used as the context passed to plugins interacting with the broker."""
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
@@ -257,10 +258,14 @@ class Broker:
             max_connections = listener.get("max_connections", -1)
             ssl_context = self._create_ssl_context(listener) if listener.get("ssl", False) else None
 
+            # for listeners which are external, don't need to create a server
             if listener.type == ListenerType.EXTERNAL:
+
+                # broker still needs to associate a new connection to the listener
                 self.logger.info(f"External listener exists for '{listener_name}' ")
                 self._servers[listener_name] = ExternalServer()
             else:
+                # for tcp and websockets, start servers to listen for inbound connections
                 try:
                     address, port = self._split_bindaddr_port(listener["bind"], DEFAULT_PORTS[listener["type"]])
                 except ValueError as e:
@@ -404,6 +409,7 @@ class Broker:
         await self._client_connected(listener_name, StreamReaderAdapter(reader), StreamWriterAdapter(writer))
 
     async def external_connected(self, reader: ReaderAdapter, writer: WriterAdapter, listener_name: str) -> None:
+        """Engage the broker in handling the data stream to/from an established connection."""
         await self._client_connected(listener_name, reader, writer)
 
     async def _client_connected(self, listener_name: str, reader: ReaderAdapter, writer: WriterAdapter) -> None:

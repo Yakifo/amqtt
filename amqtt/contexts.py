@@ -128,10 +128,6 @@ class ListenerConfig(Dictable):
             if isinstance(getattr(self, fn), str):
                 setattr(self, fn, Path(getattr(self, fn)))
 
-        # if self.type == ListenerType.EXTERNAL and not all([self.reader, self.writer]):
-        #     msg = "external type requires specifying reader, writer and server classes"
-        #     raise ValueError(msg)
-
     def apply(self, other: "ListenerConfig") -> None:
         """Apply the field from 'other', if 'self' field is default."""
         for f in fields(self):

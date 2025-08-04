@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 
 try:
     from asyncio import InvalidStateError, QueueFull, QueueShutDown
@@ -536,10 +535,6 @@ class ProtocolHandler(Generic[C]):
                 self.handle_read_timeout()
             except NoDataError:
                 self.logger.debug(f"{self.session.client_id} No data available")
-            except RuntimeError:
-                self.logger.debug(f"{self.session.client_id} websocket closed")
-                traceback.print_exc()
-                break
             except Exception as e:  # noqa: BLE001
                 self.logger.warning(f"{type(self).__name__} Unhandled exception in reader coro: {e!r}")
                 break

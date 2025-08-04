@@ -8,12 +8,14 @@ from aiohttp import web
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.broker import Broker
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
-
+from amqtt.errors import ConnectError
 
 logger = logging.getLogger(__name__)
 
+MQTT_LISTENER_NAME = "myMqttListener"
 
 async def hello(request):
+    """get request handler"""
     return web.Response(text="Hello, world")
 
 class WebSocketResponseReader(ReaderAdapter):
@@ -25,26 +27,34 @@ class WebSocketResponseReader(ReaderAdapter):
 
     async def read(self, n: int = -1) -> bytes:
         """
+        read 'n' bytes from the datastream, if < 0 read all available bytes
+
         Raises:
             BrokerPipeError : if reading on a closed websocket connection
         """
         # continue until buffer contains at least the amount of data being requested
         while not self.buffer or len(self.buffer) < n:
+            # if the websocket is closed
             if self.ws.closed:
                 raise BrokenPipeError()
+
             try:
-                async with asyncio.timeout(0.5):
-                    msg = await self.ws.receive()
-                    if msg.type == aiohttp.WSMsgType.BINARY:
-                        self.buffer.extend(msg.data)
-                    elif msg.type == aiohttp.WSMsgType.CLOSE:
-                        raise BrokenPipeError()
+                # read from stream
+                msg = await asyncio.wait_for(self.ws.receive(), timeout=0.5)
+                # mqtt streams should always be binary...
+                if msg.type == aiohttp.WSMsgType.BINARY:
+                    self.buffer.extend(msg.data)
+                elif msg.type == aiohttp.WSMsgType.CLOSE:
+                    raise BrokenPipeError()
+
             except asyncio.TimeoutError:
                 raise BrokenPipeError()
 
+        # return all bytes currently in the buffer
         if n == -1:
             result = bytes(self.buffer)
             self.buffer.clear()
+        # return the requested number of bytes from the buffer
         else:
             result = self.buffer[:n]
             del self.buffer[:n]
@@ -75,9 +85,11 @@ class WebSocketResponseWriter(WriterAdapter):
         self._stream = io.BytesIO(b"")
 
     def write(self, data: bytes) -> None:
+        """Add bytes to stream buffer."""
         self._stream.write(data)
 
     async def drain(self) -> None:
+        """Send the collected bytes in the buffer to the websocket connection."""
         data = self._stream.getvalue()
         if data and len(data):
             await self.ws.send_bytes(data)
@@ -87,54 +99,79 @@ class WebSocketResponseWriter(WriterAdapter):
         return self.client_ip, self.port
 
     async def close(self) -> None:
+        # no clean up needed, stream will be gc along with instance
         pass
 
+async def mqtt_websocket_handler(request: web.Request) -> web.StreamResponse:
 
-async def websocket_handler(request: web.Request) -> web.StreamResponse:
-
-    # respond to the websocket request with the 'mqtt' protocol
+    # establish connection by responding to the websocket request with the 'mqtt' protocol
     ws = web.WebSocketResponse(protocols=['mqtt',])
     await ws.prepare(request)
 
-    # access the broker created when the server started and notify the broker of this new connection
+    # access the broker created when the server started
     b: Broker = request.app['broker']
 
-    # send/receive data to the websocket. must pass the name of the externalized listener in the broker config
-    await b.external_connected(WebSocketResponseReader(ws), WebSocketResponseWriter(ws, request), 'myAIOHttp')
+    # hand-off the websocket data stream to the broker for handling
+    # `listener_name` is the same name of the externalized listener in the broker config
+    await b.external_connected(WebSocketResponseReader(ws), WebSocketResponseWriter(ws, request), MQTT_LISTENER_NAME)
 
     logger.debug('websocket connection closed')
     return ws
 
 
-def main():
+async def websocket_handler(request: web.Request) -> web.StreamResponse:
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
 
+    async for msg in ws:
+        logging.info(msg)
+
+    logging.info("websocket connection closed")
+    return ws
+
+def main():
+    # create an `aiohttp` server
+    lp = asyncio.get_event_loop()
     app = web.Application()
     app.add_routes(
         [
-            web.get('/', hello),
-            web.get('/ws', websocket_handler)
+            web.get('/', hello), # http get request/response route
+            web.get('/ws', websocket_handler), # standard websocket handler
+            web.get('/mqtt', mqtt_websocket_handler), # websocket handler for mqtt connections
         ])
+    # create background task for running the `amqtt` broker
     app.cleanup_ctx.append(run_broker)
-    web.run_app(app)
+
+    # make sure that both `aiohttp` server and `amqtt` broker run in the same loop
+    #  so the server can hand off the connection to the broker (prevents attached-to-a-different-loop `RuntimeError`)
+    web.run_app(app, loop=lp)
 
 
 async def run_broker(_app):
-    """https://docs.aiohttp.org/en/stable/web_advanced.html#background-tasks"""
-    loop = asyncio.get_event_loop()
+    """App init function to start (and then shutdown) the `amqtt` broker.
+    https://docs.aiohttp.org/en/stable/web_advanced.html#background-tasks"""
 
+    # standard TCP connection as well as an externalized-listener
     cfg = BrokerConfig(
         listeners={
             'default':ListenerConfig(type=ListenerType.TCP, bind='127.0.0.1:1883'),
-            'myAIOHttp': ListenerConfig(type=ListenerType.EXTERNAL),
+            MQTT_LISTENER_NAME: ListenerConfig(type=ListenerType.EXTERNAL),
         }
     )
 
+    # make sure the `Broker` runs in the same loop as the aiohttp server
+    loop = asyncio.get_event_loop()
     broker = Broker(config=cfg, loop=loop)
+
+    # store broker instance so that incoming requests can hand off processing of a datastream
     _app['broker'] = broker
+    # start the broker
     await broker.start()
 
+    # pass control back to web app
     yield
 
+    # closing activities
     await broker.shutdown()
 
 
