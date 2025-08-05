@@ -124,7 +124,7 @@ class Broker:
     """MQTT 3.1.1 compliant broker implementation.
 
     Args:
-        config: dictionary of configuration options (see [broker configuration](broker_config.md)).
+        config: `BrokerConfig` or dictionary of equivalent structure options (see [broker configuration](broker_config.md)).
         loop: asyncio loop. defaults to `asyncio.new_event_loop()`.
         plugin_namespace: plugin namespace to use when loading plugin entry_points. defaults to `amqtt.broker.plugins`.
 
