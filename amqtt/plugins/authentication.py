@@ -78,7 +78,7 @@ class FileAuthPlugin(BaseAuthPlugin):
             self.context.logger.warning(f"Password file '{password_file}' not found")
         except ValueError:
             self.context.logger.exception(f"Malformed password file '{password_file}'")
-        except Exception:
+        except OSError:
             self.context.logger.exception(f"Unexpected error reading password file '{password_file}'")
 
     async def authenticate(self, *, session: Session) -> bool | None:

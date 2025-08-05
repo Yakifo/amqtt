@@ -159,7 +159,8 @@ class MQTTClient:
         except asyncio.CancelledError as e:
             msg = "Future or Task was cancelled"
             raise ConnectError(msg) from e
-        except Exception as e:
+        # no matter the failure mode, still try to reconnect
+        except Exception as e:  # pylint: disable=W0718
             self.logger.warning(f"Connection failed: {e!r}")
             if not self.config.get("auto_reconnect", False):
                 raise
@@ -233,7 +234,8 @@ class MQTTClient:
             except asyncio.CancelledError as e:
                 msg = "Future or Task was cancelled"
                 raise ConnectError(msg) from e
-            except Exception as e:
+            # no matter the failure mode, still try to reconnect
+            except Exception as e:  # pylint: disable=W0718
                 self.logger.warning(f"Reconnection attempt failed: {e!r}")
                 self.logger.debug("", exc_info=True)
                 if 0 <= reconnect_retries < nb_attempt:

@@ -240,6 +240,7 @@ jobs = 2
 ignore = ["tests"]
 fail-on = ["I"]
 max-line-length = 130
+ignore-paths = ["amqtt/plugins/persistence.py"]
 
 [tool.pylint.BASIC]
 # Good variable names which should always be accepted, separated by a comma.
@@ -250,7 +251,6 @@ good-names = ["i", "j", "k", "e", "ex", "f", "_", "T", "x", "y", "id", "tg"]
 # duplicate-code - unavoidable
 # too-many-* - are not enforced for the sake of readability
 disable = [
-  "broad-exception-caught",        # TODO: improve later
   "duplicate-code",
   "fixme",
   "invalid-name",
