@@ -17,3 +17,7 @@ These are fully supported plugins but require additional dependencies to be inst
 - [HTTP Auth](http.md)<br/>
   Determine client authentication and authorization based on response from a separate HTTP server.<br/>
   `amqtt.contrib.http.HttpAuthTopicPlugin`
+
+- [LDAP Auth](ldap.md)<br/>
+  Authenticate a user with an LDAP directory server.<br/>
+  `amqtt.contrib.ldap.LDAPAuthPlugin`

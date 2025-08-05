@@ -52,6 +52,7 @@ dev = [
   "pylint>=3.3.6", # https://pypi.org/project/pylint
   "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
   "pytest-cov>=6.1.0", # https://pypi.org/project/pytest-cov
+  "pytest-docker>=3.2.3",
   "pytest-logdog>=0.1.0", # https://pypi.org/project/pytest-logdog
   "pytest-timeout>=2.3.1", # https://pypi.org/project/pytest-timeout
   "pytest>=8.3.5", # https://pypi.org/project/pytest
@@ -87,6 +88,7 @@ contrib = [
     "sqlalchemy>=2.0.41",
     "argon2-cffi>=25.1.0",
     "aiohttp>=3.12.13",
+    "python-ldap>=3.4.4",
 ]
 
 [project.scripts]
