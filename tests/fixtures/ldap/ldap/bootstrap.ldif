@@ -1,3 +1,6 @@
+
+
+
 # admin user
 dn: cn=admin,dc=amqtt,dc=io
 changetype: add
@@ -12,16 +15,6 @@ dn: ou=IT,dc=amqtt,dc=io
 changetype: add
 objectClass: organizationalUnit
 ou: IT
-
-# user: John Doe for unit IT department
-dn: uid=johndoe,ou=IT,dc=amqtt,dc=io
-changetype: add
-objectClass: inetOrgPerson
-cn: John Doe
-sn: Doe
-uid: johndoe
-mail: johndoe@amqtt.io
-userPassword: password123
 
 # user: Alpha Beta for unit IT department
 dn: uid=alpha.beta,ou=IT,dc=amqtt,dc=io
