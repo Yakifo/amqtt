@@ -37,9 +37,10 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
 
     @dataclass
     class Config:
-        """Allow empty username."""
+        """Configuration for AnonymousAuthPlugin."""
 
         allow_anonymous: bool = field(default=True)
+        """Allow all anonymous authentication (even with _no_ username)."""
 
 
 class FileAuthPlugin(BaseAuthPlugin):
@@ -107,6 +108,7 @@ class FileAuthPlugin(BaseAuthPlugin):
 
     @dataclass
     class Config:
-        """Path to the properly encoded password file."""
+        """Configuration for FileAuthPlugin."""
 
         password_file: str | Path | None = None
+        """Path to file with `username:password` pairs, one per line. All passwords are encoded using sha-512."""

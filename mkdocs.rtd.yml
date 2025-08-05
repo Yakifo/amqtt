@@ -37,6 +37,9 @@ nav:
           - Broker: references/broker.md
           - Client: references/client.md
           - Common: references/common.md
+      - Configuration:
+          - Broker: references/broker_config.md
+          - Client: references/client_config.md
       - Plugins:
           - Packaged: plugins/packaged_plugins.md
           - Custom: plugins/custom_plugins.md
@@ -44,9 +47,6 @@ nav:
             - plugins/contrib.md
             - Database Auth: plugins/auth_db.md
             - HTTP Auth: plugins/http.md
-      - Configuration:
-          - Broker: references/broker_config.md
-          - Client: references/client_config.md
       - Reference:
           - Containerization: docker.md
           - Support: support.md

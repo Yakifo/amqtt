@@ -17,9 +17,9 @@ that respond with information about client authenticated and topic-level authori
 
     ??? info "recipe for authentication"
         Provide the client id and username when webpage is initially rendered or passed to the mqtt initialization from stored
-         cookies. If application is secure, the user's password will be hashed should be encrypted and cannot be used to 
-         authenticate a client. Instead, the application should create an encrypted password (eg jwt) which the server
-         can then verify when the broker contacts the application.
+         cookies. If application is secure, the user's password will already be stored as a hashed value and, therefore, cannot
+         be used in this context to  authenticate a client. Instead, the application should create its own encrypted key (eg jwt)
+         which the server can then verify when the broker contacts the application.
 
     ??? example "mqtt in javascript"
           Example initialization of mqtt in javascript:
@@ -35,7 +35,7 @@ that respond with information about client authenticated and topic-level authori
             try {
               const clientMqtt = await mqtt.connect(url, options);
 
-See the 'Request and Response Modes' section below for details on `params_mode` and `response_mode`. 
+See the [Request and Response Modes](#request-response-modes) section below for details on `params_mode` and `response_mode`. 
 
 ::: amqtt.contrib.http.HttpAuthPlugin.Config
     options:
@@ -45,7 +45,8 @@ See the 'Request and Response Modes' section below for details on `params_mode` 
         class_style: "simple"
 
 [//]: # (manually creating the heading so it doesn't show in the sidebar ToC)
-<h2>Params and Response Modes</h2>
+[](){#request-response-modes}
+<h2>Request and Response Modes</h2>
 
 Each URI endpoint will receive different information in order to determine authentication and authorization;
 format will depend on `params_mode` configuration attribute (`json` or `form`).:
@@ -69,7 +70,7 @@ format will depend on `params_mode` configuration attribute (`json` or `form`).:
 
 All endpoints should respond with the following, dependent on `response_mode` configuration attribute:
 
-*In `status` mode:
+*In `status` mode:*
 
     - status code: 2xx (granted) or 4xx(denied) or 5xx (noop)
 
@@ -81,7 +82,9 @@ All endpoints should respond with the following, dependent on `response_mode` co
 
     - status code: 2xx
     - content-type: application/json
-    - response: {'ok': True } (granted), {'ok': False, 'error': 'optional error message' } (denied) or { 'error': 'optional error message' } (noop)
+    - response: {'ok': True } (granted)
+                or {'ok': False, 'error': 'optional error message' } (denied)
+                or { 'error': 'optional error message' } (noop)
 
 !!! note "excluded 'ok' key"
     **noop** (no operation): plugin will not participate in the filtering operation and will defer to another
