@@ -154,9 +154,9 @@ class BrokerConfig(Dictable):
     listeners: dict[Literal["default"] | str, ListenerConfig] = field(default_factory=default_listeners) # noqa: PYI051
     """Network of listeners used by the services. a 'default' named listener is required; if another listener
      does not set a value, the 'default' settings are applied. See
-     [ListenerConfig](#amqtt.contexts.ListenerConfig) for more information."""
+     [`ListenerConfig`](broker_config.md#amqtt.contexts.ListenerConfig) for more information."""
     sys_interval: int | None = None
-    """*Deprecated field to configure the `BrokerSysPlugin`. See [`BrokerSysPlugin`](#sys-topics)
+    """*Deprecated field to configure the `BrokerSysPlugin`. See [`BrokerSysPlugin`](../plugins/packaged_plugins.md#sys-topics)
     for recommended configuration.*"""
     timeout_disconnect_delay: int | None = 0
     """Client disconnect timeout without a keep-alive."""
@@ -164,17 +164,17 @@ class BrokerConfig(Dictable):
     """Seconds for an inactive session to be retained."""
     auth: dict[str, Any] | None = None
     """*Deprecated field used to config EntryPoint-loaded plugins. See
-    [`AnonymousAuthPlugin`](#anonymous-auth-plugin) and
-    [`FileAuthPlugin`](#password-file-auth-plugin) for recommended configuration.*"""
+    [`AnonymousAuthPlugin`](../plugins/packaged_plugins.md#anonymous-auth-plugin) and
+    [`FileAuthPlugin`](../plugins/packaged_plugins.md#password-file-auth-plugin) for recommended configuration.*"""
     topic_check: dict[str, Any] | None = None
     """*Deprecated field used to config EntryPoint-loaded plugins. See
-    [`TopicTabooPlugin`](#taboo-topic-plugin) and
-    [`TopicACLPlugin`](#acl-topic-plugin) for recommended configuration method.*"""
+    [`TopicTabooPlugin`](../plugins/packaged_plugins.md#taboo-topic-plugin) and
+    [`TopicACLPlugin`](../plugins/packaged_plugins.md#acl-topic-plugin) for recommended configuration method.*"""
     plugins: dict[str, Any] | list[str | dict[str,Any]] | None = field(default_factory=default_broker_plugins)
     """The dictionary has a key of the dotted-module path of a class derived from `BasePlugin`, `BaseAuthPlugin`
      or `BaseTopicPlugin`; the value is a dictionary of configuration options for that plugin. See
-     [Plugins](http://localhost:8000/custom_plugins/) for more information. `list[str | dict[str,Any]]` is not
-     recommended but available to support legacy use cases."""
+     [custom plugins](../plugins/custom_plugins.md) for more information. `list[str | dict[str,Any]]` is deprecated but available
+      to support legacy use cases."""
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
@@ -327,16 +327,16 @@ class ClientConfig(Dictable):
     """Specify the topics and what flags should be set for messages published to them."""
     broker: ConnectionConfig | None = field(default_factory=ConnectionConfig)
     """Configuration for connecting to the broker. See
-     [ConnectionConfig](#amqtt.contexts.ConnectionConfig) for more information."""
+     [`ConnectionConfig`](client_config.md#amqtt.contexts.ConnectionConfig) for more information."""
     plugins: dict[str, Any] | list[dict[str, Any]] | None = field(default_factory=default_client_plugins)
     """The dictionary has a key of the dotted-module path of a class derived from `BasePlugin`; the value is
-     a dictionary of configuration options for that plugin. See [Plugins](http://localhost:8000/custom_plugins/)
-     for more information."""
+     a dictionary of configuration options for that plugin. See [custom plugins](../plugins/custom_plugins.md) for
+      more information. `list[str | dict[str,Any]]` is deprecated but available to support legacy use cases."""
     check_hostname: bool | None = True
     """If establishing a secure connection, should the hostname of the certificate be verified."""
     will: WillConfig | None = None
     """Message, topic and flags that should be sent to if the client disconnects. See
-    [WillConfig](#amqtt.contexts.WillConfig)"""
+    [`WillConfig`](client_config.md#amqtt.contexts.WillConfig) for more information."""
 
     def __post__init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
