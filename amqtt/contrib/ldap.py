@@ -6,6 +6,7 @@ import ldap
 from amqtt.broker import BrokerContext
 from amqtt.contexts import Action
 from amqtt.errors import PluginInitError
+from amqtt.plugins import TopicMatcher
 from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
 from amqtt.session import Session
 
@@ -72,6 +73,12 @@ class LDAPAuthPlugin(BaseAuthPlugin):
 class LDAPTopicPlugin(BaseTopicPlugin):
     """Plugin to authenticate a user with an LDAP directory server."""
 
+    _action_attr_map = {
+        Action.PUBLISH: 'publish_attribute',
+        Action.SUBSCRIBE: 'subscribe_attribute',
+        Action.RECEIVE: 'receive_attribute'
+    }
+
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
@@ -82,13 +89,20 @@ class LDAPTopicPlugin(BaseTopicPlugin):
         except ldap.INVALID_CREDENTIALS as e:  # pylint: disable=E1101
             raise PluginInitError(self.__class__) from e
 
+        self.topic_matcher = TopicMatcher()
+
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
     ) -> bool | None:
         # search_filter = f"({self.config.user_attribute}={session.username})"
         search_filter = "(uid=jdoe)"
-        attrs = ["cn", "userType", "roleName", "isActive"]
+        attrs = [
+            "cn",
+            self.config.publish_attribute,
+            self.config.subscribe_attribute,
+            self.config.receive_attribute
+        ]
         results = self.conn.search_s(self.config.base_dn, ldap.SCOPE_SUBTREE, search_filter, attrs)
 
 
@@ -96,13 +110,22 @@ class LDAPTopicPlugin(BaseTopicPlugin):
             logger.debug(f"user not found: {session.username}")
             return False
 
-        for dn, entry in results:
-            print("DN:", dn)
-            print("publishACL:", entry.get("userType", []))
-            print("subscribeACL:", entry.get("roleName", []))
-            print("receiveACL:", entry.get("isActive", []))
+        if len(results) > 1:
+            found_users = [dn for dn, _ in results]
+            logger.debug(f"multiple users found: {', '.join(found_users)}")
+            return False
 
-        return None
+        dn, entry = results[0]
+
+        ldap_attribute = getattr(self.config, self._action_attr_map[action])
+        allowed_topics = [t.decode("utf-8") for t in entry.get(ldap_attribute, [])]
+        logger.debug(f"DN: {dn} - {ldap_attribute}={allowed_topics}")
+
+        return self.topic_matcher.are_topics_allowed(topic, allowed_topics)
+        # print(f"{self.config.publish_attribute} : ", entry.get(self.config.publish_attribute, []))
+        # print(f"{self.config.subscribe_attribute} : ", entry.get(self.config.subscribe_attribute, []))
+        # print(f"{self.config.receive_attribute} : ", entry.get(self.config.receive_attribute, []))
+
 
     @dataclass
     class Config:

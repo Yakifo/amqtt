@@ -121,9 +121,9 @@ async def test_topic_ldap_plugin():
     ctx.config = LDAPTopicPlugin.Config(
         server="ldap://localhost:1389",
         # server=ldap_service,
-        base_dn="dc=example,dc=org",
+        base_dn="dc=amqtt,dc=io",
         user_attribute="uid",
-        bind_dn="cn=admin,dc=example,dc=org",
+        bind_dn="cn=admin,dc=amqtt,dc=io",
         bind_password="adminpassword",
         publish_attribute="publishACL",
         subscribe_attribute="subscribeACL",
@@ -135,4 +135,4 @@ async def test_topic_ldap_plugin():
     s.username = "testuser"
     s.password = "testpassword"
 
-    assert await ldap_plugin.topic_filtering(session=s, topic='my/topic', action=Action.PUBLISH), "access not granted"
+    assert await ldap_plugin.topic_filtering(session=s, topic='my/topic/one', action=Action.PUBLISH), "access not granted"

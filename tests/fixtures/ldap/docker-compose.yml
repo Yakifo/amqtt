@@ -15,7 +15,7 @@ services:
       - "1636:636"
     environment:
       - LDAP_ADMIN_PASSWORD=adminpassword
-      - LDAP_DOMAIN=example.org
+      - LDAP_DOMAIN=amqtt.io
 
 volumes:
   ldap-data:

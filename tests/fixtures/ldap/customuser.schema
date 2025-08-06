@@ -1,7 +1,7 @@
-attributetype ( 1.3.6.1.4.1.4203.666.1.1 NAME 'userType' DESC 'Type of user' EQUALITY caseIgnoreMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
+attributetype ( 1.3.6.1.4.1.4203.666.1.1 NAME 'publishACL' DESC 'topics for publishing' EQUALITY caseIgnoreMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
 
-attributetype ( 1.3.6.1.4.1.4203.666.1.2 NAME 'roleName' DESC 'Role of the user' EQUALITY caseIgnoreMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
+attributetype ( 1.3.6.1.4.1.4203.666.1.2 NAME 'subscribeACL' DESC 'topics for subscribing' EQUALITY caseIgnoreMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
 
-attributetype ( 1.3.6.1.4.1.4203.666.1.3 NAME 'isActive' DESC 'Account status' EQUALITY booleanMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 SINGLE-VALUE )
+attributetype ( 1.3.6.1.4.1.4203.666.1.3 NAME 'receiveACL' DESC 'topics for receiving' EQUALITY caseIgnoreMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
 
-objectclass ( 1.3.6.1.4.1.4203.666.2.1 NAME 'customuserinfo' DESC 'User info with custom attributes' SUP inetOrgPerson STRUCTURAL MUST ( cn $ sn $ isActive ) MAY ( userType $ roleName ) )
+objectclass ( 1.3.6.1.4.1.4203.666.2.1 NAME 'customuserinfo' DESC 'User info with custom attributes' SUP inetOrgPerson STRUCTURAL MUST ( cn $ sn ) MAY ( publishACL $ subscribeACL $ receiveACL ) )
