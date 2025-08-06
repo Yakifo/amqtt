@@ -15,7 +15,7 @@ from aiohttp import ClientResponse, ClientSession, FormData
 
 from amqtt.broker import BrokerContext
 from amqtt.contexts import Action
-from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
+from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin, BasePlugin
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,31 @@ HTTP_4xx_MIN = 400
 HTTP_4xx_MAX = 499
 
 
-class HttpAuthPlugin(BaseAuthPlugin, BaseTopicPlugin):
+@dataclass
+class HttpConfig:
+    """Configuration for the HTTP Auth & ACL Plugin."""
+
+    host: str
+    """hostname of the server for the auth & acl check"""
+    port: int
+    """port of the server for the auth & acl check"""
+    request_method: RequestMethod = RequestMethod.GET
+    """send the request as a GET, POST or PUT"""
+    params_mode: ParamsMode = ParamsMode.JSON  # see docs/plugins/http.md for additional details
+    """send the request with `JSON` or `FORM` data. *additional details below*"""
+    response_mode: ResponseMode = ResponseMode.JSON  # see docs/plugins/http.md for additional details
+    """expected response from the auth/acl server. `STATUS` (code), `JSON`, or `TEXT`. *additional details below*"""
+    with_tls: bool = False
+    """http or https"""
+    user_agent: str = "amqtt"
+    """the 'User-Agent' header sent along with the request"""
+    superuser_uri: str | None = None
+    """URI to verify if the user is a superuser (e.g. '/superuser'), `None` if superuser is not supported"""
+    timeout: int = 5
+    """duration, in seconds, to wait for the HTTP server to respond"""
+
+
+class HttpPlugin(BasePlugin):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
@@ -113,9 +137,22 @@ class HttpAuthPlugin(BaseAuthPlugin, BaseTopicPlugin):
     def get_url(self, uri: str) -> str:
         return f"{'https' if self.config.with_tls else 'http'}://{self.config.host}:{self.config.port}{uri}"
 
+
+class HttpAuthPlugin(HttpPlugin, BaseAuthPlugin):
+
     async def authenticate(self, *, session: Session) -> bool | None:
         d = {"username": session.username, "password": session.password, "client_id": session.client_id}
         return await self._send_request(self.get_url(self.config.user_uri), d)
+
+    @dataclass
+    class Config(HttpConfig):
+        """Configuration for the HTTP Auth Plugin."""
+
+        user_uri: str = "/user"
+        """URI of the auth check."""
+
+
+class HttpTopicPlugin(HttpPlugin, BaseTopicPlugin):
 
     async def topic_filtering(self, *,
                         session: Session | None = None,
@@ -136,28 +173,7 @@ class HttpAuthPlugin(BaseAuthPlugin, BaseTopicPlugin):
         return await self._send_request(self.get_url(self.config.topic_uri), d)
 
     @dataclass
-    class Config:
-        """Configuration for the HTTP Auth & ACL Plugin."""
-
-        host: str
-        """hostname of the server for the auth & acl check"""
-        port: int
-        """port of the server for the auth & acl check"""
-        user_uri: str
-        """URI of the topic check (e.g. '/user')"""
-        topic_uri: str
-        """URI of the topic check (e.g. '/acl')"""
-        request_method: RequestMethod = RequestMethod.GET
-        """send the request as a GET, POST or PUT"""
-        params_mode: ParamsMode = ParamsMode.JSON  # see docs/plugins/http.md for additional details
-        """send the request with `JSON` or `FORM` data. *additional details below*"""
-        response_mode: ResponseMode = ResponseMode.JSON  # see docs/plugins/http.md for additional details
-        """expected response from the auth/acl server. `STATUS` (code), `JSON`, or `TEXT`. *additional details below*"""
-        with_tls: bool = False
-        """http or https"""
-        user_agent: str = "amqtt"
-        """the 'User-Agent' header sent along with the request"""
-        superuser_uri: str | None = None
-        """URI to verify if the user is a superuser (e.g. '/superuser'), `None` if superuser is not supported"""
-        timeout: int = 5
-        """duration, in seconds, to wait for the HTTP server to respond"""
+    class Config(HttpConfig):
+        """Configuration for the HTTP Topic Plugin."""
+        topic_uri: str = "/acl"
+        """URI of the topic check."""
