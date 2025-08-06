@@ -1,0 +1,16 @@
+dn: ou=users,dc=example,dc=org
+objectClass: organizationalUnit
+ou: users
+description: Organizational Unit for storing user entries
+
+dn: uid=jdoe,ou=users,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: customuserinfo
+cn: John Doe
+sn: Doe
+uid: jdoe
+mail: jdoe@example.org
+userPassword: {SSHA}w0RfYQaFGMQq7c5QnW7xvXb+iXG0P5gB
+userType: Admin
+roleName: Manager
+isActive: TRUE

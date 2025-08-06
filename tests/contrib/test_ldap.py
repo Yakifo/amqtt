@@ -6,9 +6,9 @@ import pytest
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.client import MQTTClient
-from amqtt.contexts import BrokerConfig, ListenerConfig, ClientConfig
+from amqtt.contexts import BrokerConfig, ListenerConfig, ClientConfig, Action
 from amqtt.contrib.auth_db.user_mgr_cli import user_app
-from amqtt.contrib.ldap import LDAPAuthPlugin
+from amqtt.contrib.ldap import LDAPAuthPlugin, LDAPTopicPlugin
 from amqtt.errors import ConnectError
 from amqtt.session import Session
 from tests.test_cli import broker
@@ -113,3 +113,26 @@ async def test_auth_ldap_incorrect_creds(ldap_service):
         await client.connect('mqtt://gamma.delta:wrongpassword@127.0.0.1:1883')
 
     await broker.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_topic_ldap_plugin():
+    ctx = BrokerContext(Broker())
+    ctx.config = LDAPTopicPlugin.Config(
+        server="ldap://localhost:1389",
+        # server=ldap_service,
+        base_dn="dc=example,dc=org",
+        user_attribute="uid",
+        bind_dn="cn=admin,dc=example,dc=org",
+        bind_password="adminpassword",
+        publish_attribute="publishACL",
+        subscribe_attribute="subscribeACL",
+        receive_attribute="receiveACL"
+    )
+    ldap_plugin = LDAPTopicPlugin(context=ctx)
+
+    s = Session()
+    s.username = "testuser"
+    s.password = "testpassword"
+
+    assert await ldap_plugin.topic_filtering(session=s, topic='my/topic', action=Action.PUBLISH), "access not granted"

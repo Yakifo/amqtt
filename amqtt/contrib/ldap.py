@@ -4,8 +4,9 @@ import logging
 import ldap
 
 from amqtt.broker import BrokerContext
+from amqtt.contexts import Action
 from amqtt.errors import PluginInitError
-from amqtt.plugins.base import BaseAuthPlugin
+from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -66,3 +67,57 @@ class LDAPAuthPlugin(BaseAuthPlugin):
         """distinguished name (dn) of known, preferably read-only, user. e.g. `cn=admin,dc=amqtt,dc=io`"""
         bind_password: str
         """password for known, preferably read-only, user"""
+
+
+class LDAPTopicPlugin(BaseTopicPlugin):
+    """Plugin to authenticate a user with an LDAP directory server."""
+
+    def __init__(self, context: BrokerContext) -> None:
+        super().__init__(context)
+
+        self.conn = ldap.initialize(self.config.server)
+        self.conn.protocol_version = ldap.VERSION3  # pylint: disable=E1101
+        try:
+            self.conn.simple_bind_s(self.config.bind_dn, self.config.bind_password)
+        except ldap.INVALID_CREDENTIALS as e:  # pylint: disable=E1101
+            raise PluginInitError(self.__class__) from e
+
+
+    async def topic_filtering(
+        self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
+    ) -> bool | None:
+        # search_filter = f"({self.config.user_attribute}={session.username})"
+        search_filter = "(uid=jdoe)"
+        attrs = ["cn", "userType", "roleName", "isActive"]
+        results = self.conn.search_s(self.config.base_dn, ldap.SCOPE_SUBTREE, search_filter, attrs)
+
+
+        if not results:
+            logger.debug(f"user not found: {session.username}")
+            return False
+
+        for dn, entry in results:
+            print("DN:", dn)
+            print("publishACL:", entry.get("userType", []))
+            print("subscribeACL:", entry.get("roleName", []))
+            print("receiveACL:", entry.get("isActive", []))
+
+        return None
+
+    @dataclass
+    class Config:
+        """Configuration for the LDAPAuthPlugin."""
+
+        server: str
+        """uri formatted server location. e.g `ldap://localhost:389`"""
+        base_dn: str
+        """distinguished name (dn) of the ldap server. e.g. `dc=amqtt,dc=io`"""
+        user_attribute: str
+        """attribute in ldap entry to match the username against"""
+        bind_dn: str
+        """distinguished name (dn) of known, preferably read-only, user. e.g. `cn=admin,dc=amqtt,dc=io`"""
+        bind_password: str
+        """password for known, preferably read-only, user"""
+        publish_attribute: str
+        subscribe_attribute: str
+        receive_attribute: str

@@ -1,36 +1,22 @@
-networks:
-  ldap_network:
-    driver: bridge
+version: '3'
 services:
   openldap:
     image: osixia/openldap:latest
     container_name: openldap
-    environment:
-      LDAP_BASE_DN: "dc=amqtt,dc=io"
-      LDAP_ORGANISATION: "Test Organization"
-      LDAP_DOMAIN: "amqtt.io"
-      LDAP_ADMIN_PASSWORD: "admin"
-      LDAP_TLS: "false"             # deactivate TLS for the LDAP server
+    command: [--copy-service]
+    restart: always
     volumes:
-      - ./ldap/bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-bootstrap.ldif
-    networks:
-      - ldap_network
+      - ./customuser.schema:/container/service/slapd/assets/config/bootstrap/schema/customuser.schema
+      - ./customusers.ldif:/container/service/slapd/assets/config/bootstrap/ldif/50-customusers.ldif
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
     ports:
-      - "389:389"                   # default port for unsecured LDAP
-      - "10389:389"
-    command: --copy-service
-    restart: unless-stopped
-#  phpldapadmin:
-#    image: osixia/phpldapadmin:latest
-#    container_name: phpldapadmin
-#    environment:
-#      PHPLDAPADMIN_LDAP_HOSTS: openldap
-#      PHPLDAPADMIN_HTTPS: "false"   # deactivate HTTPS
-#    networks:
-#      - ldap_network
-#    ports:
-#      - "8081:80"
-#    restart: unless-stopped
-#    depends_on:
-#      - openldap
+      - "1389:389"
+      - "1636:636"
+    environment:
+      - LDAP_ADMIN_PASSWORD=adminpassword
+      - LDAP_DOMAIN=example.org
 
+volumes:
+  ldap-data:
+  ldap-config:
