@@ -20,7 +20,7 @@ def default_hash_scheme() -> list[str]:
     return ["argon2", "bcrypt", "pbkdf2_sha256", "scrypt"]
 
 
-class UserAuthDBPlugin(BaseAuthPlugin, BaseTopicPlugin):
+class UserAuthDBPlugin(BaseAuthPlugin):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)

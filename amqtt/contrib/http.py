@@ -15,7 +15,7 @@ from aiohttp import ClientResponse, ClientSession, FormData
 
 from amqtt.broker import BrokerContext
 from amqtt.contexts import Action
-from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin, BasePlugin
+from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class HttpConfig:
     """duration, in seconds, to wait for the HTTP server to respond"""
 
 
-class HttpPlugin(BasePlugin):
+class AuthHttpPlugin(BasePlugin[BrokerContext]):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
@@ -138,7 +138,7 @@ class HttpPlugin(BasePlugin):
         return f"{'https' if self.config.with_tls else 'http'}://{self.config.host}:{self.config.port}{uri}"
 
 
-class HttpAuthPlugin(HttpPlugin, BaseAuthPlugin):
+class UserAuthHttpPlugin(AuthHttpPlugin, BaseAuthPlugin):
 
     async def authenticate(self, *, session: Session) -> bool | None:
         d = {"username": session.username, "password": session.password, "client_id": session.client_id}
@@ -152,7 +152,7 @@ class HttpAuthPlugin(HttpPlugin, BaseAuthPlugin):
         """URI of the auth check."""
 
 
-class HttpTopicPlugin(HttpPlugin, BaseTopicPlugin):
+class TopicAuthHttpPlugin(AuthHttpPlugin, BaseTopicPlugin):
 
     async def topic_filtering(self, *,
                         session: Session | None = None,
@@ -175,5 +175,6 @@ class HttpTopicPlugin(HttpPlugin, BaseTopicPlugin):
     @dataclass
     class Config(HttpConfig):
         """Configuration for the HTTP Topic Plugin."""
+
         topic_uri: str = "/acl"
         """URI of the topic check."""

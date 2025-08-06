@@ -1,9 +1,16 @@
 # Authentication & Authorization via external HTTP server
 
-`amqtt.contrib.http.HttpAuthPlugin`
-
 If clients accessing the broker are managed by another application, it can implement API endpoints
-that respond with information about client authenticated and topic-level authorization.
+that respond with information about client authentication and/or topic-level authorization.
+
+- `amqtt.contrib.http.UserAuthHttpPlugin` (client authentication)
+- `amqtt.contrib.http.TopicAuthHttpPlugin` (topic authorization)
+
+Configuration of these plugins is identical (except for the uri name) so that they can be used independently, if desired.
+
+## User Auth
+
+See the [Request and Response Modes](#request-response-modes) section below for details on `params_mode` and `response_mode`.
 
 !!! info "browser-based mqtt over websockets"
 
@@ -35,9 +42,18 @@ that respond with information about client authenticated and topic-level authori
             try {
               const clientMqtt = await mqtt.connect(url, options);
 
-See the [Request and Response Modes](#request-response-modes) section below for details on `params_mode` and `response_mode`. 
+::: amqtt.contrib.http.UserAuthHttpPlugin.Config
+    options:
+      show_source: false
+      heading_level: 4
+      extra:
+        class_style: "simple"
 
-::: amqtt.contrib.http.HttpAuthPlugin.Config
+## Topic ACL
+
+See the [Request and Response Modes](#request-response-modes) section below for details on `params_mode` and `response_mode`.
+
+::: amqtt.contrib.http.TopicAuthHttpPlugin.Config
     options:
       show_source: false
       heading_level: 4
@@ -57,10 +73,6 @@ format will depend on `params_mode` configuration attribute (`json` or `form`).:
     - password *(str)*
     - client_id *(str)*
 
-*For superuser validation, the request will contain:*
-
-    - username *(str)*
-
 *For acl check, the request will contain:*
 
     - username *(str)*
@@ -75,8 +87,8 @@ All endpoints should respond with the following, dependent on `response_mode` co
     - status code: 2xx (granted) or 4xx(denied) or 5xx (noop)
 
 !!! note "5xx response"
-    **noop** (no operation): plugin will not participate in the filtering operation and will defer to another
-    topic filtering plugin to determine access. if there is no other topic filtering plugin, access will be denied.
+    **noop** (no operation): plugin will not participate in the operation and will defer to another
+    plugin to determine access. if there is no other auth/filtering plugin, access will be denied.
 
 *In `json` mode:*
 
@@ -87,8 +99,8 @@ All endpoints should respond with the following, dependent on `response_mode` co
                 or { 'error': 'optional error message' } (noop)
 
 !!! note "excluded 'ok' key"
-    **noop** (no operation): plugin will not participate in the filtering operation and will defer to another
-     topic filtering plugin to determine access. if there is no other topic filtering plugin, access will be denied.
+    **noop** (no operation): plugin will not participate in the operation and will defer to another
+    plugin to determine access. if there is no other auth/filtering plugin, access will be denied.
 
 *In `text` mode:*
 
