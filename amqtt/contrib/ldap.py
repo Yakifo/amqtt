@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import logging
+from typing import ClassVar
 
 import ldap
 
@@ -7,14 +8,29 @@ from amqtt.broker import BrokerContext
 from amqtt.contexts import Action
 from amqtt.errors import PluginInitError
 from amqtt.plugins import TopicMatcher
-from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
+from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin, BasePlugin
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
 
 
-class LDAPAuthPlugin(BaseAuthPlugin):
-    """Plugin to authenticate a user with an LDAP directory server."""
+@dataclass
+class LdapConfig:
+    """Configuration for the LDAP Plugins."""
+
+    server: str
+    """uri formatted server location. e.g `ldap://localhost:389`"""
+    base_dn: str
+    """distinguished name (dn) of the ldap server. e.g. `dc=amqtt,dc=io`"""
+    user_attribute: str
+    """attribute in ldap entry to match the username against"""
+    bind_dn: str
+    """distinguished name (dn) of known, preferably read-only, user. e.g. `cn=admin,dc=amqtt,dc=io`"""
+    bind_password: str
+    """password for known, preferably read-only, user"""
+
+
+class AuthLdapPlugin(BasePlugin[BrokerContext]):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
@@ -26,6 +42,8 @@ class LDAPAuthPlugin(BaseAuthPlugin):
         except ldap.INVALID_CREDENTIALS as e:  # pylint: disable=E1101
             raise PluginInitError(self.__class__) from e
 
+class UserAuthLdapPlugin(AuthLdapPlugin, BaseAuthPlugin):
+    """Plugin to authenticate a user with an LDAP directory server."""
 
     async def authenticate(self, *, session: Session) -> bool | None:
 
@@ -55,55 +73,39 @@ class LDAPAuthPlugin(BaseAuthPlugin):
         return True
 
     @dataclass
-    class Config:
-        """Configuration for the LDAPAuthPlugin."""
+    class Config(LdapConfig):
+        """Configuration for the User Auth LDAP Plugin."""
 
-        server: str
-        """uri formatted server location. e.g `ldap://localhost:389`"""
-        base_dn: str
-        """distinguished name (dn) of the ldap server. e.g. `dc=amqtt,dc=io`"""
-        user_attribute: str
-        """attribute in ldap entry to match the username against"""
-        bind_dn: str
-        """distinguished name (dn) of known, preferably read-only, user. e.g. `cn=admin,dc=amqtt,dc=io`"""
-        bind_password: str
-        """password for known, preferably read-only, user"""
-
-
-class LDAPTopicPlugin(BaseTopicPlugin):
+class TopicAuthLdapPlugin(AuthLdapPlugin, BaseTopicPlugin):
     """Plugin to authenticate a user with an LDAP directory server."""
 
-    _action_attr_map = {
-        Action.PUBLISH: 'publish_attribute',
-        Action.SUBSCRIBE: 'subscribe_attribute',
-        Action.RECEIVE: 'receive_attribute'
+    _action_attr_map: ClassVar = {
+        Action.PUBLISH: "publish_attribute",
+        Action.SUBSCRIBE: "subscribe_attribute",
+        Action.RECEIVE: "receive_attribute"
     }
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
-        self.conn = ldap.initialize(self.config.server)
-        self.conn.protocol_version = ldap.VERSION3  # pylint: disable=E1101
-        try:
-            self.conn.simple_bind_s(self.config.bind_dn, self.config.bind_password)
-        except ldap.INVALID_CREDENTIALS as e:  # pylint: disable=E1101
-            raise PluginInitError(self.__class__) from e
-
         self.topic_matcher = TopicMatcher()
-
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
     ) -> bool | None:
-        # search_filter = f"({self.config.user_attribute}={session.username})"
-        search_filter = "(uid=jdoe)"
+
+        # if not provided needed criteria, can't properly evaluate topic filtering
+        if not session or not action or not topic:
+            return None
+
+        search_filter = f"({self.config.user_attribute}={session.username})"
         attrs = [
             "cn",
             self.config.publish_attribute,
             self.config.subscribe_attribute,
             self.config.receive_attribute
         ]
-        results = self.conn.search_s(self.config.base_dn, ldap.SCOPE_SUBTREE, search_filter, attrs)
+        results = self.conn.search_s(self.config.base_dn, ldap.SCOPE_SUBTREE, search_filter, attrs)  # pylint: disable=E1101
 
 
         if not results:
@@ -118,29 +120,19 @@ class LDAPTopicPlugin(BaseTopicPlugin):
         dn, entry = results[0]
 
         ldap_attribute = getattr(self.config, self._action_attr_map[action])
-        allowed_topics = [t.decode("utf-8") for t in entry.get(ldap_attribute, [])]
-        logger.debug(f"DN: {dn} - {ldap_attribute}={allowed_topics}")
+        topic_filters =  [t.decode("utf-8") for t in entry.get(ldap_attribute, [])]
+        logger.debug(f"DN: {dn} - {ldap_attribute}={topic_filters}")
 
-        return self.topic_matcher.are_topics_allowed(topic, allowed_topics)
-        # print(f"{self.config.publish_attribute} : ", entry.get(self.config.publish_attribute, []))
-        # print(f"{self.config.subscribe_attribute} : ", entry.get(self.config.subscribe_attribute, []))
-        # print(f"{self.config.receive_attribute} : ", entry.get(self.config.receive_attribute, []))
+        return self.topic_matcher.are_topics_allowed(topic, topic_filters)
 
 
     @dataclass
-    class Config:
+    class Config(LdapConfig):
         """Configuration for the LDAPAuthPlugin."""
 
-        server: str
-        """uri formatted server location. e.g `ldap://localhost:389`"""
-        base_dn: str
-        """distinguished name (dn) of the ldap server. e.g. `dc=amqtt,dc=io`"""
-        user_attribute: str
-        """attribute in ldap entry to match the username against"""
-        bind_dn: str
-        """distinguished name (dn) of known, preferably read-only, user. e.g. `cn=admin,dc=amqtt,dc=io`"""
-        bind_password: str
-        """password for known, preferably read-only, user"""
         publish_attribute: str
+        """LDAP attribute which contains a list of permissible publish topics."""
         subscribe_attribute: str
+        """LDAP attribute which contains a list of permissible subscribe topics."""
         receive_attribute: str
+        """LDAP attribute which contains a list of permissible receive topics."""

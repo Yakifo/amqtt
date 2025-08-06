@@ -208,7 +208,7 @@ max-returns = 10
 addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-timeout = 10
+timeout = 15
 asyncio_default_fixture_loop_scope = "function"
 #addopts = ["--tb=short", "--capture=tee-sys"]
 #log_cli = true

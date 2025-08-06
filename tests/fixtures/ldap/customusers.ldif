@@ -10,7 +10,9 @@ cn: John Doe
 sn: Doe
 uid: jdoe
 mail: jdoe@amqtt.io
-userPassword: {SSHA}w0RfYQaFGMQq7c5QnW7xvXb+iXG0P5gB
-publishACL: my/topic/one
+# `slappasswd -s johndoepassword`
+userPassword: {SSHA}ANVSnjfMu85vXHNS5XW7i4EHGJ8VjMtu
+publishACL: my/topic/#
+publishACL: other/+/topic
 subscribeACL: my/topic/two
 receiveACL: my/topic/three
