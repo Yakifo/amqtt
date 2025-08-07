@@ -75,18 +75,15 @@ def mqtt_connected(func: _F) -> _F:
 
 
 class MQTTClient:
-    """MQTT client implementation.
-
-    MQTTClient instances provides API for connecting to a broker and send/receive
-     messages using the MQTT protocol.
+    """MQTT client implementation, providing an API for connecting to a broker and send/receive messages using the MQTT protocol.
 
     Args:
         client_id: MQTT client ID to use when connecting to the broker. If none,
             it will be generated randomly by `amqtt.utils.gen_client_id`
-        config: dictionary of configuration options (see [client configuration](client_config.md)).
+        config: `ClientConfig` or dictionary of equivalent structure options (see [client configuration](client_config.md)).
 
     Raises:
-        PluginImportError: if importing a plugin from configuration
+        PluginImportError: if importing a plugin from configuration fails
         PluginInitError: if initialization plugin fails
 
     """
@@ -159,7 +156,8 @@ class MQTTClient:
         except asyncio.CancelledError as e:
             msg = "Future or Task was cancelled"
             raise ConnectError(msg) from e
-        except Exception as e:
+        # no matter the failure mode, still try to reconnect
+        except Exception as e:  # pylint: disable=W0718
             self.logger.warning(f"Connection failed: {e!r}")
             if not self.config.get("auto_reconnect", False):
                 raise
@@ -233,7 +231,8 @@ class MQTTClient:
             except asyncio.CancelledError as e:
                 msg = "Future or Task was cancelled"
                 raise ConnectError(msg) from e
-            except Exception as e:
+            # no matter the failure mode, still try to reconnect
+            except Exception as e:  # pylint: disable=W0718
                 self.logger.warning(f"Reconnection attempt failed: {e!r}")
                 self.logger.debug("", exc_info=True)
                 if 0 <= reconnect_retries < nb_attempt:
