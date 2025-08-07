@@ -49,7 +49,7 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
         super().__init__(context)
         self._shadows: dict[DeviceID, dict[ShadowName, StateDocument]] = defaultdict(dict)
 
-        self._engine = create_async_engine(f"{self.config.connection}")
+        self._engine = create_async_engine(self.config.connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
 
 
