@@ -1,7 +1,13 @@
 import asyncio
-import datetime
 import logging
 import secrets
+
+try:
+    from datetime import UTC, datetime, timedelta
+except ImportError:
+    from datetime import datetime, timezone, timedelta
+
+    UTC = timezone.utc
 
 import jwt
 import pytest
@@ -18,9 +24,10 @@ from amqtt.session import Session
 def secret_key():
     return secrets.token_urlsafe(32)
 
+
 @pytest.mark.parametrize("exp_time, outcome", [
-    (datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1), True),
-    (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1), False),
+    (datetime.now(UTC) + timedelta(hours=1), True),
+    (datetime.now(UTC) - timedelta(hours=1), False),
 ])
 @pytest.mark.asyncio
 async def test_user_jwt_plugin(secret_key, exp_time, outcome):
@@ -50,7 +57,7 @@ async def test_topic_jwt_plugin(secret_key):
 
     payload = {
         "username": "example_user",
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),
+        "exp": datetime.now(UTC) + timedelta(hours=1),
         "publish_acl": ['my/topic/#', 'my/+/other']
     }
 
@@ -75,7 +82,7 @@ async def test_topic_jwt_plugin(secret_key):
 async def test_broker_with_jwt_plugin(secret_key, caplog):
     payload = {
         "username": "example_user",
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),
+        "exp": datetime.now(UTC) + timedelta(hours=1),
         "publish_acl": ['my/topic/#', 'my/+/other'],
         "subscribe_acl": ['my/+/other'],
     }
