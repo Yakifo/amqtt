@@ -31,7 +31,7 @@ and configured for the broker:
 
 ## Client
 
-By default, the `PacketLoggerPlugin` is  activated  and configured for the client:
+By default, the `PacketLoggerPlugin` is  activated and configured for the client:
 
 ```yaml
 --8<-- "amqtt/scripts/default_client.yaml"
@@ -43,13 +43,13 @@ By default, the `PacketLoggerPlugin` is  activated  and configured for the clien
 
 `amqtt.plugins.authentication.AnonymousAuthPlugin`
 
-**Configuration**
+Authentication plugin allowing anonymous access.
 
-```yaml
-plugins:
-  amqtt.plugins.authentication.AnonymousAuthPlugin:
-      allow_anonymous: false
-```
+::: amqtt.plugins.authentication.AnonymousAuthPlugin.Config
+    options:
+      heading_level: 4
+      extra:
+        class_style: "simple"
 
 !!! danger
     even if `allow_anonymous` is set to `false`, the plugin will still allow access if a username is provided by the client
@@ -69,15 +69,14 @@ plugins:
 
 `amqtt.plugins.authentication.FileAuthPlugin`
 
-clients are authorized by providing username and password, compared against file
+Authentication plugin based on a file-stored user database.
 
-**Configuration**
+::: amqtt.plugins.authentication.FileAuthPlugin.Config
+    options:
+      heading_level: 4
+      extra:
+        class_style: "simple"
 
-```yaml
-plugins:
-  amqtt.plugins.authentication.FileAuthPlugin:
-      password_file: /path/to/password_file
-```
 
 ??? warning "EntryPoint-style configuration is deprecated"
     ```yaml

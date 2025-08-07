@@ -1,7 +1,7 @@
 # Relational Database for Authentication and Authorization
 
-- `amqtt.contrib.auth_db.AuthUserDBPlugin` (authentication) verify a client's ability to connect to broker
-- `amqtt.contrib.auth_db.AuthTopicDBPlugin` (authorization) determine a client's access to topics
+- `amqtt.contrib.auth_db.UserAuthDBPlugin` (authentication) verify a client's ability to connect to broker
+- `amqtt.contrib.auth_db.TopicAuthDBPlugin` (authorization) determine a client's access to topics
 
 Relational database access is supported using SQLAlchemy so MySQL, MariaDB, Postgres and SQLite support is available.
 
