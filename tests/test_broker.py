@@ -934,6 +934,35 @@ async def test_broker_socket_open_close(broker):
     await asyncio.sleep(0.1)
     s.close()
 
+std_legacy_config = {
+        "listeners": {
+            "default": {
+                "type": "tcp",
+                "bind": f"127.0.0.1:1883",
+            }
+        },
+        "sys_interval": 10,
+        "auth": {
+            "allow-anonymous": True,
+            "plugins": ["auth_anonymous"],
+        },
+        "topic-check": {"enabled": False},
+    }
+
+
+@pytest.mark.asyncio
+async def test_broker_with_legacy_config():
+
+    broker = Broker(config=std_legacy_config)
+
+    await broker.start()
+    await asyncio.sleep(2)
+
+    mqtt_client = MQTTClient(config={'auto_reconnect': False})
+    await mqtt_client.connect()
+
+    await broker.shutdown()
+
 
 legacy_config_empty_auth_plugin_list = {
         "listeners": {
