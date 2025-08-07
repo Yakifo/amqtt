@@ -88,8 +88,8 @@ class TopicAuthJwtPlugin(BaseTopicPlugin):
 
         try:
             decoded_payload = jwt.decode(session.password, self.config.secret_key, algorithms=["HS256"])
-            return any(self.topic_matcher.is_topic_allowed(topic, a_filter)
-                       for a_filter in decoded_payload.get(self._topic_jwt_claims, []))
+            claim = getattr(self.config, self._topic_jwt_claims[action])
+            return any(self.topic_matcher.is_topic_allowed(topic, a_filter) for a_filter in decoded_payload.get(claim, []))
         except jwt.ExpiredSignatureError:
             logger.debug(f"jwt for '{session.username}' is expired")
             return False
@@ -102,9 +102,11 @@ class TopicAuthJwtPlugin(BaseTopicPlugin):
         secret_key: str
         """Secret key to decrypt the token."""
         publish_claim: str
-        """Payload key for list of ."""
+        """Payload key for contains a list of permissible publish topics."""
         subscribe_claim: str
+        """Payload key for contains a list of permissible subscribe topics."""
         receive_claim: str
+        """Payload key for contains a list of permissible receive topics."""
         algorithm: str = "HS256"
         """Algorithm to use for token encryption: 'ES256', 'ES256K', 'ES384', 'ES512', 'ES521', 'EdDSA', 'HS256',
          'HS384', 'HS512', 'PS256', 'PS384', 'PS512', 'RS256', 'RS384', 'RS512'"""
