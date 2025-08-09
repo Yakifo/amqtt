@@ -8,6 +8,8 @@ import copy
 from importlib.metadata import EntryPoint, EntryPoints, entry_points
 from inspect import iscoroutinefunction
 import logging
+import sys
+import traceback
 from typing import Any, Generic, NamedTuple, Optional, TypeAlias, TypeVar, cast
 import warnings
 
@@ -291,6 +293,15 @@ class PluginManager(Generic[C]):
         return asyncio.ensure_future(coro)
 
     def _clean_fired_events(self, future: asyncio.Future[Any]) -> None:
+        if self.logger.getEffectiveLevel() <= logging.DEBUG:
+            try:
+                future.result()
+            except asyncio.CancelledError:
+                self.logger.warning("fired event was cancelled")
+            # display plugin fault; don't allow it to cause a broker failure
+            except Exception as exc:  # noqa: BLE001, pylint: disable=W0718
+                traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
+
         with contextlib.suppress(KeyError, ValueError):
             self._fired_events.remove(future)
 

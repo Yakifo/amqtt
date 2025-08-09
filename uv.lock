@@ -148,8 +148,10 @@ ci = [
 ]
 contrib = [
     { name = "aiohttp" },
+    { name = "aiosqlite" },
     { name = "argon2-cffi" },
-    { name = "sqlalchemy" },
+    { name = "greenlet" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 
 [package.dev-dependencies]
@@ -171,6 +173,7 @@ dev = [
     { name = "pytest-timeout" },
     { name = "ruff" },
     { name = "setuptools" },
+    { name = "sqlalchemy", extra = ["mypy"] },
     { name = "types-mock" },
     { name = "types-pyyaml" },
     { name = "types-setuptools" },
@@ -197,13 +200,15 @@ docs = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.7" },
     { name = "aiohttp", marker = "extra == 'contrib'", specifier = ">=3.12.13" },
+    { name = "aiosqlite", marker = "extra == 'contrib'", specifier = ">=0.21.0" },
     { name = "argon2-cffi", marker = "extra == 'contrib'", specifier = ">=25.1.0" },
     { name = "coveralls", marker = "extra == 'ci'", specifier = "==4.0.1" },
     { name = "dacite", specifier = ">=1.9.2" },
+    { name = "greenlet", marker = "extra == 'contrib'", specifier = ">=3.2.3" },
     { name = "passlib", specifier = "==1.7.4" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = "==6.0.2" },
-    { name = "sqlalchemy", marker = "extra == 'contrib'", specifier = ">=2.0.41" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'contrib'", specifier = ">=2.0.41" },
     { name = "transitions", specifier = "==0.9.2" },
     { name = "typer", specifier = "==0.15.4" },
     { name = "websockets", specifier = "==15.0.1" },
@@ -229,6 +234,7 @@ dev = [
     { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "ruff", specifier = ">=0.11.3" },
     { name = "setuptools", specifier = ">=78.1.0" },
+    { name = "sqlalchemy", extras = ["mypy"], specifier = ">=2.0.41" },
     { name = "types-mock", specifier = ">=5.2.0.20250306" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250402" },
     { name = "types-setuptools", specifier = ">=78.1.0.20250329" },
@@ -2413,6 +2419,14 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/2e/677c17c5d6a004c3c45334ab1dbe7b7deb834430b282b8a0f75ae220c8eb/sqlalchemy-2.0.41-cp313-cp313-win32.whl", hash = "sha256:bfc9064f6658a3d1cadeaa0ba07570b83ce6801a1314985bf98ec9b95d74e15f", size = 2082420, upload-time = "2025-05-14T17:55:52.69Z" },
     { url = "https://files.pythonhosted.org/packages/e9/61/e8c1b9b6307c57157d328dd8b8348ddc4c47ffdf1279365a13b2b98b8049/sqlalchemy-2.0.41-cp313-cp313-win_amd64.whl", hash = "sha256:82ca366a844eb551daff9d2e6e7a9e5e76d2612c8564f58db6c19a726869c1df", size = 2108329, upload-time = "2025-05-14T17:55:54.495Z" },
     { url = "https://files.pythonhosted.org/packages/1c/fc/9ba22f01b5cdacc8f5ed0d22304718d2c758fce3fd49a5372b886a86f37c/sqlalchemy-2.0.41-py3-none-any.whl", hash = "sha256:57df5dc6fdb5ed1a88a1ed2195fd31927e705cad62dedd86b46972752a80f576", size = 1911224, upload-time = "2025-05-14T17:39:42.154Z" },
+]
+
+[package.optional-dependencies]
+asyncio = [
+    { name = "greenlet" },
+]
+mypy = [
+    { name = "mypy" },
 ]
 
 [[package]]
