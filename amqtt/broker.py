@@ -22,7 +22,7 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig
+from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -277,30 +277,42 @@ class Broker:
     async def _create_server_instance(
         self,
         listener_name: str,
-        listener_type: str,
+        listener_type: ListenerType,
         address: str | None,
-        port: int,
+        port: int | None,
         ssl_context: ssl.SSLContext | None,
     ) -> asyncio.Server | websockets.asyncio.server.Server:
         """Create a server instance for a listener."""
-        if listener_type == "tcp":
-            return await asyncio.start_server(
-                partial(self.stream_connected, listener_name=listener_name),
-                address,
-                port,
-                reuse_address=True,
-                ssl=ssl_context,
-            )
-        if listener_type == "ws":
-            return await websockets.serve(
-                partial(self.ws_connected, listener_name=listener_name),
-                address,
-                port,
-                ssl=ssl_context,
-                subprotocols=[websockets.Subprotocol("mqtt")],
-            )
-        msg = f"Unsupported listener type: {listener_type}"
-        raise BrokerError(msg)
+        if listener_type not in (ListenerType.TCP, ListenerType.WS) and port is None:
+            msg = f"listener type '{listener_type}' requires a port"
+            raise BrokerError(msg)
+
+        match listener_type:
+            case ListenerType.TCP:
+                return await asyncio.start_server(
+                    partial(self.stream_connected, listener_name=listener_name),
+                    address,
+                    port,
+                    reuse_address=True,
+                    ssl=ssl_context,
+                )
+            case ListenerType.WS:
+                return await websockets.serve(
+                    partial(self.ws_connected, listener_name=listener_name),
+                    address,
+                    port,
+                    ssl=ssl_context,
+                    subprotocols=[websockets.Subprotocol("mqtt")],
+                )
+            case ListenerType.UNIX:
+                return await asyncio.start_unix_server(
+                    partial(self.stream_connected, listener_name=listener_name),
+                    address,
+                    ssl=ssl_context,
+                    loop=self._loop)
+            case _:
+                msg = f"Unsupported listener type: {listener_type}"
+                raise BrokerError(msg)
 
     async def _session_monitor(self) -> None:
 

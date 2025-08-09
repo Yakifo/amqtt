@@ -44,6 +44,7 @@ class ListenerType(StrEnum):
 
     TCP = "tcp"
     WS = "ws"
+    UNIX = "unix"
 
     def __repr__(self) -> str:
         """Display the string value, instead of the enum member."""
@@ -94,9 +95,9 @@ class ListenerConfig(Dictable):
     """Structured configuration for a broker's listeners."""
 
     type: ListenerType = ListenerType.TCP
-    """Type of listener: `tcp` for 'mqtt' or `ws` for 'websocket' when specified in dictionary or yaml.'"""
-    bind: str | None = "0.0.0.0:1883"
-    """address and port for the listener to bind to"""
+    """Type of listener: `tcp` for 'mqtt', `ws` for 'websocket' or `unix` when specified in dictionary or yaml.'"""
+    bind: str | Path | None = "0.0.0.0:1883"
+    """address and port for the listener to bind to for `ws` and `tcp` or path and file for `unix`"""
     max_connections: int = 0
     """max number of connections allowed for this listener"""
     ssl: bool = False
@@ -124,6 +125,20 @@ class ListenerConfig(Dictable):
         for fn in ("cafile", "capath", "certfile", "keyfile"):
             if isinstance(getattr(self, fn), str):
                 setattr(self, fn, Path(getattr(self, fn)))
+            if getattr(self, fn) and not getattr(self, fn).exists():
+                msg = f"'{fn}' does not exist : {getattr(self, fn)}"
+                raise FileNotFoundError(msg)
+
+        if isinstance(self.bind, Path) and self.type != ListenerType.UNIX:
+            msg = "bind address can only be a `pathlib.Path` if listener type is unix"
+            raise ValueError(msg)
+
+        if self.type == ListenerType.UNIX:
+            if isinstance(self.bind, str):
+                self.bind = Path(self.bind)
+            if self.bind and not self.bind.exists():
+                msg = f"unix socket : '{self.bind}' does not exist"
+                raise FileNotFoundError(msg)
 
     def apply(self, other: "ListenerConfig") -> None:
         """Apply the field from 'other', if 'self' field is default."""

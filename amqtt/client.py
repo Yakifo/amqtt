@@ -501,6 +501,13 @@ class MQTTClient:
 
                 reader = WebSocketsReader(websocket)
                 writer = WebSocketsWriter(websocket)
+            elif scheme == "unix":
+                conn_reader, conn_writer = await asyncio.wait_for(
+                    asyncio.open_unix_connection(
+                        path=self.session.broker_uri,
+                        **kwargs), timeout=connection_timeout)
+                reader = UnixStreamReaderAdapter(conn_reader)
+                writer = StreamWriterAdapter(conn_writer)
             elif not self.session.broker_uri:
                 msg = "missing broker uri"
                 raise ClientError(msg)
