@@ -47,6 +47,7 @@ nav:
             - plugins/contrib.md
             - Database Auth: plugins/auth_db.md
             - HTTP Auth: plugins/http.md
+            - Certificate Auth: plugins/cert.md
       - Reference:
           - Containerization: docker.md
           - Support: support.md
@@ -111,7 +112,11 @@ markdown_extensions:
   - pymdownx.snippets:
       base_path: !relative $config_dir
       check_paths: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
       slugify: !!python/object/apply:pymdownx.slugs.slugify
@@ -131,7 +136,7 @@ plugins:
   - markdown-exec
   - section-index
   - coverage
-  - mkdocs-typer2
+  - mkdocs-typer2:
   - mkdocstrings:
       custom_templates: 'docs/templates'
       handlers:
