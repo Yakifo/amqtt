@@ -327,12 +327,6 @@ class Broker:
                     ssl=ssl_context,
                     subprotocols=[websockets.Subprotocol("mqtt")],
                 )
-            case ListenerType.UNIX:
-                return await asyncio.start_unix_server(
-                    partial(self.stream_connected, listener_name=listener_name),
-                    address,
-                    ssl=ssl_context,
-                    loop=self._loop)
             case _:
                 msg = f"Unsupported listener type: {listener_type}"
                 raise BrokerError(msg)

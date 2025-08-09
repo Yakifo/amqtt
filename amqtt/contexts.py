@@ -131,17 +131,6 @@ class ListenerConfig(Dictable):
                 msg = f"'{fn}' does not exist : {getattr(self, fn)}"
                 raise FileNotFoundError(msg)
 
-        if isinstance(self.bind, Path) and self.type != ListenerType.UNIX:
-            msg = "bind address can only be a `pathlib.Path` if listener type is unix"
-            raise ValueError(msg)
-
-        if self.type == ListenerType.UNIX:
-            if isinstance(self.bind, str):
-                self.bind = Path(self.bind)
-            if self.bind and not self.bind.exists():
-                msg = f"unix socket : '{self.bind}' does not exist"
-                raise FileNotFoundError(msg)
-
     def apply(self, other: "ListenerConfig") -> None:
         """Apply the field from 'other', if 'self' field is default."""
         for f in fields(self):
