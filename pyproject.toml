@@ -39,9 +39,6 @@ dependencies = [
 ]
 
 [dependency-groups]
-contrib = [
-    "pyopenssl>=25.1.0",
-]
 dev = [
   "aiosqlite>=0.21.0",
   "greenlet>=3.2.3",
@@ -57,6 +54,7 @@ dev = [
   "pyopenssl>=25.1.0",
   "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
   "pytest-cov>=6.1.0", # https://pypi.org/project/pytest-cov
+  "pytest-docker>=3.2.3",
   "pytest-logdog>=0.1.0", # https://pypi.org/project/pytest-logdog
   "pytest-timeout>=2.3.1", # https://pypi.org/project/pytest-timeout
   "pytest>=8.3.5", # https://pypi.org/project/pytest
@@ -97,8 +95,10 @@ contrib = [
     "argon2-cffi>=25.1.0",
     "aiohttp>=3.12.13",
     "pyjwt>=2.10.1",
+    "python-ldap>=3.4.4",
     "mergedeep>=1.3.4",
-    "jsonschema>=4.25.0"
+    "jsonschema>=4.25.0",
+    "pyopenssl>=25.1.0"
 ]
 
 
@@ -222,7 +222,7 @@ max-returns = 10
 addopts = ["--cov=amqtt", "--cov-report=term-missing", "--cov-report=html"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-timeout = 10
+timeout = 15
 asyncio_default_fixture_loop_scope = "function"
 #addopts = ["--tb=short", "--capture=tee-sys"]
 #log_cli = true

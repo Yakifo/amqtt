@@ -32,6 +32,9 @@ jobs:
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           python-version: "3.13"
 
+      - name: install openldap dependencies
+        run: sudo apt-get install -y libldap2-dev libsasl2-dev
+
       - name: 🏗 Install the project
         run: uv sync --locked --dev --all-extras
 
@@ -67,6 +70,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           python-version: ${{ matrix.python-version }}
+
+      - name: install openldap dependencies
+        run: sudo apt-get install -y libldap2-dev libsasl2-dev
 
       - name: 🏗 Install the project
         run: uv sync --locked --dev --all-extras

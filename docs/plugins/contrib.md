@@ -18,6 +18,10 @@ These are fully supported plugins but require additional dependencies to be inst
   Determine client authentication and authorization based on response from a separate HTTP server.<br/>
   `amqtt.contrib.http.HttpAuthTopicPlugin`
 
+- [LDAP Auth](ldap.md)<br/>
+  Authenticate a user with an LDAP directory server.<br/>
+  `amqtt.contrib.ldap.LDAPAuthPlugin`
+
 - [Shadows](shadows.md)<br/>
   Device shadows provide a persistent, cloud-based representation of the state of a device,
    even when the device is offline. This plugin tracks the desired and reported state of a client
