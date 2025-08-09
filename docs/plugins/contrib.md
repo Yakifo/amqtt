@@ -23,3 +23,10 @@ These are fully supported plugins but require additional dependencies to be inst
    even when the device is offline. This plugin tracks the desired and reported state of a client
    and provides MQTT topic-based communication channels to retrieve and update a shadow.<br/>
    `amqtt.contrib.shadows.ShadowPlugin`
+
+- [Certificate Auth](cert.md)<br/>
+  Using client-specific certificates, signed by a common authority (even if self-signed) provides
+   a highly secure way of authenticating mqtt clients. Often used with IoT devices where a unique
+   certificate can be initialized on initial provisioning. Includes command line utilities to generate
+   root, broker and device certificates with the correct X509 attributes to enable authenticity.<br/>
+   `amqtt.contrib.cert.CertificateAuthPlugin.Config`

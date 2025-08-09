@@ -48,6 +48,7 @@ nav:
             - Database Auth: plugins/auth_db.md
             - HTTP Auth: plugins/http.md
             - Shadows: plugins/shadows.md
+            - Certificate Auth: plugins/cert.md
       - Reference:
           - Containerization: docker.md
           - Support: support.md
@@ -136,7 +137,7 @@ plugins:
   - markdown-exec
   - section-index
   - coverage
-  - mkdocs-typer2
+  - mkdocs-typer2:
   - mkdocstrings:
       custom_templates: 'docs/templates'
       handlers:

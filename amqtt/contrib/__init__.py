@@ -1,4 +1,4 @@
-"""Module for plugins requiring additional dependencies."""
+"""Module for contributed plugins."""
 
 from dataclasses import asdict, is_dataclass
 from typing import Any, TypeVar
