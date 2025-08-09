@@ -94,6 +94,7 @@ contrib = [
     "sqlalchemy[asyncio]>=2.0.41",
     "argon2-cffi>=25.1.0",
     "aiohttp>=3.12.13",
+    "pyjwt>=2.10.1",
     "python-ldap>=3.4.4",
     "mergedeep>=1.3.4",
     "jsonschema>=4.25.0",
