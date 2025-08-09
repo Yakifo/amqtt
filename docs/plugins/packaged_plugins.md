@@ -1,4 +1,4 @@
-# Existing Plugins
+# Packaged Plugins
 
 With the aMQTT plugins framework, one can add additional functionality without
 having to rewrite core logic in the broker or client. Plugins can be loaded and configured using
@@ -50,7 +50,6 @@ Authentication plugin allowing anonymous access.
       heading_level: 4
       extra:
         class_style: "simple"
-
 
 !!! danger
     even if `allow_anonymous` is set to `false`, the plugin will still allow access if a username is provided by the client
