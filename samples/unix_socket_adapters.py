@@ -1,4 +1,3 @@
-import asyncio
 import contextlib
 import logging
 from asyncio import StreamWriter, StreamReader, Event
@@ -54,3 +53,5 @@ class UnixStreamWriterAdapter(WriterAdapter):
 
         with contextlib.suppress(AttributeError):
             await self._writer.wait_closed()
+
+
