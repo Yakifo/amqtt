@@ -52,6 +52,7 @@ dev = [
   "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
   "psutil>=7.0.0", # https://pypi.org/project/psutil
+  "pyhamcrest>=2.1.0",
   "pylint>=3.3.6", # https://pypi.org/project/pylint
   "pyopenssl>=25.1.0",
   "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
@@ -95,6 +96,8 @@ contrib = [
     "sqlalchemy[asyncio]>=2.0.41",
     "argon2-cffi>=25.1.0",
     "aiohttp>=3.12.13",
+    "mergedeep>=1.3.4",
+    "jsonschema>=4.25.0",
 ]
 
 

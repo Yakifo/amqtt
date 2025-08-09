@@ -47,6 +47,7 @@ nav:
             - plugins/contrib.md
             - Database Auth: plugins/auth_db.md
             - HTTP Auth: plugins/http.md
+            - Shadows: plugins/shadows.md
             - Certificate Auth: plugins/cert.md
       - Reference:
           - Containerization: docker.md
