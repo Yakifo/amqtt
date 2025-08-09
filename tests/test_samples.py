@@ -2,14 +2,15 @@ import asyncio
 import logging
 import signal
 import subprocess
+
+from multiprocessing import Process
 from pathlib import Path
+from samples.http_server_integration import main as http_server_main
 
 import pytest
 
 from amqtt.broker import Broker
-from samples.client_publish import __main__ as client_publish_main
-from samples.client_subscribe import __main__ as client_subscribe_main
-from samples.client_keepalive import __main__ as client_keepalive_main
+from amqtt.client import MQTTClient
 from samples.broker_acl import config as broker_acl_config
 from samples.broker_taboo import config as broker_taboo_config
 
@@ -280,3 +281,24 @@ async def test_client_subscribe_plugin_taboo():
     assert "Exception" not in stderr.decode("utf-8")
 
     await broker.shutdown()
+
+
+@pytest.fixture
+def external_http_server():
+    p = Process(target=http_server_main)
+    p.start()
+    yield p
+    p.terminate()
+
+
+@pytest.mark.asyncio
+async def test_external_http_server(external_http_server):
+
+    await asyncio.sleep(1)
+    client = MQTTClient(config={'auto_reconnect': False})
+    await client.connect("ws://127.0.0.1:8080/mqtt")
+    assert client.session is not None
+    await client.publish("my/topic", b'test message')
+    await client.disconnect()
+    # Send the interrupt signal
+    await asyncio.sleep(1)
