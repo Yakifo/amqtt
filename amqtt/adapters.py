@@ -129,7 +129,7 @@ class WebSocketsWriter(WriterAdapter):
         return remote_address
 
     def get_ssl_info(self) -> ssl.SSLObject | None:
-        return None
+        return cast("ssl.SSLObject", self._protocol.transport.get_extra_info("ssl_object"))
 
     async def close(self) -> None:
         await self._protocol.close()

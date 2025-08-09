@@ -1,6 +1,7 @@
 import asyncio
 import io
 import logging
+import ssl
 
 import aiohttp
 from aiohttp import web
@@ -101,6 +102,10 @@ class WebSocketResponseWriter(WriterAdapter):
     async def close(self) -> None:
         # no clean up needed, stream will be gc along with instance
         pass
+
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        pass
+
 
 async def mqtt_websocket_handler(request: web.Request) -> web.StreamResponse:
 
