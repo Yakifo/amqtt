@@ -95,9 +95,9 @@ class ListenerConfig(Dictable):
     """Structured configuration for a broker's listeners."""
 
     type: ListenerType = ListenerType.TCP
-    """Type of listener: `tcp` for 'mqtt', `ws` for 'websocket' or `unix` when specified in dictionary or yaml.'"""
-    bind: str | Path | None = "0.0.0.0:1883"
-    """address and port for the listener to bind to for `ws` and `tcp` or path and file for `unix`"""
+    """Type of listener: `tcp` for 'mqtt' or `ws` for 'websocket' when specified in dictionary or yaml.'"""
+    bind: str | None = "0.0.0.0:1883"
+    """address and port for the listener to bind to"""
     max_connections: int = 0
     """max number of connections allowed for this listener"""
     ssl: bool = False
@@ -137,11 +137,13 @@ class ListenerConfig(Dictable):
             if getattr(self, f.name) == f.default:
                 setattr(self, f.name, other[f.name])
 
+
 def default_listeners() -> dict[str, Any]:
     """Create defaults for BrokerConfig.listeners."""
     return {
         "default": ListenerConfig()
     }
+
 
 def default_broker_plugins() -> dict[str, Any]:
     """Create defaults for BrokerConfig.plugins."""
