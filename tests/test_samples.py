@@ -5,7 +5,11 @@ import subprocess
 
 from multiprocessing import Process
 from pathlib import Path
+
+from typer.testing import CliRunner
+
 from samples.http_server_integration import main as http_server_main
+from samples.unix_sockets import app as unix_sockets_app
 
 import pytest
 
@@ -298,3 +302,31 @@ async def test_external_http_server(external_http_server):
     await client.disconnect()
     # Send the interrupt signal
     await asyncio.sleep(1)
+
+
+@pytest.mark.asyncio
+async def test_unix_connection():
+
+    unix_socket_script = Path(__file__).parent.parent / "samples/unix_sockets.py"
+    broker_process = subprocess.Popen(["python", unix_socket_script, "broker", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # start the broker
+    await asyncio.sleep(1)
+
+    # start the client
+    client_process = subprocess.Popen(["python", unix_socket_script, "client", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    await asyncio.sleep(3)
+
+    # stop the client (ctrl-c)
+    client_process.send_signal(signal.SIGINT)
+    _ = client_process.communicate()
+
+    # stop the broker (ctrl-c)
+    broker_process.send_signal(signal.SIGINT)
+    broker_stdout, broker_stderr = broker_process.communicate()
+
+    logger.debug(broker_stderr.decode("utf-8"))
+
+    # verify that the broker received client connected/disconnected
+    assert "on_broker_client_connected" in broker_stderr.decode("utf-8")
+    assert "on_broker_client_disconnected" in broker_stderr.decode("utf-8")
