@@ -35,8 +35,7 @@ dependencies = [
   "typer==0.15.4",
   "aiohttp>=3.12.7",
   "dacite>=1.9.2",
-  "psutil>=7.0.0",
-  "jsonschema>=4.25.0",
+  "psutil>=7.0.0"
 ]
 
 [dependency-groups]
@@ -59,6 +58,7 @@ dev = [
   "pytest>=8.3.5", # https://pypi.org/project/pytest
   "ruff>=0.11.3", # https://pypi.org/project/ruff
   "setuptools>=78.1.0",
+  "sqlalchemy[mypy]>=2.0.41",
   "types-mock>=5.2.0.20250306", # https://pypi.org/project/types-mock
   "types-PyYAML>=6.0.12.20250402", # https://pypi.org/project/types-PyYAML
   "types-setuptools>=78.1.0.20250329", # https://pypi.org/project/types-setuptools
@@ -86,10 +86,13 @@ docs = [
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
 contrib = [
-    "sqlalchemy>=2.0.41",
+    "aiosqlite>=0.21.0",
+    "greenlet>=3.2.3",
+    "sqlalchemy[asyncio]>=2.0.41",
     "argon2-cffi>=25.1.0",
     "aiohttp>=3.12.13",
     "mergedeep>=1.3.4",
+    "jsonschema>=4.25.0",
 ]
 
 [project.scripts]
