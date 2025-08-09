@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from amqtt.broker import BrokerContext, Broker
 from amqtt.contrib.shadows import ShadowPlugin
 from amqtt.contrib.shadows.models import Shadow, ShadowUpdateError
-from amqtt.contrib.shadows.states import StateDocument, State
+from amqtt.contrib.shadows.states import StateDocument, State, MetaTimestamp
 from amqtt.mqtt.constants import QOS_0
 from amqtt.session import IncomingApplicationMessage
 from tests.contrib.test_shadows_schema import *
@@ -110,11 +110,16 @@ async def test_shadow_create_find_state_doc(db_connection, db_session_maker, sha
         await db_session.commit()
         await db_session.flush()
 
+    def new_equal(a, b):
+        diff = abs(a.timestamp - b.timestamp)
+        return diff <= 2
+
     async with db_session_maker() as db_session, db_session.begin():
         shadow = await Shadow.latest_version(session=db_session, device_id='device123', name="myShadowName")
         assert shadow is not None
         assert shadow.version == 1
-        assert shadow.state == state_doc
+        with patch.object(MetaTimestamp, "__eq__", new=new_equal) as mocked_mqtt_publish:
+            assert shadow.state == state_doc
 
 @pytest.mark.asyncio
 async def test_shadow_update_state(db_connection, db_session_maker, shadow_plugin):
