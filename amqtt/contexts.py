@@ -127,6 +127,9 @@ class ListenerConfig(Dictable):
         for fn in ("cafile", "capath", "certfile", "keyfile"):
             if isinstance(getattr(self, fn), str):
                 setattr(self, fn, Path(getattr(self, fn)))
+            if getattr(self, fn) and not getattr(self, fn).exists():
+                msg = f"'{fn}' does not exist : {getattr(self, fn)}"
+                raise FileNotFoundError(msg)
 
     def apply(self, other: "ListenerConfig") -> None:
         """Apply the field from 'other', if 'self' field is default."""
@@ -134,11 +137,13 @@ class ListenerConfig(Dictable):
             if getattr(self, f.name) == f.default:
                 setattr(self, f.name, other[f.name])
 
+
 def default_listeners() -> dict[str, Any]:
     """Create defaults for BrokerConfig.listeners."""
     return {
         "default": ListenerConfig()
     }
+
 
 def default_broker_plugins() -> dict[str, Any]:
     """Create defaults for BrokerConfig.plugins."""
