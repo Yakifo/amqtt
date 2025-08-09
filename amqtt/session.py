@@ -3,7 +3,7 @@ from collections import OrderedDict
 import logging
 from math import floor
 import time
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from transitions import Machine
 
@@ -13,6 +13,8 @@ from amqtt.mqtt.publish import PublishPacket
 OUTGOING = 0
 INCOMING = 1
 
+if TYPE_CHECKING:
+    import ssl
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +147,7 @@ class Session:
         self._packet_id: int = 0
         self.parent: int = 0
         self.last_connect_time: int | None = None
+        self.ssl_object: ssl.SSLObject | None = None
         self.last_disconnect_time: int | None = None
 
         # Used to store outgoing ApplicationMessage while publish protocol flows

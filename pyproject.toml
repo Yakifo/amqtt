@@ -49,7 +49,9 @@ dev = [
   "poethepoet>=0.34.0",
   "pre-commit>=4.2.0", # https://pypi.org/project/pre-commit
   "psutil>=7.0.0", # https://pypi.org/project/psutil
+  "pyhamcrest>=2.1.0",
   "pylint>=3.3.6", # https://pypi.org/project/pylint
+  "pyopenssl>=25.1.0",
   "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
   "pytest-cov>=6.1.0", # https://pypi.org/project/pytest-cov
   "pytest-docker>=3.2.3",
@@ -86,18 +88,26 @@ docs = [
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
 contrib = [
+    "cryptography>=45.0.3",
     "aiosqlite>=0.21.0",
     "greenlet>=3.2.3",
     "sqlalchemy[asyncio]>=2.0.41",
     "argon2-cffi>=25.1.0",
     "aiohttp>=3.12.13",
     "python-ldap>=3.4.4",
+    "mergedeep>=1.3.4",
+    "jsonschema>=4.25.0",
+    "pyopenssl>=25.1.0"
 ]
+
 
 [project.scripts]
 amqtt = "amqtt.scripts.broker_script:main"
 amqtt_pub = "amqtt.scripts.pub_script:main"
 amqtt_sub = "amqtt.scripts.sub_script:main"
+ca_creds = "amqtt.scripts.ca_creds:main"
+server_creds = "amqtt.scripts.server_creds:main"
+device_creds = "amqtt.scripts.device_creds:main"
 
 user_mgr = "amqtt.scripts.manage_users:main"
 topic_mgr = "amqtt.scripts.manage_topics:main"
