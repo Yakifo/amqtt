@@ -2,20 +2,26 @@
 
 This document describes `aMQTT` common API both used by [MQTT Client](client.md) and [Broker](broker.md).
 
-## Reference
+## ApplicationMessage
 
-### ApplicationMessage
+::: amqtt.session.ApplicationMessage
+    options:
+      heading_level: 3
 
-The `amqtt.session` module provides the following message classes:
+## IncomingApplicationMessage
 
-#### ApplicationMessage
+Represents messages received from MQTT clients.
 
-Base class for MQTT application messages.
+::: amqtt.session.IncomingApplicationMessage
+    options:
+      heading_level: 3
 
-#### IncomingApplicationMessage
 
-Inherits from ApplicationMessage. Represents messages received from MQTT clients.
-
-#### OutgoingApplicationMessage
+## OutgoingApplicationMessage
 
 Inherits from ApplicationMessage. Represents messages to be sent to MQTT clients.
+
+::: amqtt.session.OutgoingApplicationMessage
+    options:
+      heading_level: 3
+

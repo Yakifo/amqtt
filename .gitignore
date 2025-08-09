@@ -4,6 +4,9 @@ __pycache__
 node_modules
 .vite
 *.pem
+*.crt
+*.key
+*.patch
 
 #------- Environment Files -------
 .python-version

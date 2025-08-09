@@ -1,0 +1,13 @@
+{% extends "_base/class.html.jinja" %}
+
+{% block signature scoped %}
+  {% if config.extra.class_style != 'simple' %}
+    {{ super() }}
+  {% endif %}
+{% endblock signature %}
+
+{% block bases scoped %}
+  {% if config.extra.class_style != 'simple' %}
+    {{ super() }}
+  {%  endif %}
+{% endblock bases %}

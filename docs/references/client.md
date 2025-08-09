@@ -129,15 +129,4 @@ amqtt/LYRf52W[56SOjW04 <-in-- PubcompPacket(ts=2015-11-11 21:54:48.713107, fixed
 
 Both coroutines have the same results except that `test_coro2()` manages messages flow in parallel which may be more efficient.
 
-
-### Client configuration
-
-The `MQTTClient` class's `__init__` method accepts a `config` parameter which allows setup of default and custom behaviors.
-
-Details on the `config` parameter structure is a dictionary whose structure is identical to yaml formatted file[^1]
-used by the included broker script: [client configuration](client_config.md)
-
 ::: amqtt.client.MQTTClient
-
-[^1]: See [PyYAML](http://pyyaml.org/wiki/PyYAMLDocumentation) for loading YAML files as Python dict.
-

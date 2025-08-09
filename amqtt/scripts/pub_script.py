@@ -52,7 +52,7 @@ class MessageInput:
                 with Path(self.file).open(encoding="utf-8") as f:
                     for line in f:
                         yield line.encode(encoding="utf-8")
-            except Exception:
+            except (FileNotFoundError, OSError):
                 logger.exception(f"Failed to read file '{self.file}'")
         if self.lines:
             for line in sys.stdin:
