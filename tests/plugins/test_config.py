@@ -12,7 +12,7 @@ from dacite import from_dict, Config, UnexpectedDataError
 
 from amqtt.client import MQTTClient
 from amqtt.errors import PluginLoadError, ConnectError, PluginCoroError
-from amqtt.mqtt.constants import QOS_0
+from amqtt.mqtt3.constants import QOS_0
 
 logger = logging.getLogger(__name__)
 

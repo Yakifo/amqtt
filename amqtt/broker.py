@@ -24,13 +24,13 @@ from amqtt.adapters import (
 )
 from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
-from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.mqtt3.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id
 
 from .events import BrokerEvents
-from .mqtt.constants import QOS_0, QOS_1, QOS_2
-from .mqtt.disconnect import DisconnectPacket
+from .mqtt3.constants import QOS_0, QOS_1, QOS_2
+from .mqtt3.disconnect import DisconnectPacket
 from .plugins.manager import PluginManager
 
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]

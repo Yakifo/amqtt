@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import MQTTError
 from amqtt.events import MQTTEvents
-from amqtt.mqtt.connack import (
+from amqtt.mqtt3.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
     IDENTIFIER_REJECTED,
@@ -13,15 +13,15 @@ from amqtt.mqtt.connack import (
     UNACCEPTABLE_PROTOCOL_VERSION,
     ConnackPacket,
 )
-from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.mqtt.pingreq import PingReqPacket
-from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.protocol.handler import ProtocolHandler
-from amqtt.mqtt.suback import SubackPacket
-from amqtt.mqtt.subscribe import SubscribePacket
-from amqtt.mqtt.unsuback import UnsubackPacket
-from amqtt.mqtt.unsubscribe import UnsubscribePacket
+from amqtt.mqtt3.connect import ConnectPacket
+from amqtt.mqtt3.disconnect import DisconnectPacket
+from amqtt.mqtt3.pingreq import PingReqPacket
+from amqtt.mqtt3.pingresp import PingRespPacket
+from amqtt.mqtt3.protocol.handler import ProtocolHandler
+from amqtt.mqtt3.suback import SubackPacket
+from amqtt.mqtt3.subscribe import SubscribePacket
+from amqtt.mqtt3.unsuback import UnsubackPacket
+from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import Session
 from amqtt.utils import format_client_message

@@ -13,7 +13,7 @@ from amqtt.broker import BrokerContext, Broker
 from amqtt.contrib.shadows import ShadowPlugin
 from amqtt.contrib.shadows.models import Shadow, ShadowUpdateError
 from amqtt.contrib.shadows.states import StateDocument, State, MetaTimestamp
-from amqtt.mqtt.constants import QOS_0
+from amqtt.mqtt3.constants import QOS_0
 from amqtt.session import IncomingApplicationMessage
 from tests.contrib.test_shadows_schema import *
 

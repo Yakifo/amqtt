@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from amqtt.client import ClientError, MQTTClient
-from amqtt.mqtt.constants import QOS_1
+from amqtt.mqtt3.constants import QOS_1
 
 """
 Run `samples/broker_acl.py` or `samples/broker_taboo.py` 

@@ -1,7 +1,7 @@
 from typing_extensions import Self
 
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.packet import UNSUBACK, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
+from amqtt.mqtt3.packet import UNSUBACK, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
 class UnsubackPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):

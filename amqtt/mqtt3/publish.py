@@ -4,7 +4,7 @@ from typing_extensions import Self
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import decode_packet_id, decode_string, encode_string, int_to_bytes
 from amqtt.errors import AMQTTError, MQTTError
-from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
+from amqtt.mqtt3.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 
 class PublishVariableHeader(MQTTVariableHeader):

@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from amqtt.broker import Broker, BrokerContext, RetainedApplicationMessage
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_1
+from amqtt.mqtt3.constants import QOS_1
 from amqtt.contrib.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage
 from amqtt.session import Session
 
