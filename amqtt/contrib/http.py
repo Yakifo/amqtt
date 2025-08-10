@@ -5,7 +5,7 @@ try:
 except ImportError:
     # support for python 3.10
     from enum import Enum
-    class StrEnum(str, Enum):  #type: ignore[no-redef]
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
         pass
 
 import logging
@@ -25,6 +25,7 @@ class ResponseMode(StrEnum):
     STATUS = "status"
     JSON = "json"
     TEXT = "text"
+
 
 class RequestMethod(StrEnum):
     GET = "get"
@@ -76,7 +77,7 @@ class AuthHttpPlugin(BasePlugin[BrokerContext]):
 
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
-        self.http = ClientSession(headers = {"User-Agent": self.config.user_agent})
+        self.http = ClientSession(headers={"User-Agent": self.config.user_agent})
 
         match self.config.request_method:
             case RequestMethod.GET:
@@ -102,15 +103,15 @@ class AuthHttpPlugin(BasePlugin[BrokerContext]):
             case ParamsMode.FORM:
                 match self.config.request_method:
                     case RequestMethod.GET:
-                        kwargs = { "params": payload }
-                    case _: # POST, PUT
+                        kwargs = {"params": payload}
+                    case _:  # POST, PUT
                         d: Any = FormData(payload)
                         kwargs = {"data": d}
             case _:  # JSON
-                kwargs = { "json": payload}
+                kwargs = {"json": payload}
         return kwargs
 
-    async def _send_request(self, url: str, payload: dict[str, Any]) -> bool|None: # pylint: disable=R0911
+    async def _send_request(self, url: str, payload: dict[str, Any]) -> bool | None:  # pylint: disable=R0911
 
         kwargs = self._get_params(payload)
 
@@ -131,7 +132,7 @@ class AuthHttpPlugin(BasePlugin[BrokerContext]):
                     if not self._is_2xx(r):
                         return False
                     data: dict[str, Any] = await r.json()
-                    data = {k.lower():v for k,v in data.items()}
+                    data = {k.lower(): v for k, v in data.items()}
                     return data.get("ok", None)
 
     def get_url(self, uri: str) -> str:

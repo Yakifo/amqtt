@@ -139,7 +139,7 @@ class BrokerContext(BaseContext):
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
         return self._broker_instance.subscriptions
 
-    async def add_subscription(self, client_id: str, topic: str|None, qos: int|None) -> None:
+    async def add_subscription(self, client_id: str, topic: str | None, qos: int | None) -> None:
         """Create a topic subscription for the given `client_id`.
 
         If a client session doesn't exist for `client_id`, create a disconnected session.
@@ -325,7 +325,6 @@ class Broker:
         ssl_context: ssl.SSLContext | None,
     ) -> asyncio.Server | websockets.asyncio.server.Server:
         """Create a server instance for a listener."""
-
         match listener_type:
             case ListenerType.TCP:
                 return await asyncio.start_server(
@@ -356,17 +355,17 @@ class Broker:
             session_count_before = len(self._sessions)
 
             # clean or anonymous sessions don't retain messages (or subscriptions); the session can be filtered out
-            sessions_to_remove = [ client_id for client_id, (session, _) in self._sessions.items()
-                if session.transitions.state == "disconnected" and (session.is_anonymous or session.clean_session) ]
+            sessions_to_remove = [client_id for client_id, (session, _) in self._sessions.items()
+                if session.transitions.state == "disconnected" and (session.is_anonymous or session.clean_session)]
 
             # if session expiration is enabled, check to see if any of the sessions are disconnected and past expiration
             if self.config.session_expiry_interval is not None:
                 retain_after = floor(time.time() - self.config.session_expiry_interval)
 
-                sessions_to_remove += [ client_id for client_id, (session, _) in self._sessions.items()
+                sessions_to_remove += [client_id for client_id, (session, _) in self._sessions.items()
                                         if session.transitions.state == "disconnected" and
                                         session.last_disconnect_time and
-                                        session.last_disconnect_time < retain_after ]
+                                        session.last_disconnect_time < retain_after]
 
             for client_id in sessions_to_remove:
                 await self._cleanup_session(client_id)
@@ -586,9 +585,7 @@ class Broker:
         # if this is not a new session, there are subscriptions associated with them; publish any topic retained messages
         self.logger.debug("Publish retained messages to a pre-existing session's subscriptions.")
         for topic in self._subscriptions:
-            await self._publish_retained_messages_for_subscription( (topic, QOS_0), client_session)
-
-
+            await self._publish_retained_messages_for_subscription((topic, QOS_0), client_session)
 
         await self._client_message_loop(client_session, handler)
 
@@ -619,7 +616,6 @@ class Broker:
                     connected = False
 
                     # no need to reschedule the `disconnect_waiter` since we're exiting the message loop
-
 
                 if subscribe_waiter in done:
                     await self._handle_subscription(client_session, handler, subscribe_waiter)
@@ -689,7 +685,6 @@ class Broker:
         await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED,
                                               client_id=client_session.client_id,
                                               client_session=client_session)
-
 
     async def _handle_subscription(
         self,
@@ -808,7 +803,7 @@ class Broker:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
 
-        results = [ result for _, result in returns.items() if result is not None] if returns else []
+        results = [result for _, result in returns.items() if result is not None] if returns else []
         if len(results) < 1:
             self.logger.debug("Authentication failed: no plugin responded with a boolean")
             return False

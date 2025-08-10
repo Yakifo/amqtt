@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     """Run the auth db cli."""
     try:
-        from amqtt.contrib.auth_db.topic_mgr_cli import topic_app  #  pylint: disable=import-outside-toplevel
+        from amqtt.contrib.auth_db.topic_mgr_cli import topic_app  # pylint: disable=import-outside-toplevel
     except ImportError:
         logger.critical("optional 'contrib' library is missing, please install: `pip install amqtt[contrib]`")
         sys.exit(1)
 
-    from amqtt.contrib.auth_db.topic_mgr_cli import topic_app  #  pylint: disable=import-outside-toplevel
+    from amqtt.contrib.auth_db.topic_mgr_cli import topic_app  # pylint: disable=import-outside-toplevel
 
     try:
         topic_app()
@@ -31,6 +31,7 @@ def main() -> None:
     except MQTTError as me:
         logger.critical(f"could not execute command: {me}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

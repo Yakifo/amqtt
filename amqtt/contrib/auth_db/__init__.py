@@ -8,7 +8,7 @@ try:
 except ImportError:
     # support for python 3.10
     from enum import Enum
-    class StrEnum(str, Enum):  #type: ignore[no-redef]
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
         pass
 
 from .plugin import TopicAuthDBPlugin, UserAuthDBPlugin
@@ -39,7 +39,7 @@ _db_map = {
 }
 
 
-def db_connection_str(db_type: DBType, db_username: str, db_host:str, db_port: int|None, db_filename: str) -> str:
+def db_connection_str(db_type: DBType, db_username: str, db_host: str, db_port: int | None, db_filename: str) -> str:
     """Create sqlalchemy database connection string."""
     db_info = _db_map[db_type]
     if db_type == DBType.SQLITE:

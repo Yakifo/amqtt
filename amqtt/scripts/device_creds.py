@@ -16,7 +16,7 @@ def main() -> None:
 
 
 @app.command()
-def device_creds( # pylint: disable=too-many-locals
+def device_creds(  # pylint: disable=too-many-locals
         country: str = typer.Option(..., "--country", help="x509 'country_name' attribute"),
         org_name: str = typer.Option(..., "--org-name", help="x509 'organization_name' attribute"),
         device_id: str = typer.Option(..., "--device-id", help="device id for the SAN"),
@@ -58,6 +58,7 @@ def device_creds( # pylint: disable=too-many-locals
     write_key_and_crt(device_key, device_crt, device_id, Path(output_dir))
 
     logger.info(f"✅ Created: {device_id}.crt and {device_id}.key")
+
 
 if __name__ == "__main__":
     main()

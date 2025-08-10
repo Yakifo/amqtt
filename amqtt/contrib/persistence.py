@@ -82,7 +82,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
 
     @staticmethod
-    async def _get_or_create_session(db_session: AsyncSession, client_id:str) -> StoredSession:
+    async def _get_or_create_session(db_session: AsyncSession, client_id: str) -> StoredSession:
 
         stmt = select(StoredSession).filter(StoredSession.client_id == client_id)
         stored_session = await db_session.scalar(stmt)
@@ -92,9 +92,8 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         await db_session.flush()
         return stored_session
 
-
     @staticmethod
-    async def _get_or_create_message(db_session: AsyncSession, topic:str) -> StoredMessage:
+    async def _get_or_create_message(db_session: AsyncSession, topic: str) -> StoredMessage:
 
         stmt = select(StoredMessage).filter(StoredMessage.topic == topic)
         stored_message = await db_session.scalar(stmt)
@@ -104,8 +103,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         await db_session.flush()
         return stored_message
 
-
-    async def on_broker_client_connected(self, client_id:str, client_session:Session) -> None:
+    async def on_broker_client_connected(self, client_id: str, client_session: Session) -> None:
         """Search to see if session already exists."""
         # if client id doesn't exist, create (can ignore if session is anonymous)
         # update session information (will, clean_session, etc)
@@ -239,7 +237,6 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
                 ))
                 restored_messages += 1
             logger.info(f"Retained messages restored: {restored_messages}")
-
 
         logger.info(f"Restored {restored_sessions} sessions.")
 

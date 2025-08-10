@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 topic_app = typer.Typer(no_args_is_help=True)
 
 
-
 @topic_app.callback()
 def main(
         ctx: typer.Context,

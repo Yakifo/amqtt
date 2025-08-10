@@ -21,7 +21,7 @@ def main() -> None:
     app()
 
 
-def _version(v:bool) -> None:
+def _version(v: bool) -> None:
     if v:
         typer.echo(f"{amqtt_version}")
         raise typer.Exit(code=0)
@@ -65,7 +65,7 @@ def broker_main(
         typer.echo(f"❌ Broker failed to start: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-    _ = loop.create_task(broker.start())  #noqa : RUF006
+    _ = loop.create_task(broker.start())  # noqa : RUF006
     try:
         loop.run_forever()
     except KeyboardInterrupt:

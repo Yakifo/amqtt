@@ -35,6 +35,7 @@ class ShadowMessage:
     def to_message(self) -> bytes:
         return json.dumps(asdict_no_none(self)).encode("utf-8")
 
+
 @dataclass
 class GetAcceptedMessage(ShadowMessage):
     state: State[dict[str, Any]]
@@ -46,6 +47,7 @@ class GetAcceptedMessage(ShadowMessage):
     def topic(device_id: str, shadow_name: str) -> str:
         return create_shadow_topic(device_id, shadow_name, ShadowOperation.GET_ACCEPT)
 
+
 @dataclass
 class GetRejectedMessage(ShadowMessage):
     code: int
@@ -55,6 +57,7 @@ class GetRejectedMessage(ShadowMessage):
     @staticmethod
     def topic(device_id: str, shadow_name: str) -> str:
         return create_shadow_topic(device_id, shadow_name, ShadowOperation.GET_REJECT)
+
 
 @dataclass
 class UpdateAcceptedMessage(ShadowMessage):
@@ -78,6 +81,7 @@ class UpdateRejectedMessage(ShadowMessage):
     def topic(device_id: str, shadow_name: str) -> str:
         return create_shadow_topic(device_id, shadow_name, ShadowOperation.UPDATE_REJECT)
 
+
 @dataclass
 class UpdateDeltaMessage(ShadowMessage):
     state: MutableMapping[str, Any]
@@ -89,12 +93,14 @@ class UpdateDeltaMessage(ShadowMessage):
     def topic(device_id: str, shadow_name: str) -> str:
         return create_shadow_topic(device_id, shadow_name, ShadowOperation.UPDATE_DELTA)
 
+
 class UpdateIotaMessage(UpdateDeltaMessage):
     """Same format, corollary name."""
 
     @staticmethod
     def topic(device_id: str, shadow_name: str) -> str:
         return create_shadow_topic(device_id, shadow_name, ShadowOperation.UPDATE_IOTA)
+
 
 @dataclass
 class UpdateDocumentMessage(ShadowMessage):

@@ -18,11 +18,12 @@ logger = logging.getLogger(__name__)
 
 matcher = TopicMatcher()
 
+
 @dataclass
 class AllowedTopic:
     topic: str
 
-    def __contains__(self, item: Union[str,"AllowedTopic"]) -> bool:
+    def __contains__(self, item: Union[str, "AllowedTopic"]) -> bool:
         """Determine `in`."""
         return self.__eq__(item)
 
@@ -42,6 +43,7 @@ class AllowedTopic:
     def __repr__(self) -> str:
         """Display topic."""
         return self.topic
+
 
 class PasswordHasher:
     """singleton to initialize the CryptContext and then use it elsewhere in the code."""

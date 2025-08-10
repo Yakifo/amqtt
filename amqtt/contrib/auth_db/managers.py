@@ -52,7 +52,7 @@ class UserManager:
                 raise MQTTError(msg)
             return users
 
-    async def create_user_auth(self, username: str, plain_password:str) -> UserAuth | None:
+    async def create_user_auth(self, username: str, plain_password: str) -> UserAuth | None:
         """Create a new user."""
         async with self._db_session_maker() as db_session, db_session.begin():
             stmt = select(UserAuth).filter(UserAuth.username == username)

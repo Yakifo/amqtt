@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import logging
-from pathlib import Path
 
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
@@ -29,7 +28,7 @@ config = {
 
 
 async def test_coro(certfile: str) -> None:
-    config['certfile'] = certfile
+    config["certfile"] = certfile
     client = MQTTClient(config=config)
 
     await client.connect("mqtts://localhost:8883")
@@ -47,7 +46,7 @@ def __main__():
     formatter = "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.DEBUG, format=formatter)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cert', default='cert.pem', help="path & file to verify server's authenticity")
+    parser.add_argument("--cert", default="cert.pem", help="path & file to verify server's authenticity")
     args = parser.parse_args()
 
     asyncio.run(test_coro(args.cert))

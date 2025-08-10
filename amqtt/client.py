@@ -424,14 +424,10 @@ class MQTTClient:
         scheme = uri_attributes.scheme
         secure = scheme in ("mqtts", "wss")
         self.session.username = (
-            self.session.username
-            if self.session.username
-            else (str(uri_attributes.username) if uri_attributes.username else None)
+            self.session.username or (str(uri_attributes.username) if uri_attributes.username else None)
         )
         self.session.password = (
-            self.session.password
-            if self.session.password
-            else (str(uri_attributes.password) if uri_attributes.password else None)
+            self.session.password or (str(uri_attributes.password) if uri_attributes.password else None)
         )
         self.session.remote_address = str(uri_attributes.hostname) if uri_attributes.hostname else None
         self.session.remote_port = uri_attributes.port

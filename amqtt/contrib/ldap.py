@@ -8,7 +8,7 @@ from amqtt.broker import BrokerContext
 from amqtt.contexts import Action
 from amqtt.errors import PluginInitError
 from amqtt.plugins import TopicMatcher
-from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin, BasePlugin
+from amqtt.plugins.base import BaseAuthPlugin, BasePlugin, BaseTopicPlugin
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ class AuthLdapPlugin(BasePlugin[BrokerContext]):
             self.conn.simple_bind_s(self.config.bind_dn, self.config.bind_password)
         except ldap.INVALID_CREDENTIALS as e:  # pylint: disable=E1101
             raise PluginInitError(self.__class__) from e
+
 
 class UserAuthLdapPlugin(AuthLdapPlugin, BaseAuthPlugin):
     """Plugin to authenticate a user with an LDAP directory server."""
@@ -76,6 +77,7 @@ class UserAuthLdapPlugin(AuthLdapPlugin, BaseAuthPlugin):
     class Config(LdapConfig):
         """Configuration for the User Auth LDAP Plugin."""
 
+
 class TopicAuthLdapPlugin(AuthLdapPlugin, BaseTopicPlugin):
     """Plugin to authenticate a user with an LDAP directory server."""
 
@@ -107,7 +109,6 @@ class TopicAuthLdapPlugin(AuthLdapPlugin, BaseTopicPlugin):
         ]
         results = self.conn.search_s(self.config.base_dn, ldap.SCOPE_SUBTREE, search_filter, attrs)  # pylint: disable=E1101
 
-
         if not results:
             logger.debug(f"user not found: {session.username}")
             return False
@@ -120,11 +121,10 @@ class TopicAuthLdapPlugin(AuthLdapPlugin, BaseTopicPlugin):
         dn, entry = results[0]
 
         ldap_attribute = getattr(self.config, self._action_attr_map[action])
-        topic_filters =  [t.decode("utf-8") for t in entry.get(ldap_attribute, [])]
+        topic_filters = [t.decode("utf-8") for t in entry.get(ldap_attribute, [])]
         logger.debug(f"DN: {dn} - {ldap_attribute}={topic_filters}")
 
         return self.topic_matcher.are_topics_allowed(topic, topic_filters)
-
 
     @dataclass
     class Config(LdapConfig):

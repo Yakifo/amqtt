@@ -40,7 +40,7 @@ class Shadow(ShadowBase):
 
     device_id: Mapped[str] = mapped_column(String(128), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
-    version: Mapped[int] =mapped_column(Integer, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
 
     _state: Mapped[dict[str, Any]] = mapped_column("state", JSON, nullable=False, default=dict)
 
@@ -106,7 +106,7 @@ def prevent_update(_mapper: Mapper[Any], _session: Session, _instance: "Shadow")
 
 
 @event.listens_for(Session, "before_flush")
-def convert_update_to_insert(session: Session, _flush_context: object, _instances:object | None) -> None:
+def convert_update_to_insert(session: Session, _flush_context: object, _instances: object | None) -> None:
     """Force a shadow to insert a new version, instead of updating an existing."""
     # Make a copy of the dirty set so we can safely mutate the session
     dirty = list(session.dirty)
@@ -126,6 +126,7 @@ def convert_update_to_insert(session: Session, _flush_context: object, _instance
         obj.version += 1             # bump version or modify fields
 
         session.add(obj)             # re-add as new object
+
 
 _listener_example = '''#
 # @event.listens_for(Shadow, "before_insert")

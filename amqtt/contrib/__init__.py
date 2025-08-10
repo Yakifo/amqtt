@@ -36,9 +36,11 @@ class DataClassListJSON(TypeDecorator[list[dict[str, Any]]]):
         if value is None:
             return None
         return [self.dataclass_type(**item) for item in value]
+
     def process_literal_param(self, value: Any, dialect: Any) -> Any:
         # Required by SQLAlchemy, typically used for literal SQL rendering.
         return value
+
     @property
     def python_type(self) -> type:
         # Required by TypeEngine to indicate the expected Python type.

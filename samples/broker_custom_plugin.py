@@ -1,8 +1,6 @@
 import asyncio
-import logging
-import os
 from dataclasses import dataclass
-from pathlib import Path
+import logging
 
 from amqtt.broker import Broker
 from amqtt.plugins.base import BasePlugin
@@ -18,7 +16,7 @@ logger = logging.getLogger(__name__)
 class RemoteInfoPlugin(BasePlugin):
 
     async def on_broker_client_connected(self, *, client_id:str, client_session:Session) -> None:
-        display_port_str = f"on port '{client_session.remote_port}'" if self.config.display_port else ''
+        display_port_str = f"on port '{client_session.remote_port}'" if self.config.display_port else ""
 
         logger.info(f"client '{client_id}' connected from"
                     f" '{client_session.remote_address}' {display_port_str}")
@@ -40,8 +38,8 @@ config = {
         },
     },
     "plugins": {
-        'amqtt.plugins.authentication.AnonymousAuthPlugin': { 'allow_anonymous': True},
-        'samples.broker_custom_plugin.RemoteInfoPlugin': { 'display_port': True },
+        "amqtt.plugins.authentication.AnonymousAuthPlugin": { "allow_anonymous": True},
+        "samples.broker_custom_plugin.RemoteInfoPlugin": { "display_port": True },
     }
 }
 

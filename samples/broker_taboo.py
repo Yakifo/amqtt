@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from pathlib import Path
 
 from amqtt.broker import Broker
@@ -24,12 +23,12 @@ config = {
         },
     },
     "plugins": {
-        'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True},
-        'amqtt.plugins.authentication.FileAuthPlugin': {
-            'password_file': Path(__file__).parent / 'passwd',
+        "amqtt.plugins.authentication.AnonymousAuthPlugin": {"allow_anonymous": True},
+        "amqtt.plugins.authentication.FileAuthPlugin": {
+            "password_file": Path(__file__).parent / "passwd",
         },
-        'amqtt.plugins.sys.broker.BrokerSysPlugin': {"sys_interval": 10},
-        'amqtt.plugins.topic_checking.TopicTabooPlugin': {},
+        "amqtt.plugins.sys.broker.BrokerSysPlugin": {"sys_interval": 10},
+        "amqtt.plugins.topic_checking.TopicTabooPlugin": {},
     }
 }
 
