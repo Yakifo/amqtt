@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.11.3
+
+* Structural elements for the 0.11.3 release https://github.com/Yakifo/amqtt/pull/265
+* Release Candidate Branch for 0.11.3 https://github.com/Yakifo/amqtt/pull/272
+* update the configuration for the broker running at test.amqtt.io  https://github.com/Yakifo/amqtt/pull/271
+* Improved broker script logging https://github.com/Yakifo/amqtt/pull/277
+* test.amqtt.io dashboard cleanup  https://github.com/Yakifo/amqtt/pull/278
+* Structured broker and client configurations https://github.com/Yakifo/amqtt/pull/269
+* Determine auth & topic access via external http server https://github.com/Yakifo/amqtt/pull/262
+* Plugin: authentication against a relational database  https://github.com/Yakifo/amqtt/pull/280
+* Fixes #247 : expire disconnected sessions https://github.com/Yakifo/amqtt/pull/279
+* Expanded structure for plugin documentation https://github.com/Yakifo/amqtt/pull/281
+* Yakifo/amqtt#120 confirms : validate example is functioning https://github.com/Yakifo/amqtt/pull/284
+* Yakifo/amqtt#39 : adding W0718 'broad exception caught' https://github.com/Yakifo/amqtt/pull/285
+* Documentation improvement for 0.11.3 https://github.com/Yakifo/amqtt/pull/286
+* Plugin naming convention https://github.com/Yakifo/amqtt/pull/288
+* embed amqtt into an existing server https://github.com/Yakifo/amqtt/pull/283
+* Plugin: rebuild of session persistence https://github.com/Yakifo/amqtt/pull/256
+* Plugin: determine authentication based on X509 certificates https://github.com/Yakifo/amqtt/pull/264
+* Plugin: device 'shadows' to bridge device online/offline states https://github.com/Yakifo/amqtt/pull/282
+* Plugin: authenticate against LDAP server https://github.com/Yakifo/amqtt/pull/287
+* Sample: broker and client communicating with mqtt over unix socket https://github.com/Yakifo/amqtt/pull/291
+* Plugin: jwt authentication and authorization https://github.com/Yakifo/amqtt/pull/289
+
 ## 0.11.2
 
 -  config-file based plugin loading   [PR #240](https://github.com/Yakifo/amqtt/pull/240)

@@ -1,6 +1,7 @@
 import contextlib
 import logging
 import asyncio
+import ssl
 from asyncio import StreamWriter, StreamReader, Event
 from functools import partial
 from pathlib import Path
@@ -75,6 +76,9 @@ class UnixStreamWriterAdapter(WriterAdapter):
 
         with contextlib.suppress(AttributeError):
             await self._writer.wait_closed()
+
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        pass
 
 
 async def run_broker(socket_file: Path):

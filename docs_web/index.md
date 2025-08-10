@@ -7,10 +7,20 @@
 ## Features
 
 - Full set of [MQTT 3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html) protocol specifications
-- Communication over TCP and/or websocket, including support for SSL/TLS
+- Communication over multiple TCP and/or websocket ports, including support for SSL/TLS
 - Support QoS 0, QoS 1 and QoS 2 messages flow
 - Client auto-reconnection on network lost
-- Custom functionality expansion; plugins included: authentication, `$SYS` topic publishing, session persistence
+- Plugin framework for functionality expansion; included plugins:
+  - `$SYS` topic publishing
+  - AWS IOT-style shadow states
+  - x509 certificate authentication (including cli cert creation)
+  - Secure file-based password authentication
+  - Configuration-based topic authorization
+  - MySQL, Postgres & SQLite user and/or topic auth (including cli manager)
+  - External server (HTTP) user and/or topic auth
+  - LDAP user and/or topic auth
+  - JWT user and/or topic auth
+  - Fail over session persistence
 
 ## Installation
 
