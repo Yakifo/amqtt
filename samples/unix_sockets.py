@@ -1,6 +1,5 @@
 import asyncio
-from asyncio import Event, StreamReader, StreamWriter
-import contextlib
+from asyncio import StreamWriter, StreamReader, Event
 from functools import partial
 import logging
 from pathlib import Path
