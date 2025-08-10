@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from amqtt.client import ClientError, MQTTClient
-from amqtt.mqtt.constants import QOS_1, QOS_2
+from amqtt.mqtt3.constants import QOS_1, QOS_2
 
 """
 This sample shows how to subscribe to different $SYS topics and how to receive incoming messages 

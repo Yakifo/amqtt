@@ -4,9 +4,9 @@ import pytest
 
 from amqtt.adapters import BufferReader
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.packet import MQTTFixedHeader, CONNECT
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.publish import PublishPacket, PublishPayload, PublishVariableHeader
+from amqtt.mqtt3.packet import MQTTFixedHeader, CONNECT
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt3.publish import PublishPacket, PublishPayload, PublishVariableHeader
 
 
 class PublishPacketTest(unittest.TestCase):

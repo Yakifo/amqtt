@@ -4,8 +4,8 @@ import pytest
 
 from amqtt.adapters import BufferReader
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.packet import MQTTFixedHeader, PUBLISH
-from amqtt.mqtt.pubrel import PacketIdVariableHeader, PubrelPacket
+from amqtt.mqtt3.packet import MQTTFixedHeader, PUBLISH
+from amqtt.mqtt3.pubrel import PacketIdVariableHeader, PubrelPacket
 
 
 class PubrelPacketTest(unittest.TestCase):

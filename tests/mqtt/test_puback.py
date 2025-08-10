@@ -4,8 +4,8 @@ import pytest
 
 from amqtt.adapters import BufferReader
 from amqtt.errors import AMQTTError
-from amqtt.mqtt import PUBLISH, MQTTFixedHeader
-from amqtt.mqtt.puback import PacketIdVariableHeader, PubackPacket
+from amqtt.mqtt3 import PUBLISH, MQTTFixedHeader
+from amqtt.mqtt3.puback import PacketIdVariableHeader, PubackPacket
 
 
 class PubackPacketTest(unittest.TestCase):

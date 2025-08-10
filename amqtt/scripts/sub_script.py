@@ -14,7 +14,7 @@ import typer
 from amqtt import __version__ as amqtt_version
 from amqtt.client import MQTTClient
 from amqtt.errors import ClientError, ConnectError, MQTTError
-from amqtt.mqtt.constants import QOS_0
+from amqtt.mqtt3.constants import QOS_0
 from amqtt.utils import read_yaml_config
 
 logger = logging.getLogger(__name__)

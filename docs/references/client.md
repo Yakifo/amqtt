@@ -13,9 +13,10 @@ import logging
 import asyncio
 
 from amqtt.client import MQTTClient, ClientException
-from amqtt.mqtt.constants import QOS_1, QOS_2
+from amqtt.mqtt3.constants import QOS_1, QOS_2
 
 logger = logging.getLogger(__name__)
+
 
 async def uptime_coro():
     C = MQTTClient()
@@ -23,9 +24,9 @@ async def uptime_coro():
     # Subscribe to '$SYS/broker/uptime' with QOS=1
     # Subscribe to '$SYS/broker/load/#' with QOS=2
     await C.subscribe([
-            ('$SYS/broker/uptime', QOS_1),
-            ('$SYS/broker/load/#', QOS_2),
-         ])
+        ('$SYS/broker/uptime', QOS_1),
+        ('$SYS/broker/load/#', QOS_2),
+    ])
     try:
         for i in range(1, 100):
             message = await C.deliver_message()
@@ -35,6 +36,7 @@ async def uptime_coro():
         await C.disconnect()
     except ClientException as ce:
         logger.error("Client exception: %s" % ce)
+
 
 if __name__ == '__main__':
     formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -60,9 +62,10 @@ import logging
 import asyncio
 
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
 
 logger = logging.getLogger(__name__)
+
 
 async def test_coro():
     C = MQTTClient()
@@ -84,7 +87,7 @@ async def test_coro2():
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_0', qos=QOS_0)
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_1', qos=QOS_1)
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_2', qos=QOS_2)
-        #print(message)
+        # print(message)
         logger.info("messages published")
         await C.disconnect()
     except ConnectException as ce:

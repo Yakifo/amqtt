@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from amqtt.broker import Broker
-from amqtt.mqtt.constants import QOS_0
+from amqtt.mqtt3.constants import QOS_0
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.DEBUG, format=formatter)

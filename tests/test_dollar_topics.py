@@ -5,7 +5,7 @@ import pytest
 
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_0
+from amqtt.mqtt3.constants import QOS_0
 
 
 logger = logging.getLogger(__name__)
