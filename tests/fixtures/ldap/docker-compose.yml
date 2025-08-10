@@ -1,0 +1,22 @@
+version: '3'
+services:
+  openldap:
+    image: osixia/openldap:latest
+    container_name: openldap
+    command: [--copy-service]
+    restart: always
+    volumes:
+      - ./customuser.schema:/container/service/slapd/assets/config/bootstrap/schema/customuser.schema
+      - ./customusers.ldif:/container/service/slapd/assets/config/bootstrap/ldif/50-customusers.ldif
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+    ports:
+      - "1389:389"
+      - "1636:636"
+    environment:
+      - LDAP_ADMIN_PASSWORD=adminpassword
+      - LDAP_DOMAIN=amqtt.io
+
+volumes:
+  ldap-data:
+  ldap-config:

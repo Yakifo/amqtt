@@ -17,7 +17,8 @@
 - Communication over multiple TCP and/or websocket ports, including support for SSL/TLS
 - Support QoS 0, QoS 1 and QoS 2 messages flow
 - Client auto-reconnection on network lost
-- Functionality expansion; optional plugins included:
+
+- Plugin framework for functionality expansion; included plugins:
   - `$SYS` topic publishing
   - AWS IOT-style shadow states
   - x509 certificate authentication (including cli cert creation)
@@ -28,7 +29,6 @@
   - LDAP user and/or topic auth
   - JWT user and/or topic auth
   - Fail over session persistence
-
 
 ## Installation
 

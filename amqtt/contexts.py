@@ -44,6 +44,7 @@ class ListenerType(StrEnum):
 
     TCP = "tcp"
     WS = "ws"
+    EXTERNAL = "external"
 
     def __repr__(self) -> str:
         """Display the string value, instead of the enum member."""
@@ -114,6 +115,8 @@ class ListenerConfig(Dictable):
     certificates needed to establish the certificate's authenticity.)"""
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the server's private key."""
+    reader: str | None = None
+    writer: str | None = None
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
@@ -124,6 +127,9 @@ class ListenerConfig(Dictable):
         for fn in ("cafile", "capath", "certfile", "keyfile"):
             if isinstance(getattr(self, fn), str):
                 setattr(self, fn, Path(getattr(self, fn)))
+            if getattr(self, fn) and not getattr(self, fn).exists():
+                msg = f"'{fn}' does not exist : {getattr(self, fn)}"
+                raise FileNotFoundError(msg)
 
     def apply(self, other: "ListenerConfig") -> None:
         """Apply the field from 'other', if 'self' field is default."""
@@ -131,11 +137,13 @@ class ListenerConfig(Dictable):
             if getattr(self, f.name) == f.default:
                 setattr(self, f.name, other[f.name])
 
+
 def default_listeners() -> dict[str, Any]:
     """Create defaults for BrokerConfig.listeners."""
     return {
         "default": ListenerConfig()
     }
+
 
 def default_broker_plugins() -> dict[str, Any]:
     """Create defaults for BrokerConfig.plugins."""
@@ -326,6 +334,8 @@ class ClientConfig(Dictable):
     topics: dict[str, TopicConfig] | None = field(default_factory=dict)
     """Specify the topics and what flags should be set for messages published to them."""
     broker: ConnectionConfig | None = field(default_factory=ConnectionConfig)
+    """*Deprecated* Configuration for connecting to the broker. Use `connection` field instead."""
+    connection: ConnectionConfig = field(default_factory=ConnectionConfig)
     """Configuration for connecting to the broker. See
      [`ConnectionConfig`](client_config.md#amqtt.contexts.ConnectionConfig) for more information."""
     plugins: dict[str, Any] | list[dict[str, Any]] | None = field(default_factory=default_client_plugins)
@@ -338,10 +348,17 @@ class ClientConfig(Dictable):
     """Message, topic and flags that should be sent to if the client disconnects. See
     [`WillConfig`](client_config.md#amqtt.contexts.WillConfig) for more information."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.default_qos is not None and (self.default_qos < QOS_0 or self.default_qos > QOS_2):
             msg = "Client config: default QoS must be 0, 1 or 2."
+            raise ValueError(msg)
+
+        if self.broker is not None:
+            self.connection = self.broker
+
+        if bool(not self.connection.keyfile) ^ bool(not self.connection.certfile):
+            msg = "Connection key and certificate files are _both_ required."
             raise ValueError(msg)
 
     @classmethod

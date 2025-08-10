@@ -32,3 +32,7 @@ class TopicMatcher:
                                                                .lstrip("?"))
         match_pattern = self._topic_filter_matchers[a_filter]
         return bool(match_pattern.fullmatch(topic))
+
+    def are_topics_allowed(self, topic: str, many_filters: list[str]) -> bool:
+
+        return any(self.is_topic_allowed(topic, a_filter) for a_filter in many_filters)

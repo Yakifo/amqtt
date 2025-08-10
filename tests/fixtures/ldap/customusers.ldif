@@ -1,0 +1,18 @@
+dn: ou=users,dc=amqtt,dc=io
+objectClass: organizationalUnit
+ou: users
+description: Organizational Unit for storing user entries
+
+dn: uid=jdoe,ou=users,dc=amqtt,dc=io
+objectClass: inetOrgPerson
+objectClass: customuserinfo
+cn: John Doe
+sn: Doe
+uid: jdoe
+mail: jdoe@amqtt.io
+# `slappasswd -s johndoepassword`
+userPassword: {SSHA}ANVSnjfMu85vXHNS5XW7i4EHGJ8VjMtu
+publishACL: my/topic/#
+publishACL: other/+/topic
+subscribeACL: my/topic/two
+receiveACL: my/topic/three

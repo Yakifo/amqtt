@@ -32,8 +32,11 @@ jobs:
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           python-version: "3.13"
 
+      - name: install openldap dependencies
+        run: sudo apt-get install -y libldap2-dev libsasl2-dev
+
       - name: 🏗 Install the project
-        run: uv sync --locked --dev --extra contrib
+        run: uv sync --locked --dev --all-extras
 
       - name: Run mypy
         run: uv run --frozen mypy ${{ env.PROJECT_PATH }}/
@@ -68,8 +71,11 @@ jobs:
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           python-version: ${{ matrix.python-version }}
 
+      - name: install openldap dependencies
+        run: sudo apt-get install -y libldap2-dev libsasl2-dev
+
       - name: 🏗 Install the project
-        run: uv sync --locked --dev --extra contrib
+        run: uv sync --locked --dev --all-extras
 
       - name: Run pytest
         run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
