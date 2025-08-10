@@ -217,6 +217,9 @@ class BufferWriter(WriterAdapter):
     This adapter simply adapts writing to a byte buffer.
     """
 
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        return None
+
     def __init__(self, buffer: bytes = b"") -> None:
         self._stream = io.BytesIO(buffer)
 
