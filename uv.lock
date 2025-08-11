@@ -132,7 +132,6 @@ name = "amqtt"
 version = "0.11.3"
 source = { editable = "." }
 dependencies = [
-    { name = "aiohttp" },
     { name = "dacite" },
     { name = "passlib" },
     { name = "psutil" },
@@ -188,6 +187,7 @@ dev = [
     { name = "types-setuptools" },
 ]
 docs = [
+    { name = "griffe" },
     { name = "markdown-callouts" },
     { name = "markdown-exec" },
     { name = "mkdocs" },
@@ -207,7 +207,6 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", specifier = ">=3.12.7" },
     { name = "aiohttp", marker = "extra == 'contrib'", specifier = ">=3.12.13" },
     { name = "aiosqlite", marker = "extra == 'contrib'", specifier = ">=0.21.0" },
     { name = "argon2-cffi", marker = "extra == 'contrib'", specifier = ">=25.1.0" },
@@ -258,6 +257,7 @@ dev = [
     { name = "types-setuptools", specifier = ">=78.1.0.20250329" },
 ]
 docs = [
+    { name = "griffe", specifier = ">=1.11.1" },
     { name = "markdown-callouts", specifier = ">=0.4" },
     { name = "markdown-exec", specifier = ">=1.8" },
     { name = "mkdocs", specifier = ">=1.6" },
@@ -936,14 +936,14 @@ wheels = [
 
 [[package]]
 name = "griffe"
-version = "1.7.3"
+version = "1.11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/3e/5aa9a61f7c3c47b0b52a1d930302992229d191bf4bc76447b324b731510a/griffe-1.7.3.tar.gz", hash = "sha256:52ee893c6a3a968b639ace8015bec9d36594961e156e23315c8e8e51401fa50b", size = 395137, upload-time = "2025-04-23T11:29:09.147Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/0f/9cbd56eb047de77a4b93d8d4674e70cd19a1ff64d7410651b514a1ed93d5/griffe-1.11.1.tar.gz", hash = "sha256:d54ffad1ec4da9658901eb5521e9cddcdb7a496604f67d8ae71077f03f549b7e", size = 410996, upload-time = "2025-08-11T11:38:35.528Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/c6/5c20af38c2a57c15d87f7f38bee77d63c1d2a3689f74fefaf35915dd12b2/griffe-1.7.3-py3-none-any.whl", hash = "sha256:c6b3ee30c2f0f17f30bcdef5068d6ab7a2a4f1b8bf1a3e74b56fffd21e1c5f75", size = 129303, upload-time = "2025-04-23T11:29:07.145Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/a3/451ffd422ce143758a39c0290aaa7c9727ecc2bcc19debd7a8f3c6075ce9/griffe-1.11.1-py3-none-any.whl", hash = "sha256:5799cf7c513e4b928cfc6107ee6c4bc4a92e001f07022d97fd8dee2f612b6064", size = 138745, upload-time = "2025-08-11T11:38:33.964Z" },
 ]
 
 [[package]]

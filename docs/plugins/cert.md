@@ -65,9 +65,32 @@ async def main():
 asyncio.run(main())
 ```
 
-::: amqtt.contrib.cert.CertificateAuthPlugin
+## Background
 
-### Root & Certificate Credentials
+Often used for IoT devices, this method provides the most secure form of identification. A root
+certificate, often referenced as a CA certificate -- either issued by a known authority (such as LetsEncrypt)
+or a self-signed certificate) is used to sign a private key and certificate for the server. Each device/client
+also gets a unique private key and certificate signed by the same CA certificate; also included in the device
+certificate is a 'SAN' or SubjectAlternativeName which is the device's unique identifier.
+
+Since both server and device certificates are signed by the same CA certificate, the client can
+verify the server's authenticity; and the server can verify the client's authenticity. And since
+the device's certificate contains a x509 SAN, the server (with this plugin) can identify the device securely.
+
+!!! note "URI and Client ID configuration"
+    `uri_domain` configuration must be set to the same uri used to generate the device credentials
+
+    when a device is connecting with private key and certificate, the `client_id` must
+    match the device id used to generate the device credentials.
+
+Available ore three scripts to help with the key generation and certificate signing: `ca_creds`, `server_creds`
+and `device_creds`.
+
+!!! note "Configuring broker & client for using Self-signed root CA"
+    If using self-signed root credentials, the `cafile` configuration for both broker and client need to be
+    configured with `cafile` set to the `ca.crt`.
+
+## Root & Certificate Credentials
 
 The process for generating a server's private key and certificate is only done once. If you have a private key & certificate -- 
 such as one from verifying your webserver's domain with LetsEncrypt -- that you want to use, pass them to the `server_creds` cli.
@@ -99,7 +122,7 @@ flowchart LR
     ssi --> skc
 ```
 
-### Device credentials
+## Device credentials
 
 For each device, create a device id to generate a device-specific private key and certificate using the `device_creds` cli.
 Use the same CA as was used for the server (above) so the client & server recognize each other.
@@ -127,9 +150,9 @@ flowchart LR
     con["country, org<br/>common name<br/>& device id"] --> ccsr
 ```
 
-### Configuration
+## Configuration
 
-::: amqtt.contrib.cert.CertificateAuthPlugin.Config
+::: amqtt.contrib.cert.UserAuthCertPlugin.Config
     options:
       show_source: false
       heading_level: 4
@@ -137,7 +160,7 @@ flowchart LR
         class_style: "simple"
 
 
-### Key and Certificate Generation
+## Key and Certificate Generation
 
 ::: mkdocs-typer2
     :module: amqtt.scripts.ca_creds

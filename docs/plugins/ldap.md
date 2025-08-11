@@ -8,7 +8,7 @@ for client authentication and/or topic-level authorization.
 
 Authenticate a user with an LDAP directory server.
 
-## User Auth
+# User Auth
 
 ::: amqtt.contrib.ldap.UserAuthLdapPlugin.Config
     options:
@@ -16,7 +16,7 @@ Authenticate a user with an LDAP directory server.
       extra:
         class_style: "simple"
 
-## Topic Auth (ACL)
+# Topic Auth (ACL)
 
 ::: amqtt.contrib.ldap.TopicAuthLdapPlugin.Config
     options:

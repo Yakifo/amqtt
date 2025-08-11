@@ -9,7 +9,7 @@ For ease of use, the [`user_mgr` command-line utility](auth_db.md/#user_mgr) to 
 list clients. And the [`topic_mgr` command-line utility](auth_db.md/#topic_mgr) to add client access to
 subscribe, publish and receive messages on topics.
 
-## Authentication Configuration
+# Authentication Configuration
 
 ::: amqtt.contrib.auth_db.UserAuthDBPlugin.Config
     options:
@@ -17,7 +17,7 @@ subscribe, publish and receive messages on topics.
       extra:
         class_style: "simple"
 
-## Authorization Configuration
+# Authorization Configuration
 
 ::: amqtt.contrib.auth_db.TopicAuthDBPlugin.Config
     options:

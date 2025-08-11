@@ -1,13 +1,9 @@
 import ast
-import json
 import pprint
 from typing import Any
 
 import griffe
-from _griffe.agents.inspector import Inspector
-from _griffe.agents.nodes.runtime import ObjectNode
-from _griffe.agents.visitor import Visitor
-from _griffe.models import Attribute
+from griffe import Inspector, ObjectNode, Visitor, Attribute
 
 from amqtt.contexts import default_listeners, default_broker_plugins, default_client_plugins
 from amqtt.contrib.auth_db.plugin import default_hash_scheme

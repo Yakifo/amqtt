@@ -1,17 +1,17 @@
 import asyncio
+import ldap
 import time
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 import pytest
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.client import MQTTClient
 from amqtt.contexts import BrokerConfig, ListenerConfig, ClientConfig, Action
-from amqtt.contrib.auth_db.user_mgr_cli import user_app
 from amqtt.contrib.ldap import UserAuthLdapPlugin, TopicAuthLdapPlugin
 from amqtt.errors import ConnectError
 from amqtt.session import Session
-from tests.test_cli import broker
 
 
 # Pin the project name to avoid creating multiple stacks
@@ -29,7 +29,7 @@ def docker_compose_file(pytestconfig):
     return Path(pytestconfig.rootdir) / "tests/fixtures/ldap" / "docker-compose.yml"
 
 @pytest.fixture(scope="session")
-def ldap_service(docker_ip, docker_services):
+def ldap_service_docker(docker_ip, docker_services):
     """Ensure that HTTP service is up and responsive."""
 
     # `port_for` takes a container port and returns the corresponding host port
@@ -37,6 +37,36 @@ def ldap_service(docker_ip, docker_services):
     url = "ldap://{}:{}".format(docker_ip, port)
     time.sleep(2)
     return url
+
+@pytest.fixture(scope="session")
+def ldap_service_mock():
+    """Ensure that HTTP service is up and responsive."""
+
+    # `port_for` takes a container port and returns the corresponding host port
+    url = "ldap://localhost:0"
+    mock_ldap_object = MagicMock()
+
+    def mock_simple_s(*args, **kwargs):
+        return [ ('dn', {'uid':'jdoe', 'publishACL':[b'my/topic/one', b'my/topic/two']}), ]
+
+    def mock_simple_bind_s(*args):
+        p = args[1]
+        if p in ("adminpassword", "johndoepassword"):
+            return
+        raise ldap.INVALID_CREDENTIALS
+
+    mock_ldap_object.search_s.side_effect = mock_simple_s
+    mock_ldap_object.simple_bind_s.side_effect = mock_simple_bind_s
+    with patch("ldap.initialize", return_value=mock_ldap_object):
+        yield url
+
+@pytest.fixture(scope="session")
+def ldap_service(request):
+    mode = request.config.getoption("--mock-docker")
+    if mode:
+        return request.getfixturevalue("ldap_service_mock")
+    return request.getfixturevalue("ldap_service_docker")
+
 
 @pytest.mark.asyncio
 async def test_ldap_user_plugin(ldap_service):

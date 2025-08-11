@@ -13,7 +13,7 @@ import pytest
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.client import MQTTClient
-from amqtt.contrib.cert import CertificateAuthPlugin
+from amqtt.contrib.cert import UserAuthCertPlugin
 from amqtt.errors import ConnectError
 from amqtt.scripts.server_creds import server_creds as get_server_creds
 from amqtt.scripts.device_creds import device_creds as get_device_creds
@@ -99,9 +99,9 @@ async def test_cert_plugin(ssl_object_mock, uri_domain, client_id, expected_resu
     }
 
     bc = BrokerContext(broker=Broker(config=empty_cfg))
-    bc.config = CertificateAuthPlugin.Config(uri_domain=uri_domain)
+    bc.config = UserAuthCertPlugin.Config(uri_domain=uri_domain)
 
-    cert_auth_plugin = CertificateAuthPlugin(bc)
+    cert_auth_plugin = UserAuthCertPlugin(bc)
 
     s = Session()
     s.client_id = client_id
@@ -128,7 +128,7 @@ async def test_client_broker_cert_authentication(ca_creds, server_creds, device_
         },
         'plugins': {
             'amqtt.plugins.logging_amqtt.PacketLoggerPlugin':{},
-            'amqtt.contrib.cert.CertificateAuthPlugin': {'uri_domain': 'test.amqtt.io'},
+            'amqtt.contrib.cert.UserAuthCertPlugin': {'uri_domain': 'test.amqtt.io'},
         }
     }
 
@@ -187,7 +187,7 @@ async def test_client_broker_wrong_certs(ca_creds, server_creds, device_creds):
         },
         'plugins': {
             'amqtt.plugins.logging_amqtt.PacketLoggerPlugin':{},
-            'amqtt.contrib.cert.CertificateAuthPlugin': {'uri_domain': 'test.amqtt.io'},
+            'amqtt.contrib.cert.UserAuthCertPlugin': {'uri_domain': 'test.amqtt.io'},
         }
     }
 

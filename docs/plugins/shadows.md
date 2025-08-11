@@ -171,7 +171,7 @@ state (last row in table).
 | `{ "levels": [1, 10, 4]}`              | `{"levels": [1, 4, 10]}`                 | `{"levels": [1, 4, 10]}`                |
 | `{ "brightness": 100, "mode": "eco" }` | `{ "brightness": 80 }`                   | `{ "brightness": 80, "mode": null }`    |
 
-### Configuration
+## Configuration
 
 ::: amqtt.contrib.shadows.ShadowPlugin.Config
     options:

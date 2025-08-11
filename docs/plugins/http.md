@@ -8,7 +8,7 @@ that respond with information about client authentication and/or topic-level aut
 
 Configuration of these plugins is identical (except for the uri name) so that they can be used independently, if desired.
 
-## User Auth
+# User Auth
 
 See the [Request and Response Modes](#request-response-modes) section below for details on `params_mode` and `response_mode`.
 
@@ -49,7 +49,7 @@ See the [Request and Response Modes](#request-response-modes) section below for 
       extra:
         class_style: "simple"
 
-## Topic ACL
+# Topic ACL
 
 See the [Request and Response Modes](#request-response-modes) section below for details on `params_mode` and `response_mode`.
 

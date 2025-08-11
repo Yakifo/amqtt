@@ -155,3 +155,12 @@ def ca_file_fixture():
         for file in temp_dir.iterdir():
             file.unlink()
         temp_dir.rmdir()
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--mock-docker",
+        action="store",
+        default="false",
+        help="for environments where docker isn't available, mock calls which require docker",
+    )

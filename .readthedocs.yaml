@@ -1,15 +1,22 @@
- version: 2
+version: 2
 
- build:
-   os: "ubuntu-24.04"
-   tools:
-     python: "3.13"
-   jobs:
-     pre_install:
-       - pip install --upgrade pip
-       - pip install uv
-       - uv pip install --group dev --group docs
-       - uv run pytest
+build:
+  os: "ubuntu-24.04"
+  tools:
+    python: "3.13"
+  apt_packages:
+    - libldap2-dev
+    - libsasl2-dev
+  jobs:
+    pre_install:
+      - pip install --upgrade pip
+      - pip install uv
+      - uv venv
+      - uv pip install --group dev --group docs ".[contrib]"
+      - uv run pytest --mock-docker=true
+    build:
+      html:
+        - uv run python -m mkdocs build --clean --site-dir $READTHEDOCS_OUTPUT/html --config-file mkdocs.rtd.yml
 
- mkdocs:
-   configuration: mkdocs.rtd.yml
+mkdocs:
+  configuration: mkdocs.rtd.yml

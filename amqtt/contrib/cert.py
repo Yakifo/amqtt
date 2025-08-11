@@ -27,7 +27,7 @@ from amqtt.session import Session
 logger = logging.getLogger(__name__)
 
 
-class CertificateAuthPlugin(BaseAuthPlugin):
+class UserAuthCertPlugin(BaseAuthPlugin):
     """Used a *signed* x509 certificate's `Subject AlternativeName` or `SAN` to verify client authentication.
 
     Often used for IoT devices, this method provides the most secure form of identification. A root

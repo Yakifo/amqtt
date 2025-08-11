@@ -50,6 +50,8 @@ nav:
             - LDAP Auth: plugins/ldap.md
             - Shadows: plugins/shadows.md
             - Certificate Auth: plugins/cert.md
+            - JWT Auth: plugins/jwt.md
+            - Session persistence: plugins/session.md
       - Reference:
           - Containerization: docker.md
           - Support: support.md
