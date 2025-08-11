@@ -46,7 +46,7 @@ class BasePlugin(Generic[C]):
         return section_config
 
     # Deprecated : supports entrypoint-style configs as well as dataclass configuration.
-    def _get_config_option(self, option_name: str, default: Any=None) -> Any:
+    def _get_config_option(self, option_name: str, default: Any = None) -> Any:
         if not self.context.config:
             return default
 
@@ -75,7 +75,7 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
         if not bool(self.topic_config) and not is_dataclass(self.context.config):
             self.context.logger.warning("'topic-check' section not found in context configuration")
 
-    def _get_config_option(self, option_name: str, default: Any=None) -> Any:
+    def _get_config_option(self, option_name: str, default: Any = None) -> Any:
         if not self.context.config:
             return default
 
@@ -107,7 +107,7 @@ class BaseTopicPlugin(BasePlugin[BaseContext]):
 class BaseAuthPlugin(BasePlugin[BaseContext]):
     """Base class for authentication plugins."""
 
-    def _get_config_option(self, option_name: str, default: Any=None) -> Any:
+    def _get_config_option(self, option_name: str, default: Any = None) -> Any:
         if not self.context.config:
             return default
 
@@ -125,7 +125,6 @@ class BaseAuthPlugin(BasePlugin[BaseContext]):
         if not bool(self.auth_config) and not is_dataclass(self.context.config):
             # auth config section not found and Config dataclass not provided
             self.context.logger.warning("'auth' section not found in context configuration")
-
 
     async def authenticate(self, *, session: Session) -> bool | None:
         """Logic for session authentication.

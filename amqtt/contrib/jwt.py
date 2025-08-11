@@ -9,7 +9,7 @@ try:
 except ImportError:
     # support for python 3.10
     from enum import Enum
-    class StrEnum(str, Enum):  #type: ignore[no-redef]
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
         pass
 
 from amqtt.broker import BrokerContext

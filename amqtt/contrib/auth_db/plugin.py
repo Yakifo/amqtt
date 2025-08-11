@@ -66,6 +66,7 @@ class UserAuthDBPlugin(BaseAuthPlugin):
         hash_schemes: list[str] = field(default_factory=default_hash_scheme)
         """list of hash schemes to use for passwords"""
 
+
 class TopicAuthDBPlugin(BaseTopicPlugin):
 
     def __init__(self, context: BrokerContext) -> None:
@@ -83,7 +84,7 @@ class TopicAuthDBPlugin(BaseTopicPlugin):
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
-    ) -> bool|None:
+    ) -> bool | None:
         if not session or not session.username or not topic:
             return None
 

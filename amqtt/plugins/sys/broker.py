@@ -14,7 +14,7 @@ except ImportError:
     from typing import Protocol, runtime_checkable
 
     @runtime_checkable
-    class Buffer(Protocol):  #  type: ignore[no-redef]
+    class Buffer(Protocol):  # type: ignore[no-redef]
         def __buffer__(self, flags: int = ...) -> memoryview:
             """Mimic the behavior of `collections.abc.Buffer` for python 3.10-3.12."""
 
@@ -74,7 +74,6 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
 
         self._sys_interval: int = 0
         self._current_process = psutil.Process()
-
 
     def _clear_stats(self) -> None:
         """Initialize broker statistics data structures."""

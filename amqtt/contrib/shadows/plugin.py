@@ -28,7 +28,7 @@ from amqtt.session import ApplicationMessage, Session
 
 shadow_topic_re = re.compile(r"^\$shadow/(?P<client_id>[a-zA-Z0-9_-]+?)/(?P<shadow_name>[a-zA-Z0-9_-]+?)/(?P<request>get|update)")
 
-DeviceID= str
+DeviceID = str
 ShadowName = str
 
 
@@ -43,6 +43,7 @@ def shadow_dict() -> dict[DeviceID, dict[ShadowName, StateDocument]]:
     """Nested defaultdict for shadow cache."""
     return defaultdict(shadow_dict)  # type: ignore[arg-type]
 
+
 class ShadowPlugin(BasePlugin[BrokerContext]):
 
     def __init__(self, context: BrokerContext) -> None:
@@ -51,7 +52,6 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
 
         self._engine = create_async_engine(self.config.connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
-
 
     async def on_broker_pre_start(self) -> None:
         """Sync the schema."""
@@ -83,8 +83,8 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
             accept_msg = GetAcceptedMessage(
                 state=shadow.state.state,
                 metadata=shadow.state.metadata,
-                timestamp= shadow.created_at,
-                version= shadow.version
+                timestamp=shadow.created_at,
+                version=shadow.version
             )
             await self.context.broadcast_message(accept_msg.topic(st.device_id, st.name), accept_msg.to_message())
 
@@ -98,7 +98,7 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
 
             prev_state = shadow.state or StateDocument()
             prev_state.version = shadow.version or 0  # only required when generating shadow messages
-            prev_state.timestamp = shadow.created_at or 0 # only required when generating shadow messages
+            prev_state.timestamp = shadow.created_at or 0  # only required when generating shadow messages
 
             next_state = prev_state + state_update
 

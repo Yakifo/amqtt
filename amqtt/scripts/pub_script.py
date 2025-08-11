@@ -118,6 +118,7 @@ async def do_pub(
         logger.fatal("Publish canceled due to previous error")
         raise asyncio.CancelledError from ce
 
+
 app = typer.Typer(add_completion=False, rich_markup_mode=None)
 
 
@@ -131,8 +132,9 @@ def _version(v: bool) -> None:
         typer.echo(f"{amqtt_version}")
         raise typer.Exit(code=0)
 
+
 @app.command()
-def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
+def publisher_main(  # pylint: disable=R0914,R0917
     url: str | None = typer.Option(None, "--url", help="Broker connection URL, *must conform to MQTT or URI scheme: `[mqtt(s)|ws(s)]://<username:password>@HOST:port`*"),
     config_file: str | None = typer.Option(None, "-c", "--config-file", help="Client configuration file"),
     client_id: str | None = typer.Option(None, "-i", "--client-id", help="client identification for mqtt connection. *default: process id and the hostname of the client*"),
@@ -155,7 +157,7 @@ def publisher_main(  # pylint: disable=R0914,R0917  # noqa : PLR0913
     will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. *only valid, if `--will-topic` is specified*"),
     extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
-    version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"), # noqa : ARG001
+    version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"),  # noqa : ARG001
 ) -> None:
     """Command-line MQTT client for publishing simple messages."""
     provided = [bool(message), bool(file), stdin, lines, no_message]

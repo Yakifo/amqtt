@@ -9,14 +9,13 @@ from aiohttp import web
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.broker import Broker
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
-from amqtt.errors import ConnectError
 
 logger = logging.getLogger(__name__)
 
 MQTT_LISTENER_NAME = "myMqttListener"
 
 async def hello(request):
-    """get request handler"""
+    """Get request handler"""
     return web.Response(text="Hello, world")
 
 class WebSocketResponseReader(ReaderAdapter):
@@ -27,17 +26,17 @@ class WebSocketResponseReader(ReaderAdapter):
         self.buffer = bytearray()
 
     async def read(self, n: int = -1) -> bytes:
-        """
-        read 'n' bytes from the datastream, if < 0 read all available bytes
+        """Read 'n' bytes from the datastream, if < 0 read all available bytes
 
         Raises:
             BrokerPipeError : if reading on a closed websocket connection
+
         """
         # continue until buffer contains at least the amount of data being requested
         while not self.buffer or len(self.buffer) < n:
             # if the websocket is closed
             if self.ws.closed:
-                raise BrokenPipeError()
+                raise BrokenPipeError
 
             try:
                 # read from stream
@@ -46,10 +45,10 @@ class WebSocketResponseReader(ReaderAdapter):
                 if msg.type == aiohttp.WSMsgType.BINARY:
                     self.buffer.extend(msg.data)
                 elif msg.type == aiohttp.WSMsgType.CLOSE:
-                    raise BrokenPipeError()
+                    raise BrokenPipeError
 
             except asyncio.TimeoutError:
-                raise BrokenPipeError()
+                raise BrokenPipeError
 
         # return all bytes currently in the buffer
         if n == -1:
@@ -74,7 +73,7 @@ class WebSocketResponseWriter(WriterAdapter):
 
         # needed for `get_peer_info`
         # https://docs.python.org/3/library/socket.html#socket.socket.getpeername
-        peer_name = request.transport.get_extra_info('peername')
+        peer_name = request.transport.get_extra_info("peername")
         if peer_name is not None:
             self.client_ip, self.port = peer_name[0:2]
         else:
@@ -110,17 +109,17 @@ class WebSocketResponseWriter(WriterAdapter):
 async def mqtt_websocket_handler(request: web.Request) -> web.StreamResponse:
 
     # establish connection by responding to the websocket request with the 'mqtt' protocol
-    ws = web.WebSocketResponse(protocols=['mqtt',])
+    ws = web.WebSocketResponse(protocols=["mqtt"])
     await ws.prepare(request)
 
     # access the broker created when the server started
-    b: Broker = request.app['broker']
+    b: Broker = request.app["broker"]
 
     # hand-off the websocket data stream to the broker for handling
     # `listener_name` is the same name of the externalized listener in the broker config
     await b.external_connected(WebSocketResponseReader(ws), WebSocketResponseWriter(ws, request), MQTT_LISTENER_NAME)
 
-    logger.debug('websocket connection closed')
+    logger.debug("websocket connection closed")
     return ws
 
 
@@ -140,9 +139,9 @@ def main():
     app = web.Application()
     app.add_routes(
         [
-            web.get('/', hello), # http get request/response route
-            web.get('/ws', websocket_handler), # standard websocket handler
-            web.get('/mqtt', mqtt_websocket_handler), # websocket handler for mqtt connections
+            web.get("/", hello), # http get request/response route
+            web.get("/ws", websocket_handler), # standard websocket handler
+            web.get("/mqtt", mqtt_websocket_handler), # websocket handler for mqtt connections
         ])
     # create background task for running the `amqtt` broker
     app.cleanup_ctx.append(run_broker)
@@ -154,12 +153,12 @@ def main():
 
 async def run_broker(_app):
     """App init function to start (and then shutdown) the `amqtt` broker.
-    https://docs.aiohttp.org/en/stable/web_advanced.html#background-tasks"""
-
+    https://docs.aiohttp.org/en/stable/web_advanced.html#background-tasks
+    """
     # standard TCP connection as well as an externalized-listener
     cfg = BrokerConfig(
         listeners={
-            'default':ListenerConfig(type=ListenerType.TCP, bind='127.0.0.1:1883'),
+            "default":ListenerConfig(type=ListenerType.TCP, bind="127.0.0.1:1883"),
             MQTT_LISTENER_NAME: ListenerConfig(type=ListenerType.EXTERNAL),
         }
     )
@@ -169,7 +168,7 @@ async def run_broker(_app):
     broker = Broker(config=cfg, loop=loop)
 
     # store broker instance so that incoming requests can hand off processing of a datastream
-    _app['broker'] = broker
+    _app["broker"] = broker
     # start the broker
     await broker.start()
 
@@ -180,6 +179,6 @@ async def run_broker(_app):
     await broker.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main()

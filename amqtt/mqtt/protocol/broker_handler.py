@@ -31,6 +31,7 @@ _MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
 if TYPE_CHECKING:
     from amqtt.broker import BrokerContext
 
+
 class Subscription:
     def __init__(self, packet_id: int, topics: list[tuple[str, int]]) -> None:
         self.packet_id = packet_id

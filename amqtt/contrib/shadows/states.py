@@ -7,7 +7,7 @@ try:
 except ImportError:
     # support for python 3.10
     from enum import Enum
-    class StrEnum(str, Enum):  #type: ignore[no-redef]
+    class StrEnum(str, Enum):  # type: ignore[no-redef]
         pass
 import time
 from typing import Any, Generic, TypeVar
@@ -16,9 +16,11 @@ from mergedeep import merge
 
 C = TypeVar("C", bound=Any)
 
+
 class StateError(Exception):
     def __init__(self, msg: str = "'state' field is required") -> None:
         super().__init__(msg)
+
 
 @dataclass
 class MetaTimestamp:
@@ -58,7 +60,7 @@ class MetaTimestamp:
         """Convert timestamp to int."""
         return int(self.timestamp)
 
-    def __lt__(self, other:int ) -> bool:
+    def __lt__(self, other: int) -> bool:
         """Compare timestamp."""
         return self.timestamp < other
 
@@ -127,6 +129,7 @@ def calculate_iota_update(desired: MutableMapping[str, Any], reported: MutableMa
 
     return delta
 
+
 @dataclass
 class State(Generic[C]):
     desired: MutableMapping[str, C] = field(default_factory=dict)
@@ -156,8 +159,8 @@ class State(Generic[C]):
 class StateDocument:
     state: State[dict[str, Any]] = field(default_factory=State)
     metadata: State[MetaTimestamp] = field(default_factory=State)
-    version: int | None = None # only required when generating shadow messages
-    timestamp: int | None = None # only required when generating shadow messages
+    version: int | None = None  # only required when generating shadow messages
+    timestamp: int | None = None  # only required when generating shadow messages
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "StateDocument":

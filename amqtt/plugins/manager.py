@@ -51,6 +51,7 @@ def safe_issubclass(sub_class: Any, super_class: Any) -> bool:
 AsyncFunc: TypeAlias = Callable[..., Coroutine[Any, Any, None]]
 C = TypeVar("C", bound=BaseContext)
 
+
 class PluginManager(Generic[C]):
     """Wraps contextlib Entry point mechanism to provide a basic plugin system.
 
@@ -96,7 +97,6 @@ class PluginManager(Generic[C]):
         """
         if self.app_context.config and self.app_context.config.get("plugins", None) is not None:
             # plugins loaded directly from config dictionary
-
 
             if "auth" in self.app_context.config and self.app_context.config["auth"] is not None:
                 self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
@@ -147,7 +147,7 @@ class PluginManager(Generic[C]):
                     self.logger.debug(f"'{event}' handler found for '{plugin.__class__.__name__}'")
                     self._event_plugin_callbacks[event].append(awaitable)
 
-    def _load_ep_plugins(self, namespace:str) -> None:
+    def _load_ep_plugins(self, namespace: str) -> None:
         """Load plugins from `pyproject.toml` entrypoints. Deprecated."""
         self.logger.debug(f"Loading plugins for namespace {namespace}")
         auth_filter_list = []
@@ -224,7 +224,7 @@ class PluginManager(Generic[C]):
     def _load_str_plugin(self, plugin_path: str, plugin_cfg: dict[str, Any] | None = None) -> "BasePlugin[C]":
         """Load plugin from string dotted path: mymodule.myfile.MyPlugin."""
         try:
-            plugin_class: Any =  import_string(plugin_path)
+            plugin_class: Any = import_string(plugin_path)
         except ImportError as ep:
             msg = f"Plugin import failed: {plugin_path}"
             raise PluginImportError(msg) from ep
@@ -377,7 +377,7 @@ class PluginManager(Generic[C]):
         :return: dict containing return from coro call for each plugin.
         """
         return await self._map_plugin_method(
-            self._auth_plugins, "authenticate", {"session": session })  # type: ignore[arg-type]
+            self._auth_plugins, "authenticate", {"session": session})  # type: ignore[arg-type]
 
     async def map_plugin_topic(
         self, *, session: Session, topic: str, action: "Action"

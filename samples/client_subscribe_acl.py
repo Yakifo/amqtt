@@ -35,7 +35,7 @@ async def uptime_coro() -> None:
         await client.unsubscribe(["$SYS/#", "data/memes"])
         logger.info("UnSubscribed")
         await client.disconnect()
-    except ClientError as ce:
+    except ClientError:
         logger.exception("Client exception")
 
 
