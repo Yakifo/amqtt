@@ -3,6 +3,8 @@ from asyncio import StreamReader, StreamWriter
 from contextlib import suppress
 import io
 import logging
+import ssl
+from typing import cast
 
 from websockets import ConnectionClosed
 from websockets.asyncio.connection import Connection
@@ -50,6 +52,11 @@ class WriterAdapter(ABC):
     @abstractmethod
     def get_peer_info(self) -> tuple[str, int] | None:
         """Return peer socket info (remote address and remote port as tuple)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        """Return peer certificate information (if available) used to establish a TLS session."""
         raise NotImplementedError
 
     @abstractmethod
@@ -121,6 +128,9 @@ class WebSocketsWriter(WriterAdapter):
         remote_address: tuple[str, int] | None = self._protocol.remote_address[:2]
         return remote_address
 
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        return cast("ssl.SSLObject", self._protocol.transport.get_extra_info("ssl_object"))
+
     async def close(self) -> None:
         await self._protocol.close()
 
@@ -170,6 +180,9 @@ class StreamWriterAdapter(WriterAdapter):
         extra_info = self._writer.get_extra_info("peername")
         return extra_info[0], extra_info[1]
 
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        return cast("ssl.SSLObject", self._writer.get_extra_info("ssl_object"))
+
     async def close(self) -> None:
         if not self.is_closed:
             self.is_closed = True  # we first mark this closed so yields below don't cause races with waiting writes
@@ -203,6 +216,9 @@ class BufferWriter(WriterAdapter):
 
     This adapter simply adapts writing to a byte buffer.
     """
+
+    def get_ssl_info(self) -> ssl.SSLObject | None:
+        return None
 
     def __init__(self, buffer: bytes = b"") -> None:
         self._stream = io.BytesIO(buffer)

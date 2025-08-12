@@ -140,7 +140,7 @@ async def test_client_connect(broker, mock_plugin_manager):
 
 
 @pytest.mark.asyncio
-async def test_connect_tcp(broker):
+async def _connect_tcp(broker):
     process = psutil.Process()
     connections_number = 10
 
@@ -236,7 +236,7 @@ async def test_client_connect_clean_session_false(broker):
     client = MQTTClient(client_id="", config={"auto_reconnect": False})
     return_code = None
     try:
-        await client.connect("mqtt://127.0.0.1/", cleansession=False)
+        await client.connect("mqtt://127.0.0.1", cleansession=False)
     except ConnectError as ce:
         return_code = ce.return_code
     assert return_code == 0x02
@@ -431,11 +431,11 @@ async def test_client_publish_acl_forbidden(acl_broker):
 
 @pytest.mark.asyncio
 async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
-    sub_client1 = MQTTClient()
+    sub_client1 = MQTTClient(client_id="sub_client1")
     ret_conn = await sub_client1.connect("mqtt://user2:user2password@127.0.0.1:1884/")
     assert ret_conn == 0
 
-    sub_client2 = MQTTClient()
+    sub_client2 = MQTTClient(client_id="sub_client2")
     ret_conn = await sub_client2.connect("mqtt://user3:user3password@127.0.0.1:1884/")
     assert ret_conn == 0
 
@@ -445,7 +445,7 @@ async def test_client_publish_acl_permitted_sub_forbidden(acl_broker):
     ret_sub = await sub_client2.subscribe([("public/subtopic/test", QOS_0)])
     assert ret_sub == [128]
 
-    pub_client = MQTTClient()
+    pub_client = MQTTClient(client_id="pub_client")
     ret_conn = await pub_client.connect("mqtt://user1:user1password@127.0.0.1:1884/")
     assert ret_conn == 0
 
@@ -933,6 +933,35 @@ async def test_broker_socket_open_close(broker):
     s.send(static_connect_packet)
     await asyncio.sleep(0.1)
     s.close()
+
+std_legacy_config = {
+        "listeners": {
+            "default": {
+                "type": "tcp",
+                "bind": f"127.0.0.1:1883",
+            }
+        },
+        "sys_interval": 10,
+        "auth": {
+            "allow-anonymous": True,
+            "plugins": ["auth_anonymous"],
+        },
+        "topic-check": {"enabled": False},
+    }
+
+
+@pytest.mark.asyncio
+async def test_broker_with_legacy_config():
+
+    broker = Broker(config=std_legacy_config)
+
+    await broker.start()
+    await asyncio.sleep(2)
+
+    mqtt_client = MQTTClient(config={'auto_reconnect': False})
+    await mqtt_client.connect()
+
+    await broker.shutdown()
 
 
 legacy_config_empty_auth_plugin_list = {

@@ -14,7 +14,7 @@ except ImportError:
     from typing import Protocol, runtime_checkable
 
     @runtime_checkable
-    class Buffer(Protocol):  #  type: ignore[no-redef]
+    class Buffer(Protocol):  # type: ignore[no-redef]
         def __buffer__(self, flags: int = ...) -> memoryview:
             """Mimic the behavior of `collections.abc.Buffer` for python 3.10-3.12."""
 
@@ -75,7 +75,6 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         self._sys_interval: int = 0
         self._current_process = psutil.Process()
 
-
     def _clear_stats(self) -> None:
         """Initialize broker statistics data structures."""
         for stat in (
@@ -112,7 +111,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         """Initialize statistics and start $SYS broadcasting."""
         self._stats[STAT_START_TIME] = int(datetime.now(tz=UTC).timestamp())
         version = f"aMQTT version {amqtt.__version__}"
-        self.context.retain_message(DOLLAR_SYS_ROOT + "version", version.encode())
+        await self.context.retain_message(DOLLAR_SYS_ROOT + "version", version.encode())
 
         # Start $SYS topics management
         try:

@@ -21,7 +21,7 @@ def main() -> None:
     app()
 
 
-def _version(v:bool) -> None:
+def _version(v: bool) -> None:
     if v:
         typer.echo(f"{amqtt_version}")
         raise typer.Exit(code=0)
@@ -41,9 +41,12 @@ def broker_main(
 ) -> None:
     """Command-line script for running a MQTT 3.1.1 broker."""
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
+    if debug:
+        formatter = "[%(asctime)s] %(name)s:%(lineno)d :: %(levelname)s - %(message)s"
 
     level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(level=level, format=formatter)
+    logging.getLogger("transitions").setLevel(logging.WARNING)
     try:
         if config_file:
             config = read_yaml_config(config_file)
@@ -62,7 +65,7 @@ def broker_main(
         typer.echo(f"❌ Broker failed to start: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-    _ = loop.create_task(broker.start())  #noqa : RUF006
+    _ = loop.create_task(broker.start())  # noqa : RUF006
     try:
         loop.run_forever()
     except KeyboardInterrupt:

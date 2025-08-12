@@ -16,9 +16,11 @@ class CodecError(Exception):
 class NoDataError(Exception):
     """Exceptions thrown by packet encode/decode functions."""
 
+
 class ZeroLengthReadError(NoDataError):
     def __init__(self) -> None:
         super().__init__("Decoding a string of length zero.")
+
 
 class BrokerError(Exception):
     """Exceptions thrown by broker."""

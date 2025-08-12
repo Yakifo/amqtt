@@ -37,12 +37,21 @@ nav:
           - Broker: references/broker.md
           - Client: references/client.md
           - Common: references/common.md
-      - Plugins:
-          - Packaged: packaged_plugins.md
-          - Custom: custom_plugins.md
       - Configuration:
           - Broker: references/broker_config.md
           - Client: references/client_config.md
+      - Plugins:
+          - Packaged: plugins/packaged_plugins.md
+          - Custom: plugins/custom_plugins.md
+          - Contributed:
+            - plugins/contrib.md
+            - Database Auth: plugins/auth_db.md
+            - HTTP Auth: plugins/http.md
+            - LDAP Auth: plugins/ldap.md
+            - Shadows: plugins/shadows.md
+            - Certificate Auth: plugins/cert.md
+            - JWT Auth: plugins/jwt.md
+            - Session persistence: plugins/session.md
       - Reference:
           - Containerization: docker.md
           - Support: support.md
@@ -57,6 +66,7 @@ theme:
   name: material
   logo: assets/amqtt_bw.svg
   features:
+    - toc.integrate
     - announce.dismiss
     - content.action.edit
     - content.action.view
@@ -106,7 +116,11 @@ markdown_extensions:
   - pymdownx.snippets:
       base_path: !relative $config_dir
       check_paths: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
       slugify: !!python/object/apply:pymdownx.slugs.slugify
@@ -117,6 +131,7 @@ markdown_extensions:
   - pymdownx.tilde
   - toc:
       permalink: "¤"
+      toc_depth: 3
 
 plugins:
   - search
@@ -125,12 +140,15 @@ plugins:
   - markdown-exec
   - section-index
   - coverage
-  - mkdocs-typer2
+  - mkdocs-typer2:
   - mkdocstrings:
+      custom_templates: 'docs/templates'
       handlers:
         python:
           paths: [amqtt]
           options:
+#            extra:
+#              template_log_display: true
             docstring_options:
               ignore_init_summary: true
             docstring_section_style: list
@@ -148,6 +166,9 @@ plugins:
             show_symbol_type_toc: true
             signature_crossrefs: true
             summary: true
+            extensions:
+              - docs/scripts/exts.py:DataclassDefaultFactoryExtension:
+                paths: [mypkg.mymod.myobj]
   - git-revision-date-localized:
       enabled: !ENV [DEPLOY, false]
       enable_creation_date: true

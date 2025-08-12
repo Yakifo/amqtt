@@ -35,7 +35,7 @@ async def test_coro1() -> None:
 
 async def test_coro2() -> None:
     try:
-        client = MQTTClient(config={'auto_reconnect': False, 'connection_timeout': 1})
+        client = MQTTClient(config={"auto_reconnect": False, "connection_timeout": 1})
         await client.connect("mqtt://localhost:1884/")
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_0", qos=0x00)
         await client.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=0x01)
@@ -43,7 +43,7 @@ async def test_coro2() -> None:
         logger.info("test_coro2 messages published")
         await client.disconnect()
     except ConnectError:
-        logger.info(f"Connection failed", exc_info=True)
+        logger.info("Connection failed", exc_info=True)
 
 
 def __main__():

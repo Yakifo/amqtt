@@ -1,6 +1,6 @@
 import asyncio
-import logging
 from asyncio import CancelledError
+import logging
 
 from amqtt.broker import Broker
 

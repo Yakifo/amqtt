@@ -4,7 +4,6 @@ import logging
 from amqtt.client import ClientError, MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
-
 """
 This sample shows how to subscribe to different $SYS topics and how to receive incoming messages 
 """
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def uptime_coro() -> None:
-    client = MQTTClient(config={'auto_reconnect': False})
+    client = MQTTClient(config={"auto_reconnect": False})
     await client.connect("mqtt://localhost:1883")
 
     await client.subscribe(

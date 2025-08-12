@@ -4,13 +4,13 @@ try:
     from asyncio import InvalidStateError, QueueFull, QueueShutDown
 except ImportError:
     # Fallback for Python < 3.12
-    class InvalidStateError(Exception):  #  type: ignore[no-redef]
+    class InvalidStateError(Exception):  # type: ignore[no-redef]
         pass
 
-    class QueueFull(Exception):  #  type: ignore[no-redef]  # noqa : N818
+    class QueueFull(Exception):  # type: ignore[no-redef]  # noqa : N818
         pass
 
-    class QueueShutDown(Exception):  #  type: ignore[no-redef]  # noqa : N818
+    class QueueShutDown(Exception):  # type: ignore[no-redef]  # noqa : N818
         pass
 
 
@@ -62,6 +62,7 @@ from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 C = TypeVar("C", bound=BaseContext)
+
 
 class ProtocolHandler(Generic[C]):
     """Class implementing the MQTT communication protocol using asyncio features."""
@@ -199,7 +200,7 @@ class ProtocolHandler(Generic[C]):
     async def mqtt_publish(
         self,
         topic: str,
-        data: bytes | bytearray ,
+        data: bytes | bytearray,
         qos: int | None,
         retain: bool,
         ack_timeout: int | None = None,
@@ -535,7 +536,7 @@ class ProtocolHandler(Generic[C]):
                 self.handle_read_timeout()
             except NoDataError:
                 self.logger.debug(f"{self.session.client_id} No data available")
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001, pylint: disable=W0718
                 self.logger.warning(f"{type(self).__name__} Unhandled exception in reader coro: {e!r}")
                 break
         while running_tasks:

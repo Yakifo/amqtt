@@ -19,6 +19,7 @@ from amqtt.session import Session
 if TYPE_CHECKING:
     from amqtt.client import ClientContext
 
+
 class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
     def __init__(
         self,

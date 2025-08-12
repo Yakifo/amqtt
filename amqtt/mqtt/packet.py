@@ -167,7 +167,7 @@ class PacketIdVariableHeader(MQTTVariableHeader):
 _VH = TypeVar("_VH", bound=MQTTVariableHeader | None)
 
 
-class MQTTPayload(Generic[_VH], ABC):
+class MQTTPayload(ABC, Generic[_VH]):
     """Abstract base class for MQTT payloads."""
 
     async def to_stream(self, writer: asyncio.StreamWriter) -> None:
