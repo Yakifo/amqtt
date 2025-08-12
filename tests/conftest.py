@@ -30,32 +30,31 @@ def rsa_keys():
 @pytest.fixture
 def test_config(rsa_keys):
     certfile, keyfile = rsa_keys
-    with pytest.warns(DeprecationWarning):
-        yield {
-            "listeners": {
-                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 15},
-                "mqtts": {
-                    "type": "tcp",
-                    "bind": "127.0.0.1:1884",
-                    "max_connections": 15,
-                    "ssl": True,
-                    "certfile": certfile,
-                    "keyfile": keyfile
-                },
-                "ws": {"type": "ws", "bind": "127.0.0.1:8080", "max_connections": 15},
-                "wss": {
-                    "type": "ws",
-                    "bind": "127.0.0.1:8081",
-                    "max_connections": 15,
-                    "ssl": True,
-                    'certfile': certfile,
-                    'keyfile': keyfile},
+    yield {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 15},
+            "mqtts": {
+                "type": "tcp",
+                "bind": "127.0.0.1:1884",
+                "max_connections": 15,
+                "ssl": True,
+                "certfile": certfile,
+                "keyfile": keyfile
             },
-            "sys_interval": 0,
-            "auth": {
-                "allow-anonymous": True,
-            }
+            "ws": {"type": "ws", "bind": "127.0.0.1:8080", "max_connections": 15},
+            "wss": {
+                "type": "ws",
+                "bind": "127.0.0.1:8081",
+                "max_connections": 15,
+                "ssl": True,
+                'certfile': certfile,
+                'keyfile': keyfile},
+        },
+        "sys_interval": 0,
+        "auth": {
+            "allow-anonymous": True,
         }
+    }
 
 test_config_acl: dict[str, int | dict[str, Any]] = {
     "listeners": {
@@ -94,13 +93,14 @@ def mock_plugin_manager():
 
 @pytest.fixture
 async def broker_fixture(test_config):
-    broker = Broker(test_config, plugin_namespace="amqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
-    assert broker._sessions == {}
-    assert "default" in broker._servers
+    with pytest.warns(DeprecationWarning):
+        broker = Broker(test_config, plugin_namespace="amqtt.test.plugins")
+        await broker.start()
+        assert broker.transitions.is_started()
+        assert broker._sessions == {}
+        assert "default" in broker._servers
 
-    yield broker
+        yield broker
 
     if not broker.transitions.is_stopped():
         await broker.shutdown()
