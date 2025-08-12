@@ -577,7 +577,7 @@ class MQTTClient:
         cadata: str | None = None,
     ) -> Session:
         """Initialize the MQTT session."""
-        broker_conf = self.config.get("broker", {}).copy()
+        broker_conf = self.config.get("connection", {}).copy()
 
         if uri is not None:
             broker_conf.uri = uri

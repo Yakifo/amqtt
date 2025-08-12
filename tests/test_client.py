@@ -256,7 +256,7 @@ def client_config():
                 }
         },
         "keep_alive": 10,
-        "broker": {
+        "connection": {
             "uri": "mqtt://localhost:1884"
         },
         "reconnect_max_interval": 5,
@@ -489,13 +489,15 @@ async def test_client_no_auth():
 
         client = MQTTClient(client_id="client1", config={'auto_reconnect': False})
 
-        broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
-        await broker.start()
+        with pytest.warns(DeprecationWarning):
 
-        with pytest.raises(ConnectError):
-            await client.connect("mqtt://127.0.0.1:1883/")
+            broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
+            await broker.start()
 
-        await broker.shutdown()
+            with pytest.raises(ConnectError):
+                await client.connect("mqtt://127.0.0.1:1883/")
+
+            await broker.shutdown()
 
 
 @pytest.mark.asyncio

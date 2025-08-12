@@ -30,31 +30,32 @@ def rsa_keys():
 @pytest.fixture
 def test_config(rsa_keys):
     certfile, keyfile = rsa_keys
-    yield {
-        "listeners": {
-            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 15},
-            "mqtts": {
-                "type": "tcp",
-                "bind": "127.0.0.1:1884",
-                "max_connections": 15,
-                "ssl": True,
-                "certfile": certfile,
-                "keyfile": keyfile
+    with pytest.warns(DeprecationWarning):
+        yield {
+            "listeners": {
+                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 15},
+                "mqtts": {
+                    "type": "tcp",
+                    "bind": "127.0.0.1:1884",
+                    "max_connections": 15,
+                    "ssl": True,
+                    "certfile": certfile,
+                    "keyfile": keyfile
+                },
+                "ws": {"type": "ws", "bind": "127.0.0.1:8080", "max_connections": 15},
+                "wss": {
+                    "type": "ws",
+                    "bind": "127.0.0.1:8081",
+                    "max_connections": 15,
+                    "ssl": True,
+                    'certfile': certfile,
+                    'keyfile': keyfile},
             },
-            "ws": {"type": "ws", "bind": "127.0.0.1:8080", "max_connections": 15},
-            "wss": {
-                "type": "ws",
-                "bind": "127.0.0.1:8081",
-                "max_connections": 15,
-                "ssl": True,
-                'certfile': certfile,
-                'keyfile': keyfile},
-        },
-        "sys_interval": 0,
-        "auth": {
-            "allow-anonymous": True,
+            "sys_interval": 0,
+            "auth": {
+                "allow-anonymous": True,
+            }
         }
-    }
 
 test_config_acl: dict[str, int | dict[str, Any]] = {
     "listeners": {

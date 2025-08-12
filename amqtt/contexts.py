@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field, fields, replace
 import logging
+import warnings
 
 try:
     from enum import Enum, StrEnum
@@ -335,7 +336,7 @@ class ClientConfig(Dictable):
     """Upon reconnect, should subscriptions be cleared. Can be overridden by `MQTTClient.connect`"""
     topics: dict[str, TopicConfig] | None = field(default_factory=dict)
     """Specify the topics and what flags should be set for messages published to them."""
-    broker: ConnectionConfig | None = field(default_factory=ConnectionConfig)
+    broker: ConnectionConfig | None = None
     """*Deprecated* Configuration for connecting to the broker. Use `connection` field instead."""
     connection: ConnectionConfig = field(default_factory=ConnectionConfig)
     """Configuration for connecting to the broker. See
@@ -357,6 +358,7 @@ class ClientConfig(Dictable):
             raise ValueError(msg)
 
         if self.broker is not None:
+            warnings.warn("The 'broker' option is deprecated, please use 'connection' instead.", stacklevel=2)
             self.connection = self.broker
 
         if bool(not self.connection.keyfile) ^ bool(not self.connection.certfile):
