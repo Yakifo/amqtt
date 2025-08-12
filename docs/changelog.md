@@ -2,6 +2,20 @@
 
 ## 0.11.3
 
+API changes:
+
+- broker and client configuration via dataclasses and enums instead of unstructured dictionaries (backwards compatible)
+- `MESSAGE_RECIEVE` event moved to after topic filtering
+- `MESSAGE_BROADCAST` event added for prior topic filtering
+- `RETAINED_MESSAGE` event added for messages with retained flag or offline clients without setting clean session flag
+- method `retain_message` changed to coroutine (broker)
+- change `add_subscription` to a public method (broker)
+- add listener type for external servers and api method for passing new connection via `external_connected` method (broker)
+- for TLS sessions, properly load the key and cert file (client)
+- added abstract method `get_ssl_info` to `WriterAdapter`
+
+Details:
+
 * Structural elements for the 0.11.3 release https://github.com/Yakifo/amqtt/pull/265
 * Release Candidate Branch for 0.11.3 https://github.com/Yakifo/amqtt/pull/272
 * update the configuration for the broker running at test.amqtt.io  https://github.com/Yakifo/amqtt/pull/271
