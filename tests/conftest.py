@@ -93,13 +93,14 @@ def mock_plugin_manager():
 
 @pytest.fixture
 async def broker_fixture(test_config):
-    broker = Broker(test_config, plugin_namespace="amqtt.test.plugins")
-    await broker.start()
-    assert broker.transitions.is_started()
-    assert broker._sessions == {}
-    assert "default" in broker._servers
+    with pytest.warns(DeprecationWarning):
+        broker = Broker(test_config, plugin_namespace="amqtt.test.plugins")
+        await broker.start()
+        assert broker.transitions.is_started()
+        assert broker._sessions == {}
+        assert "default" in broker._servers
 
-    yield broker
+        yield broker
 
     if not broker.transitions.is_stopped():
         await broker.shutdown()

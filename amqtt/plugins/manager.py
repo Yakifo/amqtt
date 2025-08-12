@@ -132,7 +132,7 @@ class PluginManager(Generic[C]):
                 "Loading plugins from EntryPoints is deprecated and will be removed in a future version."
                 " Use `plugins` section of config instead.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=4
             )
 
             self._load_ep_plugins(namespace)
