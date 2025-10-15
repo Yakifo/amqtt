@@ -2,7 +2,7 @@
 
 ::: mkdocs-typer2
     :module: amqtt.scripts.sub_script
-    :name: amqtt_pub
+    :name: amqtt_sub
     :pretty: true
 
 ## Default Configuration
