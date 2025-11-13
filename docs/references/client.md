@@ -12,7 +12,7 @@ The example below shows how to write a simple MQTT client which subscribes a top
 import logging
 import asyncio
 
-from amqtt.client import MQTTClient, ClientException
+from amqtt.client import MQTTClient, ClientError
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
 logger = logging.getLogger(__name__)
@@ -33,8 +33,8 @@ async def uptime_coro():
             print("%d:  %s => %s" % (i, packet.variable_header.topic_name, str(packet.payload.data)))
         await C.unsubscribe(['$SYS/broker/uptime', '$SYS/broker/load/#'])
         await C.disconnect()
-    except ClientException as ce:
-        logger.error("Client exception: %s" % ce)
+    except ClientError as ce:
+        logger.error("Client error: %s" % ce)
 
 if __name__ == '__main__':
     formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
