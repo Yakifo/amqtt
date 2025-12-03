@@ -205,6 +205,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ALL"]
 "amqtt/scripts/*_script.py" = ["FBT003", "E501"]
+"amqtt/mqtt/__init__.py" = ["ALL"]
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
@@ -240,7 +241,7 @@ log_level = "DEBUG"
 
 # ------------------------------------ MYPY ------------------------------------
 [tool.mypy]
-exclude = ["^tests/.*", "^docs/.*", "^samples/.*"]
+exclude = ["^tests/.*", "^docs/.*", "^samples/.*", "amqtt/mqtt/__init__.py"]
 follow_imports = "silent"
 show_error_codes = true
 ignore_missing_imports = true
@@ -266,7 +267,7 @@ jobs = 2
 ignore = ["tests"]
 fail-on = ["I"]
 max-line-length = 130
-ignore-paths = ["amqtt/plugins/persistence.py"]
+ignore-paths = ["amqtt/mqtt/__init__.py"]
 
 [tool.pylint.BASIC]
 # Good variable names which should always be accepted, separated by a comma.

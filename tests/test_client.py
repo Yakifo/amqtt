@@ -8,7 +8,7 @@ import pytest
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.errors import ClientError, ConnectError, MQTTError
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 logging.basicConfig(level=logging.ERROR, format=formatter)

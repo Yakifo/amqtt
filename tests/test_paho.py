@@ -16,7 +16,7 @@ from yaml import Loader
 from amqtt.broker import Broker
 from amqtt.events import BrokerEvents
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_1, QOS_2
+from amqtt.mqtt3.constants import QOS_1, QOS_2
 from amqtt.session import Session
 
 logger = logging.getLogger(__name__)

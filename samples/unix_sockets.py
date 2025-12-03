@@ -10,8 +10,9 @@ import typer
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.broker import Broker
 from amqtt.client import ClientContext
+
 from amqtt.contexts import BrokerConfig, ClientConfig, ListenerConfig, ListenerType
-from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
+from amqtt.mqtt3.protocol.client_handler import ClientProtocolHandler
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import Session
 

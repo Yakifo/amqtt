@@ -23,12 +23,12 @@ from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.contexts import BaseContext
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
 from amqtt.events import MQTTEvents
-from amqtt.mqtt import packet_class
-from amqtt.mqtt.connack import ConnackPacket
-from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.mqtt.packet import (
+from amqtt.mqtt3 import packet_class
+from amqtt.mqtt3.connack import ConnackPacket
+from amqtt.mqtt3.connect import ConnectPacket
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt3.disconnect import DisconnectPacket
+from amqtt.mqtt3.packet import (
     CONNACK,
     CONNECT,
     DISCONNECT,
@@ -47,17 +47,17 @@ from amqtt.mqtt.packet import (
     UNSUBSCRIBE,
     MQTTFixedHeader,
 )
-from amqtt.mqtt.pingreq import PingReqPacket
-from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.puback import PubackPacket
-from amqtt.mqtt.pubcomp import PubcompPacket
-from amqtt.mqtt.publish import PublishPacket
-from amqtt.mqtt.pubrec import PubrecPacket
-from amqtt.mqtt.pubrel import PubrelPacket
-from amqtt.mqtt.suback import SubackPacket
-from amqtt.mqtt.subscribe import SubscribePacket
-from amqtt.mqtt.unsuback import UnsubackPacket
-from amqtt.mqtt.unsubscribe import UnsubscribePacket
+from amqtt.mqtt3.pingreq import PingReqPacket
+from amqtt.mqtt3.pingresp import PingRespPacket
+from amqtt.mqtt3.puback import PubackPacket
+from amqtt.mqtt3.pubcomp import PubcompPacket
+from amqtt.mqtt3.publish import PublishPacket
+from amqtt.mqtt3.pubrec import PubrecPacket
+from amqtt.mqtt3.pubrel import PubrelPacket
+from amqtt.mqtt3.suback import SubackPacket
+from amqtt.mqtt3.subscribe import SubscribePacket
+from amqtt.mqtt3.unsuback import UnsubackPacket
+from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 

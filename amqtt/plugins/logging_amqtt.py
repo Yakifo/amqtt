@@ -5,8 +5,8 @@ from typing import Any, TypeAlias
 
 from amqtt.contexts import BaseContext
 from amqtt.events import BrokerEvents
-from amqtt.mqtt import MQTTPacket
-from amqtt.mqtt.packet import MQTTFixedHeader, MQTTPayload, MQTTVariableHeader
+from amqtt.mqtt3 import MQTTPacket
+from amqtt.mqtt3.packet import MQTTFixedHeader, MQTTPayload, MQTTVariableHeader
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
 

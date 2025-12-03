@@ -3,7 +3,7 @@ from typing_extensions import Self
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import bytes_to_int, read_or_raise
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
+from amqtt.mqtt3.packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 CONNECTION_ACCEPTED = 0x00
 UNACCEPTABLE_PROTOCOL_VERSION = 0x01

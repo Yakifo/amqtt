@@ -14,7 +14,7 @@ from amqtt.broker import Broker, BrokerContext
 from amqtt.client import MQTTClient
 from amqtt.errors import PluginInitError, PluginImportError
 from amqtt.events import MQTTEvents, BrokerEvents
-from amqtt.mqtt.constants import QOS_0, QOS_1
+from amqtt.mqtt3.constants import QOS_0, QOS_1
 from amqtt.plugins.base import BasePlugin
 from amqtt.contexts import BaseContext
 from amqtt.contrib.persistence import RetainedMessage

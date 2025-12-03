@@ -1,7 +1,7 @@
 from typing_extensions import Self
 
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.packet import PUBCOMP, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
+from amqtt.mqtt3.packet import PUBCOMP, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
 class PubcompPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):

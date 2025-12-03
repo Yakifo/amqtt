@@ -4,8 +4,8 @@ import pytest
 
 from amqtt.adapters import BufferReader
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
-from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader, PUBLISH
+from amqtt.mqtt3.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
+from amqtt.mqtt3.packet import CONNECT, MQTTFixedHeader, PUBLISH
 
 
 class ConnectPacketTest(unittest.TestCase):
