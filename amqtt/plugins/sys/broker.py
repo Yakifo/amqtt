@@ -114,23 +114,25 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         await self.context.retain_message(DOLLAR_SYS_ROOT + "version", version.encode())
 
         # Start $SYS topics management
-        try:
-            self._sys_interval = self._get_config_option("sys_interval", None)
-            if isinstance(self._sys_interval, str | Buffer | SupportsInt | SupportsIndex):
-                self._sys_interval = int(self._sys_interval)
+        self._sys_interval = self._get_config_option("sys_interval", None)
 
-            if self._sys_interval > 0:
-                self.context.logger.debug(f"Setup $SYS broadcasting every {self._sys_interval} seconds")
-                self._sys_handle = (
-                    self.context.loop.call_later(self._sys_interval, self.broadcast_dollar_sys_topics)
-                    if self.context.loop is not None
-                    else None
-                )
-            else:
-                self.context.logger.debug("$SYS disabled")
-        except KeyError:
-            self.context.logger.debug("could not find 'sys_interval' key: {e!r}")
-            # 'sys_interval' config parameter not found
+        if not self._sys_interval:
+            self.context.logger.warning("'sys_interval' key is not set or is None")
+            return
+
+        if isinstance(self._sys_interval, str | Buffer | SupportsInt | SupportsIndex):
+            self._sys_interval = int(self._sys_interval)
+
+        if self._sys_interval > 0:
+            self.context.logger.debug(f"Setup $SYS broadcasting every {self._sys_interval} seconds")
+            self._sys_handle = (
+                self.context.loop.call_later(self._sys_interval, self.broadcast_dollar_sys_topics)
+                if self.context.loop is not None
+                else None
+            )
+        else:
+            self.context.logger.debug("$SYS disabled")
+
 
     async def on_broker_pre_shutdown(self) -> None:
         """Stop $SYS topics broadcasting."""
