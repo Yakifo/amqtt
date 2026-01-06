@@ -6,7 +6,7 @@ from functools import wraps
 import logging
 import ssl
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import unquote, urlparse, urlunparse
 
 import websockets
 from websockets import HeadersLike, InvalidHandshake, InvalidURI
@@ -424,10 +424,10 @@ class MQTTClient:
         scheme = uri_attributes.scheme
         secure = scheme in ("mqtts", "wss")
         self.session.username = (
-            self.session.username or (str(uri_attributes.username) if uri_attributes.username else None)
+            self.session.username or (unquote(uri_attributes.username) if uri_attributes.username else None)
         )
         self.session.password = (
-            self.session.password or (str(uri_attributes.password) if uri_attributes.password else None)
+            self.session.password or (unquote(uri_attributes.password) if uri_attributes.password else None)
         )
         self.session.remote_address = str(uri_attributes.hostname) if uri_attributes.hostname else None
         self.session.remote_port = uri_attributes.port
