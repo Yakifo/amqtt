@@ -444,6 +444,8 @@ class Broker:
         remote_info = writer.get_peer_info()
         if remote_info is None:
             self.logger.warning("Remote info could not be retrieved from peer info")
+            await writer.close() # python 3.10 needs explicit close
+            server.release_connection()
             return
 
         remote_address, remote_port = remote_info

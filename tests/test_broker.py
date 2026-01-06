@@ -1028,3 +1028,14 @@ async def test_broker_with_absent_auth_plugin_filter():
     await mqtt_client.connect()
 
     await broker.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_client_without_peer_info(broker, mock_plugin_manager):
+    client = MQTTClient(config={'auto_reconnect':False})
+
+    # if the broker's stream writer for this client does not have peer info, the client should fail to connect
+    with patch.object(asyncio.streams.StreamWriter, 'get_extra_info', return_value=None) as mock_extra_info:
+        with pytest.raises(ConnectError):
+            await client.connect("mqtt://127.0.0.1/")
+            await asyncio.sleep(0.01)
