@@ -22,6 +22,17 @@ async def test_connect_tcp(broker_fixture):
     assert client.session is not None
     await client.disconnect()
 
+
+@pytest.mark.asyncio
+async def test_connect_username_password(broker_fixture):
+    client = MQTTClient()
+    await client.connect("mqtt://c%40mpl3x:p%2F%2F%7C%5C%3A%24%24@127.0.0.1:1883/")
+    assert client.session is not None
+    assert client.session.username == "c@mpl3x"
+    assert client.session.password == "p//|\\:$$"
+    await client.disconnect()
+
+
 @pytest.mark.asyncio
 async def test_connect_tcp_secure(rsa_keys, broker_fixture):
     certfile, _ = rsa_keys
