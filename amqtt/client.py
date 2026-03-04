@@ -468,6 +468,11 @@ class MQTTClient:
             if self.config.check_hostname is not None:
                 sc.check_hostname = self.config.check_hostname
                 sc.verify_mode = ssl.CERT_REQUIRED
+            if self.config.verify_cert is False:
+                if self.config.check_hostname:
+                    msg = "verify_cert cannot be disabled when check_hostname is enabled"
+                    raise ClientError(msg)
+                sc.verify_mode = ssl.CERT_NONE
             kwargs["ssl"] = sc
 
         try:
