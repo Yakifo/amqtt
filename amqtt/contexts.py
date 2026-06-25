@@ -347,6 +347,9 @@ class ClientConfig(Dictable):
       more information. `list[str | dict[str,Any]]` is deprecated but available to support legacy use cases."""
     check_hostname: bool | None = True
     """If establishing a secure connection, should the hostname of the certificate be verified."""
+    verify_cert: bool | None = True
+    """If establishing a secure connection, should the certificate be verified. Validation errors, such as untrusted or
+     expired certificate, are ignored. Can only be disabled if `check_hostname` is also disabled."""
     will: WillConfig | None = None
     """Message, topic and flags that should be sent to if the client disconnects. See
     [`WillConfig`](client_config.md#amqtt.contexts.WillConfig) for more information."""

@@ -176,8 +176,10 @@ class StreamWriterAdapter(WriterAdapter):
         if not self.is_closed:
             await self._writer.drain()
 
-    def get_peer_info(self) -> tuple[str, int]:
+    def get_peer_info(self) -> tuple[str, int] | None:
         extra_info = self._writer.get_extra_info("peername")
+        if not extra_info or len(extra_info) < 2:
+            return None
         return extra_info[0], extra_info[1]
 
     def get_ssl_info(self) -> ssl.SSLObject | None:

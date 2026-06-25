@@ -59,38 +59,40 @@ This example also shows two methods for publishing messages asynchronously.
 import logging
 import asyncio
 
-from amqtt.client import MQTTClient
+from amqtt.client import MQTTClient, ConnectError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
 logger = logging.getLogger(__name__)
 
 async def test_coro():
-    C = MQTTClient()
-    await C.connect('mqtt://test.mosquitto.org/')
-    tasks = [
-        asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_0')),
-        asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_1', qos=QOS_1)),
-        asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_2', qos=QOS_2)),
-    ]
-    await asyncio.wait(tasks)
-    logger.info("messages published")
-    await C.disconnect()
-
-
-async def test_coro2():
     try:
         C = MQTTClient()
         ret = await C.connect('mqtt://test.mosquitto.org:1883/')
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_0', qos=QOS_0)
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_1', qos=QOS_1)
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_2', qos=QOS_2)
-        #print(message)
+
         logger.info("messages published")
         await C.disconnect()
-    except ConnectException as ce:
+    except ConnectError as ce:
         logger.error("Connection failed: %s" % ce)
-        asyncio.get_event_loop().stop()
 
+    
+async def test_coro2():
+    try:
+        C = MQTTClient()
+        await C.connect('mqtt://test.mosquitto.org/')
+        tasks = [
+            asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_0')),
+            asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_1', qos=QOS_1)),
+            asyncio.ensure_future(C.publish('a/b', b'TEST MESSAGE WITH QOS_2', qos=QOS_2)),
+        ]
+        await asyncio.wait(tasks)
+        logger.info("messages published")
+        await C.disconnect()
+    except ConnectError as ce:
+        logger.error("Connection failed: %s" % ce)
+    
 
 if __name__ == '__main__':
     formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

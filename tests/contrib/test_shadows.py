@@ -32,7 +32,6 @@ def db_connection(db_file):
 
 
 @pytest.fixture
-@pytest.mark.asyncio
 async def db_session_maker(db_connection):
     engine = create_async_engine(f"{db_connection}")
     db_session_maker = async_sessionmaker(engine, expire_on_commit=False)
@@ -41,7 +40,6 @@ async def db_session_maker(db_connection):
 
 
 @pytest.fixture
-@pytest.mark.asyncio
 async def shadow_plugin(db_connection):
 
     cfg = ShadowPlugin.Config(connection=db_connection)

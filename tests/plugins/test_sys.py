@@ -166,3 +166,54 @@ async def test_broker_sys_plugin_config() -> None:
 
     assert all(
         sys_topic_flags.values()), f'topic not received: {[topic for topic, flag in sys_topic_flags.items() if not flag]}'
+
+
+@pytest.mark.asyncio
+async def test_broker_sys_plugin_without_interval_set(caplog) -> None:
+
+    sys_topic_flags = {sys_topic:False for sys_topic in all_sys_topics}
+
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'plugins': [
+            {'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True}},
+            {'amqtt.plugins.sys.broker.BrokerSysPlugin': {}},  # not set sys_interval, gets default of 20
+        ]
+    }
+
+    broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
+
+    with caplog.at_level(logging.WARNING):
+        # if sys_interval is set to `None`, the broker will throw an error that 'NoneType'
+        #    which won't t match expected type 'int'
+        # to reproduce #298, need to set it to `None` after the plugin is loaded but before `post_start`
+        broker.plugins_manager.get_plugin('BrokerSysPlugin').context.config.sys_interval = None
+        await broker.start()
+        await asyncio.sleep(0.1)
+        assert "'sys_interval' key is not set or is None" in caplog.text
+
+
+    client = MQTTClient()
+    await client.connect("mqtt://127.0.0.1:1883/")
+    await client.subscribe([("$SYS/#", QOS_0), ])
+    await client.publish('test/topic', b'my test message')
+    await asyncio.sleep(2)
+    sys_msg_count = 0
+    try:
+        while sys_msg_count < 30:
+            message = await client.deliver_message(timeout_duration=1)
+            if '$SYS' in message.topic:
+                sys_msg_count += 1
+                assert message.topic in sys_topic_flags
+                sys_topic_flags[message.topic] = True
+
+    except asyncio.TimeoutError:
+        logger.debug(f"TimeoutError after {sys_msg_count} messages")
+
+    await client.disconnect()
+    await broker.shutdown()
+
+    # the only message received should be the test message that was sent
+    assert sys_msg_count == 1
