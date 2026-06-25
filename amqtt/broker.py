@@ -757,7 +757,7 @@ class Broker:
                 f"[MQTT-3.3.2-2] - {client_session.client_id} invalid TOPIC sent in PUBLISH message, closing connection",
             )
             return False
-        if app_message.topic.startswith("$"):
+        if app_message.topic.startswith("$") and not self.config.get("allow_dollar_topics", False):
             self.logger.warning(
                 f"[MQTT-4.7.2-1] - {client_session.client_id} cannot use a topic with a leading $ character."
             )
@@ -1117,7 +1117,7 @@ class Broker:
         )
 
     def _matches(self, topic: str, a_filter: str) -> bool:
-        if topic.startswith("$") and (a_filter.startswith(("+", "#"))):
+        if topic.startswith("$") and (a_filter.startswith(("+", "#"))) and not self.config.get("allow_dollar_topics", False):
             self.logger.debug("[MQTT-4.7.2-1] - ignoring broadcasting $ topic to subscriptions starting with + or #")
             return False
 

@@ -180,6 +180,8 @@ class BrokerConfig(Dictable):
     """*Deprecated field used to config EntryPoint-loaded plugins. See
     [`TopicTabooPlugin`](../plugins/packaged_plugins.md#taboo-topic-plugin) and
     [`TopicACLPlugin`](../plugins/packaged_plugins.md#acl-topic-plugin) for recommended configuration method.*"""
+    allow_dollar_topics: bool | None = False
+    """Controls whether the broker accepts client-sent topics starting with a dollar sign (`$`)."""
     plugins: dict[str, Any] | list[str | dict[str, Any]] | None = field(default_factory=default_broker_plugins)
     """The dictionary has a key of the dotted-module path of a class derived from `BasePlugin`, `BaseAuthPlugin`
      or `BaseTopicPlugin`; the value is a dictionary of configuration options for that plugin. See

@@ -41,6 +41,40 @@ async def test_publish_to_dollar_sign_topics():
     await asyncio.sleep(0.1)
     await b.shutdown()
 
+
+@pytest.mark.asyncio
+async def test_publish_to_dollar_sign_topics_if_allowed():
+    """Applications can use a topic with a leading $ character for their own purposes if it is allowed."""
+
+    cfg = {
+        'listeners': {'default': {'type': 'tcp', 'bind': '127.0.0.1'}},
+        'allow_dollar_topics': True,
+        'plugins': {'amqtt.plugins.authentication.AnonymousAuthPlugin': {"allow_anonymous": True}},
+    }
+
+    b = Broker(config=cfg)
+    await b.start()
+    await asyncio.sleep(0.1)
+    c = MQTTClient(config={'auto_reconnect': False})
+    await c.connect()
+    await asyncio.sleep(0.1)
+    await c.subscribe(
+        [('$#', QOS_0),
+         ('#', QOS_0)]
+    )
+    await asyncio.sleep(0.1)
+    await c.publish('$MY', b'message should not be blocked')
+    await asyncio.sleep(0.1)
+
+    msg = await c.deliver_message()
+    assert msg.topic == '$MY'
+    assert msg.data == b'message should not be blocked'
+
+    await c.disconnect()
+    await asyncio.sleep(0.1)
+    await b.shutdown()
+
+
 @pytest.mark.asyncio
 async def test_hash_will_not_receive_dollar():
     """A subscription to “#” will not receive any messages published to a topic beginning with a $ [MQTT-4.7.2-1]."""
@@ -67,6 +101,39 @@ async def test_hash_will_not_receive_dollar():
     with pytest.raises(asyncio.TimeoutError):
         # wait long enough for broker sys plugin to run
         _ = await c.deliver_message(timeout_duration=5)
+
+    await c.disconnect()
+    await asyncio.sleep(0.1)
+    await b.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_hash_will_receive_dollar_if_allowed():
+    """A subscription to “#” will not receive messages published to a topic beginning with a $ if it is allowed."""
+
+    cfg = {
+        'listeners': {'default': {'type': 'tcp', 'bind': '127.0.0.1'}},
+        'allow_dollar_topics': True,
+        'plugins': {
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {"allow_anonymous": True},
+            'amqtt.plugins.sys.broker.BrokerSysPlugin': {"sys_interval": 2}
+        }
+    }
+
+    b = Broker(config=cfg)
+    await b.start()
+    await asyncio.sleep(0.1)
+    c = MQTTClient(config={'auto_reconnect': False})
+    await c.connect()
+    await asyncio.sleep(0.1)
+    await c.subscribe(
+        [('#', QOS_0)]
+    )
+    await asyncio.sleep(0.1)
+
+    msg = await c.deliver_message()
+    assert msg.topic == '$SYS/broker/version'
+    assert b"aMQTT" in msg.data
 
     await c.disconnect()
     await asyncio.sleep(0.1)
@@ -104,6 +171,45 @@ async def test_plus_will_not_receive_dollar():
     with pytest.raises(asyncio.TimeoutError):
         # wait long enough for broker sys plugin to run
         _ = await c.deliver_message(timeout_duration=5)
+
+    await c.disconnect()
+    await asyncio.sleep(0.1)
+    await b.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_plus_will_receive_dollar_if_allowed():
+    """A subscription to “+/monitor/Clients” will receive any messages published to “$SYS/monitor/Clients if it is allowed."""
+    # BrokerSysPlugin doesn't use $SYS/monitor/Clients, so this is an equivalent test with $SYS/broker topics
+
+    cfg = {
+        'listeners': {'default': {'type': 'tcp', 'bind': '127.0.0.1'}},
+        'allow_dollar_topics': True,
+        'plugins': {
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {"allow_anonymous": True},
+            'amqtt.plugins.sys.broker.BrokerSysPlugin': {"sys_interval": 2}
+        }
+    }
+
+    b = Broker(config=cfg)
+    await b.start()
+    await asyncio.sleep(0.1)
+    c = MQTTClient(config={'auto_reconnect': False})
+    await c.connect()
+    await asyncio.sleep(0.1)
+    await c.subscribe(
+        [('+/broker/#', QOS_0),
+         ('+/broker/time', QOS_0),
+         ('+/broker/clients/#', QOS_0),
+         ('+/broker/+/maximum', QOS_0)
+         ]
+    )
+    await asyncio.sleep(0.1)
+
+
+    msg = await c.deliver_message()
+    assert msg.topic == '$SYS/broker/version'
+    assert b"aMQTT" in msg.data
 
     await c.disconnect()
     await asyncio.sleep(0.1)
