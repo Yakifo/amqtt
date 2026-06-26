@@ -58,3 +58,4 @@ async def test_clear_session_expiration(caplog, session_broker_config, username,
         assert any([record for record in caplog.records if "Expired 1 sessions" in record.message]) == (session_count == 0)
 
     await broker.shutdown()
+    await asyncio.sleep(0.5)
