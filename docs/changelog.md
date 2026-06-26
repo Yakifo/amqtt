@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.4
+
+- disable TLS certificate verification via config `[PR #312](https://github.com/Yakifo/amqtt/pull/312)
+- fix: handle special characters in passwords [PR #307](https://github.com/Yakifo/amqtt/pull/307)
+- fix: explicit close/release allowing proper v3.10 cleanup  [PR #304](https://github.com/Yakifo/amqtt/pull/304)
+- fix: prevent failure when `sys_interval` is unset or `None` [PR #303](https://github.com/Yakifo/amqtt/pull/303)
+- reduce noisy reconnect logging  [PR #310](https://github.com/Yakifo/amqtt/pull/310)
+- fix: publish coroutines in client documentation  [PR #302](https://github.com/Yakifo/amqtt/pull/302)
+- fix: exception names in client documentation  [PR #305](https://github.com/Yakifo/amqtt/pull/305)
+- fix: `amqtt_sub` reference page name  [PR #299](https://github.com/Yakifo/amqtt/pull/299)
+- remove obselete pytests, add additional coverage  [PR #309](https://github.com/Yakifo/amqtt/pull/309)
+
+
 ## 0.11.3
 
 API changes:
