@@ -40,7 +40,6 @@ def db_connection(db_file):
 
 
 @pytest.fixture
-@pytest.mark.asyncio
 async def user_manager(password_hasher, db_connection):
     um = UserManager(db_connection)
     await um.db_sync()
@@ -48,7 +47,6 @@ async def user_manager(password_hasher, db_connection):
 
 
 @pytest.fixture
-@pytest.mark.asyncio
 async def topic_manager(password_hasher, db_connection):
     tm = TopicManager(db_connection)
     await tm.db_sync()
