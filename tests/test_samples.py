@@ -362,4 +362,6 @@ async def test_allowable_dollar_topics():
     assert message.data == b'test message'
     await rcv_client.disconnect()
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.1)
+    await broker.shutdown()
+    await asyncio.sleep(0.1)
