@@ -1,7 +1,7 @@
 import pytest
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.connack import ConnackPacket
-from amqtt.mqtt.packet import MQTTFixedHeader, PUBLISH
+from amqtt.mqtt3.connack import ConnackPacket
+from amqtt.mqtt3.packet import MQTTFixedHeader, PUBLISH
 
 
 

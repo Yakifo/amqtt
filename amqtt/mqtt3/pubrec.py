@@ -1,10 +1,10 @@
 from typing_extensions import Self
 
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.packet import PUBREL, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
+from amqtt.mqtt3.packet import PUBREC, MQTTFixedHeader, MQTTPacket, PacketIdVariableHeader
 
 
-class PubrelPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
+class PubrecPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
     VARIABLE_HEADER = PacketIdVariableHeader
     PAYLOAD = None
 
@@ -14,10 +14,10 @@ class PubrelPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
         variable_header: PacketIdVariableHeader | None = None,
     ) -> None:
         if fixed is None:
-            header = MQTTFixedHeader(PUBREL, 0x02)  # [MQTT-3.6.1-1]
+            header = MQTTFixedHeader(PUBREC, 0x00)
         else:
-            if fixed.packet_type is not PUBREL:
-                msg = f"Invalid fixed packet type {fixed.packet_type} for PubrelPacket init"
+            if fixed.packet_type is not PUBREC:
+                msg = f"Invalid fixed packet type {fixed.packet_type} for PubrecPacket init"
                 raise AMQTTError(msg)
             header = fixed
         super().__init__(header)
@@ -26,8 +26,8 @@ class PubrelPacket(MQTTPacket[PacketIdVariableHeader, None, MQTTFixedHeader]):
 
     @classmethod
     def build(cls, packet_id: int) -> Self:
-        variable_header = PacketIdVariableHeader(packet_id)
-        return cls(variable_header=variable_header)
+        v_header = PacketIdVariableHeader(packet_id)
+        return cls(variable_header=v_header)
 
     @property
     def packet_id(self) -> int:

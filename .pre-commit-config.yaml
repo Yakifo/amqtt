@@ -28,7 +28,7 @@ repos:
         language: script
         types: [python]
         require_serial: true
-        exclude: ^tests/.+|^docs/.+|^samples/.+
+        exclude: ^tests/.+|^docs/.+|^samples/.+|amqtt/mqtt/__init__.py
       - id: pylint
         name: Run Pylint in Virtualenv
         entry: scripts/run-in-env.sh pylint

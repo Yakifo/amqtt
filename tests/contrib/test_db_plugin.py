@@ -14,7 +14,7 @@ from amqtt.contrib.auth_db.models import AllowedTopic, PasswordHasher
 from amqtt.contrib.auth_db.plugin import UserAuthDBPlugin, TopicAuthDBPlugin
 from amqtt.contrib.auth_db.managers import UserManager, TopicManager
 from amqtt.errors import ConnectError, MQTTError
-from amqtt.mqtt.constants import QOS_1, QOS_0
+from amqtt.mqtt3.constants import QOS_1, QOS_0
 from amqtt.session import Session
 from argon2 import PasswordHasher as ArgonPasswordHasher
 from argon2.exceptions import VerifyMismatchError

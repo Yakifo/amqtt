@@ -12,7 +12,7 @@ from amqtt.codecs_amqtt import (
     read_or_raise,
 )
 from amqtt.errors import AMQTTError, NoDataError
-from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
+from amqtt.mqtt3.packet import CONNECT, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 from amqtt.utils import gen_client_id
 
 

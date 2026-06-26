@@ -1,7 +1,7 @@
 from typing_extensions import Self
 
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.packet import PINGRESP, MQTTFixedHeader, MQTTPacket
+from amqtt.mqtt3.packet import PINGRESP, MQTTFixedHeader, MQTTPacket
 
 
 class PingRespPacket(MQTTPacket[None, None, MQTTFixedHeader]):

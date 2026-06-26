@@ -5,7 +5,7 @@ import pytest
 
 from amqtt.adapters import BufferReader
 from amqtt.errors import MQTTError
-from amqtt.mqtt.packet import CONNECT, MQTTFixedHeader
+from amqtt.mqtt3.packet import CONNECT, MQTTFixedHeader
 
 
 class TestMQTTFixedHeaderTest(unittest.TestCase):

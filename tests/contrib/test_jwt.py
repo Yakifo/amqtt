@@ -16,7 +16,7 @@ from amqtt.broker import BrokerContext, Broker
 from amqtt.client import MQTTClient
 from amqtt.contexts import Action, ListenerConfig, BrokerConfig
 from amqtt.contrib.jwt import UserAuthJwtPlugin, TopicAuthJwtPlugin
-from amqtt.mqtt.constants import QOS_0
+from amqtt.mqtt3.constants import QOS_0
 from amqtt.session import Session
 
 
