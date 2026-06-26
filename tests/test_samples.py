@@ -8,6 +8,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from amqtt.mqtt.constants import QOS_0
 from samples.http_server_integration import main as http_server_main
 from samples.unix_sockets import app as unix_sockets_app
 
@@ -17,6 +18,7 @@ from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from samples.broker_acl import config as broker_acl_config
 from samples.broker_taboo import config as broker_taboo_config
+from samples.broker_dollar_topics import config as broker_dollar_topics_config
 
 logger = logging.getLogger(__name__)
 
@@ -334,3 +336,32 @@ async def test_unix_connection():
     # verify that the broker received client connected/disconnected
     assert "on_broker_client_connected" in broker_stderr.decode("utf-8")
     assert "on_broker_client_disconnected" in broker_stderr.decode("utf-8")
+
+
+@pytest.mark.asyncio
+async def test_allowable_dollar_topics():
+
+    broker = Broker(config=broker_dollar_topics_config)
+    await broker.start()
+    await asyncio.sleep(1)
+
+    rcv_client = MQTTClient(config={'auto_reconnect': False})
+    await rcv_client.connect("ws://127.0.0.1:8080/mqtt")
+    await rcv_client.subscribe([("$my/dollar/topic", QOS_0),])
+    assert rcv_client.session is not None
+
+    pub_client = MQTTClient(config={'auto_reconnect': False})
+    await pub_client.connect("ws://127.0.0.1:8080/mqtt")
+    await pub_client.publish("$my/dollar/topic", b'test message')
+    await asyncio.sleep(1)
+    await pub_client.disconnect()
+
+    message = await rcv_client.deliver_message()
+    assert message is not None
+    assert message.publish_packet is not None
+    assert message.data == b'test message'
+    await rcv_client.disconnect()
+
+    await asyncio.sleep(0.1)
+    await broker.shutdown()
+    await asyncio.sleep(0.1)
