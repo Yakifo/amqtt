@@ -34,12 +34,22 @@ async def test_connect_username_password(broker_fixture):
 
 
 @pytest.mark.asyncio
-async def test_connect_tcp_secure(rsa_keys, broker_fixture):
+async def test_connect_tcp_encrypted_secure(rsa_keys, broker_fixture):
     certfile, _ = rsa_keys
     client = MQTTClient(config={"check_hostname": False, "auto_reconnect": False})
 
     # since we're using a self-signed certificate, need to provide the server's certificate to verify authenticity
     await client.connect("mqtts://localhost:1884/", cafile=certfile)
+    assert client.session is not None
+    await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_connect_tcp_encrypted_insecure(broker_fixture):
+    # self-signed certificate is implicitly used, but explicitly not verified
+    client = MQTTClient(config={"check_hostname": False, "verify_cert": False, "auto_reconnect": False})
+
+    await client.connect("mqtts://localhost:1884/")
     assert client.session is not None
     await client.disconnect()
 

@@ -236,8 +236,7 @@ class MQTTClient:
                 self.logger.warning(f"Reconnection attempt failed: {e!r}")
                 self.logger.debug("", exc_info=True)
                 if 0 <= reconnect_retries < nb_attempt:
-                    self.logger.exception("Maximum connection attempts reached. Reconnection aborted.")
-                    self.logger.debug("", exc_info=True)
+                    self.logger.debug("Maximum connection attempts reached. Reconnection aborted.", exc_info=e)
                     msg = "Too many failed attempts"
                     raise ConnectError(msg) from e
                 delay = min(reconnect_max_interval, 2**nb_attempt)
@@ -468,6 +467,11 @@ class MQTTClient:
             if self.config.check_hostname is not None:
                 sc.check_hostname = self.config.check_hostname
                 sc.verify_mode = ssl.CERT_REQUIRED
+            if self.config.verify_cert is False:
+                if self.config.check_hostname:
+                    msg = "verify_cert cannot be disabled when check_hostname is enabled"
+                    raise ClientError(msg)
+                sc.verify_mode = ssl.CERT_NONE
             kwargs["ssl"] = sc
 
         try:
