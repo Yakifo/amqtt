@@ -77,6 +77,21 @@ jobs:
       - name: 🏗 Install the project
         run: uv sync --locked --dev --all-extras
 
+      # https://github.com/actions/setup-node
+      - name: 🏗 Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: docs_test/package-lock.json
+
+      - name: 🏗 Install mqtt.js dependencies
+        run: npm ci
+        working-directory: docs_test
+
+      - name: Run MQTT.js interoperability tests
+        run: uv run --frozen pytest tests/test_mqttjs.py -v
+
       - name: Run pytest
         run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
 
