@@ -61,3 +61,21 @@ pre-commit run --all-files
 
 When adding a new feature, please add corollary tests. The testing coverage should not decrease.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
+
+## Go MQTT Interoperability Tests
+
+Some interoperability tests use the Eclipse Paho Go MQTT client. To run them locally, install Go with `go` on your `PATH`, then download the Go module dependencies:
+
+```shell
+cd tests/support/go-mqtt-client
+go mod download
+cd -
+```
+
+Then run the Go interoperability tests:
+
+```shell
+uv run pytest tests/test_go_mqtt.py -v
+```
+
+If Go or the downloaded module dependencies are unavailable, these tests are skipped during local runs. In CI, missing Go dependencies are treated as failures.

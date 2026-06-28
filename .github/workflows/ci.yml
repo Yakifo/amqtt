@@ -74,8 +74,22 @@ jobs:
       - name: install openldap dependencies
         run: sudo apt-get install -y libldap2-dev libsasl2-dev
 
+      # https://github.com/actions/setup-go
+      - name: 🏗 Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: tests/support/go-mqtt-client/go.mod
+
+      - name: 🏗 Install Go MQTT test dependencies
+        run: go mod download
+        working-directory: tests/support/go-mqtt-client
+
       - name: 🏗 Install the project
         run: uv sync --locked --dev --all-extras
+
+      - name: Run Go MQTT interoperability tests
+        run: uv run --frozen pytest tests/test_go_mqtt.py -v
 
       - name: Run pytest
         run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
