@@ -23,6 +23,7 @@ from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.contexts import BaseContext
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
 from amqtt.events import MQTTEvents
+from amqtt.protocol import ProtocolHandlerBase
 from amqtt.mqtt3 import packet_class
 from amqtt.mqtt3.connack import ConnackPacket
 from amqtt.mqtt3.connect import ConnectPacket
@@ -64,7 +65,7 @@ from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplic
 C = TypeVar("C", bound=BaseContext)
 
 
-class ProtocolHandler(Generic[C]):
+class ProtocolHandler(ProtocolHandlerBase[C], Generic[C]):
     """Class implementing the MQTT communication protocol using asyncio features."""
 
     def __init__(
