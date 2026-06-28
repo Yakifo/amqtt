@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -33,7 +34,6 @@ import django
 
 django.setup()
 
-from amqtt.broker import Broker, BrokerContext
 from amqtt.contexts import Action, BaseContext
 from amqtt.contrib.django.models import AbstractMqttToken, MqttToken
 from amqtt.contrib.django.plugins import DEFAULT_TOKEN_MODEL, DjangoAuthPlugin, UserTopicACLPlugin
@@ -54,13 +54,13 @@ def clean_django_database(django_database: None) -> None:
 
 
 @pytest.fixture
-def user():
+def user() -> Any:
     user_model = get_user_model()
     return user_model.objects.create_user(username="mqtt-user")
 
 
 @pytest.fixture
-def issued_token(user) -> tuple[MqttToken, str]:
+def issued_token(user: Any) -> tuple[MqttToken, str]:
     return MqttToken.issue(user)
 
 
@@ -70,7 +70,7 @@ def _auth_plugin(
     service_user_id: str | None = None,
     service_token: str | None = None,
 ) -> DjangoAuthPlugin:
-    context = BrokerContext(Broker())
+    context = cast(Any, BaseContext())
     context.config = DjangoAuthPlugin.Config(
         token_model=token_model,
         service_user_id=service_user_id,
@@ -80,12 +80,12 @@ def _auth_plugin(
 
 
 def _topic_plugin() -> UserTopicACLPlugin:
-    context = BrokerContext(Broker())
+    context = cast(Any, BaseContext())
     context.config = UserTopicACLPlugin.Config()
     return UserTopicACLPlugin(context)
 
 
-def test_mqtt_token_issue_stores_digest_only(user) -> None:
+def test_mqtt_token_issue_stores_digest_only(user: Any) -> None:
     token, raw_key = MqttToken.issue(user)
 
     assert raw_key
@@ -95,7 +95,7 @@ def test_mqtt_token_issue_stores_digest_only(user) -> None:
     assert MqttToken.get_active_for_key(raw_key) == token
 
 
-def test_mqtt_token_revoke_removes_token_from_active_lookup(user) -> None:
+def test_mqtt_token_revoke_removes_token_from_active_lookup(user: Any) -> None:
     token, raw_key = MqttToken.issue(user)
 
     token.revoke()
@@ -132,7 +132,7 @@ def test_django_auth_plugin_loads_amqtt_plugin_config() -> None:
 
 
 @pytest.mark.asyncio
-async def test_django_auth_plugin_accepts_active_token(user, issued_token) -> None:
+async def test_django_auth_plugin_accepts_active_token(user: Any, issued_token: tuple[MqttToken, str]) -> None:
     _, raw_key = issued_token
     plugin = _auth_plugin()
     session = Session()
@@ -140,11 +140,11 @@ async def test_django_auth_plugin_accepts_active_token(user, issued_token) -> No
     session.password = raw_key
 
     assert await plugin.authenticate(session=session) is True
-    assert session._django_role == "user"  # noqa: SLF001
+    assert getattr(session, "_django_role") == "user"
 
 
 @pytest.mark.asyncio
-async def test_django_auth_plugin_rejects_wrong_user(issued_token) -> None:
+async def test_django_auth_plugin_rejects_wrong_user(issued_token: tuple[MqttToken, str]) -> None:
     _, raw_key = issued_token
     plugin = _auth_plugin()
     session = Session()
@@ -163,7 +163,7 @@ async def test_django_auth_plugin_accepts_service_credentials() -> None:
     session.password = "secret"
 
     assert await plugin.authenticate(session=session) is True
-    assert session._django_role == "service"  # noqa: SLF001
+    assert getattr(session, "_django_role") == "service"
 
 
 @pytest.mark.asyncio
@@ -171,10 +171,10 @@ async def test_user_topic_acl_scopes_subscribers_to_own_updates() -> None:
     plugin = _topic_plugin()
     session = Session()
     session.username = "123"
-    session._django_role = "user"  # noqa: SLF001
+    setattr(session, "_django_role", "user")
 
-    assert await plugin.topic_filtering(session=session, topic="users/123/updates/new", action=Action.SUBSCRIBE) is True
-    assert await plugin.topic_filtering(session=session, topic="users/456/updates/new", action=Action.SUBSCRIBE) is False
+    assert await plugin.topic_filtering(session=session, topic="users/123/updates/new", action=cast(Action, Action.SUBSCRIBE)) is True
+    assert await plugin.topic_filtering(session=session, topic="users/456/updates/new", action=cast(Action, Action.SUBSCRIBE)) is False
 
 
 @pytest.mark.asyncio
@@ -182,7 +182,7 @@ async def test_user_topic_acl_allows_service_publish_only_to_update_topics() -> 
     plugin = _topic_plugin()
     session = Session()
     session.username = "service"
-    session._django_role = "service"  # noqa: SLF001
+    setattr(session, "_django_role", "service")
 
-    assert await plugin.topic_filtering(session=session, topic="users/123/updates/new", action=Action.PUBLISH) is True
-    assert await plugin.topic_filtering(session=session, topic="users/123/private/new", action=Action.PUBLISH) is False
+    assert await plugin.topic_filtering(session=session, topic="users/123/updates/new", action=cast(Action, Action.PUBLISH)) is True
+    assert await plugin.topic_filtering(session=session, topic="users/123/private/new", action=cast(Action, Action.PUBLISH)) is False

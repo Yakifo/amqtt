@@ -3,7 +3,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import secrets
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, cast
+from typing_extensions import Self
 
 from django.conf import settings
 from django.db import models
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractBaseUser
 
 
-class AbstractMqttToken(models.Model):
+class AbstractMqttToken(models.Model):  # type: ignore[misc]
     """Abstract hashed bearer token model for authenticating MQTT clients."""
 
     KEY_BYTES: ClassVar[int] = 32
@@ -48,16 +49,17 @@ class AbstractMqttToken(models.Model):
         return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
     @classmethod
-    def issue(cls, user: AbstractBaseUser, raw_key: str | None = None) -> tuple[AbstractMqttToken, str]:
+    def issue(cls, user: AbstractBaseUser, raw_key: str | None = None) -> tuple[Self, str]:
         """Create a token for a user and return ``(token, raw_key)``."""
         key = raw_key or cls.generate_key()
         token = cls.objects.create(user=user, key_digest=cls.digest_key(key))
-        return token, key
+        return cast("Self", token), key
 
     @classmethod
-    def get_active_for_key(cls, raw_key: str) -> AbstractMqttToken:
+    def get_active_for_key(cls, raw_key: str) -> Self:
         """Return the active token matching ``raw_key``."""
-        return cls.objects.select_related("user").get(key_digest=cls.digest_key(raw_key), revoked_at__isnull=True)
+        token = cls.objects.select_related("user").get(key_digest=cls.digest_key(raw_key), revoked_at__isnull=True)
+        return cast("Self", token)
 
     def matches_key(self, raw_key: str) -> bool:
         """Return whether ``raw_key`` matches this stored token digest."""

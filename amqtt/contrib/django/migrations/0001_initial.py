@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
+import django.db.models.deletion
 
 
-class Migration(migrations.Migration):
+class Migration(migrations.Migration):  # type: ignore[misc]
     initial = True
 
-    dependencies = [
+    dependencies = [  # noqa: RUF012
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
-    operations = [
+    operations = [  # noqa: RUF012
         migrations.CreateModel(
             name="MqttToken",
             fields=[
@@ -34,4 +34,3 @@ class Migration(migrations.Migration):
             },
         ),
     ]
-

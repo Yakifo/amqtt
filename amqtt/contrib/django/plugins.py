@@ -15,15 +15,14 @@ Implements the broker side of [ADR-006] push notifications:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from asgiref.sync import sync_to_async
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 
 from amqtt.contexts import Action, BaseContext
-from amqtt.plugins.authentication import BaseAuthPlugin
-from amqtt.plugins.topic_checking import BaseTopicPlugin
+from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
 
 if TYPE_CHECKING:
     from amqtt.session import Session
@@ -32,13 +31,28 @@ SERVICE_USER_SENTINEL = "service"
 DEFAULT_TOKEN_MODEL = "amqtt_django.MqttToken"  # noqa: S105
 
 
+class Token(Protocol):
+    """Token object contract used by the Django auth plugin."""
+
+    user_id: object
+
+
+class TokenModel(Protocol):
+    """Token model contract used by the Django auth plugin."""
+
+    DoesNotExist: type[Exception]
+
+    def get_active_for_key(self, raw_key: str) -> Token:
+        """Return an active token for ``raw_key``."""
+
+
 def _build_user_topic_prefix(user_id: str) -> str:
     return f"users/{user_id}/updates/"
 
 
-def _get_token_model(token_model_label: str) -> type:
+def _get_token_model(token_model_label: str) -> TokenModel:
     try:
-        return apps.get_model(token_model_label, require_ready=True)
+        return cast("TokenModel", apps.get_model(token_model_label, require_ready=True))
     except ValueError as exc:
         msg = "token_model must be in the form 'app_label.ModelName'"
         raise ImproperlyConfigured(msg) from exc
@@ -97,7 +111,7 @@ class DjangoAuthPlugin(BaseAuthPlugin):
             return False
         # Stash the role on the session so the topic plugin can read it without
         # another DB round-trip.
-        session._django_role = role  # noqa: SLF001
+        cast("Any", session)._django_role = role  # noqa: SLF001
         return True
 
     @dataclass
