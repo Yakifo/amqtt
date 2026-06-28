@@ -36,7 +36,7 @@ django.setup()
 
 from amqtt.contexts import Action, BaseContext
 from amqtt.contrib.django.models import AbstractMqttToken, MqttToken
-from amqtt.contrib.django.plugins import DEFAULT_TOKEN_MODEL, DjangoAuthPlugin, UserTopicACLPlugin
+from amqtt.contrib.django.plugins import DEFAULT_TOKEN_MODEL, DJANGO_ROLE_ATTRIBUTE, DjangoAuthPlugin, UserTopicACLPlugin
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import Session
 from django.contrib.auth import get_user_model
@@ -140,7 +140,7 @@ async def test_django_auth_plugin_accepts_active_token(user: Any, issued_token: 
     session.password = raw_key
 
     assert await plugin.authenticate(session=session) is True
-    assert getattr(session, "_django_role") == "user"
+    assert session.attributes[DJANGO_ROLE_ATTRIBUTE] == "user"
 
 
 @pytest.mark.asyncio
@@ -152,7 +152,7 @@ async def test_django_auth_plugin_rejects_wrong_user(issued_token: tuple[MqttTok
     session.password = raw_key
 
     assert await plugin.authenticate(session=session) is False
-    assert not hasattr(session, "_django_role")
+    assert DJANGO_ROLE_ATTRIBUTE not in session.attributes
 
 
 @pytest.mark.asyncio
@@ -163,7 +163,7 @@ async def test_django_auth_plugin_accepts_service_credentials() -> None:
     session.password = "secret"
 
     assert await plugin.authenticate(session=session) is True
-    assert getattr(session, "_django_role") == "service"
+    assert session.attributes[DJANGO_ROLE_ATTRIBUTE] == "service"
 
 
 @pytest.mark.asyncio
@@ -171,7 +171,7 @@ async def test_user_topic_acl_scopes_subscribers_to_own_updates() -> None:
     plugin = _topic_plugin()
     session = Session()
     session.username = "123"
-    setattr(session, "_django_role", "user")
+    session.attributes[DJANGO_ROLE_ATTRIBUTE] = "user"
 
     assert await plugin.topic_filtering(session=session, topic="users/123/updates/new", action=cast(Action, Action.SUBSCRIBE)) is True
     assert await plugin.topic_filtering(session=session, topic="users/456/updates/new", action=cast(Action, Action.SUBSCRIBE)) is False
@@ -182,7 +182,7 @@ async def test_user_topic_acl_allows_service_publish_only_to_update_topics() -> 
     plugin = _topic_plugin()
     session = Session()
     session.username = "service"
-    setattr(session, "_django_role", "service")
+    session.attributes[DJANGO_ROLE_ATTRIBUTE] = "service"
 
     assert await plugin.topic_filtering(session=session, topic="users/123/updates/new", action=cast(Action, Action.PUBLISH)) is True
     assert await plugin.topic_filtering(session=session, topic="users/123/private/new", action=cast(Action, Action.PUBLISH)) is False

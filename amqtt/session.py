@@ -123,6 +123,13 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
 
 class Session:
+    """MQTT client session state.
+
+    A session stores connection metadata, authentication data, protocol flow
+    state, and extension-owned attributes for a connected or persisted MQTT
+    client.
+    """
+
     states: ClassVar[list[str]] = ["new", "connected", "disconnected"]
 
     def __init__(self) -> None:
@@ -149,6 +156,12 @@ class Session:
         self.last_connect_time: int | None = None
         self.ssl_object: ssl.SSLObject | None = None
         self.last_disconnect_time: int | None = None
+        self.attributes: dict[str, Any] = {}
+        """Application and plugin-owned session attributes.
+
+        Keys should be namespaced, for example ``"amqtt.contrib.django.role"``,
+        to avoid collisions between independent extensions.
+        """
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
         self.inflight_out: OrderedDict[int, OutgoingApplicationMessage] = OrderedDict()

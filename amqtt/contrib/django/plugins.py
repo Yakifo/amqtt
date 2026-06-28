@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 SERVICE_USER_SENTINEL = "service"
 DEFAULT_TOKEN_MODEL = "amqtt_django.MqttToken"  # noqa: S105
+DJANGO_ROLE_ATTRIBUTE = "amqtt.contrib.django.role"
 
 
 class Token(Protocol):
@@ -106,9 +107,11 @@ class DjangoAuthPlugin(BaseAuthPlugin):
         )
         if not ok:
             return False
-        # Stash the role on the session so the topic plugin can read it without
-        # another DB round-trip.
-        setattr(session, "_django_role", role)
+        if role is None:
+            return False
+        # Remember the role so the topic plugin can read it without another DB
+        # round-trip.
+        session.attributes[DJANGO_ROLE_ATTRIBUTE] = role
         return True
 
     @dataclass
@@ -140,7 +143,7 @@ class UserTopicACLPlugin(BaseTopicPlugin):
         if session is None or topic is None or action is None:
             return False
 
-        role = getattr(session, "_django_role", None)
+        role = session.attributes.get(DJANGO_ROLE_ATTRIBUTE)
         username = session.username or ""
 
         if action is Action.PUBLISH:

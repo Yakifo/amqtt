@@ -133,7 +133,6 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         else:
             self.context.logger.debug("$SYS disabled")
 
-
     async def on_broker_pre_shutdown(self) -> None:
         """Stop $SYS topics broadcasting."""
         if self._sys_handle:
