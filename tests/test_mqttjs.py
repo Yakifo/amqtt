@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 import random
 import shutil
@@ -97,9 +98,9 @@ client.on("connect", async () => {
 """
 
 
-def _mqttjs_available() -> bool:
+def _mqttjs_unavailable_reason() -> str | None:
     if shutil.which("node") is None:
-        return False
+        return "mqtt.js tests require node"
 
     result = subprocess.run(
         ["node", "-e", "require('mqtt')"],
@@ -108,13 +109,23 @@ def _mqttjs_available() -> bool:
         text=True,
         check=False,
     )
-    return result.returncode == 0
+    if result.returncode != 0:
+        return (
+            "mqtt.js tests require the mqtt package in docs_test/node_modules\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+    return None
 
 
-pytestmark = pytest.mark.skipif(
-    not _mqttjs_available(),
-    reason="mqtt.js tests require node and the mqtt package in docs_test/node_modules",
-)
+@pytest.fixture(autouse=True)
+def require_mqttjs() -> None:
+    reason = _mqttjs_unavailable_reason()
+    if reason is None:
+        return
+    if os.environ.get("CI") == "true":
+        pytest.fail(reason)
+    pytest.skip(reason)
 
 
 async def run_mqttjs(settings: dict[str, Any]) -> None:

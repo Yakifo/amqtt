@@ -89,6 +89,9 @@ jobs:
         run: npm ci
         working-directory: docs_test
 
+      - name: Run MQTT.js interoperability tests
+        run: uv run --frozen pytest tests/test_mqttjs.py -v
+
       - name: Run pytest
         run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
 
