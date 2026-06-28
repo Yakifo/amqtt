@@ -61,3 +61,21 @@ pre-commit run --all-files
 
 When adding a new feature, please add corollary tests. The testing coverage should not decrease.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
+
+## Java MQTT Interoperability Tests
+
+Some interoperability tests use the Eclipse Paho Java MQTT client. To run them locally, install a JDK with `java` and `javac` on your `PATH`, then download the Paho client jar and expose it with `PAHO_MQTT_JAR`:
+
+```shell
+curl -L -o /tmp/org.eclipse.paho.client.mqttv3-1.2.5.jar \
+  https://repo1.maven.org/maven2/org/eclipse/paho/org.eclipse.paho.client.mqttv3/1.2.5/org.eclipse.paho.client.mqttv3-1.2.5.jar
+export PAHO_MQTT_JAR=/tmp/org.eclipse.paho.client.mqttv3-1.2.5.jar
+```
+
+Then run the Java interoperability tests:
+
+```shell
+uv run pytest tests/test_java_mqtt.py -v
+```
+
+If `PAHO_MQTT_JAR` is unset, pytest also checks the local Maven and Gradle caches for `org.eclipse.paho.client.mqttv3`. If no jar is available, these tests are skipped.
