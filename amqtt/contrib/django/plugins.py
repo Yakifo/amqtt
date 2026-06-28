@@ -15,13 +15,13 @@ Implements the broker side of [ADR-006] push notifications:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast
 
 from asgiref.sync import sync_to_async
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 
-from amqtt.contexts import Action, BaseContext
+from amqtt.contexts import Action
 from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
 
 if TYPE_CHECKING:
@@ -91,9 +91,6 @@ def _check_token(
 class DjangoAuthPlugin(BaseAuthPlugin):
     """Authenticate MQTT clients against Django-backed MQTT tokens."""
 
-    def __init__(self, context: BaseContext) -> None:
-        super().__init__(context)
-
     async def authenticate(self, *, session: Session) -> bool | None:
         username = session.username or ""
         password = session.password or ""
@@ -111,7 +108,7 @@ class DjangoAuthPlugin(BaseAuthPlugin):
             return False
         # Stash the role on the session so the topic plugin can read it without
         # another DB round-trip.
-        cast("Any", session)._django_role = role  # noqa: SLF001
+        setattr(session, "_django_role", role)
         return True
 
     @dataclass

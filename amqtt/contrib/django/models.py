@@ -18,6 +18,8 @@ class AbstractMqttToken(models.Model):  # type: ignore[misc]
     """Abstract hashed bearer token model for authenticating MQTT clients."""
 
     KEY_BYTES: ClassVar[int] = 32
+    objects: ClassVar[models.Manager[AbstractMqttToken]]
+    user_id: object
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
