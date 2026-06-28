@@ -108,7 +108,12 @@ class ExternalServer(Server):
 
 
 class BrokerContext(BaseContext):
-    """Used to provide the server's context as well as public methods for accessing internal state."""
+    """Broker runtime context passed to broker plugins.
+
+    Broker plugins use this object to inspect broker state, publish internal
+    messages, retain messages, and manage sessions or subscriptions without
+    reaching into the broker's private attributes.
+    """
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
@@ -120,10 +125,12 @@ class BrokerContext(BaseContext):
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
     async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
+        """Retain a message on behalf of the broker."""
         await self._broker_instance.retain_message(None, topic_name, data, qos)
 
     @property
     def sessions(self) -> Generator[Session]:
+        """Yield all known broker sessions."""
         for session in self._broker_instance.sessions.values():
             yield session[0]
 
@@ -133,10 +140,12 @@ class BrokerContext(BaseContext):
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
+        """Return retained messages keyed by topic name."""
         return self._broker_instance.retained_messages
 
     @property
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
+        """Return active subscriptions keyed by topic filter."""
         return self._broker_instance.subscriptions
 
     async def add_subscription(self, client_id: str, topic: str | None, qos: int | None) -> None:
@@ -444,7 +453,7 @@ class Broker:
         remote_info = writer.get_peer_info()
         if remote_info is None:
             self.logger.warning("Remote info could not be retrieved from peer info")
-            await writer.close() # python 3.10 needs explicit close
+            await writer.close()  # python 3.10 needs explicit close
             server.release_connection()
             return
 
