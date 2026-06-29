@@ -74,11 +74,16 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
-        # bypass the `test_plugins_correct_has_attr` until it can be updated
-        if getattr(self.config, "file", None) and getattr(self.config, "connection", None):
-            msg = "`Config` supports file _or_ connection, not both."
-            raise PluginInitError(msg)
         connection = self.config.connection
+
+        # backwards compatibility support
+        if not hasattr(self.config, "file") and not connection:
+            connection = f"sqlite+aiosqlite:///amqtt.db"
+
+        if getattr(self.config, "file", None) and connection:
+            msg = "`Config` requires file _or_ connection, but not both."
+            raise PluginInitError(msg)
+
         if getattr(self.config, "file", None):
             connection = f"sqlite+aiosqlite:///{self.config.file}"
             warnings.warn(
@@ -268,7 +273,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         - `postgresql+asyncpg://user:password@host:port/dbname`
         - `sqlite+aiosqlite:///dbfilename.db`
         """
-        file: str | Path | None = "amqtt.db"
+        file: str | Path | None = None
         """path & filename to store the sqlite session db
         Deprecated in 0.11.4, use `connection` instead.
         """
