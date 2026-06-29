@@ -1,3 +1,7 @@
-QOS_0 = 0x00
-QOS_1 = 0x01
-QOS_2 = 0x02
+import amqtt.constants as shared_constants
+
+QOS_0 = shared_constants.QOS_0
+QOS_1 = shared_constants.QOS_1
+QOS_2 = shared_constants.QOS_2
+
+__all__ = ["QOS_0", "QOS_1", "QOS_2"]
