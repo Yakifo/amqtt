@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import MQTTError
 from amqtt.events import MQTTEvents
-from amqtt.protocol import BrokerProtocolHandlerBase
 from amqtt.mqtt3.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
@@ -24,6 +23,13 @@ from amqtt.mqtt3.subscribe import SubscribePacket
 from amqtt.mqtt3.unsuback import UnsubackPacket
 from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
+from amqtt.protocol import (
+    BrokerProtocolHandlerBase,
+    ClientDisconnect,
+    SubscriptionRequest,
+    SubscriptionTopic,
+    UnsubscriptionRequest,
+)
 from amqtt.session import Session
 from amqtt.utils import format_client_message
 
@@ -31,18 +37,6 @@ _MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
 
 if TYPE_CHECKING:
     from amqtt.broker import BrokerContext
-
-
-class Subscription:
-    def __init__(self, packet_id: int, topics: list[tuple[str, int]]) -> None:
-        self.packet_id = packet_id
-        self.topics = topics
-
-
-class UnSubscription:
-    def __init__(self, packet_id: int, topics: list[str]) -> None:
-        self.packet_id = packet_id
-        self.topics = topics
 
 
 class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHandlerBase["BrokerContext"]):
@@ -53,9 +47,9 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
         loop: AbstractEventLoop | None = None,
     ) -> None:
         super().__init__(plugins_manager, session, loop)
-        self._disconnect_waiter: asyncio.Future[DisconnectPacket | None] | None = None
-        self._pending_subscriptions: Queue[Subscription] = Queue()
-        self._pending_unsubscriptions: Queue[UnSubscription] = Queue()
+        self._disconnect_waiter: asyncio.Future[ClientDisconnect | None] | None = None
+        self._pending_subscriptions: Queue[SubscriptionRequest] = Queue()
+        self._pending_unsubscriptions: Queue[UnsubscriptionRequest] = Queue()
 
     async def start(self) -> None:
         await super().start()
@@ -75,7 +69,7 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
         while not self._pending_unsubscriptions.empty():
             self._pending_unsubscriptions.get_nowait()
 
-    async def wait_disconnect(self) -> DisconnectPacket | None:
+    async def wait_disconnect(self) -> ClientDisconnect | None:
         """Wait for a disconnect packet or connection closure."""
         if self._disconnect_waiter is not None:
             return await self._disconnect_waiter
@@ -91,8 +85,9 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
         """Handle a disconnect packet and notify the disconnect waiter."""
         self.logger.debug("Client disconnecting")
         if self._disconnect_waiter and not self._disconnect_waiter.done():
-            self.logger.debug(f"Setting disconnect waiter result to {disconnect!r}")
-            self._disconnect_waiter.set_result(disconnect)
+            result = ClientDisconnect(is_clean=disconnect is not None, packet=disconnect)
+            self.logger.debug(f"Setting disconnect waiter result to {result!r}")
+            self._disconnect_waiter.set_result(result)
         self._disconnect_waiter = None  # Reset the disconnect waiter to avoid reuse
 
     async def handle_connection_closed(self) -> None:
@@ -120,7 +115,8 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
             msg = "SUBSCRIBE packet: payload not initialized."
             raise MQTTError(msg)
 
-        subscription: Subscription = Subscription(subscribe.variable_header.packet_id, subscribe.payload.topics)
+        topics = [SubscriptionTopic(topic_filter=topic, qos=qos) for topic, qos in subscribe.payload.topics]
+        subscription = SubscriptionRequest(subscribe.variable_header.packet_id, topics)
         await self._pending_subscriptions.put(subscription)
 
     async def handle_unsubscribe(self, unsubscribe: UnsubscribePacket) -> None:
@@ -130,13 +126,13 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
         if unsubscribe.payload is None:
             msg = "UNSUBSCRIBE packet: payload not initialized."
             raise MQTTError(msg)
-        unsubscription: UnSubscription = UnSubscription(unsubscribe.variable_header.packet_id, unsubscribe.payload.topics)
+        unsubscription = UnsubscriptionRequest(unsubscribe.variable_header.packet_id, unsubscribe.payload.topics)
         await self._pending_unsubscriptions.put(unsubscription)
 
-    async def get_next_pending_subscription(self) -> Subscription:
+    async def get_next_pending_subscription(self) -> SubscriptionRequest:
         return await self._pending_subscriptions.get()
 
-    async def get_next_pending_unsubscription(self) -> UnSubscription:
+    async def get_next_pending_unsubscription(self) -> UnsubscriptionRequest:
         return await self._pending_unsubscriptions.get()
 
     async def mqtt_acknowledge_subscription(self, packet_id: int, return_codes: list[int]) -> None:

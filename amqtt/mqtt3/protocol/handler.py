@@ -23,7 +23,6 @@ from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.contexts import BaseContext
 from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
 from amqtt.events import MQTTEvents
-from amqtt.protocol import ProtocolHandlerBase
 from amqtt.mqtt3 import packet_class
 from amqtt.mqtt3.connack import ConnackPacket
 from amqtt.mqtt3.connect import ConnectPacket
@@ -60,6 +59,7 @@ from amqtt.mqtt3.subscribe import SubscribePacket
 from amqtt.mqtt3.unsuback import UnsubackPacket
 from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
+from amqtt.protocol import ProtocolHandlerBase
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 C = TypeVar("C", bound=BaseContext)

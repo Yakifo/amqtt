@@ -1,13 +1,54 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.contexts import BaseContext
-from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
+
+if TYPE_CHECKING:
+    from amqtt.adapters import ReaderAdapter, WriterAdapter
+    from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 
 C = TypeVar("C", bound=BaseContext)
+
+
+@dataclass(slots=True)
+class ClientDisconnect:
+    """Protocol-neutral broker view of a client disconnect."""
+
+    is_clean: bool
+    packet: Any | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SubscriptionTopic:
+    """Protocol-neutral topic subscription request."""
+
+    topic_filter: str
+    qos: int
+    no_local: bool = False
+    retain_as_published: bool = False
+    retain_handling: int = 0
+    subscription_identifier: int | None = None
+
+
+@dataclass(slots=True)
+class SubscriptionRequest:
+    """Protocol-neutral subscription request received by the broker."""
+
+    packet_id: int
+    topics: list[SubscriptionTopic]
+    properties: Any | None = None
+
+
+@dataclass(slots=True)
+class UnsubscriptionRequest:
+    """Protocol-neutral unsubscription request received by the broker."""
+
+    packet_id: int
+    topics: list[str]
+    properties: Any | None = None
 
 
 class ProtocolHandlerBase(ABC, Generic[C]):
@@ -81,6 +122,18 @@ class BrokerProtocolHandlerBase(ProtocolHandlerBase[C], ABC):
         """Handle connection closure."""
 
     @abstractmethod
+    async def wait_disconnect(self) -> ClientDisconnect | None:
+        """Wait for a client disconnect event."""
+
+    @abstractmethod
+    async def get_next_pending_subscription(self) -> SubscriptionRequest:
+        """Return the next pending broker subscription request."""
+
+    @abstractmethod
+    async def get_next_pending_unsubscription(self) -> UnsubscriptionRequest:
+        """Return the next pending broker unsubscription request."""
+
+    @abstractmethod
     async def mqtt_acknowledge_subscription(self, packet_id: int, return_codes: list[int]) -> None:
         """Send a subscription acknowledgement to the peer."""
 
@@ -123,6 +176,10 @@ class ClientProtocolHandlerBase(ProtocolHandlerBase[C], ABC):
     @abstractmethod
     async def handle_connection_closed(self) -> None:
         """Handle connection closure."""
+
+    @abstractmethod
+    async def wait_disconnect(self) -> None:
+        """Wait for a server disconnect event."""
 
     @abstractmethod
     async def mqtt_connect(self) -> int | None:

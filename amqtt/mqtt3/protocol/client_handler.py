@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Any
 
 from amqtt.errors import AMQTTError, NoDataError
 from amqtt.events import MQTTEvents
-from amqtt.protocol import ClientProtocolHandlerBase
 from amqtt.mqtt3.connack import ConnackPacket
 from amqtt.mqtt3.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from amqtt.mqtt3.disconnect import DisconnectPacket
@@ -15,6 +14,7 @@ from amqtt.mqtt3.subscribe import SubscribePacket
 from amqtt.mqtt3.unsuback import UnsubackPacket
 from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
+from amqtt.protocol import ClientProtocolHandlerBase
 from amqtt.session import Session
 
 if TYPE_CHECKING:

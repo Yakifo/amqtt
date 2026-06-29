@@ -2,10 +2,10 @@ from typing_extensions import Self
 
 from amqtt.adapters import ReaderAdapter
 from amqtt.codecs_amqtt import bytes_to_int, read_or_raise
+from amqtt.constants import CONNECTION_ACCEPTED as CONNECTION_ACCEPTED
 from amqtt.errors import AMQTTError
 from amqtt.mqtt3.packet import CONNACK, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
-CONNECTION_ACCEPTED = 0x00
 UNACCEPTABLE_PROTOCOL_VERSION = 0x01
 IDENTIFIER_REJECTED = 0x02
 SERVER_UNAVAILABLE = 0x03
