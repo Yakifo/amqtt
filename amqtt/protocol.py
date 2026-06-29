@@ -41,14 +41,6 @@ class ProtocolHandlerBase(ABC, Generic[C]):
         """Send a publish message through the protocol implementation."""
 
     @abstractmethod
-    async def mqtt_disconnect(self) -> None:
-        """Disconnect the protocol handler from the remote peer."""
-
-    @abstractmethod
-    async def mqtt_ping(self) -> Any:
-        """Send a ping request and return the corresponding response."""
-
-    @abstractmethod
     async def mqtt_deliver_next_message(self) -> ApplicationMessage | None:
         """Return the next application message available for delivery."""
 
@@ -57,11 +49,11 @@ class BrokerProtocolHandlerBase(ProtocolHandlerBase[C], ABC):
     """Abstract broker-facing protocol-handler contract."""
 
     @abstractmethod
-    async def handle_write_timeout(self) -> None:
+    def handle_write_timeout(self) -> None:
         """Handle a write timeout event."""
 
     @abstractmethod
-    async def handle_read_timeout(self) -> None:
+    def handle_read_timeout(self) -> None:
         """Handle a read timeout event."""
 
     @abstractmethod
@@ -105,11 +97,11 @@ class ClientProtocolHandlerBase(ProtocolHandlerBase[C], ABC):
     """Abstract client-facing protocol-handler contract."""
 
     @abstractmethod
-    async def handle_write_timeout(self) -> None:
+    def handle_write_timeout(self) -> None:
         """Handle a write timeout event."""
 
     @abstractmethod
-    async def handle_read_timeout(self) -> None:
+    def handle_read_timeout(self) -> None:
         """Handle a read timeout event."""
 
     @abstractmethod
@@ -135,6 +127,14 @@ class ClientProtocolHandlerBase(ProtocolHandlerBase[C], ABC):
     @abstractmethod
     async def mqtt_connect(self) -> int | None:
         """Send CONNECT and await CONNACK."""
+
+    @abstractmethod
+    async def mqtt_disconnect(self) -> None:
+        """Disconnect the protocol handler from the remote peer."""
+
+    @abstractmethod
+    async def mqtt_ping(self) -> Any:
+        """Send a ping request and return the corresponding response."""
 
     @abstractmethod
     async def mqtt_subscribe(self, topics: list[tuple[str, int]], packet_id: int) -> list[int]:

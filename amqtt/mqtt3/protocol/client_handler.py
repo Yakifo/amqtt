@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any
 
 from amqtt.errors import AMQTTError, NoDataError
 from amqtt.events import MQTTEvents
+from amqtt.protocol import ClientProtocolHandlerBase
 from amqtt.mqtt3.connack import ConnackPacket
 from amqtt.mqtt3.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
 from amqtt.mqtt3.disconnect import DisconnectPacket
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from amqtt.client import ClientContext
 
 
-class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
+class ClientProtocolHandler(ProtocolHandler["ClientContext"], ClientProtocolHandlerBase["ClientContext"]):
     def __init__(
         self,
         plugins_manager: PluginManager["ClientContext"],

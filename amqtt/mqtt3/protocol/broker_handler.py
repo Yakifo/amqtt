@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.errors import MQTTError
 from amqtt.events import MQTTEvents
+from amqtt.protocol import BrokerProtocolHandlerBase
 from amqtt.mqtt3.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
@@ -44,7 +45,7 @@ class UnSubscription:
         self.topics = topics
 
 
-class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
+class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHandlerBase["BrokerContext"]):
     def __init__(
         self,
         plugins_manager: PluginManager["BrokerContext"],
