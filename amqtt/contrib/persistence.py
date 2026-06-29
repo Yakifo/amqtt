@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 import logging
 from pathlib import Path
+import warnings
 
-from sqlalchemy import Boolean, Integer, LargeBinary, Result, String, select
+from sqlalchemy import Boolean, Integer, LargeBinary, Result, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from amqtt.broker import BrokerContext, RetainedApplicationMessage
 from amqtt.contrib import DataClassListJSON
-from amqtt.errors import PluginError
+from amqtt.errors import PluginError, PluginInitError
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
 
@@ -36,7 +37,7 @@ class StoredSession(Base):
     __tablename__ = "stored_sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    client_id: Mapped[str] = mapped_column(String)
+    client_id: Mapped[str] = mapped_column(Text)
 
     clean_session: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
@@ -45,7 +46,7 @@ class StoredSession(Base):
     will_message: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, default=None)
     will_qos: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     will_retain: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
-    will_topic: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    will_topic: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     keep_alive: Mapped[int] = mapped_column(Integer, default=0)
     retained: Mapped[list[RetainedMessage]] = mapped_column(DataClassListJSON(RetainedMessage), default=list)
@@ -56,7 +57,7 @@ class StoredMessage(Base):
     __tablename__ = "stored_messages"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    topic: Mapped[str] = mapped_column(String)
+    topic: Mapped[str] = mapped_column(Text)
     data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, default=None)
     qos: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -73,12 +74,24 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
-        # bypass the `test_plugins_correct_has_attr` until it can be updated
-        if not hasattr(self.config, "file"):
-            logger.warning("`Config` is missing a `file` attribute")
-            return
+        connection = self.config.connection
 
-        self._engine = create_async_engine(f"sqlite+aiosqlite:///{self.config.file}")
+        # backwards compatibility support
+        if not hasattr(self.config, "file") and not connection:
+            connection = "sqlite+aiosqlite:///amqtt.db"
+
+        if getattr(self.config, "file", None) and connection:
+            msg = "`Config` requires file _or_ connection, but not both."
+            raise PluginInitError(msg)
+
+        if getattr(self.config, "file", None):
+            connection = f"sqlite+aiosqlite:///{self.config.file}"
+            warnings.warn(
+                "persistence plugin: `file` option is now deprecated, use full `connection` string instead",
+                DeprecationWarning,
+                stacklevel=0
+            )
+        self._engine = create_async_engine(connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
 
     @staticmethod
@@ -253,8 +266,18 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
     class Config:
         """Configuration variables."""
 
-        file: str | Path = "amqtt.db"
-        """path & filename to store the sqlite session db."""
+        connection: str | None = None
+        """SQLAlchemy connection string for the asyncio version of the database connector:
+
+        - `mysql+aiomysql://user:password@host:port/dbname`
+        - `postgresql+asyncpg://user:password@host:port/dbname`
+        - `sqlite+aiosqlite:///dbfilename.db`
+        """
+        file: str | Path | None = None
+        """path & filename to store the sqlite session db
+        Deprecated in 0.11.4, use `connection` instead.
+        """
+
         clear_on_shutdown: bool = True
         """if the broker shutdowns down normally, don't retain any information."""
 

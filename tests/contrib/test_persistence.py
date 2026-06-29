@@ -5,13 +5,15 @@ import sqlite3
 import pytest
 import aiosqlite
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy import select
+from sqlalchemy.dialects import mysql, postgresql, sqlite
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.schema import CreateTable
 
 from amqtt.broker import Broker, BrokerContext, RetainedApplicationMessage
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1
-from amqtt.contrib.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage
+from amqtt.contrib.persistence import Base, RetainedMessage, SessionDBPlugin, StoredMessage, StoredSession, Subscription
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -45,6 +47,24 @@ async def db_session_factory(db_file):
     factory = async_sessionmaker(engine, expire_on_commit=False)
     yield factory
 
+
+@pytest.mark.parametrize("dialect", [sqlite.dialect(), postgresql.dialect(), mysql.dialect()])
+def test_persistence_schema_compiles_for_supported_dialects(dialect):
+    for table in Base.metadata.sorted_tables:
+        str(CreateTable(table).compile(dialect=dialect))
+
+
+@pytest.mark.parametrize("dialect", [sqlite.dialect(), postgresql.dialect(), mysql.dialect()])
+def test_persistence_statements_compile_for_supported_dialects(dialect):
+    statements = [
+        select(StoredSession).where(StoredSession.client_id == "client-1"),
+        select(StoredMessage).where(StoredMessage.topic == "topic/1"),
+        StoredSession.__table__.insert(),
+        StoredMessage.__table__.delete().where(StoredMessage.topic == "topic/1"),
+    ]
+
+    for statement in statements:
+        str(statement.compile(dialect=dialect))
 
 
 @pytest.mark.asyncio
