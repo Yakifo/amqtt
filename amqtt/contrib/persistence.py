@@ -78,7 +78,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
 
         # backwards compatibility support
         if not hasattr(self.config, "file") and not connection:
-            connection = f"sqlite+aiosqlite:///amqtt.db"
+            connection = "sqlite+aiosqlite:///amqtt.db"
 
         if getattr(self.config, "file", None) and connection:
             msg = "`Config` requires file _or_ connection, but not both."
