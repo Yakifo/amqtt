@@ -261,14 +261,14 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
     class Config:
         """Configuration variables."""
 
-        connection: str = None
+        connection: str | None = None
         """SQLAlchemy connection string for the asyncio version of the database connector:
 
         - `mysql+aiomysql://user:password@host:port/dbname`
         - `postgresql+asyncpg://user:password@host:port/dbname`
         - `sqlite+aiosqlite:///dbfilename.db`
         """
-        file: str | Path = "amqtt.db"
+        file: str | Path | None = "amqtt.db"
         """path & filename to store the sqlite session db
         Deprecated in 0.11.4, use `connection` instead.
         """
