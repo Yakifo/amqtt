@@ -30,7 +30,7 @@ except ImportError:
 import amqtt
 from amqtt.broker import BrokerContext
 from amqtt.codecs_amqtt import float_to_bytes_str, int_to_bytes_str
-from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
+from amqtt.mqtt3.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
 DOLLAR_SYS_ROOT = "$SYS/broker/"
 STAT_BYTES_SENT = "bytes_sent"
@@ -132,7 +132,6 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
             )
         else:
             self.context.logger.debug("$SYS disabled")
-
 
     async def on_broker_pre_shutdown(self) -> None:
         """Stop $SYS topics broadcasting."""

@@ -14,15 +14,15 @@ from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.errors import ConnectError
-from amqtt.mqtt.connack import ConnackPacket
-from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
-from amqtt.mqtt.pubcomp import PubcompPacket
-from amqtt.mqtt.publish import PublishPacket
-from amqtt.mqtt.pubrec import PubrecPacket
-from amqtt.mqtt.pubrel import PubrelPacket
+from amqtt.mqtt3.connack import ConnackPacket
+from amqtt.mqtt3.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt3.disconnect import DisconnectPacket
+from amqtt.mqtt3.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.mqtt3.pubcomp import PubcompPacket
+from amqtt.mqtt3.publish import PublishPacket
+from amqtt.mqtt3.pubrec import PubrecPacket
+from amqtt.mqtt3.pubrel import PubrelPacket
 from amqtt.session import OutgoingApplicationMessage
 
 # formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

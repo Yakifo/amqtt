@@ -5,13 +5,13 @@ from typing import Any
 import unittest
 
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.protocol.handler import ProtocolHandler
-from amqtt.mqtt.puback import PubackPacket
-from amqtt.mqtt.pubcomp import PubcompPacket
-from amqtt.mqtt.publish import PublishPacket
-from amqtt.mqtt.pubrec import PubrecPacket
-from amqtt.mqtt.pubrel import PubrelPacket
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt3.protocol.handler import ProtocolHandler
+from amqtt.mqtt3.puback import PubackPacket
+from amqtt.mqtt3.pubcomp import PubcompPacket
+from amqtt.mqtt3.publish import PublishPacket
+from amqtt.mqtt3.pubrec import PubrecPacket
+from amqtt.mqtt3.pubrel import PubrelPacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import IncomingApplicationMessage, OutgoingApplicationMessage, Session
 

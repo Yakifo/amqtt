@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from amqtt.client import ConnectError, MQTTClient
-from amqtt.mqtt.constants import QOS_1
+from amqtt.mqtt3.constants import QOS_1
 
 """
 This sample shows how to publish messages to broker running either `samples/broker_acl.py`

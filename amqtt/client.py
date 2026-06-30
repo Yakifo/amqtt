@@ -19,12 +19,13 @@ from amqtt.adapters import (
 )
 from amqtt.contexts import BaseContext, ClientConfig
 from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
-from amqtt.mqtt.connack import CONNECTION_ACCEPTED
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
+from amqtt.mqtt3.protocol.client_handler import ClientProtocolHandler
 from amqtt.plugins.manager import PluginManager
+from amqtt.protocol import ClientProtocolHandlerBase
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id
+
+from .constants import CONNECTION_ACCEPTED, QOS_0, QOS_1, QOS_2
 
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
@@ -44,6 +45,7 @@ class ClientContext(BaseContext):
 base_logger = logging.getLogger(__name__)
 
 _F: TypeAlias = Callable[..., Coroutine[Any, Any, Any]]
+_CLIENT_HANDLER: TypeAlias = ClientProtocolHandlerBase[ClientContext]
 
 
 def mqtt_connected(func: _F) -> _F:
@@ -99,7 +101,7 @@ class MQTTClient:
         self.client_id = client_id if client_id is not None else gen_client_id()
 
         self.session: Session | None = None
-        self._handler: ClientProtocolHandler | None = None
+        self._handler: _CLIENT_HANDLER | None = None
         self._disconnect_task: asyncio.Task[Any] | None = None
         self._connected_state = asyncio.Event()
         self._no_more_connections = asyncio.Event()
@@ -448,9 +450,7 @@ class MQTTClient:
                 str(uri_attributes.fragment),
             )
             self.session.broker_uri = str(urlunparse(uri))
-        # Init protocol handler
-        # if not self._handler:
-        self._handler = ClientProtocolHandler(self.plugins_manager)
+        self._handler = self._init_handler()
 
         connection_timeout = self.config.get("connection_timeout", None)
 
@@ -530,6 +530,9 @@ class MQTTClient:
             self.session.transitions.disconnect()
             raise ConnectError(e) from e
         return return_code
+
+    def _init_handler(self) -> _CLIENT_HANDLER:
+        return ClientProtocolHandler(self.plugins_manager)
 
     async def handle_connection_close(self) -> None:
         """Handle disconnection from the broker."""
