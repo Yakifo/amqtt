@@ -59,12 +59,13 @@ from amqtt.mqtt3.subscribe import SubscribePacket
 from amqtt.mqtt3.unsuback import UnsubackPacket
 from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
+from amqtt.protocol import ProtocolHandlerBase
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 C = TypeVar("C", bound=BaseContext)
 
 
-class ProtocolHandler(Generic[C]):
+class ProtocolHandler(ProtocolHandlerBase[C], Generic[C]):
     """Class implementing the MQTT communication protocol using asyncio features."""
 
     def __init__(
