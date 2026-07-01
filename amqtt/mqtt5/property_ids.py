@@ -43,7 +43,16 @@ class PropertyDefinition:
     name: str
     wire_type: PropertyWireType
     packets: frozenset[PacketName]
-    repeatable: bool = False
+    repeatable_packets: frozenset[PacketName] = frozenset()
+    minimum: int | None = None
+    maximum: int | None = None
+    allowed_values: frozenset[int] | None = None
+
+    def is_repeatable(self, packet_name: PacketName | None = None) -> bool:
+        """Return whether the property can appear more than once."""
+        if packet_name is None:
+            return bool(self.repeatable_packets)
+        return packet_name in self.repeatable_packets
 
 
 PAYLOAD_FORMAT_INDICATOR = 0x01
@@ -81,6 +90,7 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
         "Payload Format Indicator",
         PropertyWireType.BYTE,
         frozenset({PACKET_PUBLISH, PACKET_WILL}),
+        allowed_values=frozenset({0, 1}),
     ),
     MESSAGE_EXPIRY_INTERVAL: PropertyDefinition(
         MESSAGE_EXPIRY_INTERVAL,
@@ -111,7 +121,9 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
         "Subscription Identifier",
         PropertyWireType.VARIABLE_BYTE_INTEGER,
         frozenset({PACKET_PUBLISH, PACKET_SUBSCRIBE}),
-        repeatable=True,
+        repeatable_packets=frozenset({PACKET_PUBLISH}),
+        minimum=1,
+        maximum=268_435_455,
     ),
     SESSION_EXPIRY_INTERVAL: PropertyDefinition(
         SESSION_EXPIRY_INTERVAL,
@@ -148,6 +160,7 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
         "Request Problem Information",
         PropertyWireType.BYTE,
         frozenset({PACKET_CONNECT}),
+        allowed_values=frozenset({0, 1}),
     ),
     WILL_DELAY_INTERVAL: PropertyDefinition(
         WILL_DELAY_INTERVAL,
@@ -160,6 +173,7 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
         "Request Response Information",
         PropertyWireType.BYTE,
         frozenset({PACKET_CONNECT}),
+        allowed_values=frozenset({0, 1}),
     ),
     RESPONSE_INFORMATION: PropertyDefinition(
         RESPONSE_INFORMATION,
@@ -194,6 +208,7 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
         "Receive Maximum",
         PropertyWireType.TWO_BYTE_INTEGER,
         frozenset({PACKET_CONNECT, PACKET_CONNACK}),
+        minimum=1,
     ),
     TOPIC_ALIAS_MAXIMUM: PropertyDefinition(
         TOPIC_ALIAS_MAXIMUM,
@@ -206,18 +221,21 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
         "Topic Alias",
         PropertyWireType.TWO_BYTE_INTEGER,
         frozenset({PACKET_PUBLISH}),
+        minimum=1,
     ),
     MAXIMUM_QOS: PropertyDefinition(
         MAXIMUM_QOS,
         "Maximum QoS",
         PropertyWireType.BYTE,
         frozenset({PACKET_CONNACK}),
+        allowed_values=frozenset({0, 1}),
     ),
     RETAIN_AVAILABLE: PropertyDefinition(
         RETAIN_AVAILABLE,
         "Retain Available",
         PropertyWireType.BYTE,
         frozenset({PACKET_CONNACK}),
+        allowed_values=frozenset({0, 1}),
     ),
     USER_PROPERTY: PropertyDefinition(
         USER_PROPERTY,
@@ -239,31 +257,50 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
             PACKET_AUTH,
             PACKET_WILL,
         }),
-        repeatable=True,
+        repeatable_packets=frozenset({
+            PACKET_CONNECT,
+            PACKET_CONNACK,
+            PACKET_PUBLISH,
+            PACKET_PUBACK,
+            PACKET_PUBREC,
+            PACKET_PUBREL,
+            PACKET_PUBCOMP,
+            PACKET_SUBSCRIBE,
+            PACKET_SUBACK,
+            PACKET_UNSUBSCRIBE,
+            PACKET_UNSUBACK,
+            PACKET_DISCONNECT,
+            PACKET_AUTH,
+            PACKET_WILL,
+        }),
     ),
     MAXIMUM_PACKET_SIZE: PropertyDefinition(
         MAXIMUM_PACKET_SIZE,
         "Maximum Packet Size",
         PropertyWireType.FOUR_BYTE_INTEGER,
         frozenset({PACKET_CONNECT, PACKET_CONNACK}),
+        minimum=1,
     ),
     WILDCARD_SUBSCRIPTION_AVAILABLE: PropertyDefinition(
         WILDCARD_SUBSCRIPTION_AVAILABLE,
         "Wildcard Subscription Available",
         PropertyWireType.BYTE,
         frozenset({PACKET_CONNACK}),
+        allowed_values=frozenset({0, 1}),
     ),
     SUBSCRIPTION_IDENTIFIER_AVAILABLE: PropertyDefinition(
         SUBSCRIPTION_IDENTIFIER_AVAILABLE,
         "Subscription Identifier Available",
         PropertyWireType.BYTE,
         frozenset({PACKET_CONNACK}),
+        allowed_values=frozenset({0, 1}),
     ),
     SHARED_SUBSCRIPTION_AVAILABLE: PropertyDefinition(
         SHARED_SUBSCRIPTION_AVAILABLE,
         "Shared Subscription Available",
         PropertyWireType.BYTE,
         frozenset({PACKET_CONNACK}),
+        allowed_values=frozenset({0, 1}),
     ),
 }
 

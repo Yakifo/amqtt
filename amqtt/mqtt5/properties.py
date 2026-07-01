@@ -15,7 +15,7 @@ from amqtt.codecs_amqtt import (
     read_or_raise,
 )
 from amqtt.errors import MQTTError
-from amqtt.mqtt5.property_ids import PROPERTY_DEFINITIONS, PropertyDefinition, PropertyWireType
+from amqtt.mqtt5.property_ids import PROPERTY_DEFINITIONS, PacketName, PropertyDefinition, PropertyWireType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -32,7 +32,8 @@ class Properties:
     properties raise `MQTTError`; repeatable properties preserve insertion order.
     """
 
-    def __init__(self, values: dict[int, PropertyValue] | None = None) -> None:
+    def __init__(self, values: dict[int, PropertyValue] | None = None, *, packet_name: PacketName | None = None) -> None:
+        self._packet_name = packet_name
         self._values: dict[int, PropertyValue] = {}
         if values:
             for identifier, value in values.items():
@@ -51,9 +52,10 @@ class Properties:
 
         """
         definition = _definition(identifier)
-        normalized = _normalize_value(definition, value)
+        _validate_packet_usage(definition, self._packet_name)
+        normalized = _normalize_value(definition, value, self._packet_name)
 
-        if definition.repeatable:
+        if definition.is_repeatable(self._packet_name):
             existing = self._values.get(identifier)
             if existing is None:
                 self._values[identifier] = normalized
@@ -96,7 +98,8 @@ class Properties:
         payload = bytearray()
         for identifier, value in self._values.items():
             definition = _definition(identifier)
-            if definition.repeatable:
+            _validate_packet_usage(definition, self._packet_name)
+            if definition.is_repeatable(self._packet_name):
                 if not isinstance(value, list):
                     msg = f"Repeatable property {definition.name} must be stored as a list"
                     raise MQTTError(msg)
@@ -107,11 +110,13 @@ class Properties:
         return encode_variable_byte_int(len(payload)) + bytes(payload)
 
     @classmethod
-    def decode(cls: type[Self], data: bytes | bytearray) -> Self:
+    def decode(cls: type[Self], data: bytes | bytearray, *, packet_name: PacketName | None = None) -> Self:
         """Decode MQTT 5.0 Properties from bytes.
 
         Args:
             data: MQTT 5.0 Properties bytes including the length prefix.
+            packet_name: Optional MQTT packet name used to validate whether
+                properties are allowed and repeatable in that packet.
 
         Returns:
             Decoded `Properties`.
@@ -129,23 +134,24 @@ class Properties:
             msg = "Properties bytes contain trailing data"
             raise MQTTError(msg)
 
-        properties = cls()
+        properties = cls(packet_name=packet_name)
         while offset < end:
             identifier, offset = decode_variable_byte_int(data, offset)
             definition = _definition(identifier)
+            _validate_packet_usage(definition, packet_name)
             value, offset = _decode_property(definition, data, offset, end)
             properties.set(identifier, value)
         return properties
 
     @classmethod
-    async def from_stream(cls: type[Self], reader: ReaderAdapter) -> Self:
+    async def from_stream(cls: type[Self], reader: ReaderAdapter, *, packet_name: PacketName | None = None) -> Self:
         """Read and decode MQTT 5.0 Properties from a stream."""
         property_length = await decode_variable_byte_int_from_stream(reader)
         data = await read_or_raise(reader, property_length)
         if len(data) != property_length:
             msg = "Properties length exceeds available stream bytes"
             raise MQTTError(msg)
-        return cls.decode(encode_variable_byte_int(property_length) + data)
+        return cls.decode(encode_variable_byte_int(property_length) + data, packet_name=packet_name)
 
     def items(self) -> Iterable[tuple[int, PropertyValue]]:
         """Return stored property identifier/value pairs."""
@@ -174,8 +180,19 @@ def _definition(identifier: int) -> PropertyDefinition:
         raise MQTTError(msg) from exc
 
 
-def _normalize_value(definition: PropertyDefinition, value: PropertyValue) -> PropertyValue:
-    if definition.repeatable:
+def _validate_packet_usage(definition: PropertyDefinition, packet_name: PacketName | None) -> None:
+    if packet_name is None or packet_name in definition.packets:
+        return
+    msg = f"Property {definition.name} is not valid on {packet_name}"
+    raise MQTTError(msg)
+
+
+def _normalize_value(
+    definition: PropertyDefinition,
+    value: PropertyValue,
+    packet_name: PacketName | None,
+) -> PropertyValue:
+    if definition.is_repeatable(packet_name):
         if definition.wire_type is PropertyWireType.UTF8_STRING_PAIR:
             if isinstance(value, tuple):
                 _validate_string_pair(definition, value)
@@ -187,10 +204,12 @@ def _normalize_value(definition: PropertyDefinition, value: PropertyValue) -> Pr
         elif definition.wire_type is PropertyWireType.VARIABLE_BYTE_INTEGER:
             if isinstance(value, int):
                 _validate_int(definition, value, 0, 268_435_455)
+                _validate_protocol_constraints(definition, value)
                 return [value]
             if isinstance(value, list) and all(isinstance(item, int) for item in value):
                 for item in value:
                     _validate_int(definition, item, 0, 268_435_455)
+                    _validate_protocol_constraints(definition, item)
                 return value
         msg = f"Invalid value for repeatable property {definition.name}: {value!r}"
         raise MQTTError(msg)
@@ -219,11 +238,26 @@ def _validate_single_value(definition: PropertyDefinition, value: Any) -> None:
             if not isinstance(value, (bytes, bytearray)):
                 msg = f"Property {definition.name} requires bytes"
                 raise MQTTError(msg)
+    _validate_protocol_constraints(definition, value)
 
 
 def _validate_int(definition: PropertyDefinition, value: Any, minimum: int, maximum: int) -> None:
     if not isinstance(value, int) or value < minimum or value > maximum:
         msg = f"Property {definition.name} requires an integer from {minimum} to {maximum}"
+        raise MQTTError(msg)
+
+
+def _validate_protocol_constraints(definition: PropertyDefinition, value: Any) -> None:
+    if not isinstance(value, int):
+        return
+    if definition.allowed_values is not None and value not in definition.allowed_values:
+        msg = f"Property {definition.name} requires one of {sorted(definition.allowed_values)}"
+        raise MQTTError(msg)
+    if definition.minimum is not None and value < definition.minimum:
+        msg = f"Property {definition.name} requires an integer >= {definition.minimum}"
+        raise MQTTError(msg)
+    if definition.maximum is not None and value > definition.maximum:
+        msg = f"Property {definition.name} requires an integer <= {definition.maximum}"
         raise MQTTError(msg)
 
 
@@ -243,15 +277,19 @@ def _encode_property(definition: PropertyDefinition, value: Any) -> bytes:
     match definition.wire_type:
         case PropertyWireType.BYTE:
             _validate_int(definition, value, 0, 0xFF)
+            _validate_protocol_constraints(definition, value)
             out.extend(int_to_bytes(value, 1))
         case PropertyWireType.TWO_BYTE_INTEGER:
             _validate_int(definition, value, 0, 0xFFFF)
+            _validate_protocol_constraints(definition, value)
             out.extend(int_to_bytes(value, 2))
         case PropertyWireType.FOUR_BYTE_INTEGER:
             _validate_int(definition, value, 0, 0xFFFF_FFFF)
+            _validate_protocol_constraints(definition, value)
             out.extend(int_to_bytes(value, 4))
         case PropertyWireType.VARIABLE_BYTE_INTEGER:
             _validate_int(definition, value, 0, 268_435_455)
+            _validate_protocol_constraints(definition, value)
             out.extend(encode_variable_byte_int(value))
         case PropertyWireType.UTF8_STRING:
             if not isinstance(value, str):

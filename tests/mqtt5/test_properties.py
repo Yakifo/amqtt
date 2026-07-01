@@ -16,6 +16,10 @@ from amqtt.mqtt5.property_ids import (
     MAXIMUM_PACKET_SIZE,
     MAXIMUM_QOS,
     MESSAGE_EXPIRY_INTERVAL,
+    PACKET_CONNACK,
+    PACKET_CONNECT,
+    PACKET_PUBLISH,
+    PACKET_SUBSCRIBE,
     PAYLOAD_FORMAT_INDICATOR,
     PROPERTY_DEFINITIONS,
     PropertyWireType,
@@ -138,6 +142,72 @@ def test_decode_duplicate_non_repeatable_property_raises():
 
     with pytest.raises(MQTTError):
         Properties.decode(duplicate_content_type)
+
+
+def test_packet_context_rejects_property_not_valid_for_packet():
+    properties = Properties(packet_name=PACKET_CONNECT)
+
+    with pytest.raises(MQTTError):
+        properties.set(CONTENT_TYPE, "text/plain")
+
+    content_type_empty_string = b"\x03\x03\x00\x00"
+    with pytest.raises(MQTTError):
+        Properties.decode(content_type_empty_string, packet_name=PACKET_CONNECT)
+
+
+def test_subscription_identifier_repeatability_depends_on_packet_context():
+    subscribe_properties = Properties(packet_name=PACKET_SUBSCRIBE)
+    subscribe_properties.set(SUBSCRIPTION_IDENTIFIER, 1)
+
+    with pytest.raises(MQTTError):
+        subscribe_properties.set(SUBSCRIPTION_IDENTIFIER, 2)
+
+    duplicate_subscription_ids = b"\x04\x0b\x01\x0b\x02"
+    with pytest.raises(MQTTError):
+        Properties.decode(duplicate_subscription_ids, packet_name=PACKET_SUBSCRIBE)
+
+    publish_properties = Properties(packet_name=PACKET_PUBLISH)
+    publish_properties.set(SUBSCRIPTION_IDENTIFIER, 1)
+    publish_properties.set(SUBSCRIPTION_IDENTIFIER, 2)
+
+    assert publish_properties.get(SUBSCRIPTION_IDENTIFIER) == [1, 2]
+    assert Properties.decode(duplicate_subscription_ids, packet_name=PACKET_PUBLISH) == publish_properties
+
+
+@pytest.mark.parametrize(
+    ("identifier", "value", "packet_name"),
+    [
+        (MAXIMUM_PACKET_SIZE, 0, PACKET_CONNECT),
+        (RECEIVE_MAXIMUM, 0, PACKET_CONNECT),
+        (SUBSCRIPTION_IDENTIFIER, 0, PACKET_SUBSCRIBE),
+        (TOPIC_ALIAS, 0, PACKET_PUBLISH),
+        (REQUEST_PROBLEM_INFORMATION, 2, PACKET_CONNECT),
+        (REQUEST_RESPONSE_INFORMATION, 2, PACKET_CONNECT),
+        (MAXIMUM_QOS, 2, PACKET_CONNACK),
+    ],
+)
+def test_protocol_value_constraints_are_enforced_on_set(identifier: int, value: int, packet_name: str):
+    properties = Properties(packet_name=packet_name)
+
+    with pytest.raises(MQTTError):
+        properties.set(identifier, value)
+
+
+@pytest.mark.parametrize(
+    ("data", "packet_name"),
+    [
+        (b"\x05\x27\x00\x00\x00\x00", PACKET_CONNECT),
+        (b"\x03\x21\x00\x00", PACKET_CONNECT),
+        (b"\x02\x0b\x00", PACKET_SUBSCRIBE),
+        (b"\x03\x23\x00\x00", PACKET_PUBLISH),
+        (b"\x02\x17\x02", PACKET_CONNECT),
+        (b"\x02\x19\x02", PACKET_CONNECT),
+        (b"\x02\x24\x02", PACKET_CONNACK),
+    ],
+)
+def test_protocol_value_constraints_are_enforced_on_decode(data: bytes, packet_name: str):
+    with pytest.raises(MQTTError):
+        Properties.decode(data, packet_name=packet_name)
 
 
 @pytest.mark.parametrize("data", [b"", b"\x02\x03", b"\x01\xff", b"\x05\x03\x00\xffbad", b"\x00\x01"])
