@@ -140,11 +140,11 @@ class MQTTClient:
                 initial connection (optional, used only with websocket connections)
 
         Returns:
-            [CONNACK](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718033)'s return code
+            CONNACK's successful return code (0x0)
 
         Raises:
-            ConnectError: could not connect to broker
-
+            ConnectError: if connect to broker fails or CONNACK contains non-zero (unsuccessful)
+            [`ConnectError.return_code`](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349257)
         """
         additional_headers = additional_headers if additional_headers is not None else {}
         self.session = self._init_session(uri, cleansession, cafile, capath, cadata)

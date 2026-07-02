@@ -484,7 +484,7 @@ class Broker:
             )
             raise AMQTTError(exc) from exc
         except MQTTError as exc:
-            self.logger.exception(
+            self.logger.warning(
                 f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
             )
             await writer.close()
@@ -547,9 +547,6 @@ class Broker:
     ) -> None:
         """Handle the lifecycle of a client session."""
         authenticated = await self._authenticate(client_session, self.listeners_config[listener_name])
-        if not authenticated:
-            await writer.close()
-            return
 
         if client_session.client_id is None:
             msg = "Client ID was not correctly created/set."
@@ -573,6 +570,11 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
+
+        if not authenticated:
+            await writer.close()
+            return
+
         await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
                                               client_id=client_session.client_id,
                                               client_session=client_session)
