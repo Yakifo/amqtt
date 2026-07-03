@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TypeAlias
 
+from amqtt.errors import MQTTError
+
 PacketName: TypeAlias = str
+
+# Packets in mqtt5 that allow for the property field (all except PING)
 
 PACKET_CONNECT = "CONNECT"
 PACKET_CONNACK = "CONNACK"
@@ -83,6 +87,7 @@ WILDCARD_SUBSCRIPTION_AVAILABLE = 0x28
 SUBSCRIPTION_IDENTIFIER_AVAILABLE = 0x29
 SHARED_SUBSCRIPTION_AVAILABLE = 0x2A
 
+# properties differ by message type, map to define each:
 
 PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
     PAYLOAD_FORMAT_INDICATOR: PropertyDefinition(
@@ -305,6 +310,9 @@ PROPERTY_DEFINITIONS: dict[int, PropertyDefinition] = {
 }
 
 
-def definition_for(identifier: int) -> PropertyDefinition:
-    """Return metadata for an MQTT 5.0 property identifier."""
+def get_definition(identifier: int) -> PropertyDefinition:
+    """Return the `PropertyDefinition` for a given identifier (after checking it exists)."""
+    if identifier not in PROPERTY_DEFINITIONS:
+        msg = f"Unknown MQTT 5.0 property identifier: {identifier:#x}"
+        raise MQTTError(msg)
     return PROPERTY_DEFINITIONS[identifier]
