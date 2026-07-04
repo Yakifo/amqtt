@@ -69,6 +69,7 @@ async def test_create_offline_session_defaults_to_mqtt3_handler() -> None:
 
     assert isinstance(handler, MQTT3BrokerProtocolHandler)
     assert session.client_id == "client"
+    assert session.mqtt_version == 4
     assert session.transitions.is_disconnected()
 
 
@@ -80,6 +81,7 @@ async def test_create_offline_session_selects_mqtt5_handler() -> None:
 
     assert isinstance(handler, MQTT5BrokerProtocolHandler)
     assert session.client_id == "client"
+    assert session.mqtt_version == 5
     assert session.transitions.is_disconnected()
 
 
@@ -93,6 +95,7 @@ async def test_broker_context_add_subscription_can_create_mqtt5_offline_session(
     session, handler = broker.sessions["client"]
     assert isinstance(handler, MQTT5BrokerProtocolHandler)
     assert session.client_id == "client"
+    assert session.mqtt_version == 5
     assert session.transitions.is_disconnected()
 
 

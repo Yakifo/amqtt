@@ -3,6 +3,7 @@ from asyncio import AbstractEventLoop
 from typing import TYPE_CHECKING
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
+from amqtt.constants import MQTT_PROTOCOL_LEVEL_3_1_1
 from amqtt.errors import MQTTError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt3.connack import (
@@ -30,8 +31,6 @@ from amqtt.protocol import (
 )
 from amqtt.session import Session
 from amqtt.utils import format_client_message
-
-_MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
 
 if TYPE_CHECKING:
     from amqtt.broker import BrokerContext
@@ -157,8 +156,8 @@ class BrokerProtocolHandler(
             remote_address, remote_port = remote_info
             connack = None
             error_msg = None
-            if connect.proto_level != _MQTT_PROTOCOL_LEVEL_SUPPORTED:
-                # only MQTT 3.1.1 supported
+            # MQTT 5 requests go to separate handler, so if we get a non-3.1.1 request, it needs to be rejected
+            if connect.proto_level != MQTT_PROTOCOL_LEVEL_3_1_1:
                 error_msg = (
                     f"Invalid protocol from {format_client_message(address=remote_address, port=remote_port)}:"
                     f" {connect.proto_level}"

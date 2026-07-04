@@ -24,6 +24,7 @@ from amqtt.adapters import (
     WriterAdapter,
 )
 from amqtt.codecs_amqtt import bytes_to_int, read_or_raise
+from amqtt.constants import MQTT_PROTOCOL_LEVEL_3_1_1, MQTT_PROTOCOL_LEVEL_5, QOS_0, QOS_1, QOS_2
 from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt3.packet import CONNECT
@@ -33,7 +34,6 @@ from amqtt.protocol import BrokerProtocolHandlerBase, ClientDisconnect, Subscrip
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id
 
-from .constants import QOS_0, QOS_1, QOS_2
 from .events import BrokerEvents
 from .plugins.manager import PluginManager
 
@@ -43,8 +43,6 @@ _SUBSCRIPTION_INPUT: TypeAlias = SubscriptionTopic | tuple[str, int]
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
-_MQTT_PROTOCOL_LEVEL_3 = 4
-_MQTT_PROTOCOL_LEVEL_5 = 5
 _REMAINING_LENGTH_CONTINUATION = 0x80
 _REMAINING_LENGTH_VALUE_MASK = 0x7F
 _REMAINING_LENGTH_MAX_MULTIPLIER = 128**3
@@ -154,7 +152,7 @@ class BrokerContext(BaseContext):
         client_id: str,
         topic: str | None,
         qos: int | None,
-        mqtt_version: int = _MQTT_PROTOCOL_LEVEL_3,
+        mqtt_version: int = MQTT_PROTOCOL_LEVEL_3_1_1,
     ) -> None:
         """Create a topic subscription for a client.
 
@@ -565,7 +563,7 @@ class Broker:
     async def _init_handler_from_connect(self, reader: ReaderAdapter, writer: WriterAdapter) -> tuple[_BROKER_HANDLER, Session]:
         protocol_level, packet_data = await Broker._read_connect_packet_for_negotiation(reader)
         packet_reader = BufferReader(packet_data)
-        if protocol_level == _MQTT_PROTOCOL_LEVEL_5:
+        if protocol_level == MQTT_PROTOCOL_LEVEL_5:
             return await MQTT5BrokerProtocolHandler.init_from_connect(packet_reader, writer, self.plugins_manager)
         return await MQTT3BrokerProtocolHandler.init_from_connect(packet_reader, writer, self.plugins_manager)
 
@@ -631,10 +629,11 @@ class Broker:
     def create_offline_session(
         self,
         client_id: str,
-        mqtt_version: int = _MQTT_PROTOCOL_LEVEL_3,
+        mqtt_version: int = MQTT_PROTOCOL_LEVEL_3_1_1,
     ) -> tuple[_BROKER_HANDLER, Session]:
         session = Session()
         session.client_id = client_id
+        session.mqtt_version = MQTT_PROTOCOL_LEVEL_5 if mqtt_version == MQTT_PROTOCOL_LEVEL_5 else MQTT_PROTOCOL_LEVEL_3_1_1
 
         bph = self._create_broker_protocol_handler(session, mqtt_version=mqtt_version)
         session.transitions.disconnect()
@@ -644,10 +643,10 @@ class Broker:
         self,
         session: Session | None = None,
         *,
-        mqtt_version: int = _MQTT_PROTOCOL_LEVEL_3,
+        mqtt_version: int = MQTT_PROTOCOL_LEVEL_3_1_1,
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> _BROKER_HANDLER:
-        if mqtt_version == _MQTT_PROTOCOL_LEVEL_5:
+        if mqtt_version == MQTT_PROTOCOL_LEVEL_5:
             return MQTT5BrokerProtocolHandler(self.plugins_manager, session, loop)
         return MQTT3BrokerProtocolHandler(self.plugins_manager, session, loop)
 
@@ -895,7 +894,7 @@ class Broker:
 
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> _BROKER_HANDLER:
         """Create a BrokerProtocolHandler and attach to a session."""
-        mqtt_version = getattr(session, "mqtt_version", _MQTT_PROTOCOL_LEVEL_3)
+        mqtt_version = getattr(session, "mqtt_version", MQTT_PROTOCOL_LEVEL_3_1_1)
         handler = self._create_broker_protocol_handler(mqtt_version=mqtt_version, loop=self._loop)
         handler.attach(session, reader, writer)
         return handler
