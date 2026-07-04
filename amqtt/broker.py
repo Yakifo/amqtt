@@ -15,6 +15,7 @@ import websockets.asyncio.server
 from websockets.asyncio.server import ServerConnection
 
 from amqtt.adapters import (
+    BufferReader,
     ReaderAdapter,
     StreamReaderAdapter,
     StreamWriterAdapter,
@@ -22,14 +23,17 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
+from amqtt.codecs_amqtt import bytes_to_int, read_or_raise
+from amqtt.constants import MQTT_PROTOCOL_LEVEL_3_1_1, MQTT_PROTOCOL_LEVEL_5, QOS_0, QOS_1, QOS_2
 from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
-from amqtt.mqtt3.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.mqtt3.packet import CONNECT
+from amqtt.mqtt3.protocol.broker_handler import BrokerProtocolHandler as MQTT3BrokerProtocolHandler
+from amqtt.mqtt5.protocol.broker_handler import BrokerProtocolHandler as MQTT5BrokerProtocolHandler
 from amqtt.protocol import BrokerProtocolHandlerBase, ClientDisconnect, SubscriptionTopic
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id
 
-from .constants import QOS_0, QOS_1, QOS_2
 from .events import BrokerEvents
 from .plugins.manager import PluginManager
 
@@ -39,6 +43,9 @@ _SUBSCRIPTION_INPUT: TypeAlias = SubscriptionTopic | tuple[str, int]
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
+_REMAINING_LENGTH_CONTINUATION = 0x80
+_REMAINING_LENGTH_VALUE_MASK = 0x7F
+_REMAINING_LENGTH_MAX_MULTIPLIER = 128**3
 
 
 class RetainedApplicationMessage(ApplicationMessage):
@@ -140,14 +147,35 @@ class BrokerContext(BaseContext):
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
         return self._broker_instance.subscriptions
 
-    async def add_subscription(self, client_id: str, topic: str | None, qos: int | None) -> None:
-        """Create a topic subscription for the given `client_id`.
+    async def add_subscription(
+        self,
+        client_id: str,
+        topic: str | None,
+        qos: int | None,
+        mqtt_version: int = MQTT_PROTOCOL_LEVEL_3_1_1,
+    ) -> None:
+        """Create a topic subscription for a client.
 
-        If a client session doesn't exist for `client_id`, create a disconnected session.
-        If `topic` and `qos` are both `None`, only create the client session.
+        If a client session does not exist for `client_id`, create a disconnected
+        offline session before adding the subscription.
+
+        If `topic` and `qos` are both `None`, only create the
+        client session.
+
+        Args:
+            client_id: Client identifier for the session to create or update.
+            topic: Topic filter to subscribe to. Pass `None` with `qos=None` to
+                create only the offline session.
+            qos: Requested subscription QoS. Pass `None` with `topic=None` to
+                create only the offline session.
+            mqtt_version: MQTT protocol level to use only when restoring previous
+                connection state for an offline session. Omit it for active
+                clients or sessions already known to the broker; their MQTT
+                version is determined by the active session.
+
         """
         if client_id not in self._broker_instance.sessions:
-            broker_handler, session = self._broker_instance.create_offline_session(client_id)
+            broker_handler, session = self._broker_instance.create_offline_session(client_id, mqtt_version=mqtt_version)
             self._broker_instance._sessions[client_id] = (session, broker_handler)  # noqa: SLF001
 
         if topic is not None and qos is not None:
@@ -533,15 +561,94 @@ class Broker:
         return handler, client_session
 
     async def _init_handler_from_connect(self, reader: ReaderAdapter, writer: WriterAdapter) -> tuple[_BROKER_HANDLER, Session]:
-        return await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
+        protocol_level, packet_data = await Broker._read_connect_packet_for_negotiation(reader)
+        packet_reader = BufferReader(packet_data)
+        if protocol_level == MQTT_PROTOCOL_LEVEL_5:
+            return await MQTT5BrokerProtocolHandler.init_from_connect(packet_reader, writer, self.plugins_manager)
+        return await MQTT3BrokerProtocolHandler.init_from_connect(packet_reader, writer, self.plugins_manager)
 
-    def create_offline_session(self, client_id: str) -> tuple[_BROKER_HANDLER, Session]:
+    @staticmethod
+    async def _read_connect_packet_for_negotiation(reader: ReaderAdapter) -> tuple[int, bytes]:
+        first_byte = await read_or_raise(reader, 1)
+        if len(first_byte) != 1:
+            msg = "No fixed header byte available for CONNECT packet"
+            raise NoDataError(msg)
+
+        packet_type = first_byte[0] >> 4
+        if packet_type != CONNECT:
+            # MQTT 3.1.1 and MQTT 5.0 use the same conformance id here; 3.1.0 is the CONNECT section.
+            msg = "[MQTT-3.1.0-1] First MQTT control packet must be CONNECT"
+            raise MQTTError(msg)
+
+        remaining_length, remaining_length_bytes = await Broker._read_remaining_length_for_negotiation(reader)
+        body = await read_or_raise(reader, remaining_length)
+        if len(body) != remaining_length:
+            msg = "CONNECT packet body is shorter than Remaining Length"
+            raise NoDataError(msg)
+
+        protocol_level = Broker._extract_connect_protocol_level(body)
+        return protocol_level, first_byte + remaining_length_bytes + body
+
+    @staticmethod
+    async def _read_remaining_length_for_negotiation(reader: ReaderAdapter) -> tuple[int, bytes]:
+        multiplier = 1
+        value = 0
+        encoded = bytearray()
+
+        while True:
+            data = await read_or_raise(reader, 1)
+            if len(data) != 1:
+                msg = "No Remaining Length byte available for CONNECT packet"
+                raise NoDataError(msg)
+
+            encoded_byte = data[0]
+            encoded.append(encoded_byte)
+            value += (encoded_byte & _REMAINING_LENGTH_VALUE_MASK) * multiplier
+            if (encoded_byte & _REMAINING_LENGTH_CONTINUATION) == 0:
+                return value, bytes(encoded)
+
+            multiplier *= 128
+            if multiplier > _REMAINING_LENGTH_MAX_MULTIPLIER:
+                msg = "Invalid CONNECT Remaining Length"
+                raise MQTTError(msg)
+
+    @staticmethod
+    def _extract_connect_protocol_level(body: bytes) -> int:
+        if len(body) < 2:
+            msg = "CONNECT packet is missing Protocol Name length"
+            raise MQTTError(msg)
+
+        protocol_name_length = bytes_to_int(body[:2])
+        protocol_level_offset = 2 + protocol_name_length
+        if protocol_level_offset >= len(body):
+            msg = "CONNECT packet is missing Protocol Level"
+            raise MQTTError(msg)
+
+        return body[protocol_level_offset]
+
+    def create_offline_session(
+        self,
+        client_id: str,
+        mqtt_version: int = MQTT_PROTOCOL_LEVEL_3_1_1,
+    ) -> tuple[_BROKER_HANDLER, Session]:
         session = Session()
         session.client_id = client_id
+        session.mqtt_version = MQTT_PROTOCOL_LEVEL_5 if mqtt_version == MQTT_PROTOCOL_LEVEL_5 else MQTT_PROTOCOL_LEVEL_3_1_1
 
-        bph = BrokerProtocolHandler(self.plugins_manager, session)
+        bph = self._create_broker_protocol_handler(session, mqtt_version=mqtt_version)
         session.transitions.disconnect()
         return bph, session
+
+    def _create_broker_protocol_handler(
+        self,
+        session: Session | None = None,
+        *,
+        mqtt_version: int = MQTT_PROTOCOL_LEVEL_3_1_1,
+        loop: asyncio.AbstractEventLoop | None = None,
+    ) -> _BROKER_HANDLER:
+        if mqtt_version == MQTT_PROTOCOL_LEVEL_5:
+            return MQTT5BrokerProtocolHandler(self.plugins_manager, session, loop)
+        return MQTT3BrokerProtocolHandler(self.plugins_manager, session, loop)
 
     async def _handle_client_session(
         self,
@@ -787,7 +894,8 @@ class Broker:
 
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> _BROKER_HANDLER:
         """Create a BrokerProtocolHandler and attach to a session."""
-        handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop)
+        mqtt_version = getattr(session, "mqtt_version", MQTT_PROTOCOL_LEVEL_3_1_1)
+        handler = self._create_broker_protocol_handler(mqtt_version=mqtt_version, loop=self._loop)
         handler.attach(session, reader, writer)
         return handler
 
