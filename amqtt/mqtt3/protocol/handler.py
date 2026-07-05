@@ -17,7 +17,7 @@ except ImportError:
 import collections
 import itertools
 import logging
-from typing import Generic, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.contexts import BaseContext
@@ -46,6 +46,7 @@ from amqtt.mqtt3.packet import (
     UNSUBACK,
     UNSUBSCRIBE,
     MQTTFixedHeader,
+    MQTTPacket,
 )
 from amqtt.mqtt3.pingreq import PingReqPacket
 from amqtt.mqtt3.pingresp import PingRespPacket
@@ -547,23 +548,7 @@ class ProtocolHandler(ProtocolHandlerBase[C], Generic[C]):
         self.logger.debug("Reader coro stopped")
         await self.stop()
 
-    async def _send_packet(
-        self,
-        packet: PublishPacket
-        | PubackPacket
-        | ConnackPacket
-        | SubackPacket
-        | ConnectPacket
-        | SubscribePacket
-        | UnsubscribePacket
-        | DisconnectPacket
-        | PingReqPacket
-        | PubrelPacket
-        | PubrecPacket
-        | PubcompPacket
-        | PingRespPacket
-        | UnsubackPacket,
-    ) -> None:
+    async def _send_packet(self, packet: MQTTPacket[Any, Any, MQTTFixedHeader]) -> None:
         try:
             if self.writer:
                 async with self._write_lock:

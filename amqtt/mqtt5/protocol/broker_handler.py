@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 from amqtt.errors import MQTTError
 from amqtt.mqtt3.protocol.handler import ProtocolHandler
+from amqtt.mqtt5.connack import ConnackPacket
+from amqtt.mqtt5.reason_codes import ReasonCode
 from amqtt.protocol import BrokerProtocolHandlerBase
 
 if TYPE_CHECKING:
@@ -20,7 +22,7 @@ _SUBSCRIBE_NOT_IMPLEMENTED = "MQTT 5 SUBSCRIBE handling is not implemented yet"
 _UNSUBSCRIBE_NOT_IMPLEMENTED = "MQTT 5 UNSUBSCRIBE handling is not implemented yet"
 _SUBACK_NOT_IMPLEMENTED = "MQTT 5 SUBACK handling is not implemented yet"
 _UNSUBACK_NOT_IMPLEMENTED = "MQTT 5 UNSUBACK handling is not implemented yet"
-_CONNACK_NOT_IMPLEMENTED = "MQTT 5 CONNACK handling is not implemented yet"
+_CONNACK_FAILURE_NOT_IMPLEMENTED = "MQTT 5 CONNACK failure reason codes are not implemented yet"
 _CONNECT_PARSING_NOT_IMPLEMENTED = "MQTT 5 CONNECT parsing is not implemented yet"
 
 
@@ -71,8 +73,15 @@ class BrokerProtocolHandler(
     async def mqtt_acknowledge_unsubscription(self, _packet_id: int) -> None:
         raise MQTTError(_UNSUBACK_NOT_IMPLEMENTED)
 
-    async def mqtt_connack_authorize(self, _authorize: bool) -> None:
-        raise MQTTError(_CONNACK_NOT_IMPLEMENTED)
+    async def mqtt_connack_authorize(self, authorize: bool) -> None:
+        if self.session is None:
+            msg = "Session is not initialized!"
+            raise MQTTError(msg)
+        if not authorize:
+            raise MQTTError(_CONNACK_FAILURE_NOT_IMPLEMENTED)
+
+        connack = ConnackPacket.build(bool(self.session.parent), ReasonCode.SUCCESS)
+        await self._send_packet(connack)
 
     @classmethod
     async def init_from_connect(
