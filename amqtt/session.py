@@ -7,11 +7,17 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from transitions import Machine
 
+from amqtt.constants import MQTT_PROTOCOL_LEVEL_3_1_1
 from amqtt.errors import AMQTTError
 from amqtt.mqtt3.publish import PublishPacket
 
 OUTGOING = 0
 INCOMING = 1
+
+MQTT5_DEFAULT_SESSION_EXPIRY_INTERVAL = 0
+MQTT5_SESSION_EXPIRY_NEVER = 0xFFFF_FFFF
+MQTT5_DEFAULT_RECEIVE_MAXIMUM = 65_535
+MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM = 0
 
 if TYPE_CHECKING:
     import ssl
@@ -123,10 +129,61 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
 
 class Session:
+    """MQTT session state shared by broker and client handlers.
+
+    The negotiated protocol version is stored here for state and diagnostics.
+    Prefer implementing protocol-specific behavior in the MQTT 3.1.1 and
+    MQTT 5.0 protocol handler classes instead of scattering `mqtt_version`
+    conditionals through shared broker, client, or session logic.
+
+    Attributes:
+        mqtt_version: Negotiated MQTT protocol level. Defaults to 4 for MQTT 3.1.1.
+        states: Valid lifecycle state names for the session state machine.
+        transitions: State machine that manages `new`, `connected`, and `disconnected` lifecycle states.
+        remote_address: Peer address for the active connection, when known.
+        remote_port: Peer port for the active connection, when known.
+        client_id: MQTT client identifier associated with this session.
+        clean_session: MQTT 3.1.1 clean-session flag from the CONNECT packet.
+        will_flag: Whether the client registered a Will Message.
+        will_message: Will Message payload.
+        will_qos: Will Message QoS.
+        will_retain: Will Message retain flag.
+        will_topic: Will Message topic.
+        keep_alive: Negotiated keep-alive interval in seconds.
+        publish_retry_delay: Delay used before retrying unacknowledged outgoing publishes.
+        broker_uri: Broker URI used by client-side sessions.
+        username: Username supplied during CONNECT, when present.
+        password: Password supplied during CONNECT, when present.
+        cafile: CA certificate file path used by client-side TLS connections.
+        capath: CA certificate directory path used by client-side TLS connections.
+        cadata: CA certificate data used by client-side TLS connections.
+        _packet_id: Internal packet identifier counter used by `next_packet_id`.
+        parent: CONNACK session-present flag state used by broker handlers.
+        last_connect_time: Unix timestamp for the most recent connected transition.
+        ssl_object: TLS object for the active connection, when available.
+        last_disconnect_time: Unix timestamp for the most recent disconnected transition.
+        session_expiry_interval: MQTT 5 session expiry in seconds. Defaults to 0. [MQTT-3.1.2.11.2]
+        receive_maximum: MQTT 5 maximum concurrent QoS 1/2 incoming publishes. Defaults to 65,535. [MQTT-3.1.2.11.3]
+        topic_alias_maximum: MQTT 5 maximum accepted topic alias. Defaults to 0, disabling aliases. [MQTT-3.1.2.11.5]
+        topic_alias_map: MQTT 5 per-session alias-to-topic mapping.
+        subscription_identifiers: MQTT 5 topic filter to subscription identifier mapping.
+        inflight_qos2_count: MQTT 5 flow-control counter for in-flight QoS 2 messages.
+        maximum_packet_size: MQTT 5 maximum accepted packet size, or None for unlimited. [MQTT-3.1.2.11.4]
+        inflight_out: Outgoing QoS messages currently in protocol flow.
+        inflight_in: Incoming QoS messages currently in protocol flow.
+        retained_messages: Offline messages retained for this session.
+        delivered_message_queue: Incoming application messages ready for broker/client processing.
+        is_anonymous: Whether this session belongs to an anonymous or generated-identifier client.
+
+    """
+
     states: ClassVar[list[str]] = ["new", "connected", "disconnected"]
 
     def __init__(self) -> None:
         self._init_states()
+
+        self.mqtt_version: int = MQTT_PROTOCOL_LEVEL_3_1_1
+
         self.remote_address: str | None = None
         self.remote_port: int | None = None
         self.client_id: str | None = None
@@ -149,6 +206,15 @@ class Session:
         self.last_connect_time: int | None = None
         self.ssl_object: ssl.SSLObject | None = None
         self.last_disconnect_time: int | None = None
+
+        # MQTT 5.0 session properties.
+        self.session_expiry_interval: int = MQTT5_DEFAULT_SESSION_EXPIRY_INTERVAL
+        self.receive_maximum: int = MQTT5_DEFAULT_RECEIVE_MAXIMUM
+        self.topic_alias_maximum: int = MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM
+        self.topic_alias_map: dict[int, str] = {}
+        self.subscription_identifiers: dict[str, int] = {}
+        self.inflight_qos2_count: int = 0
+        self.maximum_packet_size: int | None = None
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
         self.inflight_out: OrderedDict[int, OutgoingApplicationMessage] = OrderedDict()
