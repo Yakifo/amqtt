@@ -1,10 +1,8 @@
 import asyncio
-from unittest.mock import AsyncMock
 
 from hypothesis import given, strategies as st
 import pytest
 
-from amqtt.adapters import BufferReader, BufferWriter
 from amqtt.errors import AMQTTError, MQTTError
 from amqtt.mqtt3.packet import MQTTFixedHeader, PUBLISH
 from amqtt.mqtt5.connack import ConnackPacket
@@ -16,15 +14,13 @@ from amqtt.mqtt5.property_ids import (
     REASON_STRING,
     SESSION_EXPIRY_INTERVAL,
 )
-from amqtt.mqtt5.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.mqtt5.reason_codes import ReasonCode
-from amqtt.session import Session
 
 
-def test_decode_spec_example_minimal_success() -> None:
+def test_decode_spec_example_minimal_success(make_reader) -> None:
     data = b"\x20\x03\x00\x00\x00"
 
-    packet = asyncio.run(ConnackPacket.from_stream(BufferReader(data)))
+    packet = asyncio.run(ConnackPacket.from_stream(make_reader(data)))
 
     assert packet.session_present is False
     assert packet.reason_code is ReasonCode.SUCCESS
@@ -38,7 +34,7 @@ def test_success_reason_code_metadata() -> None:
     assert ReasonCode.SUCCESS.description == "Success"
 
 
-def test_connack_round_trip_with_success_properties() -> None:
+def test_connack_round_trip_with_success_properties(make_reader) -> None:
     properties = Properties(packet_name=PACKET_CONNACK)
     properties.set(SESSION_EXPIRY_INTERVAL, 300)
     properties.set(ASSIGNED_CLIENT_IDENTIFIER, "client-1")
@@ -46,7 +42,7 @@ def test_connack_round_trip_with_success_properties() -> None:
     expected = b"\x20\x18\x01\x00\x15\x11\x00\x00\x01\x2c\x12\x00\x08client-1\x1f\x00\x02ok"
 
     packet = ConnackPacket.build(True, ReasonCode.SUCCESS, properties)
-    decoded = asyncio.run(ConnackPacket.from_stream(BufferReader(packet.to_bytes())))
+    decoded = asyncio.run(ConnackPacket.from_stream(make_reader(packet.to_bytes())))
 
     assert packet.to_bytes() == expected
     assert decoded.session_present is True
@@ -56,8 +52,8 @@ def test_connack_round_trip_with_success_properties() -> None:
 
 
 @pytest.mark.asyncio
-async def test_minimal_success_connack_can_be_sent_to_client() -> None:
-    writer = BufferWriter()
+async def test_minimal_success_connack_can_be_sent_to_client(mock_client_handler) -> None:
+    writer = mock_client_handler.writer
     packet = ConnackPacket.build()
 
     await packet.to_stream(writer)
@@ -66,18 +62,14 @@ async def test_minimal_success_connack_can_be_sent_to_client() -> None:
 
 
 @pytest.mark.asyncio
-async def test_broker_handler_can_send_success_connack() -> None:
-    plugins_manager = AsyncMock()
-    handler = BrokerProtocolHandler(plugins_manager, loop=asyncio.get_running_loop())
-    session = Session()
-    session.parent = 1
-    writer = BufferWriter()
-    handler.attach(session, BufferReader(b""), writer)
+async def test_broker_handler_can_send_success_connack(mock_broker_handler) -> None:
+    handler = mock_broker_handler
+    handler.session.parent = 1
 
     await handler.mqtt_connack_authorize(True)
 
-    assert writer.get_buffer() == b"\x20\x03\x01\x00\x00"
-    plugins_manager.fire_event.assert_awaited()
+    assert handler.writer.get_buffer() == b"\x20\x03\x01\x00\x00"
+    handler.plugins_manager.fire_event.assert_awaited()
 
 
 def test_incorrect_fixed_header() -> None:
@@ -92,18 +84,18 @@ def test_fixed_header_reserved_flags_raise() -> None:
         ConnackPacket(fixed=header)
 
 
-def test_acknowledge_reserved_flags_raise() -> None:
+def test_acknowledge_reserved_flags_raise(make_reader) -> None:
     data = b"\x20\x03\x02\x00\x00"
 
     with pytest.raises(MQTTError):
-        asyncio.run(ConnackPacket.from_stream(BufferReader(data)))
+        asyncio.run(ConnackPacket.from_stream(make_reader(data)))
 
 
-def test_non_success_reason_code_is_deferred() -> None:
+def test_non_success_reason_code_is_deferred(make_reader) -> None:
     data = b"\x20\x03\x00\x80\x00"
 
     with pytest.raises(MQTTError):
-        asyncio.run(ConnackPacket.from_stream(BufferReader(data)))
+        asyncio.run(ConnackPacket.from_stream(make_reader(data)))
 
 
 def test_build_rejects_non_connack_properties() -> None:
@@ -114,9 +106,9 @@ def test_build_rejects_non_connack_properties() -> None:
         ConnackPacket.build(properties=properties)
 
 
-@given(st.binary())
-def test_connack_decode_never_crashes(data: bytes) -> None:
+@given(data=st.binary())
+def test_connack_decode_never_crashes(make_reader, data: bytes) -> None:
     try:
-        asyncio.run(ConnackPacket.from_stream(BufferReader(data)))
+        asyncio.run(ConnackPacket.from_stream(make_reader(data)))
     except (AMQTTError, MQTTError):
         pass

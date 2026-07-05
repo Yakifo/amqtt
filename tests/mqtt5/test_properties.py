@@ -3,7 +3,6 @@ import asyncio
 import pytest
 from hypothesis import given, strategies as st
 
-from amqtt.adapters import BufferReader
 from amqtt.errors import MQTTError
 from amqtt.mqtt3.packet import CONNECT, MQTTFixedHeader
 from amqtt.mqtt5.properties import Properties
@@ -224,10 +223,10 @@ def test_properties_decode_never_crashes(data: bytes):
         pass
 
 
-def test_mqtt3_fixed_header_uses_shared_variable_byte_integer_helpers():
+def test_mqtt3_fixed_header_uses_shared_variable_byte_integer_helpers(make_reader):
     header = MQTTFixedHeader(CONNECT, 0x00, 16_384)
     data = header.to_bytes()
-    stream = BufferReader(data)
+    stream = make_reader(data)
 
     decoded = asyncio.run(MQTTFixedHeader.from_stream(stream))
 
