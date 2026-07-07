@@ -72,6 +72,17 @@ async def test_broker_handler_can_send_success_connack(mock_broker_handler) -> N
     handler.plugins_manager.fire_event.assert_awaited()
 
 
+@pytest.mark.asyncio
+async def test_broker_handler_can_send_not_authorized_connack(mock_broker_handler) -> None:
+    handler = mock_broker_handler
+    handler.session.parent = 1
+
+    await handler.mqtt_connack_authorize(False)
+
+    assert handler.writer.get_buffer() == b"\x20\x03\x00\x87\x00"
+    handler.plugins_manager.fire_event.assert_awaited()
+
+
 def test_incorrect_fixed_header() -> None:
     header = MQTTFixedHeader(PUBLISH, 0x00)
     with pytest.raises(AMQTTError):
@@ -91,8 +102,27 @@ def test_acknowledge_reserved_flags_raise(make_reader) -> None:
         asyncio.run(ConnackPacket.from_stream(make_reader(data)))
 
 
-def test_non_success_reason_code_is_deferred(make_reader) -> None:
+def test_connack_accepts_connect_error_reason_code(make_reader) -> None:
     data = b"\x20\x03\x00\x80\x00"
+
+    packet = asyncio.run(ConnackPacket.from_stream(make_reader(data)))
+
+    assert packet.reason_code is ReasonCode.UNSPECIFIED_ERROR
+    assert packet.reason_code.is_error() is True
+    assert packet.to_bytes() == data
+
+
+def test_connack_accepts_reason_code_without_packet_specific_validation(make_reader) -> None:
+    data = bytes([0x20, 0x03, 0x00, int(ReasonCode.NO_SUBSCRIPTION_EXISTED), 0x00])
+
+    packet = asyncio.run(ConnackPacket.from_stream(make_reader(data)))
+
+    assert packet.reason_code is ReasonCode.NO_SUBSCRIPTION_EXISTED
+    assert packet.to_bytes() == data
+
+
+def test_connack_rejects_unknown_reason_code(make_reader) -> None:
+    data = b"\x20\x03\x00\x03\x00"
 
     with pytest.raises(MQTTError):
         asyncio.run(ConnackPacket.from_stream(make_reader(data)))

@@ -26,10 +26,10 @@ class ConnackVariableHeader(MQTTVariableHeader):
         session_present: bool = False,
         reason_code: ReasonCode = ReasonCode.SUCCESS,
         properties: Properties | None = None,
-        ) -> None:
+    ) -> None:
         super().__init__()
         self.session_present = session_present
-        self.reason_code = self.ensure_success_reason_code(reason_code)
+        self.reason_code = reason_code
         self.properties = self.connack_properties(properties)
 
     @classmethod
@@ -50,7 +50,11 @@ class ConnackVariableHeader(MQTTVariableHeader):
             msg = "[MQTT-3.2.2-1] CONNACK reserved acknowledge flags must be 0"
             raise MQTTError(msg)
 
-        reason_code = cls.ensure_success_reason_code(data[1])
+        try:
+            reason_code = ReasonCode(data[1])
+        except ValueError as exc:
+            msg = f"Unknown MQTT 5.0 reason code: {data[1]}"
+            raise MQTTError(msg) from exc
         properties = Properties.decode(data[2:], packet_name=PACKET_CONNACK)
         return cls(bool(flags & 0x01), reason_code, properties)
 
@@ -59,7 +63,7 @@ class ConnackVariableHeader(MQTTVariableHeader):
         out = bytearray()
         # [MQTT-3.2.2-1] Bits 7-1 are reserved; bit 0 is Session Present.
         out.append(1 if self.session_present else 0)
-        out.append(self.reason_code)
+        out.append(int(self.reason_code))
         out.extend(self.properties.encode())
         return out
 
@@ -69,14 +73,6 @@ class ConnackVariableHeader(MQTTVariableHeader):
             f"{type(self).__name__}(session_present={self.session_present}, "
             f"reason_code={self.reason_code!r}, properties={self.properties!r})"
         )
-
-    @staticmethod
-    def ensure_success_reason_code(reason_code: ReasonCode | int) -> ReasonCode:
-        try:
-            return ReasonCode(reason_code)
-        except ValueError as exc:
-            msg = "Only MQTT 5.0 CONNACK Success reason code is implemented"
-            raise MQTTError(msg) from exc
 
     @staticmethod
     def connack_properties(properties: Properties | None) -> Properties:

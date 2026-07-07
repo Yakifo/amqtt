@@ -36,7 +36,6 @@ _SUBSCRIBE_NOT_IMPLEMENTED = "MQTT 5 SUBSCRIBE handling is not implemented yet"
 _UNSUBSCRIBE_NOT_IMPLEMENTED = "MQTT 5 UNSUBSCRIBE handling is not implemented yet"
 _SUBACK_NOT_IMPLEMENTED = "MQTT 5 SUBACK handling is not implemented yet"
 _UNSUBACK_NOT_IMPLEMENTED = "MQTT 5 UNSUBACK handling is not implemented yet"
-_CONNACK_FAILURE_NOT_IMPLEMENTED = "MQTT 5 CONNACK failure reason codes are not implemented yet"
 
 
 class BrokerProtocolHandler(
@@ -90,10 +89,10 @@ class BrokerProtocolHandler(
         if self.session is None:
             msg = "Session is not initialized!"
             raise MQTTError(msg)
-        if not authorize:
-            raise MQTTError(_CONNACK_FAILURE_NOT_IMPLEMENTED)
-
-        connack = ConnackPacket.build(bool(self.session.parent), ReasonCode.SUCCESS)
+        reason_code = ReasonCode.SUCCESS if authorize else ReasonCode.NOT_AUTHORIZED
+        # [MQTT-3.2.2-6] CONNACK with a non-zero Reason Code must set Session Present to 0.
+        session_present = bool(self.session.parent) if not reason_code.is_error() else False
+        connack = ConnackPacket.build(session_present, reason_code)
         await self._send_packet(connack)
 
     @classmethod
