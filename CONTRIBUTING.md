@@ -61,3 +61,14 @@ pre-commit run --all-files
 
 When adding a new feature, please add corollary tests. The testing coverage should not decrease.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
+
+## Dependencies
+
+Depdencies are managed with `uv pip`, based on the `pyproject.toml` file and version locked with `uv.lock`. To support
+OpenSSF scorecard, the `uv.lock` file needs to be converted into a hash-based lockfile in `requirements.txt`.
+
+If dependencies are added / update, CI will require that the `requirements.txt` file aligns with the `uv.lock` file:
+
+```shell
+uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt
+```
