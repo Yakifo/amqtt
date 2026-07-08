@@ -8,8 +8,8 @@ on:
       - dev
   pull_request:
   workflow_dispatch:
-  # schedule:
-  #   - cron: "20 10 * * 0"
+  schedule:
+    - cron: "20 10 * * 0"
 
 permissions:
   contents: read

@@ -50,13 +50,13 @@ dev = [
   "psutil>=7.0.0", # https://pypi.org/project/psutil
   "pyhamcrest>=2.1.0",
   "pylint>=3.3.6", # https://pypi.org/project/pylint
-  "pyopenssl>=25.1.0",
+  "pyopenssl>=26.0.0",
   "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
   "pytest-cov>=6.1.0", # https://pypi.org/project/pytest-cov
   "pytest-docker>=3.2.3",
   "pytest-logdog>=0.1.0", # https://pypi.org/project/pytest-logdog
   "pytest-timeout>=2.3.1", # https://pypi.org/project/pytest-timeout
-  "pytest>=8.3.5", # https://pypi.org/project/pytest
+  "pytest>=9.0.3", # https://pypi.org/project/pytest
   "ruff>=0.11.3", # https://pypi.org/project/ruff
   "setuptools>=78.1.0",
   "sqlalchemy[mypy]>=2.0.41",
@@ -88,17 +88,17 @@ docs = [
 [project.optional-dependencies]
 ci = ["coveralls==4.0.1"]
 contrib = [
-    "cryptography>=45.0.3",
+    "cryptography>=48.0.1",
     "aiosqlite>=0.21.0",
     "greenlet>=3.2.3",
     "sqlalchemy[asyncio]>=2.0.41",
     "argon2-cffi>=25.1.0",
-    "aiohttp>=3.12.13",
-    "pyjwt>=2.10.1",
-    "python-ldap>=3.4.4",
+    "aiohttp>=3.14.1",
+    "pyjwt>=2.13.0",
+    "python-ldap>=3.4.5",
     "mergedeep>=1.3.4",
     "jsonschema>=4.25.0",
-    "pyopenssl>=25.1.0"
+    "pyopenssl>=26.0.0"
 ]
 
 
