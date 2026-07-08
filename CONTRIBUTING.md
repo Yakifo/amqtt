@@ -62,6 +62,27 @@ pre-commit run --all-files
 When adding a new feature, please add corollary tests. The testing coverage should not decrease.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
 
+### Local fuzzing
+
+The MQTT packet parser has local fuzz coverage using Hypothesis. These tests
+generate malformed and boundary-case byte streams and assert that packet decode
+paths either parse successfully or fail with expected parser exceptions.
+
+Run the local fuzz tests directly with:
+
+```shell
+uv run --frozen pytest tests/mqtt/test_fuzz_packet.py
+```
+
+Run them with the related MQTT parser tests before changing packet decode logic:
+
+```shell
+uv run --frozen pytest tests/mqtt tests/test_codecs.py
+```
+
+If Hypothesis finds a failure, keep the minimized example in the test output and
+add or adjust a regression test before changing the parser behavior.
+
 ## Dependencies
 
 Depdencies are managed with `uv pip`, based on the `pyproject.toml` file and version locked with `uv.lock`. To support

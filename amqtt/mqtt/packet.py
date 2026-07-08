@@ -87,7 +87,7 @@ class MQTTFixedHeader:
             multiplier, value = 1, 0
             buffer = bytearray()
             while True:
-                encoded_byte = await reader.read(1)
+                encoded_byte = await read_or_raise(reader, 1)
                 byte_value = unpack("!B", encoded_byte)[0]
                 buffer.append(byte_value)
                 value += (byte_value & 0x7F) * multiplier
