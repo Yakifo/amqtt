@@ -1,0 +1,55 @@
+---
+name: Security & Scorecard Tracking
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "25 10 * * 0"
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      issues: read
+      pull-requests: read
+      security-events: write
+      id-token: write
+
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # https://github.com/ossf/scorecard-action
+      - name: Run OpenSSF Scorecard
+        uses: ossf/scorecard-action@v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      # https://github.com/actions/upload-artifact
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openssf-scorecard-sarif
+          path: results.sarif
+          retention-days: 5
+
+      # https://github.com/github/codeql-action
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
