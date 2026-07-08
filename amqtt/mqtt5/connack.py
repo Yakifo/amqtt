@@ -30,7 +30,7 @@ class ConnackVariableHeader(MQTTVariableHeader):
         super().__init__()
         self.session_present = session_present
         self.reason_code = reason_code
-        self.properties = self.connack_properties(properties)
+        self.properties = Properties.for_packet(PACKET_CONNACK, properties)
 
     @classmethod
     async def from_stream(cls, reader: ReaderAdapter, fixed_header: MQTTFixedHeader) -> Self:
@@ -73,16 +73,6 @@ class ConnackVariableHeader(MQTTVariableHeader):
             f"{type(self).__name__}(session_present={self.session_present}, "
             f"reason_code={self.reason_code!r}, properties={self.properties!r})"
         )
-
-    @staticmethod
-    def connack_properties(properties: Properties | None) -> Properties:
-        connack_properties = Properties(packet_name=PACKET_CONNACK)
-        if properties is None:
-            return connack_properties
-
-        for identifier, value in properties.items():
-            connack_properties.set(identifier, value)
-        return connack_properties
 
 
 class ConnackPacket(MQTTPacket[ConnackVariableHeader, None, MQTTFixedHeader]):

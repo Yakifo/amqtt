@@ -43,6 +43,10 @@ from amqtt.mqtt5.property_ids import (
 )
 
 
+def packet_name_for(identifier: int) -> str:
+    return sorted(PROPERTY_DEFINITIONS[identifier].packets)[0]
+
+
 def sample_value(wire_type: PropertyWireType):
     if wire_type is PropertyWireType.BYTE:
         return 1
@@ -63,10 +67,11 @@ def sample_value(wire_type: PropertyWireType):
 
 @pytest.mark.parametrize("identifier", sorted(PROPERTY_DEFINITIONS))
 def test_property_round_trip_for_every_identifier(identifier: int):
-    properties = Properties()
+    packet_name = packet_name_for(identifier)
+    properties = Properties(packet_name=packet_name)
     properties.set(identifier, sample_value(PROPERTY_DEFINITIONS[identifier].wire_type))
 
-    decoded = Properties.decode(properties.encode())
+    decoded = Properties.decode(properties.encode(), packet_name=packet_name)
 
     assert decoded == properties
 
@@ -104,22 +109,31 @@ def test_property_round_trip_for_every_identifier(identifier: int):
     ],
 )
 def test_property_wire_bytes(identifier: int, value, expected_wire: bytes):
-    properties = Properties()
+    packet_name = packet_name_for(identifier)
+    properties = Properties(packet_name=packet_name)
     properties.set(identifier, value)
 
     encoded = properties.encode()
 
     assert encoded == bytes([len(expected_wire)]) + expected_wire
-    assert Properties.decode(encoded) == properties
+    assert Properties.decode(encoded, packet_name=packet_name) == properties
 
 
 def test_decode_spec_example_empty_properties():
-    assert Properties().encode() == b"\x00"
-    assert Properties.decode(b"\x00") == Properties()
+    assert Properties(packet_name=PACKET_CONNECT).encode() == b"\x00"
+    assert Properties.decode(b"\x00", packet_name=PACKET_CONNECT) == Properties(packet_name=PACKET_CONNECT)
+
+
+def test_properties_must_be_packet_scoped():
+    with pytest.raises(TypeError):
+        Properties()  # type: ignore[call-arg]
+
+    with pytest.raises(TypeError):
+        Properties.decode(b"\x00")  # type: ignore[call-arg]
 
 
 def test_duplicate_non_repeatable_property_raises():
-    properties = Properties()
+    properties = Properties(packet_name=PACKET_PUBLISH)
     properties.set(CONTENT_TYPE, "text/plain")
 
     with pytest.raises(MQTTError):
@@ -127,11 +141,11 @@ def test_duplicate_non_repeatable_property_raises():
 
 
 def test_duplicate_user_properties_are_preserved_in_order():
-    properties = Properties()
+    properties = Properties(packet_name=PACKET_CONNECT)
     properties.set(USER_PROPERTY, ("key", "one"))
     properties.set(USER_PROPERTY, ("key", "two"))
 
-    decoded = Properties.decode(properties.encode())
+    decoded = Properties.decode(properties.encode(), packet_name=PACKET_CONNECT)
 
     assert decoded.get(USER_PROPERTY) == [("key", "one"), ("key", "two")]
 
@@ -140,7 +154,7 @@ def test_decode_duplicate_non_repeatable_property_raises():
     duplicate_content_type = b"\x16\x03\x00\x04text\x03\x00\x04json"
 
     with pytest.raises(MQTTError):
-        Properties.decode(duplicate_content_type)
+        Properties.decode(duplicate_content_type, packet_name=PACKET_PUBLISH)
 
 
 def test_packet_context_rejects_property_not_valid_for_packet():
@@ -212,13 +226,13 @@ def test_protocol_value_constraints_are_enforced_on_decode(data: bytes, packet_n
 @pytest.mark.parametrize("data", [b"", b"\x02\x03", b"\x01\xff", b"\x05\x03\x00\xffbad", b"\x00\x01"])
 def test_malformed_properties_raise_mqtt_error(data: bytes):
     with pytest.raises(MQTTError):
-        Properties.decode(data)
+        Properties.decode(data, packet_name=PACKET_PUBLISH)
 
 
 @given(st.binary())
 def test_properties_decode_never_crashes(data: bytes):
     try:
-        Properties.decode(data)
+        Properties.decode(data, packet_name=PACKET_PUBLISH)
     except MQTTError:
         pass
 

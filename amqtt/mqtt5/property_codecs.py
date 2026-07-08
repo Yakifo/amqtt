@@ -1,8 +1,11 @@
 """MQTT 5.0 Properties encoding and decoding (§2.2.2) helpers."""
+from __future__ import annotations
+
 from typing import Any, TypeAlias, TypeGuard
 
 from amqtt.codecs_amqtt import (
     bytes_to_int,
+    decode_string_from_bytes,
     decode_variable_byte_int,
     encode_data_with_length,
     encode_string,
@@ -30,9 +33,9 @@ def is_tuple_list(val: PropertyValue) -> TypeGuard[list[tuple[str, str]]]:
     return isinstance(val, list) and all(isinstance(x, tuple) for x in val)
 
 
-def validate_packet_usage(definition: PropertyDefinition, packet_name: PacketName | None) -> None:
+def validate_packet_usage(definition: PropertyDefinition, packet_name: PacketName) -> None:
     """Validate that a property definition is correct for a given packet."""
-    if packet_name is None or packet_name in definition.packets:
+    if packet_name in definition.packets:
         return
     msg = f"Property {definition.name} is not valid on {packet_name}"
     raise MQTTError(msg)
@@ -41,7 +44,7 @@ def validate_packet_usage(definition: PropertyDefinition, packet_name: PacketNam
 def validate_and_normalize_property_type(
     definition: PropertyDefinition,
     value: PropertyValue,
-    packet_name: PacketName | None,
+    packet_name: PacketName,
 ) -> PropertyValue:
     """Validate that properties for the packet are formed with correct types.
 
@@ -203,23 +206,6 @@ def require_available(definition: PropertyDefinition, offset: int, end: int, nee
     if offset + needed > end:
         msg = f"Property {definition.name} exceeds properties length"
         raise MQTTError(msg)
-
-
-def decode_string_from_bytes(data: bytes | bytearray, offset: int, end: int) -> tuple[str, int]:
-    """Decode a string property value from a byte string."""
-    if offset + 2 > end:
-        msg = "String property length exceeds properties length"
-        raise MQTTError(msg)
-    length = bytes_to_int(bytes(data[offset:offset + 2]))
-    offset += 2
-    if offset + length > end:
-        msg = "String property value exceeds properties length"
-        raise MQTTError(msg)
-    try:
-        return bytes(data[offset:offset + length]).decode("utf-8"), offset + length
-    except UnicodeDecodeError as exc:
-        msg = "String property value is not valid UTF-8"
-        raise MQTTError(msg) from exc
 
 
 def decode_data_from_bytes(data: bytes | bytearray, offset: int, end: int) -> tuple[bytes, int]:

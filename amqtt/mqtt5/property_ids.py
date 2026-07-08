@@ -52,10 +52,8 @@ class PropertyDefinition:
     maximum: int | None = None
     allowed_values: frozenset[int] | None = None
 
-    def is_repeatable(self, packet_name: PacketName | None = None) -> bool:
+    def is_repeatable(self, packet_name: PacketName) -> bool:
         """Return whether the property can appear more than once."""
-        if packet_name is None:
-            return bool(self.repeatable_packets)
         return packet_name in self.repeatable_packets
 
 

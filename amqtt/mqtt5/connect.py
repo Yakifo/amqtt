@@ -7,16 +7,18 @@ from typing_extensions import Self
 
 from amqtt.codecs_amqtt import (
     bytes_to_int,
-    decode_variable_byte_int,
+    decode_string,
+    decode_string_from_bytes,
     encode_data_with_length,
     encode_string,
     int_to_bytes,
-    read_or_raise,
+    read_exact,
+    require_exact,
 )
 from amqtt.errors import AMQTTError, CodecError, MQTTError, NoDataError
 from amqtt.mqtt3.packet import CONNECT, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 from amqtt.mqtt5.properties import Properties
-from amqtt.mqtt5.property_codecs import decode_data_from_bytes, decode_string_from_bytes
+from amqtt.mqtt5.property_codecs import decode_data_from_bytes
 from amqtt.mqtt5.property_ids import PACKET_CONNECT, PACKET_WILL
 
 if TYPE_CHECKING:
@@ -53,7 +55,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
         self.proto_level = proto_level
         self.flags = connect_flags
         self.keep_alive = keep_alive
-        self.properties = _properties_for_packet(properties, PACKET_CONNECT)
+        self.properties = Properties.for_packet(PACKET_CONNECT, properties)
         self._wire_length = wire_length
         self._validate()
 
@@ -103,10 +105,10 @@ class ConnectVariableHeader(MQTTVariableHeader):
     @classmethod
     async def from_stream(cls, reader: ReaderAdapter, _: MQTTFixedHeader) -> Self:
         """Decode a MQTT 5.0 CONNECT variable header from a stream."""
-        proto_name = await _decode_string_from_stream(reader, "CONNECT Protocol Name")
-        proto_level = bytes_to_int(await _read_exact(reader, 1, "CONNECT Protocol Level"))
-        flags = bytes_to_int(await _read_exact(reader, 1, "CONNECT Flags"))
-        keep_alive = bytes_to_int(await _read_exact(reader, 2, "CONNECT Keep Alive"))
+        proto_name = await decode_string(reader, strict=True, field_name="CONNECT Protocol Name")
+        proto_level = bytes_to_int(await read_exact(reader, 1, "CONNECT Protocol Level"))
+        flags = bytes_to_int(await read_exact(reader, 1, "CONNECT Flags"))
+        keep_alive = bytes_to_int(await read_exact(reader, 2, "CONNECT Keep Alive"))
         properties = await Properties.from_stream(reader, packet_name=PACKET_CONNECT)
         wire_length = 2 + len(proto_name.encode("utf-8")) + 1 + 1 + 2 + len(properties.encode())
         return cls(flags, keep_alive, proto_name, proto_level, properties, wire_length=wire_length)
@@ -115,15 +117,15 @@ class ConnectVariableHeader(MQTTVariableHeader):
     def from_bytes(cls, data: bytes | bytearray, end: int) -> tuple[Self, int]:
         """Decode a MQTT 5.0 CONNECT variable header from packet-body bytes."""
         offset = 0
-        proto_name, offset = decode_string_from_bytes(data, offset, end)
-        _require_available(offset, end, 4, "CONNECT variable header")
+        proto_name, offset = decode_string_from_bytes(data, offset, end, field_name="CONNECT Protocol Name")
+        require_exact(offset, end, 4, "CONNECT variable header")
         proto_level = data[offset]
         offset += 1
         flags = data[offset]
         offset += 1
         keep_alive = bytes_to_int(bytes(data[offset:offset + 2]))
         offset += 2
-        properties, offset = _decode_properties_from_bytes(data, offset, end, PACKET_CONNECT)
+        properties, offset = Properties.from_bytes(data, offset, end, packet_name=PACKET_CONNECT, field_name="CONNECT")
         return cls(flags, keep_alive, proto_name, proto_level, properties, wire_length=offset), offset
 
     def to_bytes(self) -> bytes | bytearray:
@@ -239,7 +241,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         self.will_message = will_message
         self.username = username
         self.password = password
-        self.will_properties = _properties_for_packet(will_properties, PACKET_WILL)
+        self.will_properties = Properties.for_packet(PACKET_WILL, will_properties)
 
     def __repr__(self) -> str:
         """Return a developer-friendly representation."""
@@ -268,7 +270,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         if payload_length < 0:
             msg = "CONNECT variable header exceeds remaining length"
             raise MQTTError(msg)
-        data = await _read_exact(reader, payload_length, "CONNECT Payload")
+        data = await read_exact(reader, payload_length, "CONNECT Payload")
         return cls.from_bytes(data, 0, len(data), variable_header)
 
     @classmethod
@@ -283,17 +285,23 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         payload = cls()
 
         # [MQTT-3.1.3-1] CONNECT payload fields must appear in this order.
-        payload.client_id, offset = decode_string_from_bytes(data, offset, end)
+        payload.client_id, offset = decode_string_from_bytes(data, offset, end, field_name="CONNECT Client Identifier")
 
         if variable_header.will_flag:
             # [MQTT-3.1.2-9] Will Properties, Will Topic, and Will Payload are present when Will Flag is 1.
-            payload.will_properties, offset = _decode_properties_from_bytes(data, offset, end, PACKET_WILL)
-            payload.will_topic, offset = decode_string_from_bytes(data, offset, end)
+            payload.will_properties, offset = Properties.from_bytes(
+                data,
+                offset,
+                end,
+                packet_name=PACKET_WILL,
+                field_name="CONNECT",
+            )
+            payload.will_topic, offset = decode_string_from_bytes(data, offset, end, field_name="CONNECT Will Topic")
             payload.will_message, offset = decode_data_from_bytes(data, offset, end)
 
         if variable_header.username_flag:
             # [MQTT-3.1.2-17] User Name is present when the User Name Flag is 1.
-            payload.username, offset = decode_string_from_bytes(data, offset, end)
+            payload.username, offset = decode_string_from_bytes(data, offset, end, field_name="CONNECT User Name")
 
         if variable_header.password_flag:
             # [MQTT-3.1.2-19] Password is present when the Password Flag is 1.
@@ -439,7 +447,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
         try:
             if variable_header is None:
-                body = await _read_exact(reader, fixed_header.remaining_length, "CONNECT packet body")
+                body = await read_exact(reader, fixed_header.remaining_length, "CONNECT packet body")
                 variable_header, offset = cls.VARIABLE_HEADER.from_bytes(body, len(body))
                 payload = cls.PAYLOAD.from_bytes(body, offset, len(body), variable_header)
             else:
@@ -453,213 +461,255 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
     @property
     def proto_name(self) -> str:
         """Return the CONNECT Protocol Name."""
-        return self._require_variable_header().proto_name
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.proto_name
 
     @proto_name.setter
     def proto_name(self, name: str) -> None:
-        self._require_variable_header().proto_name = name
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.proto_name = name
 
     @property
     def proto_level(self) -> int:
         """Return the CONNECT Protocol Level."""
-        return self._require_variable_header().proto_level
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.proto_level
 
     @proto_level.setter
     def proto_level(self, level: int) -> None:
-        self._require_variable_header().proto_level = level
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.proto_level = level
 
     @property
     def username_flag(self) -> bool:
         """Return whether the CONNECT User Name Flag is set."""
-        return self._require_variable_header().username_flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.username_flag
 
     @username_flag.setter
     def username_flag(self, flag: bool) -> None:
-        self._require_variable_header().username_flag = flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.username_flag = flag
 
     @property
     def password_flag(self) -> bool:
         """Return whether the CONNECT Password Flag is set."""
-        return self._require_variable_header().password_flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.password_flag
 
     @password_flag.setter
     def password_flag(self, flag: bool) -> None:
-        self._require_variable_header().password_flag = flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.password_flag = flag
 
     @property
     def clean_start_flag(self) -> bool:
         """Return the CONNECT Clean Start flag."""
-        return self._require_variable_header().clean_start_flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.clean_start_flag
 
     @clean_start_flag.setter
     def clean_start_flag(self, flag: bool) -> None:
-        self._require_variable_header().clean_start_flag = flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.clean_start_flag = flag
 
     @property
     def will_retain_flag(self) -> bool:
         """Return whether the CONNECT Will Retain flag is set."""
-        return self._require_variable_header().will_retain_flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.will_retain_flag
 
     @will_retain_flag.setter
     def will_retain_flag(self, flag: bool) -> None:
-        self._require_variable_header().will_retain_flag = flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.will_retain_flag = flag
 
     @property
     def will_qos(self) -> int:
         """Return the CONNECT Will QoS value."""
-        return self._require_variable_header().will_qos
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.will_qos
 
     @will_qos.setter
     def will_qos(self, flag: int) -> None:
-        self._require_variable_header().will_qos = flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.will_qos = flag
 
     @property
     def will_flag(self) -> bool:
         """Return whether the CONNECT Will Flag is set."""
-        return self._require_variable_header().will_flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.will_flag
 
     @will_flag.setter
     def will_flag(self, flag: bool) -> None:
-        self._require_variable_header().will_flag = flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.will_flag = flag
 
     @property
     def reserved_flag(self) -> bool:
         """Return whether the CONNECT reserved flag bit is set."""
-        return self._require_variable_header().reserved_flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.reserved_flag
 
     @reserved_flag.setter
     def reserved_flag(self, flag: bool) -> None:
-        self._require_variable_header().reserved_flag = flag
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.reserved_flag = flag
 
     @property
     def keep_alive(self) -> int:
         """Return the CONNECT Keep Alive value."""
-        return self._require_variable_header().keep_alive
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.keep_alive
 
     @keep_alive.setter
     def keep_alive(self, keep_alive: int) -> None:
-        self._require_variable_header().keep_alive = keep_alive
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        self.variable_header.keep_alive = keep_alive
 
     @property
     def properties(self) -> Properties:
         """Return the CONNECT properties."""
-        return self._require_variable_header().properties
+        if self.variable_header is None:
+            msg = "Variable header is not set"
+            raise ValueError(msg)
+        return self.variable_header.properties
 
     @property
     def client_id(self) -> str | None:
         """Return the CONNECT Client Identifier."""
-        return self._require_payload().client_id
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        return self.payload.client_id
 
     @client_id.setter
     def client_id(self, client_id: str) -> None:
-        self._require_payload().client_id = client_id
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        self.payload.client_id = client_id
 
     @property
     def client_id_is_random(self) -> bool:
         """Return whether the Client Identifier was generated locally."""
-        return self._require_payload().client_id_is_random
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        return self.payload.client_id_is_random
 
     @client_id_is_random.setter
     def client_id_is_random(self, client_id_is_random: bool) -> None:
-        self._require_payload().client_id_is_random = client_id_is_random
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        self.payload.client_id_is_random = client_id_is_random
 
     @property
     def will_topic(self) -> str | None:
         """Return the CONNECT Will Topic."""
-        return self._require_payload().will_topic
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        return self.payload.will_topic
 
     @will_topic.setter
     def will_topic(self, will_topic: str) -> None:
-        self._require_payload().will_topic = will_topic
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        self.payload.will_topic = will_topic
 
     @property
     def will_message(self) -> bytes | bytearray | None:
         """Return the CONNECT Will Payload."""
-        return self._require_payload().will_message
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        return self.payload.will_message
 
     @will_message.setter
     def will_message(self, will_message: bytes | bytearray) -> None:
-        self._require_payload().will_message = will_message
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        self.payload.will_message = will_message
 
     @property
     def will_properties(self) -> Properties:
         """Return the CONNECT Will Properties."""
-        return self._require_payload().will_properties
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        return self.payload.will_properties
 
     @property
     def username(self) -> str | None:
         """Return the CONNECT User Name."""
-        return self._require_payload().username
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        return self.payload.username
 
     @username.setter
     def username(self, username: str) -> None:
-        self._require_payload().username = username
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        self.payload.username = username
 
     @property
     def password(self) -> bytes | bytearray | None:
         """Return the CONNECT Password binary data."""
-        return self._require_payload().password
-
-    @password.setter
-    def password(self, password: bytes | bytearray) -> None:
-        self._require_payload().password = password
-
-    def _require_variable_header(self) -> ConnectVariableHeader:
-        if self.variable_header is None:
-            msg = "Variable header is not set"
-            raise ValueError(msg)
-        return self.variable_header
-
-    def _require_payload(self) -> ConnectPayload:
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)
-        return self.payload
+        return self.payload.password
 
-
-def _properties_for_packet(properties: Properties | None, packet_name: str) -> Properties:
-    packet_properties = Properties(packet_name=packet_name)
-    if properties is None:
-        return packet_properties
-
-    for identifier, value in properties.items():
-        packet_properties.set(identifier, value)
-    return packet_properties
-
-
-def _decode_properties_from_bytes(
-    data: bytes | bytearray,
-    offset: int,
-    end: int,
-    packet_name: str,
-) -> tuple[Properties, int]:
-    property_length, properties_offset = decode_variable_byte_int(data, offset)
-    properties_end = properties_offset + property_length
-    if properties_end > end:
-        msg = "Properties length exceeds available CONNECT bytes"
-        raise MQTTError(msg)
-    return Properties.decode(bytes(data[offset:properties_end]), packet_name=packet_name), properties_end
-
-
-async def _decode_string_from_stream(reader: ReaderAdapter, field_name: str) -> str:
-    length = bytes_to_int(await _read_exact(reader, 2, f"{field_name} length"))
-    data = await _read_exact(reader, length, field_name)
-    try:
-        return data.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        msg = f"{field_name} is not valid UTF-8"
-        raise MQTTError(msg) from exc
-
-
-async def _read_exact(reader: StreamReader | ReaderAdapter, length: int, field_name: str) -> bytes:
-    data = await read_or_raise(reader, length)
-    if len(data) != length:
-        msg = f"{field_name} is shorter than expected"
-        raise MQTTError(msg)
-    return data
-
-
-def _require_available(offset: int, end: int, needed: int, field_name: str) -> None:
-    if offset + needed > end:
-        msg = f"{field_name} is shorter than expected"
-        raise MQTTError(msg)
+    @password.setter
+    def password(self, password: bytes | bytearray) -> None:
+        if self.payload is None:
+            msg = "Payload is not set"
+            raise ValueError(msg)
+        self.payload.password = password

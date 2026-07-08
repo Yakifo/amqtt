@@ -156,24 +156,94 @@ async def read_or_raise(reader: ReaderAdapter | asyncio.StreamReader, n: int = -
     return data
 
 
-async def decode_string(reader: ReaderAdapter | asyncio.StreamReader) -> str:
+async def read_exact(reader: ReaderAdapter | asyncio.StreamReader, length: int, field_name: str) -> bytes:
+    """Read exactly `length` bytes from a stream.
+
+    :param reader: reader adapter
+    :param length: number of bytes required
+    :param field_name: field label used in malformed-packet errors
+    :return: bytes read from the stream
+    :raises MQTTError: if fewer than `length` bytes are returned
+    :raises NoDataError: if the stream closes before data is available
+    """
+    data = await read_or_raise(reader, length)
+    if len(data) != length:
+        msg = f"{field_name} is shorter than expected"
+        raise MQTTError(msg)
+    return data
+
+
+def require_exact(offset: int, end: int, needed: int, field_name: str) -> None:
+    """Require `needed` bytes between `offset` and `end`.
+
+    :param offset: first byte offset to read
+    :param end: exclusive end offset for the packet body
+    :param needed: number of bytes required
+    :param field_name: field label used in malformed-packet errors
+    :raises MQTTError: if fewer than `needed` bytes are available
+    """
+    if offset + needed > end:
+        msg = f"{field_name} is shorter than expected"
+        raise MQTTError(msg)
+
+
+async def decode_string(
+    reader: ReaderAdapter | asyncio.StreamReader,
+    *,
+    strict: bool = False,
+    field_name: str = "UTF-8 string",
+) -> str:
     """Read a string from a reader and decode it according to MQTT string specification.
 
     :param reader: Stream reader
+    :param strict: raise MQTTError for invalid UTF-8 or short reads instead of preserving legacy permissive behavior.
+    :param field_name: field label used in strict-mode malformed-packet errors.
     :return: string read from stream.
     """
     length_bytes = await read_or_raise(reader, 2)
+    if strict and len(length_bytes) != 2:
+        msg = f"{field_name} length is shorter than expected"
+        raise MQTTError(msg)
     if len(length_bytes) < 1:
         raise ZeroLengthReadError
     str_length = unpack("!H", length_bytes)[0]
     if str_length:
         byte_str = await read_or_raise(reader, str_length)
+        if strict and len(byte_str) != str_length:
+            msg = f"{field_name} is shorter than expected"
+            raise MQTTError(msg)
         try:
             return byte_str.decode(encoding="utf-8")
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exc:
+            if strict:
+                msg = f"{field_name} is not valid UTF-8"
+                raise MQTTError(msg) from exc
             return str(byte_str)
     else:
         return ""
+
+
+def decode_string_from_bytes(
+    data: bytes | bytearray,
+    offset: int,
+    end: int,
+    *,
+    field_name: str = "UTF-8 string",
+) -> tuple[str, int]:
+    """Decode a MQTT UTF-8 Encoded String from packet-body bytes."""
+    if offset + 2 > end:
+        msg = f"{field_name} length is shorter than expected"
+        raise MQTTError(msg)
+    length = bytes_to_int(bytes(data[offset:offset + 2]))
+    offset += 2
+    if offset + length > end:
+        msg = f"{field_name} is shorter than expected"
+        raise MQTTError(msg)
+    try:
+        return bytes(data[offset:offset + length]).decode("utf-8"), offset + length
+    except UnicodeDecodeError as exc:
+        msg = f"{field_name} is not valid UTF-8"
+        raise MQTTError(msg) from exc
 
 
 async def decode_data_with_length(reader: ReaderAdapter | asyncio.StreamReader) -> bytes:

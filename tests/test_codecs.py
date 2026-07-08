@@ -1,7 +1,10 @@
 import asyncio
 import unittest
 
-from amqtt.adapters import StreamReaderAdapter
+import pytest
+
+from amqtt.adapters import BufferReader, StreamReaderAdapter
+from amqtt.errors import MQTTError
 from amqtt.codecs_amqtt import (
     bytes_to_hex_str,
     bytes_to_int,
@@ -10,6 +13,8 @@ from amqtt.codecs_amqtt import (
     encode_variable_byte_int,
     encode_string,
     int_to_bytes,
+    read_exact,
+    require_exact,
 )
 
 
@@ -47,6 +52,23 @@ class TestCodecs(unittest.TestCase):
         stream.feed_data(b"\x00\x02AA")
         ret = self.loop.run_until_complete(decode_string(StreamReaderAdapter(stream)))
         assert ret == "AA"
+
+    def test_read_exact(self):
+        stream = BufferReader(b"AA")
+        ret = self.loop.run_until_complete(read_exact(stream, 2, "test field"))
+        assert ret == b"AA"
+
+    def test_read_exact_raises_for_short_read(self):
+        stream = BufferReader(b"A")
+        with pytest.raises(MQTTError, match="test field is shorter than expected"):
+            self.loop.run_until_complete(read_exact(stream, 2, "test field"))
+
+    def test_require_exact(self):
+        require_exact(1, 3, 2, "test field")
+
+    def test_require_exact_raises_for_short_buffer(self):
+        with pytest.raises(MQTTError, match="test field is shorter than expected"):
+            require_exact(1, 2, 2, "test field")
 
     def test_encode_string(self):
         encoded = encode_string("AA")

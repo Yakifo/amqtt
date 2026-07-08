@@ -11,6 +11,7 @@ from amqtt.mqtt5.property_ids import (
     ASSIGNED_CLIENT_IDENTIFIER,
     CONTENT_TYPE,
     PACKET_CONNACK,
+    PACKET_PUBLISH,
     REASON_STRING,
     SESSION_EXPIRY_INTERVAL,
 )
@@ -129,7 +130,7 @@ def test_connack_rejects_unknown_reason_code(make_reader) -> None:
 
 
 def test_build_rejects_non_connack_properties() -> None:
-    properties = Properties()
+    properties = Properties(packet_name=PACKET_PUBLISH)
     properties.set(CONTENT_TYPE, "text/plain")
 
     with pytest.raises(MQTTError):

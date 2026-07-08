@@ -103,7 +103,7 @@ def test_malformed_connect_input_raises(data: bytes, make_reader) -> None:
 
 
 def test_build_rejects_non_connect_properties() -> None:
-    properties = Properties()
+    properties = Properties(packet_name=PACKET_WILL)
     properties.set(CONTENT_TYPE, "text/plain")
 
     with pytest.raises(MQTTError):

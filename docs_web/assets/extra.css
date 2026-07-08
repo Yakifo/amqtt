@@ -6,6 +6,23 @@
   background: #d11149;
 }
 
+.md-header__button[for="__drawer"] {
+  display: none;
+}
+
+.md-header__title {
+  margin-left: 0;
+}
+
+.md-header__title .md-ellipsis {
+  display: none;
+}
+
+@media screen and (max-width: 76.1875em) {
+  .md-header__button.md-logo {
+    display: inline-block;
+  }
+}
 
 body > div.md-container > main > div > div.md-content > article > a:nth-child(2),
 body > div.md-container > main > div > div.md-content > article > a:nth-child(1),
