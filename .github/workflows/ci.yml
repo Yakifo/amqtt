@@ -13,6 +13,9 @@ env:
   UV_CACHE_DIR: /tmp/.uv-cache
   PROJECT_PATH: "amqtt"
 
+permissions:
+  contents: read
+
 jobs:
   code-quality:
     name: Check code quality
@@ -21,11 +24,11 @@ jobs:
     steps:
       # https://github.com/actions/checkout
       - name: ⤵️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -47,7 +50,8 @@ jobs:
 
       - name: Check if requirements.txt is up-to-date (needed for OpenSSF scorecard)
         run: |
-          uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt --check
+          uv pip compile pyproject.toml --generate-hashes --output-file /tmp/requirements.txt --custom-compile-command "uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt"
+          diff -u requirements.txt /tmp/requirements.txt
 
   tests:
     name: Run tests
@@ -64,11 +68,11 @@ jobs:
     steps:
       # https://github.com/actions/checkout
       - name: ⤵️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -86,21 +90,21 @@ jobs:
 
       # https://github.com/actions/upload-artifact
       - name: Upload test report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pytest-report-${{ matrix.python-version }}
           path: pytest-report.xml
 
       # https://github.com/actions/upload-artifact
       - name: Upload coverage results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage-results-${{ matrix.python-version }}
           path: coverage.xml
 
       # # https://github.com/codecov/codecov-action
       # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v5
+      #   uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
       #   with:
       #     token: ${{ secrets.CODECOV_TOKEN }}
       #     fail_ci_if_error: true

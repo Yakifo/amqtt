@@ -60,6 +60,8 @@ The `amqtt` project runs a test aMQTT broker/server at [test.amqtt.io](https://t
 
 Bug reports, patches and suggestions welcome! Just [open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [discord community](https://discord.gg/S3sP6dDaF3).
 
+Please report security vulnerabilities privately according to the [security policy](SECURITY.md).
+
 ## Python Version Compatibility
 
 | Version | hbmqtt compatibility | Supported Python Versions |
