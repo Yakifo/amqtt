@@ -14,7 +14,6 @@ from amqtt.plugins.base import BasePlugin
 
 log = logging.getLogger(__name__)
 
-pytest_plugins = ["pytest_logdog"]
 
 @pytest.fixture
 def rsa_keys():

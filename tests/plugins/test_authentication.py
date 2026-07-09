@@ -15,9 +15,9 @@ logging.basicConfig(level=logging.DEBUG, format=formatter)
 
 
 @pytest.mark.asyncio
-async def test_base_no_config(logdog):
+async def test_base_no_config(caplog):
     """Check BaseTopicPlugin returns false if no topic-check is present."""
-    with logdog() as pile:
+    with caplog.at_level(logging.DEBUG, logger="testlog"):
         context = BaseContext()
         context.logger = logging.getLogger("testlog")
         context.config = {}
@@ -27,11 +27,11 @@ async def test_base_no_config(logdog):
         authorised = await plugin.authenticate(session=s)
         assert authorised is False
 
-        # Warning messages are only generated if using deprecated plugin configuration on initial load
-        log_records = list(pile.drain(name="testlog"))
-        assert len(log_records) == 1
-        assert log_records[0].levelno == logging.WARNING
-        assert log_records[0].message == "'auth' section not found in context configuration"
+    # Warning messages are only generated if using deprecated plugin configuration on initial load
+    log_records = [record for record in caplog.records if record.name == "testlog"]
+    assert len(log_records) == 1
+    assert log_records[0].levelno == logging.WARNING
+    assert log_records[0].message == "'auth' section not found in context configuration"
 
 
 class TestAnonymousAuthPlugin(unittest.TestCase):

@@ -54,7 +54,6 @@ dev = [
   "pytest-asyncio>=0.26.0", # https://pypi.org/project/pytest-asyncio
   "pytest-cov>=6.1.0", # https://pypi.org/project/pytest-cov
   "pytest-docker>=3.2.3",
-  "pytest-logdog>=0.1.0", # https://pypi.org/project/pytest-logdog
   "pytest-timeout>=2.3.1", # https://pypi.org/project/pytest-timeout
   "pytest>=9.0.3", # https://pypi.org/project/pytest
   "ruff>=0.11.3", # https://pypi.org/project/ruff
