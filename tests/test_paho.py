@@ -72,6 +72,68 @@ async def test_paho_connect(broker, mock_plugin_manager):
 
 
 @pytest.mark.asyncio
+async def test_paho_mqtt5_connect_smoke(broker, mock_plugin_manager):
+    loop = asyncio.get_running_loop()
+    test_complete = asyncio.Event()
+    callback_errors: list[AssertionError] = []
+
+    host = "localhost"
+    port = 1883
+    client_id = f'python-mqtt5-{random.randint(0, 1000)}'
+
+    def finish() -> None:
+        loop.call_soon_threadsafe(test_complete.set)
+
+    def record_error(message: str) -> None:
+        callback_errors.append(AssertionError(message))
+        finish()
+
+    def on_connect(client, userdata, flags, reason_code, properties=None):
+        if reason_code.is_failure:
+            record_error(f"Connection failed with reason code {reason_code}")
+            return
+        client.disconnect()
+
+    def on_disconnect(client, userdata, flags, reason_code, properties=None):
+        if reason_code.is_failure:
+            record_error(f"Disconnect failed with reason code {reason_code}")
+            return
+        finish()
+
+    test_client = paho_client.Client(
+        paho_client.CallbackAPIVersion.VERSION2,
+        client_id=client_id,
+        protocol=paho_client.MQTTv5,
+    )
+    test_client.enable_logger(paho_logger)
+
+    test_client.on_connect = on_connect
+    test_client.on_disconnect = on_disconnect
+
+    try:
+        test_client.connect(host, port)
+        test_client.loop_start()
+
+        await asyncio.wait_for(test_complete.wait(), timeout=5)
+        await asyncio.sleep(0.1)
+    finally:
+        test_client.loop_stop()
+
+    if callback_errors:
+        raise callback_errors[0]
+
+    broker.plugins_manager.fire_event.assert_called()
+    assert broker.plugins_manager.fire_event.call_count > 2
+
+    events = [c[0][0] for c in broker.plugins_manager.fire_event.call_args_list]
+    assert BrokerEvents.CLIENT_CONNECTED in events
+    assert BrokerEvents.CLIENT_DISCONNECTED in events
+
+    session, _ = broker.sessions[client_id]
+    assert session.mqtt_version == 5
+
+
+@pytest.mark.asyncio
 async def test_paho_qos1(broker, mock_plugin_manager):
 
     sub_client = MQTTClient()
