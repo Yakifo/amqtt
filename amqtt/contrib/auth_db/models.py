@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Self, Union, cast
 
 from sqlalchemy import String
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -55,10 +55,10 @@ class PasswordHasher:
         if not hasattr(self, "_crypt_context"):
             self._crypt_context: CryptContext | None = None
 
-    def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> "PasswordHasher":
+    def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls, *args, **kwargs)
-        return cls._instance
+        return cast(Self, cls._instance)
 
     @property
     def crypt_context(self) -> "CryptContext":
@@ -94,6 +94,9 @@ class UserAuth(Base):
 
     @password.inplace.setter  # type: ignore[arg-type]
     def _password_setter(self, plain_password: str) -> None:
+        self.set_password(plain_password)
+
+    def set_password(self, plain_password: str) -> None:
         self._password_hash = PasswordHasher().crypt_context.hash(plain_password)
 
     def verify_password(self, plain_password: str) -> bool:

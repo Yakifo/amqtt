@@ -283,7 +283,7 @@ class PluginManager(Generic[C]):
 
     @property
     def plugins(self) -> list["BasePlugin[C]"]:
-        """Get the loaded plugins list.
+        """List of loaded plugins.
 
         :return:
         """

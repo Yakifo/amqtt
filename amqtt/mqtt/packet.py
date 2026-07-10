@@ -9,7 +9,7 @@ except ImportError:
     UTC = timezone.utc
 
 from struct import unpack
-from typing import Generic
+from typing import Any, Generic, cast
 from typing_extensions import Self, TypeVar
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
@@ -189,7 +189,7 @@ class MQTTPayload(ABC, Generic[_VH]):
         pass
 
 
-_P = TypeVar("_P", bound=MQTTPayload[MQTTVariableHeader] | None)
+_P = TypeVar("_P", bound=MQTTPayload[Any] | None)
 
 
 class MQTTPacket(Generic[_VH, _P, _FH]):
@@ -197,9 +197,9 @@ class MQTTPacket(Generic[_VH, _P, _FH]):
 
     __slots__ = ("fixed_header", "payload", "protocol_ts", "variable_header")
 
-    VARIABLE_HEADER: type[_VH] | None = None
-    PAYLOAD: type[_P] | None = None
-    FIXED_HEADER: type[_FH] = MQTTFixedHeader  # type: ignore [assignment]
+    VARIABLE_HEADER: type[MQTTVariableHeader] | None = None
+    PAYLOAD: type[MQTTPayload[Any]] | None = None
+    FIXED_HEADER: type[MQTTFixedHeader] = MQTTFixedHeader
 
     def __init__(self, fixed: _FH, variable_header: _VH | None = None, payload: _P | None = None) -> None:
         self.fixed_header = fixed
@@ -234,13 +234,17 @@ class MQTTPacket(Generic[_VH, _P, _FH]):
     ) -> Self:
         """Decode an MQTT packet from the stream."""
         if fixed_header is None:
-            fixed_header = await cls.FIXED_HEADER.from_stream(reader)
+            decoded_fixed_header = await cls.FIXED_HEADER.from_stream(reader)
+            if decoded_fixed_header is None:
+                msg = "No data to decode MQTT packet fixed header"
+                raise NoDataError(msg)
+            fixed_header = cast(_FH, decoded_fixed_header)
 
         if cls.VARIABLE_HEADER and variable_header is None:
-            variable_header = await cls.VARIABLE_HEADER.from_stream(reader, fixed_header)
+            variable_header = cast(_VH, await cls.VARIABLE_HEADER.from_stream(reader, fixed_header))
 
         if cls.PAYLOAD and fixed_header:
-            payload = await cls.PAYLOAD.from_stream(reader, fixed_header, variable_header)
+            payload = cast(_P, await cls.PAYLOAD.from_stream(reader, fixed_header, variable_header))
         else:
             payload = None
 

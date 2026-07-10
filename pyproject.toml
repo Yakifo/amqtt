@@ -198,6 +198,7 @@ ignore = [
     "CPY",
     "PLC",
     "RUF052",
+    "RUF067",
     "B903"
 ]
 
