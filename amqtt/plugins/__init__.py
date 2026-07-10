@@ -1,6 +1,6 @@
 """INIT."""
 import re
-from typing import Any, Optional
+from typing import Any, Optional, Self, cast
 
 
 class TopicMatcher:
@@ -11,10 +11,10 @@ class TopicMatcher:
         if not hasattr(self, "_topic_filter_matchers"):
             self._topic_filter_matchers: dict[str, re.Pattern[str]] = {}
 
-    def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> "TopicMatcher":
+    def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls, *args, **kwargs)
-        return cls._instance
+        return cast(Self, cls._instance)
 
     def is_topic_allowed(self, topic: str, a_filter: str) -> bool:
         if topic.startswith("$") and (a_filter.startswith(("+", "#"))):
