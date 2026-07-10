@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union
-from typing_extensions import Self, cast
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing_extensions import Self
 
 from sqlalchemy import String
 from sqlalchemy.ext.hybrid import hybrid_property
