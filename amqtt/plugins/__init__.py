@@ -1,6 +1,7 @@
 """INIT."""
 import re
-from typing import Any, Optional, Self, cast
+from typing import Any, Optional
+from typing_extensions import Self, cast
 
 
 class TopicMatcher:
