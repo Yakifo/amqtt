@@ -6,7 +6,7 @@
 ![Python Version](https://img.shields.io/pypi/pyversions/amqtt?style=plastic&logo=python&logoColor=yellow)
 ![Python Wheel](https://img.shields.io/pypi/wheel/amqtt?style=plastic)
 [![PyPI](https://img.shields.io/pypi/v/amqtt?style=plastic&logo=python&logoColor=yellow)](https://pypi.org/project/amqtt/)
-[![OpenSSF Scorecard](https://securityscorecards.dev)](https://securityscorecards.dev)
+[![OpenSSF Baseline](https://www.bestpractices.dev/projects/13571/baseline)](https://www.bestpractices.dev/projects/13571)
 
 ![docs/assets/amqtt.svg](https://raw.githubusercontent.com/Yakifo/amqtt/refs/tags/v0.11.0/docs/assets/amqtt.svg)
 
