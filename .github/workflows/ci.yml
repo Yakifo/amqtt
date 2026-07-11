@@ -25,6 +25,8 @@ jobs:
       # https://github.com/actions/checkout
       - name: ⤵️ Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python
@@ -33,6 +35,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           cache-local-path: ${{ env.UV_CACHE_DIR }}
+          save-cache: ${{ github.event_name != 'pull_request' }}
           python-version: "3.13"
 
       - name: install openldap dependencies
@@ -72,6 +75,8 @@ jobs:
       # https://github.com/actions/checkout
       - name: ⤵️ Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python ${{ matrix.python-version }}
@@ -80,6 +85,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           cache-local-path: ${{ env.UV_CACHE_DIR }}
+          save-cache: ${{ github.event_name != 'pull_request' }}
           python-version: ${{ matrix.python-version }}
 
       - name: install openldap dependencies
@@ -104,10 +110,3 @@ jobs:
         with:
           name: coverage-results-${{ matrix.python-version }}
           path: coverage.xml
-
-      # # https://github.com/codecov/codecov-action
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@04b047e8bb82a0c002c8312c1c880fbc6a999d45 # v5
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     fail_ci_if_error: true

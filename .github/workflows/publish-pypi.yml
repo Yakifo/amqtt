@@ -18,6 +18,8 @@ jobs:
       # https://github.com/actions/checkout
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       # https://github.com/astral-sh/setup-uv
       - name: Install uv and Python
