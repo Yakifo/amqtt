@@ -17,9 +17,52 @@ permissions:
   contents: read
 
 jobs:
+  validate-metadata:
+    name: Validate GitHub metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate ref metadata
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+
+          check_ref() {
+            local name="$1"
+            local value="$2"
+
+            if [[ -z "$value" ]]; then
+              return 0
+            fi
+
+            if [[ ! "$value" =~ ^[A-Za-z0-9._/-]{1,255}$ ]] ||
+              [[ "$value" == -* || "$value" == */ || "$value" == *. ||
+                "$value" == *..* || "$value" == *//* ||
+                "$value" == *@{* || "$value" == *.lock ]]; then
+              echo "::error::$name contains unsupported characters for CI metadata"
+              exit 1
+            fi
+          }
+
+          check_ref BASE_REF "$BASE_REF"
+          check_ref HEAD_REF "$HEAD_REF"
+          check_ref REF_NAME "$REF_NAME"
+
+          if [[ "$REF_TYPE" == "tag" &&
+            ! "$REF_NAME" =~ ^v[0-9]+(\.[0-9]+){1,2}([.-][A-Za-z0-9]+)*$ ]]; then
+            echo "::error::Release tags must match vMAJOR.MINOR[.PATCH][-PRERELEASE]"
+            exit 1
+          fi
+
   code-quality:
     name: Check code quality
     runs-on: ubuntu-latest
+    needs: validate-metadata
 
     steps:
       # https://github.com/actions/checkout
@@ -62,6 +105,7 @@ jobs:
   tests:
     name: Run tests
     runs-on: ubuntu-latest
+    needs: validate-metadata
 
     strategy:
       matrix:

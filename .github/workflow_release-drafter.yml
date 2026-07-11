@@ -19,6 +19,20 @@ jobs:
       contents: write
 
     steps:
+      - name: Validate tag metadata
+        shell: bash
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$REF_TYPE" == "tag" &&
+            ! "$REF_NAME" =~ ^v[0-9]+(\.[0-9]+){1,2}([.-][A-Za-z0-9]+)*$ ]]; then
+            echo "::error::Release tags must match vMAJOR.MINOR[.PATCH][-PRERELEASE]"
+            exit 1
+          fi
+
       # https://github.com/release-drafter/release-drafter
       - uses: release-drafter/release-drafter@67e173cadb2fbd3de94f4a861e0c48c913b462ae # v6
         env:
