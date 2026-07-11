@@ -41,6 +41,9 @@ jobs:
       - name: 🏗 Install the project
         run: uv sync --locked --dev --all-extras
 
+      - name: Run secret scan
+        run: uv run --frozen pre-commit run gitleaks-full --hook-stage manual
+
       - name: Run mypy
         run: uv run --frozen mypy ${{ env.PROJECT_PATH }}/
       - name: Pylint review

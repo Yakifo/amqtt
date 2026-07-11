@@ -35,6 +35,14 @@ Add git pre-commit checks (which parallel the CI checks):
 pre-commit install
 ```
 
+The pre-commit configuration includes Gitleaks secret scanning to block
+accidental commits of credentials, tokens, private keys, and similar sensitive
+data. Run a manual repository scan with:
+
+```shell
+pre-commit run gitleaks-full --hook-stage manual
+```
+
 ### Run
 
 Run CLI commands:
