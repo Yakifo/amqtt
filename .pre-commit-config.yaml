@@ -6,6 +6,7 @@ ci:
   autofix_prs: false
   skip:
     # These steps run in the CI workflow. Keep in sync.
+    - bandit
     - mypy
     - pylint
 
@@ -36,7 +37,7 @@ repos:
           - --line-length=130
           - --exit-non-zero-on-fix
 
-  # Local hooks for mypy and pylint
+  # Local hooks for mypy, pylint, and Bandit
   - repo: local
     hooks:
       - id: mypy
@@ -51,5 +52,13 @@ repos:
         entry: scripts/run-in-env.sh pylint
         language: script
         types: [python]
+        require_serial: true
+        exclude: ^tests/.+|^docs/.+|^samples/.+
+      - id: bandit
+        name: Run Bandit in Virtualenv
+        entry: scripts/run-in-env.sh bandit -r amqtt
+        language: script
+        types: [python]
+        pass_filenames: false
         require_serial: true
         exclude: ^tests/.+|^docs/.+|^samples/.+

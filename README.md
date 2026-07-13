@@ -41,7 +41,7 @@ $ pip install amqtt
 
 ## Documentation
 
-Available on [Read the Docs](http://amqtt.readthedocs.org/).
+Available on [Read the Docs](https://amqtt.readthedocs.org/).
 
 ## Containerization
 
