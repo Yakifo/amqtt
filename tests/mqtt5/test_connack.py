@@ -10,12 +10,21 @@ from amqtt.mqtt5.properties import Properties
 from amqtt.mqtt5.property_ids import (
     ASSIGNED_CLIENT_IDENTIFIER,
     CONTENT_TYPE,
+    MAXIMUM_PACKET_SIZE,
+    MAXIMUM_QOS,
     PACKET_CONNACK,
     PACKET_PUBLISH,
     REASON_STRING,
+    RECEIVE_MAXIMUM,
+    RETAIN_AVAILABLE,
     SESSION_EXPIRY_INTERVAL,
+    SHARED_SUBSCRIPTION_AVAILABLE,
+    SUBSCRIPTION_IDENTIFIER_AVAILABLE,
+    TOPIC_ALIAS_MAXIMUM,
+    WILDCARD_SUBSCRIPTION_AVAILABLE,
 )
 from amqtt.mqtt5.reason_codes import ReasonCode
+from amqtt.session import MQTT5_DEFAULT_RECEIVE_MAXIMUM, MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM
 
 
 def test_decode_spec_example_minimal_success(make_reader) -> None:
@@ -63,14 +72,61 @@ async def test_minimal_success_connack_can_be_sent_to_client(mock_client_handler
 
 
 @pytest.mark.asyncio
-async def test_broker_handler_can_send_success_connack(mock_broker_handler) -> None:
+async def test_broker_handler_can_send_success_connack(mock_broker_handler, make_reader) -> None:
     handler = mock_broker_handler
     handler.session.parent = 1
 
     await handler.mqtt_connack_authorize(True)
 
-    assert handler.writer.get_buffer() == b"\x20\x03\x01\x00\x00"
+    packet = await ConnackPacket.from_stream(make_reader(handler.writer.get_buffer()))
+    assert packet.session_present is True
+    assert packet.reason_code is ReasonCode.SUCCESS
+    assert packet.properties.get(RECEIVE_MAXIMUM) == MQTT5_DEFAULT_RECEIVE_MAXIMUM
+    assert packet.properties.get(TOPIC_ALIAS_MAXIMUM) == MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM
+    assert packet.properties.get(RETAIN_AVAILABLE) == 1
+    assert packet.properties.get(WILDCARD_SUBSCRIPTION_AVAILABLE) == 1
+    assert packet.properties.get(SUBSCRIPTION_IDENTIFIER_AVAILABLE) == 0
+    assert packet.properties.get(SHARED_SUBSCRIPTION_AVAILABLE) == 0
     handler.plugins_manager.fire_event.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_broker_handler_success_connack_uses_configured_limits(mock_broker_handler, make_reader) -> None:
+    handler = mock_broker_handler
+    handler.plugins_manager.app_context.config = {
+        "receive_maximum": 128,
+        "topic_alias_maximum": 7,
+        "maximum_packet_size": 1024,
+        "maximum_qos": 1,
+        "retain_available": False,
+        "wildcard_subscription_available": False,
+        "subscription_identifier_available": True,
+        "shared_subscription_available": True,
+    }
+
+    await handler.mqtt_connack_authorize(True)
+
+    packet = await ConnackPacket.from_stream(make_reader(handler.writer.get_buffer()))
+    assert packet.properties.get(RECEIVE_MAXIMUM) == 128
+    assert packet.properties.get(TOPIC_ALIAS_MAXIMUM) == 7
+    assert packet.properties.get(MAXIMUM_PACKET_SIZE) == 1024
+    assert packet.properties.get(MAXIMUM_QOS) == 1
+    assert packet.properties.get(RETAIN_AVAILABLE) == 0
+    assert packet.properties.get(WILDCARD_SUBSCRIPTION_AVAILABLE) == 0
+    assert packet.properties.get(SUBSCRIPTION_IDENTIFIER_AVAILABLE) == 1
+    assert packet.properties.get(SHARED_SUBSCRIPTION_AVAILABLE) == 1
+
+
+@pytest.mark.asyncio
+async def test_broker_handler_success_connack_includes_assigned_client_id(mock_broker_handler, make_reader) -> None:
+    handler = mock_broker_handler
+    handler.session.client_id = "generated-client"
+    handler.session.client_id_is_generated = True
+
+    await handler.mqtt_connack_authorize(True)
+
+    packet = await ConnackPacket.from_stream(make_reader(handler.writer.get_buffer()))
+    assert packet.properties.get(ASSIGNED_CLIENT_IDENTIFIER) == "generated-client"
 
 
 @pytest.mark.asyncio

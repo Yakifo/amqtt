@@ -169,6 +169,7 @@ class Session:
         subscription_identifiers: MQTT 5 topic filter to subscription identifier mapping.
         inflight_qos2_count: MQTT 5 flow-control counter for in-flight QoS 2 messages.
         maximum_packet_size: MQTT 5 maximum accepted packet size, or None for unlimited. [MQTT-3.1.2.11.4]
+        client_id_is_generated: Whether the broker generated the client identifier for this session.
         inflight_out: Outgoing QoS messages currently in protocol flow.
         inflight_in: Incoming QoS messages currently in protocol flow.
         retained_messages: Offline messages retained for this session.
@@ -215,6 +216,7 @@ class Session:
         self.subscription_identifiers: dict[str, int] = {}
         self.inflight_qos2_count: int = 0
         self.maximum_packet_size: int | None = None
+        self.client_id_is_generated: bool = False
 
         # Used to store outgoing ApplicationMessage while publish protocol flows
         self.inflight_out: OrderedDict[int, OutgoingApplicationMessage] = OrderedDict()

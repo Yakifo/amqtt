@@ -1,18 +1,27 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from amqtt.constants import MQTT_PROTOCOL_LEVEL_5
+from amqtt.contexts import BrokerConfig
 from amqtt.errors import MQTTError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt3.protocol.handler import ProtocolHandler
 from amqtt.mqtt5.connack import ConnackPacket
 from amqtt.mqtt5.connect import ConnectPacket
+from amqtt.mqtt5.properties import Properties
 from amqtt.mqtt5.property_ids import (
+    ASSIGNED_CLIENT_IDENTIFIER,
     MAXIMUM_PACKET_SIZE,
+    MAXIMUM_QOS,
+    PACKET_CONNACK,
     RECEIVE_MAXIMUM,
+    RETAIN_AVAILABLE,
     SESSION_EXPIRY_INTERVAL,
+    SHARED_SUBSCRIPTION_AVAILABLE,
+    SUBSCRIPTION_IDENTIFIER_AVAILABLE,
     TOPIC_ALIAS_MAXIMUM,
+    WILDCARD_SUBSCRIPTION_AVAILABLE,
 )
 from amqtt.mqtt5.reason_codes import ReasonCode
 from amqtt.protocol import BrokerProtocolHandlerBase
@@ -92,8 +101,47 @@ class BrokerProtocolHandler(
         reason_code = ReasonCode.SUCCESS if authorize else ReasonCode.NOT_AUTHORIZED
         # [MQTT-3.2.2-6] CONNACK with a non-zero Reason Code must set Session Present to 0.
         session_present = bool(self.session.parent) if not reason_code.is_error() else False
-        connack = ConnackPacket.build(session_present, reason_code)
+        properties = self._build_success_connack_properties() if not reason_code.is_error() else None
+        connack = ConnackPacket.build(session_present, reason_code, properties)
         await self._send_packet(connack)
+
+    def _build_success_connack_properties(self) -> Properties:
+        """Build the CONNACK properties advertised by the broker for accepted MQTT 5 connections."""
+        if self.session is None:
+            msg = "Session is not initialized!"
+            raise MQTTError(msg)
+
+        config = _get_broker_config(self.plugins_manager)
+        properties = Properties(packet_name=PACKET_CONNACK)
+        properties.set(RECEIVE_MAXIMUM, _int_config_value(config, "receive_maximum", MQTT5_DEFAULT_RECEIVE_MAXIMUM))
+        properties.set(TOPIC_ALIAS_MAXIMUM, _int_config_value(config, "topic_alias_maximum", MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM))
+
+        maximum_packet_size = _optional_int_config_value(config, "maximum_packet_size")
+        if maximum_packet_size is not None:
+            properties.set(MAXIMUM_PACKET_SIZE, maximum_packet_size)
+
+        properties.set(RETAIN_AVAILABLE, int(_bool_config_value(config, "retain_available", default=True)))
+        properties.set(
+            WILDCARD_SUBSCRIPTION_AVAILABLE,
+            int(_bool_config_value(config, "wildcard_subscription_available", default=True)),
+        )
+        properties.set(
+            SUBSCRIPTION_IDENTIFIER_AVAILABLE,
+            int(_bool_config_value(config, "subscription_identifier_available", default=False)),
+        )
+        properties.set(
+            SHARED_SUBSCRIPTION_AVAILABLE,
+            int(_bool_config_value(config, "shared_subscription_available", default=False)),
+        )
+
+        maximum_qos = _optional_int_config_value(config, "maximum_qos")
+        if maximum_qos is not None:
+            properties.set(MAXIMUM_QOS, maximum_qos)
+
+        if self.session.client_id_is_generated and self.session.client_id:
+            properties.set(ASSIGNED_CLIENT_IDENTIFIER, self.session.client_id)
+
+        return properties
 
     @classmethod
     async def init_from_connect(
@@ -174,3 +222,42 @@ def _optional_int_property(value: Any) -> int | None:
     if isinstance(value, int):
         return value
     return None
+
+
+def _get_broker_config(plugins_manager: Any) -> BrokerConfig | dict[str, Any] | None:
+    context = getattr(plugins_manager, "app_context", None)
+    config = getattr(context, "config", None)
+    if isinstance(config, (BrokerConfig, dict)):
+        return config
+    return None
+
+
+def _config_value(config: BrokerConfig | dict[str, Any] | None, name: str, default: object) -> object:
+    if isinstance(config, BrokerConfig):
+        return cast("object", getattr(config, name))
+    if isinstance(config, dict):
+        return cast("object", config.get(name, config.get(name.replace("_", "-"), default)))
+    return default
+
+
+def _int_config_value(config: BrokerConfig | dict[str, Any] | None, name: str, default: int) -> int:
+    value = _config_value(config, name, default)
+    if isinstance(value, bool) or not isinstance(value, int):
+        return default
+    return value
+
+
+def _optional_int_config_value(config: BrokerConfig | dict[str, Any] | None, name: str) -> int | None:
+    value = _config_value(config, name, None)
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
+
+
+def _bool_config_value(config: BrokerConfig | dict[str, Any] | None, name: str, *, default: bool) -> bool:
+    value = _config_value(config, name, default)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in (0, 1):
+        return bool(value)
+    return default

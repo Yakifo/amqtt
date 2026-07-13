@@ -533,6 +533,7 @@ class Broker:
                 await self._delete_session(client_session.client_id)
             else:
                 client_session.client_id = gen_client_id()
+                client_session.client_id_is_generated = True
 
             client_session.parent = 0
         # Get session from cache

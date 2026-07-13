@@ -186,6 +186,7 @@ class BrokerProtocolHandler(
 
         incoming_session = Session()
         incoming_session.client_id = connect.client_id
+        incoming_session.client_id_is_generated = connect.client_id_is_random
         incoming_session.clean_session = connect.clean_session_flag
         incoming_session.will_flag = connect.will_flag
         incoming_session.will_retain = connect.will_retain_flag
