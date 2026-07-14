@@ -236,6 +236,9 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 timeout = 15
 asyncio_default_fixture_loop_scope = "function"
+markers = [
+  "extended: interoperability tests that require non-Python runtimes or external client dependencies",
+]
 #addopts = ["--tb=short", "--capture=tee-sys"]
 #log_cli = true
 log_level = "DEBUG"

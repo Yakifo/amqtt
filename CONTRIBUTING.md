@@ -59,6 +59,18 @@ Run the test case suite:
 pytest
 ```
 
+Run the full suite including interoperability tests that require Go, Java, or Node.js client dependencies:
+
+```shell
+pytest --extended
+```
+
+Run only the extended interoperability tests:
+
+```shell
+pytest --extended -m extended
+```
+
 Run the type checker and linters manually:
 
 ```shell

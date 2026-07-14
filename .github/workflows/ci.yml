@@ -167,10 +167,10 @@ jobs:
         run: uv sync --locked --dev --all-extras
 
       - name: Run Go MQTT interoperability tests
-        run: uv run --frozen pytest tests/test_go_mqtt.py -v
+        run: uv run --frozen pytest tests/test_go_mqtt.py -v --extended
 
       - name: Run Java MQTT interoperability tests
-        run: uv run --frozen pytest tests/test_java_mqtt.py -v
+        run: uv run --frozen pytest tests/test_java_mqtt.py -v --extended
 
       # https://github.com/actions/setup-node
       - name: 🏗 Install Node.js
@@ -185,7 +185,7 @@ jobs:
         working-directory: docs_test
 
       - name: Run MQTT.js interoperability tests
-        run: uv run --frozen pytest tests/test_mqttjs.py -v
+        run: uv run --frozen pytest tests/test_mqttjs.py -v --extended
 
       - name: Run pytest
         run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
