@@ -77,3 +77,4 @@ coverage.xml
 *.log
 *memray*
 .coverage*
+*.sarif
