@@ -76,18 +76,19 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
 
         connection = self.config.connection
 
-        # backwards compatibility support
-        if not hasattr(self.config, "file") and not connection:
-            connection = "sqlite+aiosqlite:///amqtt.db"
-
         if getattr(self.config, "file", None) and connection:
             msg = "`Config` requires file _or_ connection, but not both."
             raise PluginInitError(msg)
 
+        # backwards compatibility support for `file` option
+        if not hasattr(self.config, "file") and not connection:
+            connection = "sqlite+aiosqlite:///amqtt.db"
+
         if getattr(self.config, "file", None):
             connection = f"sqlite+aiosqlite:///{self.config.file}"
             warnings.warn(
-                "persistence plugin: `file` option is now deprecated, use full `connection` string instead",
+                "persistence plugin: `file` option is now deprecated, use full `connection` string instead."
+                " existing configurations will continue to work.",
                 DeprecationWarning,
                 stacklevel=0
             )
@@ -271,11 +272,12 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
 
         - `mysql+aiomysql://user:password@host:port/dbname`
         - `postgresql+asyncpg://user:password@host:port/dbname`
-        - `sqlite+aiosqlite:///dbfilename.db`
+        - `sqlite+aiosqlite:///amqtt.db`  # default
         """
         file: str | Path | None = None
         """path & filename to store the sqlite session db
         Deprecated in 0.11.4, use `connection` instead.
+        Existing configurations will continue to work.
         """
 
         clear_on_shutdown: bool = True
