@@ -43,7 +43,7 @@ jobs:
 
       # https://github.com/astral-sh/setup-uv
       - name: Install uv and Python
-        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"

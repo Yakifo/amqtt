@@ -51,7 +51,7 @@ class PasswordHasher:
 
     _instance: Optional["PasswordHasher"] = None
 
-    def __init__(self) -> None:
+    def __init__(self) -> None:\
 
         if not hasattr(self, "_crypt_context"):
             self._crypt_context: CryptContext | None = None
@@ -59,7 +59,7 @@ class PasswordHasher:
     def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls, *args, **kwargs)
-        return cast(Self, cls._instance)
+        return cast("Self", cls._instance)
 
     @property
     def crypt_context(self) -> "CryptContext":
@@ -95,7 +95,7 @@ class UserAuth(Base):
 
     @password.inplace.setter  # type: ignore[arg-type]
     def _password_setter(self, plain_password: str) -> None:
-        self.set_password(plain_password)
+        self.set_password(plain_password)  # nosemgrep / incorrectly identifies this as a django application
 
     def set_password(self, plain_password: str) -> None:
         self._password_hash = PasswordHasher().crypt_context.hash(plain_password)

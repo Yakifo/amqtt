@@ -50,6 +50,6 @@ jobs:
 
       # https://github.com/github/codeql-action
       - name: Upload SARIF to code scanning
-        uses: github/codeql-action/upload-sarif@641a925cfafe92d0fdf8b239ba4053e3f8d99d6d # v3
+        uses: github/codeql-action/upload-sarif@24ea975727876cf496b1eb0c5b36e96e01600b51 # v4.37.0
         with:
           sarif_file: results.sarif

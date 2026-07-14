@@ -238,13 +238,13 @@ class MQTTPacket(Generic[_VH, _P, _FH]):
             if decoded_fixed_header is None:
                 msg = "No data to decode MQTT packet fixed header"
                 raise NoDataError(msg)
-            fixed_header = cast(_FH, decoded_fixed_header)
+            fixed_header = cast("_FH", decoded_fixed_header)
 
         if cls.VARIABLE_HEADER and variable_header is None:
-            variable_header = cast(_VH, await cls.VARIABLE_HEADER.from_stream(reader, fixed_header))
+            variable_header = cast("_VH", await cls.VARIABLE_HEADER.from_stream(reader, fixed_header))
 
         if cls.PAYLOAD and fixed_header:
-            payload = cast(_P, await cls.PAYLOAD.from_stream(reader, fixed_header, variable_header))
+            payload = cast("_P", await cls.PAYLOAD.from_stream(reader, fixed_header, variable_header))
         else:
             payload = None
 

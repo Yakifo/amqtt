@@ -73,7 +73,7 @@ jobs:
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python
-        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -96,6 +96,8 @@ jobs:
         run: uv run --frozen pylint ${{ env.PROJECT_PATH }}/
       - name: Bandit security check
         run: uv run --frozen bandit -r ${{ env.PROJECT_PATH }}/
+      - name: Semgrep security check
+        run: uv run --frozen semgrep scan --error --config p/default --config p/python --config p/trailofbits --config p/xss ${{ env.PROJECT_PATH }}/
       - name: Ruff check
         run: uv run --frozen ruff check ${{ env.PROJECT_PATH }}/
 
@@ -126,7 +128,7 @@ jobs:
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
