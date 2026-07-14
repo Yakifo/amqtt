@@ -75,23 +75,25 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         super().__init__(context)
 
         connection = self.config.connection
+        configured_file = getattr(self.config, "file", None)
 
-        if getattr(self.config, "file", None) and connection:
+        if configured_file and connection:
             msg = "`Config` requires file _or_ connection, but not both."
             raise PluginInitError(msg)
 
         # backwards compatibility support for `file` option
-        if not hasattr(self.config, "file") and not connection:
-            connection = "sqlite+aiosqlite:///amqtt.db"
-
-        if getattr(self.config, "file", None):
-            connection = f"sqlite+aiosqlite:///{self.config.file}"
+        if configured_file:
+            connection = f"sqlite+aiosqlite:///{configured_file}"
             warnings.warn(
                 "persistence plugin: `file` option is now deprecated, use full `connection` string instead."
                 " existing configurations will continue to work.",
                 DeprecationWarning,
                 stacklevel=0
             )
+        elif not connection:
+            self.config.file = Path("amqtt.db")
+            connection = f"sqlite+aiosqlite:///{self.config.file}"
+
         self._engine = create_async_engine(connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
 
@@ -255,13 +257,25 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         logger.info(f"Restored {restored_sessions} sessions.")
 
     async def on_broker_pre_shutdown(self) -> None:
-        """Clean up the db connection."""
-        await self._engine.dispose()
+        """Handle broker pre-shutdown event."""
 
     async def on_broker_post_shutdown(self) -> None:
 
-        if self.config.clear_on_shutdown and self.config.file.exists():
-            self.config.file.unlink()
+        try:
+            if not self.config.clear_on_shutdown:
+                return
+
+            if self.config.file:
+                await self._engine.dispose()
+                if self.config.file.exists():
+                    self.config.file.unlink()
+                return
+
+            async with self._engine.begin() as conn:
+                for table in reversed(Base.metadata.sorted_tables):
+                    await conn.execute(table.delete())
+        finally:
+            await self._engine.dispose()
 
     @dataclass
     class Config:
@@ -281,7 +295,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         """
 
         clear_on_shutdown: bool = True
-        """if the broker shutdowns down normally, don't retain any information."""
+        """if the broker shutdowns down normally, clear retained persistence data."""
 
         def __post_init__(self) -> None:
             """Create `Path` from string path."""
