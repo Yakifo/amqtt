@@ -1,20 +1,21 @@
 from abc import ABC, abstractmethod
 import asyncio
-
-try:
-    from datetime import UTC, datetime
-except ImportError:
-    from datetime import datetime, timezone
-
-    UTC = timezone.utc
-
+from datetime import datetime, timezone
 from struct import unpack
 from typing import Generic
 from typing_extensions import Self, TypeVar
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.codecs_amqtt import bytes_to_hex_str, decode_packet_id, int_to_bytes, read_or_raise
-from amqtt.errors import CodecError, MQTTError, NoDataError
+from amqtt.codecs_amqtt import (
+    decode_packet_id,
+    decode_variable_byte_int_from_stream,
+    encode_variable_byte_int,
+    int_to_bytes,
+    read_or_raise,
+)
+from amqtt.errors import CodecError, NoDataError
+
+UTC = timezone.utc
 
 RESERVED_0 = 0x00
 CONNECT = 0x01
@@ -46,25 +47,11 @@ class MQTTFixedHeader:
 
     def to_bytes(self) -> bytes:
         """Encode the fixed header to bytes."""
-
-        def encode_remaining_length(length: int) -> bytes:
-            """Encode the remaining length as per MQTT protocol."""
-            encoded = bytearray()
-            while True:
-                length_byte = length % 0x80
-                length //= 0x80
-                if length > 0:
-                    length_byte |= 0x80
-                encoded.append(length_byte)
-                if length <= 0:
-                    break
-            return bytes(encoded)
-
         try:
             packet_type_flags = (self.packet_type << 4) | self.flags
-            encoded_length = encode_remaining_length(self.remaining_length)
+            encoded_length = encode_variable_byte_int(self.remaining_length)
             return bytes([packet_type_flags]) + encoded_length
-        except OverflowError as exc:
+        except (CodecError, OverflowError) as exc:
             msg = f"Fixed header encoding failed: {exc}"
             raise CodecError(msg) from exc
 
@@ -79,32 +66,12 @@ class MQTTFixedHeader:
     @classmethod
     async def from_stream(cls: type[Self], reader: ReaderAdapter) -> "Self | None":
         """Decode a fixed header from the stream."""
-
-        async def decode_remaining_length() -> int:
-            """Decode the remaining length from the stream."""
-            multiplier: int
-            value: int
-            multiplier, value = 1, 0
-            buffer = bytearray()
-            while True:
-                encoded_byte = await reader.read(1)
-                byte_value = unpack("!B", encoded_byte)[0]
-                buffer.append(byte_value)
-                value += (byte_value & 0x7F) * multiplier
-                if (byte_value & 0x80) == 0:
-                    break
-                multiplier *= 128
-                if multiplier > 128**3:
-                    msg = f"Invalid remaining length bytes:{bytes_to_hex_str(buffer)}, packet_type={packet_type}"
-                    raise MQTTError(msg)
-            return value
-
         try:
             byte1 = await read_or_raise(reader, 1)
             int1 = unpack("!B", byte1)[0]
             packet_type = (int1 & 0xF0) >> 4
             flags = int1 & 0x0F
-            remaining_length = await decode_remaining_length()
+            remaining_length = await decode_variable_byte_int_from_stream(reader)
             return cls(packet_type, flags, remaining_length)
         except NoDataError:
             return None
