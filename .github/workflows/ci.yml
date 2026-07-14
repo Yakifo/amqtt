@@ -12,6 +12,7 @@ on:
 env:
   UV_CACHE_DIR: /tmp/.uv-cache
   PROJECT_PATH: "amqtt"
+  PAHO_MQTT_JAR: /tmp/org.eclipse.paho.client.mqttv3-1.2.5.jar
 
 jobs:
   code-quality:
@@ -85,11 +86,26 @@ jobs:
         run: go mod download
         working-directory: tests/support/go-mqtt-client
 
+      # https://github.com/actions/setup-java
+      - name: 🏗 Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: 🏗 Install Java MQTT test dependency
+        run: |
+          curl -L -o "${PAHO_MQTT_JAR}" \
+            https://repo1.maven.org/maven2/org/eclipse/paho/org.eclipse.paho.client.mqttv3/1.2.5/org.eclipse.paho.client.mqttv3-1.2.5.jar
+
       - name: 🏗 Install the project
         run: uv sync --locked --dev --all-extras
 
       - name: Run Go MQTT interoperability tests
         run: uv run --frozen pytest tests/test_go_mqtt.py -v
+
+      - name: Run Java MQTT interoperability tests
+        run: uv run --frozen pytest tests/test_java_mqtt.py -v
 
       # https://github.com/actions/setup-node
       - name: 🏗 Install Node.js
