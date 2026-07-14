@@ -150,6 +150,31 @@ def test_duplicate_user_properties_are_preserved_in_order():
     assert decoded.get(USER_PROPERTY) == [("key", "one"), ("key", "two")]
 
 
+def test_get_int_returns_integer_property_values():
+    properties = Properties(packet_name=PACKET_CONNECT)
+    properties.set(RECEIVE_MAXIMUM, 10)
+
+    assert properties.get_int(RECEIVE_MAXIMUM) == 10
+    assert properties.get_int(SESSION_EXPIRY_INTERVAL, 30) == 30
+    assert properties.get_int(SESSION_EXPIRY_INTERVAL) is None
+
+
+def test_get_int_rejects_non_integer_property_values():
+    properties = Properties(packet_name=PACKET_PUBLISH)
+    properties.set(CONTENT_TYPE, "text/plain")
+
+    with pytest.raises(MQTTError):
+        properties.get_int(CONTENT_TYPE)
+
+
+def test_get_int_rejects_bool_property_values():
+    properties = Properties(packet_name=PACKET_CONNECT)
+    properties.set(REQUEST_PROBLEM_INFORMATION, True)
+
+    with pytest.raises(MQTTError):
+        properties.get_int(REQUEST_PROBLEM_INFORMATION)
+
+
 def test_decode_duplicate_non_repeatable_property_raises():
     duplicate_content_type = b"\x16\x03\x00\x04text\x03\x00\x04json"
 

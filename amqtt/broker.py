@@ -565,7 +565,12 @@ class Broker:
         protocol_level, packet_data = await Broker._read_connect_packet_for_negotiation(reader)
         packet_reader = BufferReader(packet_data)
         if protocol_level == MQTT_PROTOCOL_LEVEL_5:
-            return await MQTT5BrokerProtocolHandler.init_from_connect(packet_reader, writer, self.plugins_manager)
+            return await MQTT5BrokerProtocolHandler.init_from_connect(
+                packet_reader,
+                writer,
+                self.plugins_manager,
+                config=self.config,
+            )
         return await MQTT3BrokerProtocolHandler.init_from_connect(packet_reader, writer, self.plugins_manager)
 
     @staticmethod
@@ -648,7 +653,7 @@ class Broker:
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> _BROKER_HANDLER:
         if mqtt_version == MQTT_PROTOCOL_LEVEL_5:
-            return MQTT5BrokerProtocolHandler(self.plugins_manager, session, loop)
+            return MQTT5BrokerProtocolHandler(self.plugins_manager, session, loop, config=self.config)
         return MQTT3BrokerProtocolHandler(self.plugins_manager, session, loop)
 
     async def _handle_client_session(

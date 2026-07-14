@@ -1,7 +1,7 @@
 """MQTT 5.0 Properties encoding and decoding (§2.2.2)."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 from typing_extensions import Self
 
 from amqtt.codecs_amqtt import (
@@ -115,6 +115,35 @@ class Properties:
 
         """
         return self._values.get(identifier, default)
+
+    @overload
+    def get_int(self, identifier: int) -> int | None: ...
+
+    @overload
+    def get_int(self, identifier: int, default: int) -> int: ...
+
+    def get_int(self, identifier: int, default: int | None = None) -> int | None:
+        """Return an integer property value by identifier.
+
+        Args:
+            identifier: MQTT 5.0 property identifier.
+            default: Integer value returned when the property is not present.
+
+        Returns:
+            The stored integer property value, `default`, or `None`.
+
+        Raises:
+            MQTTError: If the stored property value is not an integer.
+
+        """
+        value = self._values.get(identifier, default)
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, int):
+            definition = get_definition(identifier)
+            msg = f"Property {definition.name} requires an integer value"
+            raise MQTTError(msg)
+        return value
 
     def has(self, identifier: int) -> bool:
         """Return whether a property identifier is present."""

@@ -93,16 +93,14 @@ async def test_broker_handler_can_send_success_connack(mock_broker_handler, make
 @pytest.mark.asyncio
 async def test_broker_handler_success_connack_uses_configured_limits(mock_broker_handler, make_reader) -> None:
     handler = mock_broker_handler
-    handler.plugins_manager.app_context.config = {
-        "receive_maximum": 128,
-        "topic_alias_maximum": 7,
-        "maximum_packet_size": 1024,
-        "maximum_qos": 1,
-        "retain_available": False,
-        "wildcard_subscription_available": False,
-        "subscription_identifier_available": True,
-        "shared_subscription_available": True,
-    }
+    handler.config.receive_maximum = 128
+    handler.config.topic_alias_maximum = 7
+    handler.config.maximum_packet_size = 1024
+    handler.config.maximum_qos = 1
+    handler.config.retain_available = False
+    handler.config.wildcard_subscription_available = False
+    handler.config.subscription_identifier_available = True
+    handler.config.shared_subscription_available = True
 
     await handler.mqtt_connack_authorize(True)
 

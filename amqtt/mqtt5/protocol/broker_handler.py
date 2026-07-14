@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from amqtt.constants import MQTT_PROTOCOL_LEVEL_5
 from amqtt.contexts import BrokerConfig
@@ -58,8 +58,11 @@ class BrokerProtocolHandler(
         plugins_manager: PluginManager[BrokerContext],
         session: Session | None = None,
         loop: AbstractEventLoop | None = None,
+        *,
+        config: BrokerConfig | None = None,
     ) -> None:
         super().__init__(plugins_manager, session, loop)
+        self.config = config if config is not None else BrokerConfig()
         self._init_broker_handler_state()
 
     async def start(self) -> None:
@@ -111,32 +114,20 @@ class BrokerProtocolHandler(
             msg = "Session is not initialized!"
             raise MQTTError(msg)
 
-        config = _get_broker_config(self.plugins_manager)
         properties = Properties(packet_name=PACKET_CONNACK)
-        properties.set(RECEIVE_MAXIMUM, _int_config_value(config, "receive_maximum", MQTT5_DEFAULT_RECEIVE_MAXIMUM))
-        properties.set(TOPIC_ALIAS_MAXIMUM, _int_config_value(config, "topic_alias_maximum", MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM))
+        properties.set(RECEIVE_MAXIMUM, self.config.receive_maximum)
+        properties.set(TOPIC_ALIAS_MAXIMUM, self.config.topic_alias_maximum)
 
-        maximum_packet_size = _optional_int_config_value(config, "maximum_packet_size")
-        if maximum_packet_size is not None:
-            properties.set(MAXIMUM_PACKET_SIZE, maximum_packet_size)
+        if self.config.maximum_packet_size is not None:
+            properties.set(MAXIMUM_PACKET_SIZE, self.config.maximum_packet_size)
 
-        properties.set(RETAIN_AVAILABLE, int(_bool_config_value(config, "retain_available", default=True)))
-        properties.set(
-            WILDCARD_SUBSCRIPTION_AVAILABLE,
-            int(_bool_config_value(config, "wildcard_subscription_available", default=True)),
-        )
-        properties.set(
-            SUBSCRIPTION_IDENTIFIER_AVAILABLE,
-            int(_bool_config_value(config, "subscription_identifier_available", default=False)),
-        )
-        properties.set(
-            SHARED_SUBSCRIPTION_AVAILABLE,
-            int(_bool_config_value(config, "shared_subscription_available", default=False)),
-        )
+        properties.set(RETAIN_AVAILABLE, int(self.config.retain_available))
+        properties.set(WILDCARD_SUBSCRIPTION_AVAILABLE, int(self.config.wildcard_subscription_available))
+        properties.set(SUBSCRIPTION_IDENTIFIER_AVAILABLE, int(self.config.subscription_identifier_available))
+        properties.set(SHARED_SUBSCRIPTION_AVAILABLE, int(self.config.shared_subscription_available))
 
-        maximum_qos = _optional_int_config_value(config, "maximum_qos")
-        if maximum_qos is not None:
-            properties.set(MAXIMUM_QOS, maximum_qos)
+        if self.config.maximum_qos is not None:
+            properties.set(MAXIMUM_QOS, self.config.maximum_qos)
 
         if self.session.client_id_is_generated and self.session.client_id:
             properties.set(ASSIGNED_CLIENT_IDENTIFIER, self.session.client_id)
@@ -150,6 +141,8 @@ class BrokerProtocolHandler(
         writer: WriterAdapter,
         plugins_manager: PluginManager[BrokerContext],
         loop: AbstractEventLoop | None = None,
+        *,
+        config: BrokerConfig | None = None,
     ) -> tuple[BrokerProtocolHandler, Session]:
         """Initialize a MQTT 5.0 broker handler from a CONNECT packet."""
         connect = await ConnectPacket.from_stream(reader)
@@ -194,70 +187,19 @@ class BrokerProtocolHandler(
         incoming_session.ssl_object = writer.get_ssl_info()
         incoming_session.keep_alive = max(connect.keep_alive, 0)
 
-        incoming_session.session_expiry_interval = _int_property(
-            connect.properties.get(SESSION_EXPIRY_INTERVAL),
+        incoming_session.session_expiry_interval = connect.properties.get_int(
+            SESSION_EXPIRY_INTERVAL,
             MQTT5_DEFAULT_SESSION_EXPIRY_INTERVAL,
         )
-        incoming_session.receive_maximum = _int_property(
-            connect.properties.get(RECEIVE_MAXIMUM),
+        incoming_session.receive_maximum = connect.properties.get_int(
+            RECEIVE_MAXIMUM,
             MQTT5_DEFAULT_RECEIVE_MAXIMUM,
         )
-        incoming_session.topic_alias_maximum = _int_property(
-            connect.properties.get(TOPIC_ALIAS_MAXIMUM),
+        incoming_session.topic_alias_maximum = connect.properties.get_int(
+            TOPIC_ALIAS_MAXIMUM,
             MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM,
         )
-        incoming_session.maximum_packet_size = _optional_int_property(connect.properties.get(MAXIMUM_PACKET_SIZE))
+        incoming_session.maximum_packet_size = connect.properties.get_int(MAXIMUM_PACKET_SIZE)
 
-        handler = cls(plugins_manager, loop=loop)
+        handler = cls(plugins_manager, loop=loop, config=config)
         return handler, incoming_session
-
-
-def _int_property(value: Any, default: int) -> int:
-    if isinstance(value, int):
-        return value
-    return default
-
-
-def _optional_int_property(value: Any) -> int | None:
-    if isinstance(value, int):
-        return value
-    return None
-
-
-def _get_broker_config(plugins_manager: Any) -> BrokerConfig | dict[str, Any] | None:
-    context = getattr(plugins_manager, "app_context", None)
-    config = getattr(context, "config", None)
-    if isinstance(config, (BrokerConfig, dict)):
-        return config
-    return None
-
-
-def _config_value(config: BrokerConfig | dict[str, Any] | None, name: str, default: object) -> object:
-    if isinstance(config, BrokerConfig):
-        return cast("object", getattr(config, name))
-    if isinstance(config, dict):
-        return cast("object", config.get(name, config.get(name.replace("_", "-"), default)))
-    return default
-
-
-def _int_config_value(config: BrokerConfig | dict[str, Any] | None, name: str, default: int) -> int:
-    value = _config_value(config, name, default)
-    if isinstance(value, bool) or not isinstance(value, int):
-        return default
-    return value
-
-
-def _optional_int_config_value(config: BrokerConfig | dict[str, Any] | None, name: str) -> int | None:
-    value = _config_value(config, name, None)
-    if isinstance(value, bool) or not isinstance(value, int):
-        return None
-    return value
-
-
-def _bool_config_value(config: BrokerConfig | dict[str, Any] | None, name: str, *, default: bool) -> bool:
-    value = _config_value(config, name, default)
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, int) and value in (0, 1):
-        return bool(value)
-    return default

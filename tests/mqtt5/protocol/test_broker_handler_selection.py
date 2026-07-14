@@ -5,6 +5,7 @@ import pytest
 
 from amqtt.adapters import BufferWriter
 from amqtt.broker import Broker, BrokerContext
+from amqtt.contexts import BrokerConfig
 from amqtt.mqtt3.protocol.broker_handler import BrokerProtocolHandler as MQTT3BrokerProtocolHandler
 from amqtt.mqtt5.protocol.broker_handler import BrokerProtocolHandler as MQTT5BrokerProtocolHandler
 from amqtt.session import Session
@@ -33,6 +34,7 @@ async def test_init_handler_from_connect_selects_mqtt5_handler(make_reader, v5_c
     assert selected_session is session
     mqtt5_init.assert_awaited_once()
     mqtt3_init.assert_not_awaited()
+    assert mqtt5_init.await_args.kwargs["config"] is broker.config
     forwarded_reader = mqtt5_init.await_args.args[0]
     assert await forwarded_reader.read() == connect_packet
 
@@ -80,6 +82,7 @@ async def test_create_offline_session_selects_mqtt5_handler() -> None:
     handler, session = broker.create_offline_session("client", mqtt_version=5)
 
     assert isinstance(handler, MQTT5BrokerProtocolHandler)
+    assert handler.config is broker.config
     assert session.client_id == "client"
     assert session.mqtt_version == 5
     assert session.transitions.is_disconnected()
@@ -94,6 +97,7 @@ async def test_broker_context_add_subscription_can_create_mqtt5_offline_session(
 
     session, handler = broker.sessions["client"]
     assert isinstance(handler, MQTT5BrokerProtocolHandler)
+    assert handler.config is broker.config
     assert session.client_id == "client"
     assert session.mqtt_version == 5
     assert session.transitions.is_disconnected()
@@ -101,6 +105,7 @@ async def test_broker_context_add_subscription_can_create_mqtt5_offline_session(
 
 def _make_broker() -> Broker:
     broker = object.__new__(Broker)
+    broker.config = BrokerConfig()
     broker.plugins_manager = object()
     broker._loop = asyncio.get_running_loop()  # noqa: SLF001
     broker._sessions = {}  # noqa: SLF001

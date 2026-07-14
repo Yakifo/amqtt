@@ -8,6 +8,7 @@ import pytest
 
 from amqtt.adapters import BufferReader, BufferWriter
 from amqtt.constants import MQTT_PROTOCOL_LEVEL_5
+from amqtt.contexts import BrokerConfig
 from amqtt.errors import NoDataError
 from amqtt.mqtt5.connect import ConnectPacket
 from amqtt.mqtt5.properties import Properties
@@ -87,7 +88,7 @@ async def mock_broker_handler(
     mock_v5_session: Session,
 ) -> BrokerProtocolHandler:
     plugins_manager = AsyncMock()
-    handler = BrokerProtocolHandler(plugins_manager, loop=asyncio.get_running_loop())
+    handler = BrokerProtocolHandler(plugins_manager, loop=asyncio.get_running_loop(), config=BrokerConfig())
     handler.attach(mock_v5_session, make_reader(b""), BufferWriter())
     return handler
 
