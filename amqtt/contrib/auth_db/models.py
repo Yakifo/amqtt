@@ -51,7 +51,7 @@ class PasswordHasher:
 
     _instance: Optional["PasswordHasher"] = None
 
-    def __init__(self) -> None:\
+    def __init__(self) -> None:
 
         if not hasattr(self, "_crypt_context"):
             self._crypt_context: CryptContext | None = None
