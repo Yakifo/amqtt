@@ -28,11 +28,11 @@ license = { text = "MIT" }
 authors = [{ name = "aMQTT Contributors" }]
 
 dependencies = [
-  "transitions==0.9.2", # https://pypi.org/project/transitions
+  "transitions>=0.9.2", # https://pypi.org/project/transitions
   "websockets==15.0.1", # https://pypi.org/project/websockets
-  "passlib==1.7.4", # https://pypi.org/project/passlib
-  "PyYAML==6.0.2", # https://pypi.org/project/PyYAML
-  "typer==0.15.4",
+  "passlib>=1.7.4", # https://pypi.org/project/passlib
+  "PyYAML>=6.0.2", # https://pypi.org/project/PyYAML
+  "typer>=0.15.4",
   "dacite>=1.9.2",
   "psutil>=7.0.0"
 ]

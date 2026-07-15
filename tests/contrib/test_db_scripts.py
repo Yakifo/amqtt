@@ -56,7 +56,9 @@ async def topic_manager(password_hasher, db_connection):
 def test_cli_mgr_no_params(app, error_msg):
 
     result = runner.invoke(app, [])
-    assert result.exit_code == 0, f"{result.output}"
+    assert result.exit_code == 2, f"{result.output}"
+    assert "Usage:" in result.output
+    assert "--db" in result.output
 
 
 @pytest.mark.parametrize("app,error_msg", [
