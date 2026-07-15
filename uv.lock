@@ -224,7 +224,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'contrib'", specifier = ">=2.0.41" },
     { name = "transitions", specifier = ">=0.9.2" },
-    { name = "typer", specifier = ">=0.15.4" },
+    { name = "typer", specifier = ">=0.24.0" },
     { name = "websockets", specifier = "==15.0.1" },
 ]
 provides-extras = ["ci", "contrib"]
