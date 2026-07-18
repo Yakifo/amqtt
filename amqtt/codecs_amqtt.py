@@ -60,6 +60,7 @@ async def read_or_raise(reader: ReaderAdapter | asyncio.StreamReader, n: int = -
         data = await reader.read(n)
     except (asyncio.IncompleteReadError, ConnectionResetError, BrokenPipeError):
         data = None
+
     if data is None or (n > 0 and len(data) < n):
         msg = "No more data"
         raise NoDataError(msg)
