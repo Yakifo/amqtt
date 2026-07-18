@@ -20,6 +20,8 @@ from amqtt.client import MQTTClient
 from amqtt.events import BrokerEvents
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
+pytestmark = pytest.mark.extended
+
 logger = logging.getLogger(__name__)
 
 MQTTJS_CWD = Path(__file__).resolve().parent.parent / "docs_test"

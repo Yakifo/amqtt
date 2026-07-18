@@ -225,10 +225,8 @@ def sign_csr(csr: CertificateSigningRequest,
 
 def load_ca(ca_key_fn: str, ca_crt_fn: str) -> tuple[rsa.RSAPrivateKey, Certificate]:
     """Load server key and certificate."""
-    with Path(ca_key_fn).open("rb") as f:
-        ca_key: rsa.RSAPrivateKey = serialization.load_pem_private_key(f.read(), password=None)  # type: ignore[assignment]
-    with Path(ca_crt_fn).open("rb") as f:
-        ca_cert = x509.load_pem_x509_certificate(f.read())
+    ca_key: rsa.RSAPrivateKey = serialization.load_pem_private_key(Path(ca_key_fn).read_bytes(), password=None)  # type: ignore[assignment]
+    ca_cert = x509.load_pem_x509_certificate(Path(ca_crt_fn).read_bytes())
     return ca_key, ca_cert
 
 

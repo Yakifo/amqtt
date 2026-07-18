@@ -444,7 +444,7 @@ class Broker:
         remote_info = writer.get_peer_info()
         if remote_info is None:
             self.logger.warning("Remote info could not be retrieved from peer info")
-            await writer.close() # python 3.10 needs explicit close
+            await writer.close()  # python 3.10 needs explicit close
             server.release_connection()
             return
 
@@ -805,7 +805,7 @@ class Broker:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
 
-        results = [result for _, result in returns.items() if result is not None] if returns else []
+        results = [result for result in returns.values() if result is not None] if returns else []
         if len(results) < 1:
             self.logger.debug("Authentication failed: no plugin responded with a boolean")
             return False

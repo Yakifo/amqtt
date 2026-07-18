@@ -3,14 +3,49 @@
 __pycache__
 node_modules
 .vite
+*.patch
+
+#------- Certificate, Key & Secret Files -------
 *.pem
 *.crt
 *.key
-*.patch
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ppk
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.secret
+*.secrets
+secrets.*
+gitleaks-report.*
+gitleaks-results.*
 
-#------- Environment Files -------
+#------- Environment & Local Config Files -------
 .python-version
 .venv
+.env
+.env.*
+!.env.example
+!.env.sample
+*.env
+*.local.yml
+*.local.yaml
+*.local.json
+*.local.toml
+*.local.ini
+.netrc
+.pypirc
+.npmrc
+pip.conf
+pip.ini
+docker-compose.override.yml
+.aws/
+.azure/
+.gcp/
 
 #------- Git Files -------
 BASE

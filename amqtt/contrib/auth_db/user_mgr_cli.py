@@ -25,13 +25,18 @@ def main(
         db_host: Annotated[str, typer.Option("--host", "-h", help="database host")] = "localhost",
         db_filename: Annotated[str, typer.Option("--file", "-f", help="database file name (sqlite only)")] = "auth.db",
 ) -> None:
-    """Command line interface to list, create, remove and add clients.
+    """Command line interface to list, create, remove, and add clients.
 
     Passwords are not allowed to be passed via the command line for security reasons. You will be prompted for database
     password (if applicable) and the client id's password.
 
     If you need to create users programmatically, see `amqtt.contrib.auth_db.managers.UserManager` which provides
     the underlying functionality to this command line interface.
+
+    <details class="warning">
+        <summary>Implementation does not include any password validation.</summary>
+        <p>Use NIST or other password guidelines when calling functions that set or update passwords.</p>
+    </details>
     """
     if db_type == DBType.SQLITE and ctx.invoked_subcommand == "sync" and not Path(db_filename).exists():
         pass

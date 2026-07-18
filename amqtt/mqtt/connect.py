@@ -243,7 +243,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         return out
 
 
-class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedHeader]):  # type: ignore [type-var]
+class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedHeader]):
     VARIABLE_HEADER = ConnectVariableHeader
     PAYLOAD = ConnectPayload
 

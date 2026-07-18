@@ -1,0 +1,78 @@
+---
+name: ClusterFuzzLite
+
+on:
+  pull_request:
+    paths:
+      - ".clusterfuzzlite/**"
+      - ".github/workflows/clusterfuzzlite.yml"
+      - "amqtt/**"
+      - "fuzz/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: PR fuzzing
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.sanitizer }}-${{ github.ref }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer:
+          - address
+
+    steps:
+      - name: Validate ref metadata
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          check_ref() {
+            local name="$1"
+            local value="$2"
+
+            if [[ -z "$value" ]]; then
+              return 0
+            fi
+
+            if [[ ! "$value" =~ ^[A-Za-z0-9._/-]{1,255}$ ]] ||
+              [[ "$value" == -* || "$value" == */ || "$value" == *. ||
+                "$value" == *..* || "$value" == *//* ||
+                "$value" == *@{* || "$value" == *.lock ]]; then
+              echo "::error::$name contains unsupported characters for CI metadata"
+              exit 1
+            fi
+          }
+
+          check_ref BASE_REF "$BASE_REF"
+          check_ref HEAD_REF "$HEAD_REF"
+          check_ref REF_NAME "$REF_NAME"
+
+      - name: Build fuzzers (${{ matrix.sanitizer }})
+        id: build
+        uses: google/clusterfuzzlite/actions/build_fuzzers@82652fb49e77bc29c35da1167bb286e93c6bcc05 # v1
+        with:
+          language: python
+          github-token: ${{ github.token }}
+          sanitizer: ${{ matrix.sanitizer }}
+
+      - name: Run fuzzers (${{ matrix.sanitizer }})
+        id: run
+        uses: google/clusterfuzzlite/actions/run_fuzzers@82652fb49e77bc29c35da1167bb286e93c6bcc05 # v1
+        with:
+          github-token: ${{ github.token }}
+          fuzz-seconds: 600
+          mode: code-change
+          sanitizer: ${{ matrix.sanitizer }}
+          output-sarif: true

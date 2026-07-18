@@ -58,7 +58,7 @@ def cached_import(module_path: str, class_name: str | None = None) -> Any:
     if not ((module := sys.modules.get(module_path))
             and (spec := getattr(module, "__spec__", None))
             and getattr(spec, "_initializing", False) is False):
-        module = import_module(module_path)
+        module = import_module(module_path)  # nosemgrep / import is not dynamic, based on configuration file only
     if class_name:
         return getattr(module, class_name)
     return module

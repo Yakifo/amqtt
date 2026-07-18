@@ -5,11 +5,22 @@ import logging
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
-"""
-This sample shows how to publish messages to secure broker.
+""" This sample shows how to publish messages to a secure broker. """
 
-Use `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem -subj "/CN=localhost"` to
-generate a self-signed certificate for the broker to use.
+# To generate a self-signed certificate for local testing, run:
+
+# openssl req -x509 -noenc -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem  -subj "/CN=localhost" -addext "subjectAltName = DNS:localhost"  # nosemgrep
+
+"""
+PRODUCTION WARNING:
+Do not use this command or the resulting files in production environments:
+1. No Encryption (-noenc/-nodes): The private key file (key.pem) is saved in plain 
+   text. If an attacker gains access to the host, they can steal the key immediately.
+2. Self-Signed Trust: Clients will reject this certificate because it is not signed 
+   by a trusted Certificate Authority (CA), forcing unsafe security overrides.
+3. Lack of Management: Self-signed keys lack centralized revocation lists (CRL/OCSP) 
+   and automatic renewal capabilities, increasing the risk of expired or compromised 
+   credentials staying active.
 """
 
 logger = logging.getLogger(__name__)
