@@ -5,13 +5,15 @@ import sqlite3
 import pytest
 import aiosqlite
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy import select
+from sqlalchemy.dialects import mysql, postgresql, sqlite
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.schema import CreateTable
 
 from amqtt.broker import Broker, BrokerContext, RetainedApplicationMessage
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1
-from amqtt.contrib.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage
+from amqtt.contrib.persistence import Base, RetainedMessage, SessionDBPlugin, StoredMessage, StoredSession, Subscription
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -46,6 +48,50 @@ async def db_session_factory(db_file):
     yield factory
 
 
+def assert_stored_sessions_table_initialized(db_file: Path) -> None:
+    conn = sqlite3.connect(str(db_file))
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(stored_sessions);")
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    column_names = [row[1] for row in rows]
+    assert len(column_names) > 1
+
+
+def table_row_count(db_file: Path, table_name: str) -> int:
+    conn = sqlite3.connect(str(db_file))
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+        count = cursor.fetchone()[0]
+    finally:
+        conn.close()
+
+    return count
+
+
+@pytest.mark.parametrize("dialect", [sqlite.dialect(), postgresql.dialect(), mysql.dialect()])
+def test_persistence_schema_compiles_for_supported_dialects(dialect):
+    for table in Base.metadata.sorted_tables:
+        str(CreateTable(table).compile(dialect=dialect))
+
+
+@pytest.mark.parametrize("dialect", [sqlite.dialect(), postgresql.dialect(), mysql.dialect()])
+def test_persistence_statements_compile_for_supported_dialects(dialect):
+    statements = [
+        select(StoredSession).where(StoredSession.client_id == "client-1"),
+        select(StoredMessage).where(StoredMessage.topic == "topic/1"),
+        StoredSession.__table__.insert(),
+        StoredMessage.__table__.delete().where(StoredMessage.topic == "topic/1"),
+        *[table.delete() for table in Base.metadata.sorted_tables],
+    ]
+
+    for statement in statements:
+        str(statement.compile(dialect=dialect))
+
 
 @pytest.mark.asyncio
 async def test_initialize_tables(db_file, broker_context):
@@ -56,13 +102,69 @@ async def test_initialize_tables(db_file, broker_context):
 
     assert db_file.exists()
 
-    conn = sqlite3.connect(str(db_file))
-    cursor = conn.cursor()
-    table_name = 'stored_sessions'
-    cursor.execute(f"PRAGMA table_info({table_name});")
-    rows = cursor.fetchall()
-    column_names = [row[1] for row in rows]
-    assert len(column_names) > 1
+    assert_stored_sessions_table_initialized(db_file)
+
+
+@pytest.mark.asyncio
+async def test_legacy_file_config_initializes_sqlite_db(db_file, broker_context):
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+
+    with pytest.deprecated_call(match="`file` option is now deprecated"):
+        session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    assert db_file.exists()
+    assert_stored_sessions_table_initialized(db_file)
+
+
+@pytest.mark.asyncio
+async def test_blank_file_config_initializes_default_sqlite_db(tmp_path, monkeypatch, broker_context):
+    monkeypatch.chdir(tmp_path)
+    db_file = tmp_path / "amqtt.db"
+    broker_context.config = SessionDBPlugin.Config()
+
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    assert db_file.exists()
+    assert_stored_sessions_table_initialized(db_file)
+
+
+@pytest.mark.asyncio
+async def test_clear_on_shutdown_deletes_legacy_sqlite_file(db_file, broker_context):
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+
+    with pytest.deprecated_call(match="`file` option is now deprecated"):
+        session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    assert db_file.exists()
+
+    await session_db_plugin.on_broker_post_shutdown()
+
+    assert not db_file.exists()
+
+
+@pytest.mark.asyncio
+async def test_clear_on_shutdown_clears_database_tables_for_connection(db_file, broker_context):
+    broker_context.config = SessionDBPlugin.Config(connection=f"sqlite+aiosqlite:///{db_file}")
+    session_db_plugin = SessionDBPlugin(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    async with session_db_plugin._db_session_maker() as db_session, db_session.begin():
+        db_session.add(StoredSession(client_id="client-1"))
+        db_session.add(StoredMessage(topic="topic/1", data=b"payload", qos=1))
+
+    assert table_row_count(db_file, "stored_sessions") == 1
+    assert table_row_count(db_file, "stored_messages") == 1
+
+    await session_db_plugin.on_broker_post_shutdown()
+
+    assert db_file.exists()
+    assert_stored_sessions_table_initialized(db_file)
+    assert table_row_count(db_file, "stored_sessions") == 0
+    assert table_row_count(db_file, "stored_messages") == 0
+
 
 @pytest.mark.asyncio
 async def test_create_stored_session(db_file, broker_context, db_session_factory):
