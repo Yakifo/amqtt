@@ -15,7 +15,7 @@ class PubrecVariableHeader(AcknowledgementVariableHeader):
 class PubrecPacket(AcknowledgementPacket[PubrecVariableHeader]):
     """MQTT 5.0 PUBREC packet."""
 
-    VARIABLE_HEADER = PubrecVariableHeader
+    VARIABLE_HEADER = PubrecVariableHeader  # could be inferred, but explicitly set for readability
     PACKET_TYPE = PUBREC
     PACKET_NAME = PACKET_PUBREC
     EXPECTED_FLAGS = 0x00

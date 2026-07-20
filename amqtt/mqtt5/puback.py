@@ -15,7 +15,7 @@ class PubackVariableHeader(AcknowledgementVariableHeader):
 class PubackPacket(AcknowledgementPacket[PubackVariableHeader]):
     """MQTT 5.0 PUBACK packet."""
 
-    VARIABLE_HEADER = PubackVariableHeader
+    VARIABLE_HEADER = PubackVariableHeader  # could be inferred, but explicitly set for readability
     PACKET_TYPE = PUBACK
     PACKET_NAME = PACKET_PUBACK
     EXPECTED_FLAGS = 0x00

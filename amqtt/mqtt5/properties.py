@@ -149,6 +149,10 @@ class Properties:
         """Return whether a property identifier is present."""
         return identifier in self._values
 
+    def is_empty(self) -> bool:
+        """Return whether this property set has no entries."""
+        return not self._values
+
     def encode(self) -> bytes:
         r"""Encode properties with the MQTT 5.0 length prefix.
 

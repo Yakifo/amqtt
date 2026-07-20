@@ -120,16 +120,22 @@ def test_property_wire_bytes(identifier: int, value, expected_wire: bytes):
 
 
 def test_decode_spec_example_empty_properties():
-    assert Properties(packet_name=PACKET_CONNECT).encode() == b"\x00"
+    properties = Properties(packet_name=PACKET_CONNECT)
+
+    assert properties.is_empty() is True
+    assert properties.encode() == b"\x00"
     assert Properties.decode(b"\x00", packet_name=PACKET_CONNECT) == Properties(packet_name=PACKET_CONNECT)
+
+    properties.set(SESSION_EXPIRY_INTERVAL, 300)
+    assert properties.is_empty() is False
 
 
 def test_properties_must_be_packet_scoped():
     with pytest.raises(TypeError):
-        Properties()  # type: ignore[call-arg]
+        Properties()  # type: ignore[call-arg]  # pylint: disable=missing-kwoa
 
     with pytest.raises(TypeError):
-        Properties.decode(b"\x00")  # type: ignore[call-arg]
+        Properties.decode(b"\x00")  # type: ignore[call-arg]  # pylint: disable=missing-kwoa
 
 
 def test_duplicate_non_repeatable_property_raises():

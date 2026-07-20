@@ -15,7 +15,7 @@ class PubcompVariableHeader(AcknowledgementVariableHeader):
 class PubcompPacket(AcknowledgementPacket[PubcompVariableHeader]):
     """MQTT 5.0 PUBCOMP packet."""
 
-    VARIABLE_HEADER = PubcompVariableHeader
+    VARIABLE_HEADER = PubcompVariableHeader  # could be inferred, but explicitly set for readability
     PACKET_TYPE = PUBCOMP
     PACKET_NAME = PACKET_PUBCOMP
     EXPECTED_FLAGS = 0x00

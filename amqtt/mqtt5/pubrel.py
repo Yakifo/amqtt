@@ -15,7 +15,7 @@ class PubrelVariableHeader(AcknowledgementVariableHeader):
 class PubrelPacket(AcknowledgementPacket[PubrelVariableHeader]):
     """MQTT 5.0 PUBREL packet."""
 
-    VARIABLE_HEADER = PubrelVariableHeader
+    VARIABLE_HEADER = PubrelVariableHeader  # could be inferred, but explicitly set for readability
     PACKET_TYPE = PUBREL
     PACKET_NAME = PACKET_PUBREL
     EXPECTED_FLAGS = 0x02

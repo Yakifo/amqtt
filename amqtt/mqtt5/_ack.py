@@ -16,10 +16,6 @@ if TYPE_CHECKING:
     from amqtt.mqtt5.property_ids import PacketName
 
 
-def _has_properties(properties: Properties) -> bool:
-    return any(True for _ in properties.items())
-
-
 class AcknowledgementVariableHeader(MQTTVariableHeader):
     """MQTT 5.0 acknowledgement variable header shared by PUBACK/PUBREC/PUBREL/PUBCOMP."""
 
@@ -53,10 +49,10 @@ class AcknowledgementVariableHeader(MQTTVariableHeader):
         """Encode packet id, optional reason code, and optional properties."""
         self.validate()
         out = bytearray(int_to_bytes(self.packet_id, 2))
-        if self.reason_code is ReasonCode.SUCCESS and not _has_properties(self.properties):
+        if self.reason_code is ReasonCode.SUCCESS and self.properties.is_empty():
             return out
         out.append(int(self.reason_code))
-        if _has_properties(self.properties):
+        if not self.properties.is_empty():
             out.extend(self.properties.encode())
         return out
 
@@ -141,7 +137,7 @@ class AcknowledgementPacket(MQTTPacket[_AckVariableHeader, None, MQTTFixedHeader
         properties: Properties | None = None,
     ) -> Self:
         """Build an outgoing MQTT 5.0 acknowledgement packet."""
-        variable_header = cls.VARIABLE_HEADER(packet_id, reason_code, properties)
+        variable_header = cls.VARIABLE_HEADER(packet_id, reason_code, properties)  # pylint: disable=not-callable
         return cls(variable_header=variable_header)
 
     @classmethod
