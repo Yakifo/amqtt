@@ -1,8 +1,9 @@
 import asyncio
-from asyncio import AbstractEventLoop, Queue
+from asyncio import AbstractEventLoop
 from typing import TYPE_CHECKING
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
+from amqtt.constants import MQTT_PROTOCOL_LEVEL_3_1_1
 from amqtt.errors import MQTTError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt3.connack import (
@@ -14,7 +15,6 @@ from amqtt.mqtt3.connack import (
     ConnackPacket,
 )
 from amqtt.mqtt3.connect import ConnectPacket
-from amqtt.mqtt3.disconnect import DisconnectPacket
 from amqtt.mqtt3.pingreq import PingReqPacket
 from amqtt.mqtt3.pingresp import PingRespPacket
 from amqtt.mqtt3.protocol.handler import ProtocolHandler
@@ -25,7 +25,6 @@ from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.protocol import (
     BrokerProtocolHandlerBase,
-    ClientDisconnect,
     SubscriptionRequest,
     SubscriptionTopic,
     UnsubscriptionRequest,
@@ -33,13 +32,14 @@ from amqtt.protocol import (
 from amqtt.session import Session
 from amqtt.utils import format_client_message
 
-_MQTT_PROTOCOL_LEVEL_SUPPORTED = 4
-
 if TYPE_CHECKING:
     from amqtt.broker import BrokerContext
 
 
-class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHandlerBase["BrokerContext"]):
+class BrokerProtocolHandler(
+    BrokerProtocolHandlerBase["BrokerContext"],
+    ProtocolHandler["BrokerContext"],
+):
     def __init__(
         self,
         plugins_manager: PluginManager["BrokerContext"],
@@ -47,52 +47,21 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
         loop: AbstractEventLoop | None = None,
     ) -> None:
         super().__init__(plugins_manager, session, loop)
-        self._disconnect_waiter: asyncio.Future[ClientDisconnect | None] | None = None
-        self._pending_subscriptions: Queue[SubscriptionRequest] = Queue()
-        self._pending_unsubscriptions: Queue[UnsubscriptionRequest] = Queue()
+        self._init_broker_handler_state()
 
     async def start(self) -> None:
-        await super().start()
-        # Ensure the disconnect waiter is reset
-        if self._disconnect_waiter is None or self._disconnect_waiter.done():
-            self._disconnect_waiter = asyncio.Future()
+        await ProtocolHandler.start(self)
+        self._start_broker_handler()
 
     async def stop(self) -> None:
-        """Stop the protocol handler and reset the disconnect waiter."""
-        await super().stop()
-        if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
-            self._disconnect_waiter.set_result(None)
-        self._disconnect_waiter = None  # Reset the disconnect waiter
-        # Clear pending subscriptions and unsubscriptions
-        while not self._pending_subscriptions.empty():
-            self._pending_subscriptions.get_nowait()
-        while not self._pending_unsubscriptions.empty():
-            self._pending_unsubscriptions.get_nowait()
-
-    async def wait_disconnect(self) -> ClientDisconnect | None:
-        """Wait for a disconnect packet or connection closure."""
-        if self._disconnect_waiter is not None:
-            return await self._disconnect_waiter
-        return None
+        await ProtocolHandler.stop(self)
+        self._stop_broker_handler()
 
     def handle_write_timeout(self) -> None:
         pass
 
     def handle_read_timeout(self) -> None:
         pass
-
-    async def handle_disconnect(self, disconnect: DisconnectPacket | None) -> None:
-        """Handle a disconnect packet and notify the disconnect waiter."""
-        self.logger.debug("Client disconnecting")
-        if self._disconnect_waiter and not self._disconnect_waiter.done():
-            result = ClientDisconnect(is_clean=disconnect is not None, packet=disconnect)
-            self.logger.debug(f"Setting disconnect waiter result to {result!r}")
-            self._disconnect_waiter.set_result(result)
-        self._disconnect_waiter = None  # Reset the disconnect waiter to avoid reuse
-
-    async def handle_connection_closed(self) -> None:
-        """Handle connection closure and notify the disconnect waiter."""
-        await self.handle_disconnect(None)
 
     async def handle_connect(self, connect: ConnectPacket) -> None:
         # Broker handler shouldn't receive CONNECT message during messages handling
@@ -128,12 +97,6 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
             raise MQTTError(msg)
         unsubscription = UnsubscriptionRequest(unsubscribe.variable_header.packet_id, unsubscribe.payload.topics)
         await self._pending_unsubscriptions.put(unsubscription)
-
-    async def get_next_pending_subscription(self) -> SubscriptionRequest:
-        return await self._pending_subscriptions.get()
-
-    async def get_next_pending_unsubscription(self) -> UnsubscriptionRequest:
-        return await self._pending_unsubscriptions.get()
 
     async def mqtt_acknowledge_subscription(self, packet_id: int, return_codes: list[int]) -> None:
         suback = SubackPacket.build(packet_id, return_codes)
@@ -193,8 +156,8 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"], BrokerProtocolHand
             remote_address, remote_port = remote_info
             connack = None
             error_msg = None
-            if connect.proto_level != _MQTT_PROTOCOL_LEVEL_SUPPORTED:
-                # only MQTT 3.1.1 supported
+            # MQTT 5 requests go to separate handler, so if we get a non-3.1.1 request, it needs to be rejected
+            if connect.proto_level != MQTT_PROTOCOL_LEVEL_3_1_1:
                 error_msg = (
                     f"Invalid protocol from {format_client_message(address=remote_address, port=remote_port)}:"
                     f" {connect.proto_level}"
