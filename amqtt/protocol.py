@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import asyncio
+from asyncio import Queue
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -89,6 +91,53 @@ class ProtocolHandlerBase(ABC, Generic[C]):
 class BrokerProtocolHandlerBase(ProtocolHandlerBase[C], ABC):
     """Abstract broker-facing protocol-handler contract."""
 
+    _disconnect_waiter: asyncio.Future[ClientDisconnect | None] | None
+    _pending_subscriptions: Queue[SubscriptionRequest]
+    _pending_unsubscriptions: Queue[UnsubscriptionRequest]
+
+    def _init_broker_handler_state(self) -> None:
+        self._disconnect_waiter = None
+        self._pending_subscriptions = Queue()
+        self._pending_unsubscriptions = Queue()
+
+    def _start_broker_handler(self) -> None:
+        if self._disconnect_waiter is None or self._disconnect_waiter.done():
+            self._disconnect_waiter = asyncio.Future()
+
+    def _stop_broker_handler(self) -> None:
+        if self._disconnect_waiter is not None and not self._disconnect_waiter.done():
+            self._disconnect_waiter.set_result(None)
+        self._disconnect_waiter = None
+        while not self._pending_subscriptions.empty():
+            self._pending_subscriptions.get_nowait()
+        while not self._pending_unsubscriptions.empty():
+            self._pending_unsubscriptions.get_nowait()
+
+    async def wait_disconnect(self) -> ClientDisconnect | None:
+        """Wait for a disconnect packet or connection closure."""
+        if self._disconnect_waiter is not None:
+            return await self._disconnect_waiter
+        return None
+
+    async def handle_disconnect(self, disconnect: Any | None) -> None:
+        """Handle a disconnect packet and notify the disconnect waiter."""
+        if self._disconnect_waiter and not self._disconnect_waiter.done():
+            result = ClientDisconnect(is_clean=disconnect is not None, packet=disconnect)
+            self._disconnect_waiter.set_result(result)
+        self._disconnect_waiter = None
+
+    async def handle_connection_closed(self) -> None:
+        """Handle connection closure and notify the disconnect waiter."""
+        await self.handle_disconnect(None)
+
+    async def get_next_pending_subscription(self) -> SubscriptionRequest:
+        """Return the next pending broker subscription request."""
+        return await self._pending_subscriptions.get()
+
+    async def get_next_pending_unsubscription(self) -> UnsubscriptionRequest:
+        """Return the next pending broker unsubscription request."""
+        return await self._pending_unsubscriptions.get()
+
     @abstractmethod
     def handle_write_timeout(self) -> None:
         """Handle a write timeout event."""
@@ -112,26 +161,6 @@ class BrokerProtocolHandlerBase(ProtocolHandlerBase[C], ABC):
     @abstractmethod
     async def handle_unsubscribe(self, unsubscribe: Any) -> None:
         """Handle an inbound UNSUBSCRIBE packet."""
-
-    @abstractmethod
-    async def handle_disconnect(self, disconnect: Any) -> None:
-        """Handle an inbound DISCONNECT packet."""
-
-    @abstractmethod
-    async def handle_connection_closed(self) -> None:
-        """Handle connection closure."""
-
-    @abstractmethod
-    async def wait_disconnect(self) -> ClientDisconnect | None:
-        """Wait for a client disconnect event."""
-
-    @abstractmethod
-    async def get_next_pending_subscription(self) -> SubscriptionRequest:
-        """Return the next pending broker subscription request."""
-
-    @abstractmethod
-    async def get_next_pending_unsubscription(self) -> UnsubscriptionRequest:
-        """Return the next pending broker unsubscription request."""
 
     @abstractmethod
     async def mqtt_acknowledge_subscription(self, packet_id: int, return_codes: list[int]) -> None:
