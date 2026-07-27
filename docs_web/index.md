@@ -1,3 +1,9 @@
+---
+hide:
+  - navigation
+  - toc
+---
+
 # Home
 
 ![assets/amqtt.svg](assets/amqtt.svg)

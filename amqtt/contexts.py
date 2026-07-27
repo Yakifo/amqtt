@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
-from amqtt.mqtt3.constants import QOS_0, QOS_2
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
+from amqtt.session import MQTT5_DEFAULT_RECEIVE_MAXIMUM, MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM
 
 if TYPE_CHECKING:
     import asyncio
@@ -172,6 +173,22 @@ class BrokerConfig(Dictable):
     """Client disconnect timeout without a keep-alive."""
     session_expiry_interval: int | None = None
     """Seconds for an inactive session to be retained."""
+    receive_maximum: int = MQTT5_DEFAULT_RECEIVE_MAXIMUM
+    """MQTT 5 Receive Maximum advertised by the broker in CONNACK."""
+    topic_alias_maximum: int = MQTT5_DEFAULT_TOPIC_ALIAS_MAXIMUM
+    """MQTT 5 Topic Alias Maximum advertised by the broker in CONNACK."""
+    maximum_packet_size: int | None = None
+    """MQTT 5 Maximum Packet Size accepted by the broker. Omitted from CONNACK when unset."""
+    maximum_qos: int | None = None
+    """MQTT 5 Maximum QoS advertised by the broker. Omitted from CONNACK when QoS 2 is supported."""
+    retain_available: bool = True
+    """MQTT 5 Retain Available capability advertised by the broker."""
+    wildcard_subscription_available: bool = True
+    """MQTT 5 Wildcard Subscription Available capability advertised by the broker."""
+    subscription_identifier_available: bool = False
+    """MQTT 5 Subscription Identifier Available capability advertised by the broker."""
+    shared_subscription_available: bool = False
+    """MQTT 5 Shared Subscription Available capability advertised by the broker."""
     auth: dict[str, Any] | None = None
     """*Deprecated field used to config EntryPoint-loaded plugins. See
     [`AnonymousAuthPlugin`](../plugins/packaged_plugins.md#anonymous-auth-plugin) and
@@ -193,6 +210,30 @@ class BrokerConfig(Dictable):
 
         if self.auth is not None or self.topic_check is not None:
             logger.warning("'auth' and 'topic-check' are deprecated, use 'plugins' to define configuration")
+
+        if isinstance(self.receive_maximum, bool) or self.receive_maximum < 1 or self.receive_maximum > 0xFFFF:
+            msg = "receive_maximum must be an integer from 1 to 65535."
+            raise ValueError(msg)
+        if (
+            isinstance(self.topic_alias_maximum, bool)
+            or self.topic_alias_maximum < 0
+            or self.topic_alias_maximum > 0xFFFF
+        ):
+            msg = "topic_alias_maximum must be an integer from 0 to 65535."
+            raise ValueError(msg)
+        if (
+            self.maximum_packet_size is not None
+            and (
+                isinstance(self.maximum_packet_size, bool)
+                or self.maximum_packet_size < 1
+                or self.maximum_packet_size > 0xFFFF_FFFF
+            )
+        ):
+            msg = "maximum_packet_size must be an integer from 1 to 4294967295."
+            raise ValueError(msg)
+        if self.maximum_qos is not None and self.maximum_qos not in (QOS_0, QOS_1):
+            msg = "maximum_qos must be 0 or 1. Omit it when QoS 2 is supported."
+            raise ValueError(msg)
 
         default_listener = self.listeners["default"]
         for listener_name, listener in self.listeners.items():
