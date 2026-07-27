@@ -5,7 +5,6 @@ from collections.abc import Generator
 from functools import partial
 import logging
 from math import floor
-import re
 import ssl
 import time
 from typing import Any, ClassVar, TypeAlias
@@ -202,8 +201,6 @@ class Broker:
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
-
-        self._topic_filter_matchers: dict[str, re.Pattern[str]] = {}
 
         # Broadcast queue for outgoing messages
         self._broadcast_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -848,11 +845,15 @@ class Broker:
 
     async def add_subscription(self, subscription: tuple[str, int], session: Session) -> int:
         topic_filter, qos = subscription
-        if "#" in topic_filter and not topic_filter.endswith("#"):
-            # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
+        levels = topic_filter.split("/")
+        if any(
+                "#" in level and (level != "#" or index != len(levels) - 1)
+                for index, level in enumerate(levels)
+        ):
+            # [MQTT-4.7.1-2] '#' must occupy the final filter level without multiples
             return 0x80
-        if topic_filter != "+" and "+" in topic_filter and ("/+" not in topic_filter and "+/" not in topic_filter):
-            # [MQTT-4.7.1-3] + wildcard character must occupy entire level
+        if any("+" in level and level != "+" for level in levels):
+            # [MQTT-4.7.1-3] '+' must occupy an entire level without multiples
             return 0x80
         # Check if the client is authorised to connect to the topic
         if not await self._topic_filtering(session, topic_filter, Action.SUBSCRIBE):
@@ -1123,14 +1124,20 @@ class Broker:
             # if filter doesn't contain wildcard, return exact match
             return a_filter == topic
 
-        # else use regex (re.compile is an expensive operation, store the matcher for future use)
-        if a_filter not in self._topic_filter_matchers:
-            self._topic_filter_matchers[a_filter] = re.compile(re.escape(a_filter)
-                                                               .replace("\\#", "?.*")
-                                                               .replace("\\+", "[^/]*")
-                                                               .lstrip("?"))
-        match_pattern = self._topic_filter_matchers[a_filter]
-        return bool(match_pattern.fullmatch(topic))
+        sub_levels = a_filter.split("/")
+        pub_levels = topic.split("/")
+
+        for i, level in enumerate(sub_levels):
+            if ("+" in level and level != "+") or ("#" in level and level != "#"):
+                return False
+
+            if level == "#":
+                return i == len(sub_levels) - 1
+
+            if i >= len(pub_levels) or level not in ("+", pub_levels[i]):
+                return False
+
+        return len(sub_levels) == len(pub_levels)
 
     def _get_handler(self, session: Session) -> BrokerProtocolHandler | None:
         client_id = session.client_id
