@@ -39,52 +39,53 @@ class TestAnonymousAuthPlugin(unittest.TestCase):
     def setUp(self) -> None:
         self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
 
-    def test_allow_anonymous_dict_config(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow_anonymous_dict_config(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": True}}
         s = Session()
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert auth_plugin.authenticate(session=s)
 
-    def test_allow_anonymous_dataclass_config(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow_anonymous_dataclass_config(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = AnonymousAuthPlugin.Config(allow_anonymous=True)
         s = Session()
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert await auth_plugin.authenticate(session=s)
 
-    def test_disallow_anonymous(self) -> None:
+    @pytest.mark.asyncio
+    async def test_disallow_anonymous(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": False}}
         s = Session()
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert not ret
+        assert not await auth_plugin.authenticate(session=s)
 
-    def test_allow_nonanonymous(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow_nonanonymous(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": False}}
         s = Session()
         s.username = "test"
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert await auth_plugin.authenticate(session=s)
 
 
 class TestFileAuthPlugin(unittest.TestCase):
     def setUp(self) -> None:
         self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
 
-    def test_allow(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -96,10 +97,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.username = "user"
         s.password = "test"
         auth_plugin = FileAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert await auth_plugin.authenticate(session=s)
 
-    def test_wrong_password(self) -> None:
+    @pytest.mark.asyncio
+    async def test_wrong_password(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -111,10 +112,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.username = "user"
         s.password = "wrong password"
         auth_plugin = FileAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert not ret
+        assert not await auth_plugin.authenticate(session=s)
 
-    def test_unknown_password(self) -> None:
+    @pytest.mark.asyncio
+    async def test_unknown_password(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -126,11 +127,11 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.username = "some user"
         s.password = "some password"
         auth_plugin = FileAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert not ret
+        assert not await auth_plugin.authenticate(session=s)
 
 
-    def test_legacy_deprecation(self):
+    @pytest.mark.asyncio
+    async def test_legacy_deprecation(self):
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -144,5 +145,4 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.username = "user"
         s.password = "test"
         auth_plugin = FileAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert not ret
+        assert await auth_plugin.authenticate(session=s)
