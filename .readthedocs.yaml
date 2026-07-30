@@ -12,9 +12,7 @@ build:
       - pip install --upgrade pip
       - pip install uv
       - uv venv
-      - uv pip install --group dev --group docs ".[contrib]"
-    post_install:
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH python -m pip install --upgrade typing_extensions
+      - uv pip install --all-groups --all-extras
     build:
       html:
         - uv run python -m mkdocs build --clean --site-dir $READTHEDOCS_OUTPUT/html --config-file mkdocs.rtd.yml
