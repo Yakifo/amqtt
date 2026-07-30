@@ -1,18 +1,21 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import ClassVar, Union, cast
+import warnings
 
+from pwdlib import PasswordHash
+from pwdlib.hashers import HasherProtocol
+from pwdlib.hashers.argon2 import Argon2Hasher
+from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlalchemy import String
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from amqtt.contexts import Action
 from amqtt.contrib import DataClassListJSON
+from amqtt.contrib.auth_db.hasher import LegacyPasslibPBKDF2Hasher, LegacyPasslibScryptHasher
 from amqtt.plugins import TopicMatcher
-
-if TYPE_CHECKING:
-    from passlib.context import CryptContext
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,31 +48,93 @@ class AllowedTopic:
         return self.topic
 
 
-class PasswordHasher:
-    """singleton to initialize the CryptContext and then use it elsewhere in the code."""
+class PasswordHasher(PasswordHash):
+    """Singleton password hashing context shared across auth DB models."""
 
-    _instance: Optional["PasswordHasher"] = None
+    _instance: ClassVar["PasswordHasher | None"] = None
 
-    def __init__(self) -> None:
-
-        if not hasattr(self, "_crypt_context"):
-            self._crypt_context: CryptContext | None = None
-
-    def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> "PasswordHasher":
+    def __new__(
+        cls,
+        hashers: Sequence[HasherProtocol] | None = None,
+        schemes: Sequence[str] | None = None,
+    ) -> "PasswordHasher":
+        del hashers, schemes
         if cls._instance is None:
-            cls._instance = super().__new__(cls, *args, **kwargs)
+            cls._instance = super().__new__(cls)
         return cls._instance
 
-    @property
-    def crypt_context(self) -> "CryptContext":
-        if not self._crypt_context:
-            msg = "CryptContext is empty"
-            raise ValueError(msg)
-        return self._crypt_context
+    def __init__(
+        self,
+        hashers: Sequence[HasherProtocol] | None = None,
+        schemes: Sequence[str] | None = None,
+    ) -> None:
+        if hasattr(self, "hashers"):
+            return
 
-    @crypt_context.setter
-    def crypt_context(self, value: "CryptContext") -> None:
-        self._crypt_context = value
+        if hashers is not None and schemes is not None:
+            msg = "'hashers' and 'schemes' cannot both be specified."
+            raise ValueError(msg)
+
+        super().__init__(tuple(hashers) if hashers is not None else self._make_hashers(schemes))
+
+    @property
+    def crypt_context(self) -> "PasswordHasher":
+        """Return self to preserve the previous ``PasswordHasher().crypt_context`` API."""
+        return self
+
+    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+        password, password_hash = self._normalize_verify_args(password, hash)
+        return super().verify(password, password_hash)
+
+    def verify_and_update(self, password: str | bytes, hash: str | bytes) -> tuple[bool, str | None]:  # noqa: A002# pylint: disable=redefined-builtin
+        password, password_hash = self._normalize_verify_args(password, hash)
+        return super().verify_and_update(password, password_hash)
+
+    def _normalize_verify_args(
+        self,
+        password: str | bytes,
+        password_hash: str | bytes,
+    ) -> tuple[str | bytes, str | bytes]:
+        if self._is_password_hash(password) and not self._is_password_hash(password_hash):
+            return password_hash, password
+        return password, password_hash
+
+    def _is_password_hash(self, value: str | bytes) -> bool:
+        for hasher in self.hashers:
+            try:
+                if hasher.identify(value):
+                    return True
+            except AttributeError:
+                continue
+        return False
+
+    @staticmethod
+    def _make_hashers(schemes: Sequence[str] | None = None) -> tuple[HasherProtocol, ...]:
+        if not schemes:
+            schemes = ("argon2", "bcrypt")
+
+        if "pbkdf2_sha256" in schemes or "scrypt" in schemes:
+            warnings.warn(
+                "'pbkdf2_sha256' and 'scrypt' are deprecated. Existing passwords will be verified and upgraded "
+                "to Argon2 on the next password change.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if "argon2" not in schemes:
+                schemes = ("argon2", *schemes)
+
+        hash_scheme_map: dict[str, type[HasherProtocol]] = {
+            "argon2": Argon2Hasher,
+            "bcrypt": BcryptHasher,
+            "pbkdf2_sha256": cast("type[HasherProtocol]", LegacyPasslibPBKDF2Hasher),
+            "scrypt": cast("type[HasherProtocol]", LegacyPasslibScryptHasher),
+        }
+
+        try:
+            return tuple(hash_scheme_map[scheme]() for scheme in schemes)
+        except KeyError as exc:
+            msg = f"Unsupported password hash scheme: {exc.args[0]}"
+            raise ValueError(msg) from exc
 
 
 class Base(DeclarativeBase):
@@ -94,10 +159,13 @@ class UserAuth(Base):
 
     @password.inplace.setter  # type: ignore[arg-type]
     def _password_setter(self, plain_password: str) -> None:
-        self._password_hash = PasswordHasher().crypt_context.hash(plain_password)
+        self._password_hash = PasswordHasher().hash(plain_password)
 
     def verify_password(self, plain_password: str) -> bool:
-        return bool(PasswordHasher().crypt_context.verify(plain_password, self._password_hash))
+        is_valid, updated_hash = PasswordHasher().verify_and_update(plain_password, self._password_hash)
+        if is_valid and updated_hash:
+            self._password_hash = updated_hash
+        return is_valid
 
     def __str__(self) -> str:
         """Display client id and password hash."""

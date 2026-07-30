@@ -4,7 +4,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from passlib.context import CryptContext
 from typer.testing import CliRunner
 
 from amqtt.contexts import Action
@@ -18,7 +17,6 @@ runner = CliRunner()
 @pytest.fixture
 def password_hasher():
     pwd_hasher = PasswordHasher()
-    pwd_hasher.crypt_context = CryptContext(schemes=["argon2", ], deprecated="auto")
     yield pwd_hasher
 
 

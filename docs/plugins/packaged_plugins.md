@@ -92,16 +92,20 @@ Authentication plugin based on a file-stored user database.
 
 The file includes `username:password` pairs, one per line.
 
-The password should be encoded using sha-512 with `mkpasswd -m sha-512` or:
+The password should be encoded using argon2:
 
 ```python
 import sys
 from getpass import getpass
-from passlib.hash import sha512_crypt
+from argon2 import PasswordHasher
 
 passwd = input() if not sys.stdin.isatty() else getpass()
-print(sha512_crypt.hash(passwd))
+password_hasher = PasswordHasher()
+print(password_hasher.hash(passwd))
 ```
+
+??? warning "sha512 is no longer supported"
+    Starting in version `0.12.0`, support for `sha512_crypt` hashes has been dropped due to the removal of Python's underlying native `crypt` module in Python 3.13. Existing users using this legacy algorithm must re-generate their password with `argon2` or `bcrypt`.
 
 ### Taboo (Topic Plugin)
 

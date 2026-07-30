@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Annotated
 
 import click
-import passlib
 import typer
 
 from amqtt.contrib.auth_db import DBType, db_connection_str
@@ -96,11 +95,8 @@ def create_user_auth(
         if not client_password.strip():
             logger.info("Error: client password cannot be empty.")
             raise typer.Exit(1)
-        try:
-            user = await mgr.create_user_auth(client_id, client_password.strip())
-        except passlib.exc.MissingBackendError as mbe:
-            logger.info(f"Please install backend: {mbe}")
-            raise typer.Exit(code=1) from mbe
+
+        user = await mgr.create_user_auth(client_id, client_password.strip())
 
         if not user:
             logger.info(f"Error: could not create user: {client_id}")

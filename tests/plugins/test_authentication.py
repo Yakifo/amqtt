@@ -4,8 +4,9 @@ from pathlib import Path
 import unittest
 
 import pytest
+from argon2.exceptions import HashingError
 
-from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
+from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin, PasswordFileError
 from amqtt.contexts import BaseContext
 from amqtt.plugins.base import BaseAuthPlugin
 from amqtt.session import Session
@@ -124,6 +125,24 @@ class TestFileAuthPlugin(unittest.TestCase):
         s = Session()
         s.username = "some user"
         s.password = "some password"
+        auth_plugin = FileAuthPlugin(context)
+        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
+        assert not ret
+
+
+    def test_legacy_deprecation(self):
+        context = BaseContext()
+        context.logger = logging.getLogger(__name__)
+        context.config = {
+            "auth": {
+                "password-file": Path(__file__).parent / "pass512",
+            },
+        }
+        with pytest.warns(DeprecationWarning):
+            auth_plugin = FileAuthPlugin(context)
+        s = Session()
+        s.username = "user"
+        s.password = "test"
         auth_plugin = FileAuthPlugin(context)
         ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
         assert not ret

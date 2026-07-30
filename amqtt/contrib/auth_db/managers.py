@@ -93,6 +93,16 @@ class UserManager:
             await db_session.flush()
             return user_auth
 
+    async def verify_user_auth_password(self, username: str, plain_password: str) -> bool:
+        """Verify a user's password and persist any password hash upgrade."""
+        async with self._db_session_maker() as db_session, db_session.begin():
+            try:
+                user_auth = await self._get_auth_or_raise(db_session, username)
+            except MQTTError:
+                return False
+
+            return user_auth.verify_password(plain_password)
+
 
 class TopicManager:
 
