@@ -13,6 +13,8 @@ from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
 
+pytestmark = pytest.mark.extended
+
 JAVA_CLIENT_SOURCE = Path(__file__).parent / "support" / "MqttInteropClient.java"
 PAHO_JAR_GLOBS = (
     ".m2/repository/org/eclipse/paho/org.eclipse.paho.client.mqttv3/*/org.eclipse.paho.client.mqttv3-*.jar",

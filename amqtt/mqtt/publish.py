@@ -2,7 +2,7 @@ import asyncio
 from typing_extensions import Self
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.codecs_amqtt import decode_packet_id, decode_string, encode_string, int_to_bytes
+from amqtt.codecs_amqtt import decode_packet_id, decode_string, encode_string, int_to_bytes, read_or_raise
 from amqtt.errors import AMQTTError, MQTTError
 from amqtt.mqtt.packet import PUBLISH, MQTTFixedHeader, MQTTPacket, MQTTPayload, MQTTVariableHeader
 
@@ -66,7 +66,7 @@ class PublishPayload(MQTTPayload[MQTTVariableHeader]):
         data_length = fixed_header.remaining_length - variable_header.bytes_length
         length_read = 0
         while length_read < data_length:
-            buffer = await reader.read(data_length - length_read)
+            buffer = await read_or_raise(reader, data_length - length_read)
             data.extend(buffer)
             length_read = len(data)
         return cls(bytes(data))
