@@ -35,6 +35,14 @@ Add git pre-commit checks (which parallel the CI checks):
 pre-commit install
 ```
 
+The pre-commit configuration includes Gitleaks secret scanning to block
+accidental commits of credentials, tokens, private keys, and similar sensitive
+data. Run a manual repository scan with:
+
+```shell
+pre-commit run gitleaks-full --hook-stage manual
+```
+
 ### Run
 
 Run CLI commands:
@@ -51,6 +59,18 @@ Run the test case suite:
 pytest
 ```
 
+Run the full suite including interoperability tests that require Go, Java, or Node.js client dependencies:
+
+```shell
+pytest --extended
+```
+
+Run only the extended interoperability tests:
+
+```shell
+pytest --extended -m extended
+```
+
 Run the type checker and linters manually:
 
 ```shell
@@ -61,6 +81,38 @@ pre-commit run --all-files
 
 When adding a new feature, please add corollary tests. The testing coverage should not decrease.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
+
+### Local fuzzing
+
+The MQTT packet parser has local fuzz coverage using Hypothesis. These tests
+generate malformed and boundary-case byte streams and assert that packet decode
+paths either parse successfully or fail with expected parser exceptions.
+
+Run the local fuzz tests directly with:
+
+```shell
+uv run --frozen pytest tests/mqtt/test_fuzz_packet.py
+```
+
+Run them with the related MQTT parser tests before changing packet decode logic:
+
+```shell
+uv run --frozen pytest tests/mqtt tests/test_codecs.py
+```
+
+If Hypothesis finds a failure, keep the minimized example in the test output and
+add or adjust a regression test before changing the parser behavior.
+
+## Dependencies
+
+Depdencies are managed with `uv pip`, based on the `pyproject.toml` file and version locked with `uv.lock`. To support
+OpenSSF scorecard, the `uv.lock` file needs to be converted into a hash-based lockfile in `requirements.txt`.
+
+If dependencies are added / update, CI will require that the `requirements.txt` file aligns with the `uv.lock` file:
+
+```shell
+uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt
+```
 
 ## Go MQTT Interoperability Tests
 
