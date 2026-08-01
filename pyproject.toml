@@ -160,7 +160,7 @@ packet_logger_plugin = "amqtt.plugins.logging_amqtt:PacketLoggerPlugin"
 # https://docs.astral.sh/ruff/settings/
 [tool.ruff]
 line-length = 130
-fix = true
+fix = false
 extend-exclude = ["docs/", "samples/"]
 
 
@@ -202,7 +202,6 @@ ignore = [
     "CPY",
     "PLC",
     "RUF052",
-    "RUF067",
     "B903"
 ]
 
