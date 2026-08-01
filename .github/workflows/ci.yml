@@ -14,23 +14,72 @@ env:
   PROJECT_PATH: "amqtt"
   PAHO_MQTT_JAR: /tmp/org.eclipse.paho.client.mqttv3-1.2.5.jar
 
+permissions:
+  contents: read
+
 jobs:
+  validate-metadata:
+    name: Validate GitHub metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate ref metadata
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+
+          check_ref() {
+            local name="$1"
+            local value="$2"
+
+            if [[ -z "$value" ]]; then
+              return 0
+            fi
+
+            if [[ ! "$value" =~ ^[A-Za-z0-9._/-]{1,255}$ ]] ||
+              [[ "$value" == -* || "$value" == */ || "$value" == *. ||
+                "$value" == *..* || "$value" == *//* ||
+                "$value" == *@{* || "$value" == *.lock ]]; then
+              echo "::error::$name contains unsupported characters for CI metadata"
+              exit 1
+            fi
+          }
+
+          check_ref BASE_REF "$BASE_REF"
+          check_ref HEAD_REF "$HEAD_REF"
+          check_ref REF_NAME "$REF_NAME"
+
+          if [[ "$REF_TYPE" == "tag" &&
+            ! "$REF_NAME" =~ ^v[0-9]+(\.[0-9]+){1,2}([.-][A-Za-z0-9]+)*$ ]]; then
+            echo "::error::Release tags must match vMAJOR.MINOR[.PATCH][-PRERELEASE]"
+            exit 1
+          fi
+
   code-quality:
     name: Check code quality
     runs-on: ubuntu-latest
+    needs: validate-metadata
 
     steps:
       # https://github.com/actions/checkout
       - name: ⤵️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           cache-local-path: ${{ env.UV_CACHE_DIR }}
+          save-cache: ${{ github.event_name != 'pull_request' }}
           python-version: "3.13"
 
       - name: install openldap dependencies
@@ -39,16 +88,29 @@ jobs:
       - name: 🏗 Install the project
         run: uv sync --locked --dev --all-extras
 
+      - name: Run secret scan
+        run: uv run --frozen pre-commit run gitleaks-full --hook-stage manual
+
       - name: Run mypy
         run: uv run --frozen mypy ${{ env.PROJECT_PATH }}/
       - name: Pylint review
         run: uv run --frozen pylint ${{ env.PROJECT_PATH }}/
+      - name: Bandit security check
+        run: uv run --frozen bandit -r ${{ env.PROJECT_PATH }}/
+      - name: Semgrep security check
+        run: uv run --frozen semgrep scan --error --config p/default --config p/python --config p/trailofbits --config p/xss ${{ env.PROJECT_PATH }}/
       - name: Ruff check
         run: uv run --frozen ruff check ${{ env.PROJECT_PATH }}/
+
+      - name: Check if requirements.txt is up-to-date (needed for OpenSSF scorecard)
+        run: |
+          uv pip compile pyproject.toml --generate-hashes --output-file /tmp/requirements.txt --custom-compile-command "uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt"
+          diff -u requirements.txt /tmp/requirements.txt
 
   tests:
     name: Run tests
     runs-on: ubuntu-latest
+    needs: validate-metadata
 
     strategy:
       matrix:
@@ -61,15 +123,18 @@ jobs:
     steps:
       # https://github.com/actions/checkout
       - name: ⤵️ Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       # https://github.com/astral-sh/setup-uv
       - name: 🏗 Install uv and Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           cache-local-path: ${{ env.UV_CACHE_DIR }}
+          save-cache: ${{ github.event_name != 'pull_request' }}
           python-version: ${{ matrix.python-version }}
 
       - name: install openldap dependencies
@@ -102,10 +167,10 @@ jobs:
         run: uv sync --locked --dev --all-extras
 
       - name: Run Go MQTT interoperability tests
-        run: uv run --frozen pytest tests/test_go_mqtt.py -v
+        run: uv run --frozen pytest tests/test_go_mqtt.py -v --extended
 
       - name: Run Java MQTT interoperability tests
-        run: uv run --frozen pytest tests/test_java_mqtt.py -v
+        run: uv run --frozen pytest tests/test_java_mqtt.py -v --extended
 
       # https://github.com/actions/setup-node
       - name: 🏗 Install Node.js
@@ -120,28 +185,21 @@ jobs:
         working-directory: docs_test
 
       - name: Run MQTT.js interoperability tests
-        run: uv run --frozen pytest tests/test_mqttjs.py -v
+        run: uv run --frozen pytest tests/test_mqttjs.py -v --extended
 
       - name: Run pytest
         run: uv run --frozen pytest tests/ --cov=./ --cov-report=xml --junitxml=pytest-report.xml
 
       # https://github.com/actions/upload-artifact
       - name: Upload test report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pytest-report-${{ matrix.python-version }}
           path: pytest-report.xml
 
       # https://github.com/actions/upload-artifact
       - name: Upload coverage results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage-results-${{ matrix.python-version }}
           path: coverage.xml
-
-      # # https://github.com/codecov/codecov-action
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v5
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     fail_ci_if_error: true

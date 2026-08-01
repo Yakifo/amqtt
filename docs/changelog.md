@@ -1,5 +1,28 @@
 # Changelog
 
+
+## 0.11.4
+
+This is an urgent security and maintenance release addressing a privately disclosed vulnerability in the MQTT topic matching layer. All users are strongly advised to upgrade immediately.
+
+### Security Fixes
+
+- Invalid wildcard topic subscriptions could trigger a Regular Expression Denial of Service (ReDoS) attack, allowing a malicious client to spike CPU utilization to 100% and completely stall the application. We have refactored the topic evaluation mechanism to a strict linear-time O(n) validation algorithm, eliminating the risk of regular expression backtracking and improving performance. 
+
+**Official Advisory:** [GHSA-2hjf-7455-w946](https://github.com/Yakifo/amqtt/security/advisories/GHSA-2hjf-7455-w946)
+
+**Known affected versions:** `>= 0.11.0, <= 0.11.3`
+
+Versions before 0.11.0 were not evaluated.
+
+A formal CVE identifier has been requested for this vulnerability and will be updated in these notes once assigned. Once assigned, the GHSA record will be updated automatically.
+
+### Features & Enhancements
+
+This release strictly contains the security patch and associated performance optimizations. Pending feature PRs remain on schedule for our upcoming `v0.12.0` release.
+
+---
+
 ## 0.11.3
 
 API changes:
