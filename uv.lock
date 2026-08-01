@@ -188,6 +188,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "transitions" },
     { name = "typer" },
+    { name = "typing-extensions" },
     { name = "websockets" },
 ]
 
@@ -276,6 +277,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'contrib'", specifier = ">=2.0.41" },
     { name = "transitions", specifier = ">=0.9.2" },
     { name = "typer", specifier = ">=0.24.0" },
+    { name = "typing-extensions", specifier = ">=4.0.0" },
     { name = "websockets", specifier = "==15.0.1" },
 ]
 provides-extras = ["ci", "contrib"]
