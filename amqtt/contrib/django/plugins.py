@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from amqtt.session import Session
 
 SERVICE_USER_SENTINEL = "service"
-DEFAULT_TOKEN_MODEL = "amqtt_django.MqttToken"  # noqa: S105
+DEFAULT_TOKEN_MODEL = "amqtt_django.MqttToken"  # noqa: S105  # nosec B105 - Django model label, not a token.
 DJANGO_ROLE_ATTRIBUTE = "amqtt.contrib.django.role"
 
 
