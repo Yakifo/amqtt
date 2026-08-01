@@ -95,6 +95,7 @@ contrib = [
     "greenlet>=3.2.3",
     "sqlalchemy[asyncio]>=2.0.41",
     "argon2-cffi>=25.1.0",
+    "django>=4.2",
     "aiohttp>=3.14.1",
     "pyjwt>=2.13.0",
     "python-ldap>=3.4.5",
@@ -201,7 +202,6 @@ ignore = [
     "CPY",
     "PLC",
     "RUF052",
-    "RUF067",
     "B903"
 ]
 

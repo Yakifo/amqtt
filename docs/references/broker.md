@@ -23,3 +23,10 @@ The `amqtt.broker` module provides the following key methods in the `Broker` cla
 
 
 ::: amqtt.broker.Broker
+
+### Broker Context API
+
+Broker plugins receive `BrokerContext` as their runtime context. It exposes
+public broker state and helper methods for plugin implementations.
+
+::: amqtt.broker.BrokerContext
