@@ -32,6 +32,18 @@ class TestMQTTFixedHeaderTest(unittest.TestCase):
         assert not header.flags & 1
         assert header.remaining_length == 268435455
 
+    def test_from_empty_stream(self):
+        header = self.loop.run_until_complete(
+            MQTTFixedHeader.from_stream(BufferReader(b"")),
+        )
+        assert header is None
+
+    def test_from_stream_without_remaining_length(self):
+        header = self.loop.run_until_complete(
+            MQTTFixedHeader.from_stream(BufferReader(b"\x10")),
+        )
+        assert header is None
+
     def test_from_bytes_ko_with_length(self):
         data = b"\x10\xff\xff\xff\xff\x7f"
         stream = BufferReader(data)

@@ -6,20 +6,39 @@ ci:
   autofix_prs: false
   skip:
     # These steps run in the CI workflow. Keep in sync.
+    - bandit
+    - semgrep
     - mypy
     - pylint
 
 repos:
+  # Secret scanning ###########################################################
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: d5c275d6b2140fcb59bc3f58b8dd5350f5b19df6  # v8.24.2
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: gitleaks-full
+        name: Detect hardcoded secrets in git history
+        entry: gitleaks git --redact --verbose .
+        language: golang
+        additional_dependencies:
+          - github.com/zricethezav/gitleaks/v8@d5c275d6b2140fcb59bc3f58b8dd5350f5b19df6  # v8.24.2
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+
   # Python-specific hooks ######################################################
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.10
+    rev: v0.15.20
     hooks:
       - id: ruff
         args:
           - --line-length=130
           - --exit-non-zero-on-fix
 
-  # Local hooks for mypy and pylint
+  # Local hooks for mypy, pylint, Bandit, and Semgrep
   - repo: local
     hooks:
       - id: mypy
@@ -34,5 +53,21 @@ repos:
         entry: scripts/run-in-env.sh pylint
         language: script
         types: [python]
+        require_serial: true
+        exclude: ^tests/.+|^docs/.+|^samples/.+
+      - id: bandit
+        name: Run Bandit in Virtualenv
+        entry: scripts/run-in-env.sh bandit -r amqtt
+        language: script
+        types: [python]
+        pass_filenames: false
+        require_serial: true
+        exclude: ^tests/.+|^docs/.+|^samples/.+
+      - id: semgrep
+        name: Run Semgrep in Virtualenv
+        entry: scripts/run-in-env.sh semgrep scan --error --config p/default --config p/python --config p/trailofbits --config p/xss amqtt
+        language: script
+        types: [python]
+        pass_filenames: false
         require_serial: true
         exclude: ^tests/.+|^docs/.+|^samples/.+
