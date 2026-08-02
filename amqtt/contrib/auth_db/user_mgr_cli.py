@@ -2,8 +2,6 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Annotated
-
-import click
 import typer
 
 from amqtt.contrib.auth_db import DBType, db_connection_str
@@ -96,7 +94,7 @@ def create_user_auth(
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
         mgr = UserManager(connect)
-        client_password = click.prompt("Enter the client's password", hide_input=True)
+        client_password = typer.prompt("Enter the client's password", hide_input=True)
         if not client_password.strip():
             logger.info("Error: client password cannot be empty.")
             raise typer.Exit(1)
@@ -125,7 +123,7 @@ def remove_user_auth(ctx: typer.Context,
             logger.info(f"Error: client '{client_id}' does not exist.")
             raise typer.Exit(1)
 
-        if not click.confirm(f"Please confirm the removal of '{client_id}'?"):
+        if not typer.confirm(f"Please confirm the removal of '{client_id}'?"):
             raise typer.Exit(0)
 
         user = await mgr.delete_user_auth(client_id)
@@ -145,7 +143,7 @@ def change_password(
         ) -> None:
     """Update a user's password (prompted)."""
     async def run_password() -> None:
-        client_password = click.prompt("Enter the client's new password", hide_input=True)
+        client_password = typer.prompt("Enter the client's new password", hide_input=True)
         if not client_password.strip():
             logger.error("Error: client password cannot be empty.")
             raise typer.Exit(1)

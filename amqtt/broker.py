@@ -107,7 +107,12 @@ class ExternalServer(Server):
 
 
 class BrokerContext(BaseContext):
-    """Used to provide the server's context as well as public methods for accessing internal state."""
+    """Broker runtime context passed to broker plugins.
+
+    Broker plugins use this object to inspect broker state, publish internal
+    messages, retain messages, and manage sessions or subscriptions without
+    reaching into the broker's private attributes.
+    """
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
@@ -119,10 +124,12 @@ class BrokerContext(BaseContext):
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
     async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
+        """Retain a message on behalf of the broker."""
         await self._broker_instance.retain_message(None, topic_name, data, qos)
 
     @property
     def sessions(self) -> Generator[Session]:
+        """Yield all known broker sessions."""
         for session in self._broker_instance.sessions.values():
             yield session[0]
 
@@ -132,10 +139,12 @@ class BrokerContext(BaseContext):
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
+        """Return retained messages keyed by topic name."""
         return self._broker_instance.retained_messages
 
     @property
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
+        """Return active subscriptions keyed by topic filter."""
         return self._broker_instance.subscriptions
 
     async def add_subscription(self, client_id: str, topic: str | None, qos: int | None) -> None:
@@ -481,7 +490,7 @@ class Broker:
             )
             raise AMQTTError(exc) from exc
         except MQTTError as exc:
-            self.logger.exception(
+            self.logger.warning(
                 f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
             )
             await writer.close()
@@ -544,9 +553,6 @@ class Broker:
     ) -> None:
         """Handle the lifecycle of a client session."""
         authenticated = await self._authenticate(client_session, self.listeners_config[listener_name])
-        if not authenticated:
-            await writer.close()
-            return
 
         if client_session.client_id is None:
             msg = "Client ID was not correctly created/set."
@@ -570,6 +576,11 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
+
+        if not authenticated:
+            await writer.close()
+            return
+
         await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
                                               client_id=client_session.client_id,
                                               client_session=client_session)

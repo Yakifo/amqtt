@@ -4,9 +4,12 @@ from pathlib import Path
 import unittest
 
 import pytest
-from argon2.exceptions import HashingError
 
-from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin, PasswordFileError
+from amqtt.broker import Broker
+from amqtt.client import MQTTClient
+from amqtt.errors import ConnectError
+from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
+
 from amqtt.contexts import BaseContext
 from amqtt.plugins.base import BaseAuthPlugin
 from amqtt.session import Session
@@ -146,3 +149,33 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.password = "test"
         auth_plugin = FileAuthPlugin(context)
         assert await auth_plugin.authenticate(session=s)
+
+@pytest.mark.asyncio
+async def test_connack_failure_on_invalid_password():
+
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'plugins':[
+            {'amqtt.plugins.authentication.FileAuthPlugin': {
+                'password_file': Path(__file__).parent / "passwd"
+            }}
+        ]
+    }
+
+    broker = Broker(config=config)
+    await broker.start()
+    await asyncio.sleep(0.1)
+
+    client = MQTTClient(config={'auto_reconnect': False})
+
+    with pytest.raises(ConnectError) as exec:
+        ret = await client.connect("mqtt://user:badpass@127.0.0.1:1883/")
+
+    assert exec.value.return_code == 0x05
+
+    await client.disconnect()
+
+    await broker.shutdown()
+    await asyncio.sleep(0.1)
