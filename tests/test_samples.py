@@ -1,13 +1,14 @@
 import asyncio
 import logging
+import multiprocessing
 import signal
 import subprocess
 
-from multiprocessing import Process
 from pathlib import Path
 
 from typer.testing import CliRunner
 
+from amqtt.mqtt.constants import QOS_0
 from samples.http_server_integration import main as http_server_main
 from samples.unix_sockets import app as unix_sockets_app
 
@@ -17,6 +18,7 @@ from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from samples.broker_acl import config as broker_acl_config
 from samples.broker_taboo import config as broker_taboo_config
+from samples.broker_dollar_topics import config as broker_dollar_topics_config
 
 logger = logging.getLogger(__name__)
 
@@ -289,16 +291,36 @@ async def test_client_subscribe_plugin_taboo():
 
 @pytest.fixture
 def external_http_server():
-    p = Process(target=http_server_main)
+    # Force "spawn" so the child starts a fresh interpreter with no event loop.
+    # On Linux the default start method is "fork", which would inherit the running
+    # pytest-asyncio event loop and break `web.run_app` inside the sample's main().
+    ctx = multiprocessing.get_context("spawn")
+    p = ctx.Process(target=http_server_main)
     p.start()
     yield p
     p.terminate()
+    p.join()
+
+
+async def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> None:
+    """Poll until the server is accepting connections (spawn startup can be slow)."""
+    deadline = asyncio.get_event_loop().time() + timeout
+    while True:
+        try:
+            _, writer = await asyncio.open_connection(host, port)
+            writer.close()
+            await writer.wait_closed()
+            return
+        except OSError:
+            if asyncio.get_event_loop().time() >= deadline:
+                raise
+            await asyncio.sleep(0.1)
 
 
 @pytest.mark.asyncio
 async def test_external_http_server(external_http_server):
 
-    await asyncio.sleep(1)
+    await _wait_for_port("127.0.0.1", 8080)
     client = MQTTClient(config={'auto_reconnect': False})
     await client.connect("ws://127.0.0.1:8080/mqtt")
     assert client.session is not None
@@ -334,3 +356,32 @@ async def test_unix_connection():
     # verify that the broker received client connected/disconnected
     assert "on_broker_client_connected" in broker_stderr.decode("utf-8")
     assert "on_broker_client_disconnected" in broker_stderr.decode("utf-8")
+
+
+@pytest.mark.asyncio
+async def test_allowable_dollar_topics():
+
+    broker = Broker(config=broker_dollar_topics_config)
+    await broker.start()
+    await asyncio.sleep(1)
+
+    rcv_client = MQTTClient(config={'auto_reconnect': False})
+    await rcv_client.connect("ws://127.0.0.1:8080/mqtt")
+    await rcv_client.subscribe([("$my/dollar/topic", QOS_0),])
+    assert rcv_client.session is not None
+
+    pub_client = MQTTClient(config={'auto_reconnect': False})
+    await pub_client.connect("ws://127.0.0.1:8080/mqtt")
+    await pub_client.publish("$my/dollar/topic", b'test message')
+    await asyncio.sleep(1)
+    await pub_client.disconnect()
+
+    message = await rcv_client.deliver_message()
+    assert message is not None
+    assert message.publish_packet is not None
+    assert message.data == b'test message'
+    await rcv_client.disconnect()
+
+    await asyncio.sleep(0.1)
+    await broker.shutdown()
+    await asyncio.sleep(0.1)

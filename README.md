@@ -6,6 +6,7 @@
 ![Python Version](https://img.shields.io/pypi/pyversions/amqtt?style=plastic&logo=python&logoColor=yellow)
 ![Python Wheel](https://img.shields.io/pypi/wheel/amqtt?style=plastic)
 [![PyPI](https://img.shields.io/pypi/v/amqtt?style=plastic&logo=python&logoColor=yellow)](https://pypi.org/project/amqtt/)
+[![OpenSSF Baseline](https://www.bestpractices.dev/projects/13571/baseline)](https://www.bestpractices.dev/projects/13571)
 
 ![docs/assets/amqtt.svg](https://raw.githubusercontent.com/Yakifo/amqtt/refs/tags/v0.11.0/docs/assets/amqtt.svg)
 
@@ -40,7 +41,7 @@ $ pip install amqtt
 
 ## Documentation
 
-Available on [Read the Docs](http://amqtt.readthedocs.org/).
+Available on [Read the Docs](https://amqtt.readthedocs.org/).
 
 ## Containerization
 
@@ -58,6 +59,8 @@ The `amqtt` project runs a test aMQTT broker/server at [test.amqtt.io](https://t
 ## Support
 
 Bug reports, patches and suggestions welcome! Just [open an issue](https://github.com/Yakifo/amqtt/issues/new) or join the [discord community](https://discord.gg/S3sP6dDaF3).
+
+Please report security vulnerabilities privately according to the [security policy](SECURITY.md).
 
 ## Python Version Compatibility
 

@@ -5,7 +5,6 @@ from collections.abc import Generator
 from functools import partial
 import logging
 from math import floor
-import re
 import ssl
 import time
 from typing import Any, ClassVar, TypeAlias
@@ -109,7 +108,12 @@ class ExternalServer(Server):
 
 
 class BrokerContext(BaseContext):
-    """Used to provide the server's context as well as public methods for accessing internal state."""
+    """Broker runtime context passed to broker plugins.
+
+    Broker plugins use this object to inspect broker state, publish internal
+    messages, retain messages, and manage sessions or subscriptions without
+    reaching into the broker's private attributes.
+    """
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
@@ -121,10 +125,12 @@ class BrokerContext(BaseContext):
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
     async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
+        """Retain a message on behalf of the broker."""
         await self._broker_instance.retain_message(None, topic_name, data, qos)
 
     @property
     def sessions(self) -> Generator[Session]:
+        """Yield all known broker sessions."""
         for session in self._broker_instance.sessions.values():
             yield session[0]
 
@@ -134,10 +140,12 @@ class BrokerContext(BaseContext):
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
+        """Return retained messages keyed by topic name."""
         return self._broker_instance.retained_messages
 
     @property
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
+        """Return active subscriptions keyed by topic filter."""
         return self._broker_instance.subscriptions
 
     async def add_subscription(self, client_id: str, topic: str | None, qos: int | None) -> None:
@@ -206,8 +214,6 @@ class Broker:
         self._sessions: dict[str, tuple[Session, _BROKER_HANDLER]] = {}
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
-
-        self._topic_filter_matchers: dict[str, re.Pattern[str]] = {}
 
         # Broadcast queue for outgoing messages
         self._broadcast_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -488,7 +494,7 @@ class Broker:
             )
             raise AMQTTError(exc) from exc
         except MQTTError as exc:
-            self.logger.exception(
+            self.logger.warning(
                 f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
             )
             await writer.close()
@@ -554,9 +560,6 @@ class Broker:
     ) -> None:
         """Handle the lifecycle of a client session."""
         authenticated = await self._authenticate(client_session, self.listeners_config[listener_name])
-        if not authenticated:
-            await writer.close()
-            return
 
         if client_session.client_id is None:
             msg = "Client ID was not correctly created/set."
@@ -580,6 +583,11 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
+
+        if not authenticated:
+            await writer.close()
+            return
+
         await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
                                               client_id=client_session.client_id,
                                               client_session=client_session)
@@ -812,7 +820,7 @@ class Broker:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
 
-        results = [result for _, result in returns.items() if result is not None] if returns else []
+        results = [result for result in returns.values() if result is not None] if returns else []
         if len(results) < 1:
             self.logger.debug("Authentication failed: no plugin responded with a boolean")
             return False
@@ -857,11 +865,15 @@ class Broker:
 
     async def add_subscription(self, subscription: _SUBSCRIPTION_INPUT, session: Session) -> int:
         topic_filter, qos = self._subscription_parts(subscription)
-        if "#" in topic_filter and not topic_filter.endswith("#"):
-            # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
+        levels = topic_filter.split("/")
+        if any(
+                "#" in level and (level != "#" or index != len(levels) - 1)
+                for index, level in enumerate(levels)
+        ):
+            # [MQTT-4.7.1-2] '#' must occupy the final filter level without multiples
             return 0x80
-        if topic_filter != "+" and "+" in topic_filter and ("/+" not in topic_filter and "+/" not in topic_filter):
-            # [MQTT-4.7.1-3] + wildcard character must occupy entire level
+        if any("+" in level and level != "+" for level in levels):
+            # [MQTT-4.7.1-3] '+' must occupy an entire level without multiples
             return 0x80
         # Check if the client is authorised to connect to the topic
         if not await self._topic_filtering(session, topic_filter, Action.SUBSCRIBE):
@@ -1138,14 +1150,20 @@ class Broker:
             # if filter doesn't contain wildcard, return exact match
             return a_filter == topic
 
-        # else use regex (re.compile is an expensive operation, store the matcher for future use)
-        if a_filter not in self._topic_filter_matchers:
-            self._topic_filter_matchers[a_filter] = re.compile(re.escape(a_filter)
-                                                               .replace("\\#", "?.*")
-                                                               .replace("\\+", "[^/]*")
-                                                               .lstrip("?"))
-        match_pattern = self._topic_filter_matchers[a_filter]
-        return bool(match_pattern.fullmatch(topic))
+        sub_levels = a_filter.split("/")
+        pub_levels = topic.split("/")
+
+        for i, level in enumerate(sub_levels):
+            if ("+" in level and level != "+") or ("#" in level and level != "#"):
+                return False
+
+            if level == "#":
+                return i == len(sub_levels) - 1
+
+            if i >= len(pub_levels) or level not in ("+", pub_levels[i]):
+                return False
+
+        return len(sub_levels) == len(pub_levels)
 
     def _get_handler(self, session: Session) -> _BROKER_HANDLER | None:
         client_id = session.client_id
