@@ -2,6 +2,7 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Annotated
+
 import typer
 
 from amqtt.contrib.auth_db import DBType, db_connection_str
