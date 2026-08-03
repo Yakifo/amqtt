@@ -7,6 +7,7 @@
 ![Python Wheel](https://img.shields.io/pypi/wheel/amqtt?style=plastic)
 [![PyPI](https://img.shields.io/pypi/v/amqtt?style=plastic&logo=python&logoColor=yellow)](https://pypi.org/project/amqtt/)
 [![OpenSSF Baseline](https://www.bestpractices.dev/projects/13571/baseline)](https://www.bestpractices.dev/projects/13571)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13571/badge)](https://www.bestpractices.dev/projects/13571)
 
 ![docs/assets/amqtt.svg](https://raw.githubusercontent.com/Yakifo/amqtt/refs/tags/v0.11.0/docs/assets/amqtt.svg)
 
@@ -64,10 +65,11 @@ Please report security vulnerabilities privately according to the [security poli
 
 ## Python Version Compatibility
 
-| Version | hbmqtt compatibility | Supported Python Versions |
-| ------- | -------------------- | ------------------------- |
-| 0.10.x  | yes [^2]             | 3.7 - 3.9                 |
-| 0.11.x  | no [^3]              | 3.10 - 3.13               |
+| Version  | hbmqtt compatibility | Supported Python Versions |
+|----------|----------------------|---------------------------|
+| 0.10.x   | yes [^2]             | 3.7 - 3.9                 |
+| 0.11.x   | no [^3]              | 3.10 - 3.13               |
+| 0.12.x   | no [^3]              | 3.10 - 3.13               |
 
 
 [^1]: Forked from [HBMQTT](https://github.com/beerfactory/hbmqtt) after it was deprecated by the original author.

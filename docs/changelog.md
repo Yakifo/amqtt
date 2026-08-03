@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.12.0
+
+- fix: authentication failure needs to send connack before disconnecting [PR #335](https://github.com/Yakifo/amqtt/pull/335)
+- new: enable multiple sqlalchemy db backends for persistence plugin [PR #333](https://github.com/Yakifo/amqtt/pull/333)
+- new: contrib plugin for authenticating against django's user models [PR #323](https://github.com/Yakifo/amqtt/pull/323)
+- new: example of plugin that allows clients to publish on `$` [PR #315](https://github.com/Yakifo/amqtt/pull/315)
+- disable TLS certificate verification via config `[PR #312](https://github.com/Yakifo/amqtt/pull/312)
+- fix: handle special characters in passwords [PR #307](https://github.com/Yakifo/amqtt/pull/307)
+- fix: explicit close/release allowing proper v3.10 cleanup  [PR #304](https://github.com/Yakifo/amqtt/pull/304)
+- fix: prevent failure when `sys_interval` is unset or `None` [PR #303](https://github.com/Yakifo/amqtt/pull/303)
+- reduce noisy reconnect logging  [PR #310](https://github.com/Yakifo/amqtt/pull/310)
+- fix: publish coroutines in client documentation  [PR #302](https://github.com/Yakifo/amqtt/pull/302)
+- fix: exception names in client documentation  [PR #305](https://github.com/Yakifo/amqtt/pull/305)
+- fix: `amqtt_sub` reference page name  [PR #299](https://github.com/Yakifo/amqtt/pull/299)
+- remove obselete pytests, add additional coverage  [PR #309](https://github.com/Yakifo/amqtt/pull/309)
+
+### Security Fixes
+
+The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its CI, including usage of `bandit` and `semgrep` for static security checking. Current status: [openssf baseline level 1](https://www.bestpractices.dev/en/projects/13571/passing) and [openssf best practices](https://www.bestpractices.dev/en/projects/13571/passing),
+
+### Test Coverage
+
+- compatibility with [mqttjs](https://github.com/Yakifo/amqtt/pull/320), [java mqtt](https://github.com/Yakifo/amqtt/pull/321) and [go mqtt](https://github.com/Yakifo/amqtt/pull/322).
+- `fuzz` test cases
+
+---
 
 ## 0.11.4
 
@@ -17,7 +43,7 @@ Versions before 0.11.0 were not evaluated.
 
 A formal CVE identifier has been requested for this vulnerability and will be updated in these notes once assigned. Once assigned, the GHSA record will be updated automatically.
 
-### Testing Evidence
+### Test Coverage
 
 The 0.11.4 topic matching security fix is covered by automated regression tests in [`tests/test_broker.py`](../tests/test_broker.py), including:
 
