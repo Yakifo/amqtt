@@ -1,0 +1,35 @@
+# OSV-Scanner configuration.
+#
+# Keep recursive repository scans focused on the published Python package.
+# The npm and Go dependencies in this repository support the website and
+# interoperability tests; they are not runtime dependencies of the Python
+# package.
+#
+# OSV-Scanner applies this file to dependency files in this directory. To apply
+# it to nested manifests too, scan with: osv-scanner scan source --config=osv-scanner.toml --recursive .
+
+[[PackageOverrides]]
+ecosystem = "npm"
+ignore = true
+reason = "Website dependencies are not part of the published Python package."
+
+[[PackageOverrides]]
+ecosystem = "Go"
+ignore = true
+reason = "Go interoperability test dependencies are not part of the published Python package."
+
+# Example vulnerability exception:
+#
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# ignoreUntil = 2026-12-31
+# reason = "Document the reviewed impact and tracking issue."
+
+# Example package-specific override:
+#
+# [[PackageOverrides]]
+# name = "example-package"
+# ecosystem = "PyPI"
+# vulnerability.ignore = true
+# effectiveUntil = 2026-12-31
+# reason = "Document why this package's vulnerability findings are not actionable."

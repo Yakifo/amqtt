@@ -17,6 +17,14 @@ Versions before 0.11.0 were not evaluated.
 
 A formal CVE identifier has been requested for this vulnerability and will be updated in these notes once assigned. Once assigned, the GHSA record will be updated automatically.
 
+### Testing Evidence
+
+The 0.11.4 topic matching security fix is covered by automated regression tests in [`tests/test_broker.py`](../tests/test_broker.py), including:
+
+- `test_matches_plus_wildcard_redos_protection`
+- `test_matches_fails_safely_on_all_invalid_filters`
+- `test_invalid_wildcard_subscriptions`
+
 ### Features & Enhancements
 
 This release strictly contains the security patch and associated performance optimizations. Pending feature PRs remain on schedule for our upcoming `v0.12.0` release.
