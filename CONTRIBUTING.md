@@ -105,13 +105,14 @@ add or adjust a regression test before changing the parser behavior.
 
 ## Dependencies
 
-Depdencies are managed with `uv pip`, based on the `pyproject.toml` file and version locked with `uv.lock`. To support
-OpenSSF scorecard, the `uv.lock` file needs to be converted into a hash-based lockfile in `requirements.txt`.
+Dependencies are managed with `uv`, based on the `pyproject.toml` file and version locked with `uv.lock`. To support
+OpenSSF Scorecard, the `uv.lock` file needs to be exported into the hash-based `requirements.txt` file. This file is
+only used for OpenSSF Scorecard dependency analysis; the project itself uses `uv.lock`.
 
-If dependencies are added / update, CI will require that the `requirements.txt` file aligns with the `uv.lock` file:
+If dependencies are added or updated, CI will require that `requirements.txt` aligns with `uv.lock`:
 
 ```shell
-uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt
+uv export --frozen --format requirements.txt --no-default-groups --no-emit-project --no-header --output-file requirements.txt
 ```
 
 ## Go MQTT Interoperability Tests

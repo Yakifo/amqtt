@@ -19,7 +19,10 @@ from amqtt.events import BrokerEvents
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
 
-pytestmark = pytest.mark.extended
+pytestmark = [
+    pytest.mark.extended,
+    pytest.mark.timeout(60),
+]
 
 GO_CLIENT_DIR = Path(__file__).parent / "support" / "go-mqtt-client"
 

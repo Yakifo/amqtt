@@ -129,7 +129,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.sdist]
-include = ["/amqtt", "README.md", "docs/assets/amqtt.svg"]
+include = ["/amqtt", "README.md"]
 
 [tool.hatch.version]
 source = "vcs"
