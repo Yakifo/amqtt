@@ -104,7 +104,7 @@ jobs:
 
       - name: Check if requirements.txt is up-to-date (needed for OpenSSF scorecard)
         run: |
-          uv pip compile pyproject.toml --generate-hashes --output-file /tmp/requirements.txt --custom-compile-command "uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt"
+          uv export --frozen --format requirements.txt --no-default-groups --no-emit-project --no-header --output-file /tmp/requirements.txt
           diff -u requirements.txt /tmp/requirements.txt
 
   tests:
