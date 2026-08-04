@@ -18,7 +18,7 @@
 
 ### Security Fixes
 
-The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its CI, including usage of `bandit` and `semgrep` for static security checking. Current status: [openssf baseline level 1](https://www.bestpractices.dev/en/projects/13571/passing) and [openssf best practices](https://www.bestpractices.dev/en/projects/13571/passing),
+The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its CI, including usage of `bandit` and `semgrep` for static security checking. Current status scorecard status for [openssf baseline level 1](https://www.bestpractices.dev/en/projects/13571/passing) and [openssf best practices](https://www.bestpractices.dev/en/projects/13571/passing),
 
 ### Test Coverage
 
