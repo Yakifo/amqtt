@@ -3,7 +3,12 @@ from collections import deque  # pylint: disable=C0412
 from dataclasses import dataclass
 from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
 
-import psutil
+import sys
+
+if sys.platform == "android":
+    from amqtt.compat import psutil_android as psutil
+else:
+    import psutil
 
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
