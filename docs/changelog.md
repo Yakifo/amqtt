@@ -15,15 +15,27 @@
 - fix: exception names in client documentation  [PR #305](https://github.com/Yakifo/amqtt/pull/305)
 - fix: `amqtt_sub` reference page name  [PR #299](https://github.com/Yakifo/amqtt/pull/299)
 - remove obselete pytests, add additional coverage  [PR #309](https://github.com/Yakifo/amqtt/pull/309)
+- documentation now includes version number alongside every deprecation warning
 
 ### Security Fixes
 
-The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its CI, including usage of `bandit` and `semgrep` for static security checking. Current status scorecard status for [openssf baseline level 1](https://www.bestpractices.dev/en/projects/13571/passing) and [openssf best practices](https://www.bestpractices.dev/en/projects/13571/passing),
+The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its CI, including usage of `bandit` and `semgrep` for static security checking. Current scorecard status for [openssf baseline level 1](https://www.bestpractices.dev/en/projects/13571/passing) and [openssf best practices](https://www.bestpractices.dev/en/projects/13571/passing),
 
 ### Test Coverage
 
 - compatibility with [mqttjs](https://github.com/Yakifo/amqtt/pull/320), [java mqtt](https://github.com/Yakifo/amqtt/pull/321) and [go mqtt](https://github.com/Yakifo/amqtt/pull/322).
 - `fuzz` test cases
+- test cases for [PR #335](https://github.com/Yakifo/amqtt/pull/335), [PR #333](https://github.com/Yakifo/amqtt/pull/333), [PR #323](https://github.com/Yakifo/amqtt/pull/323), [PR #315](https://github.com/Yakifo/amqtt/pull/315), `[PR #312](https://github.com/Yakifo/amqtt/pull/312) and  [PR #307](https://github.com/Yakifo/amqtt/pull/307)
+
+### Deprecations & Migrations
+
+`passlib` is no longer a supported library and, as of python 3.13, the standard library `crypt`has been removed. For this release, deprecation warnings will be displayed if using hash schemes other than `argon2` or `bcrypt`.
+- `AuthDBPlugin`'s hash schemes config now only support `argon2` and `bcrypt`. For this release, specifying `pbkdf2_sha256` or `scrypt` will result in (1) a `DeprecationWarning` and (2) upon positive verification of the provided password, it will use the `pwdlib`'s `verify_and_update` function to update the row to an `argon2` hash.
+- The `FileAuthPlugin` hash scheme has migrated from `sha512_crypt` to `argon2`. For this release, the `sha512_crypt` passwords will be accepted alongside `argon2` hashes. A `DeprecationWarning` is displayed, but automatic migration is not supported; see [FileAuthPlugin](plugins/packaged_plugins.md#password-file-auth-plugin) for information on how to create a new password file.
+
+### Retired
+
+none
 
 ---
 
@@ -45,7 +57,7 @@ A formal CVE identifier has been requested for this vulnerability and will be up
 
 ### Test Coverage
 
-The 0.11.4 topic matching security fix is covered by automated regression tests in [`tests/test_broker.py`](../tests/test_broker.py), including:
+The 0.11.4 topic matching security fix is covered by automated regression tests in [`tests/test_broker.py`](https://github.com/Yakifo/amqtt/blob/v0.11.4/tests/test_broker.py), including:
 
 - `test_matches_plus_wildcard_redos_protection`
 - `test_matches_fails_safely_on_all_invalid_filters`

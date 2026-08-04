@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 import logging
 
-from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from amqtt.broker import BrokerContext
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def default_hash_scheme() -> list[str]:
     """Create config dataclass defaults."""
-    return ["argon2", "bcrypt", "pbkdf2_sha256", "scrypt"]
+    return ["argon2", "bcrypt"]
 
 
 class UserAuthDBPlugin(BaseAuthPlugin):
@@ -25,9 +24,8 @@ class UserAuthDBPlugin(BaseAuthPlugin):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
-        # access the singleton and set the proper crypt context
-        pwd_hasher = PasswordHasher()
-        pwd_hasher.crypt_context = CryptContext(schemes=self.config.hash_schemes, deprecated="auto")
+        # Initialize the singleton with the configured hash schemes.
+        PasswordHasher(schemes=self.config.hash_schemes)
 
         self._user_manager = UserManager(self.config.connection)
         self._engine = create_async_engine(f"{self.config.connection}")
@@ -44,11 +42,7 @@ class UserAuthDBPlugin(BaseAuthPlugin):
         if not session.username or not session.password:
             return False
 
-        user_auth = await self._user_manager.get_user_auth(session.username)
-        if not user_auth:
-            return False
-
-        return bool(session.password) and user_auth.verify_password(session.password)
+        return await self._user_manager.verify_user_auth_password(session.username, session.password)
 
     @dataclass
     class Config:
