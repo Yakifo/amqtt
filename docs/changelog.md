@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.12.0
+
+- `BrokerSysPlugin` only: `psutil` installation as part of required `amqtt` dependencies has been deprecated. use `amqtt[dollarsys]` instead.
 
 ## 0.11.4
 

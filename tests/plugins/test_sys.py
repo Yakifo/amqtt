@@ -9,6 +9,7 @@ import pytest
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_0
+from tests.asserts import does_not_warn
 
 dictConfig({
     'version': 1,
@@ -140,6 +141,7 @@ async def test_broker_sys_plugin_config() -> None:
         ]
     }
 
+
     broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
     await broker.start()
     client = MQTTClient()
@@ -217,3 +219,34 @@ async def test_broker_sys_plugin_without_interval_set(caplog) -> None:
 
     # the only message received should be the test message that was sent
     assert sys_msg_count == 1
+
+
+@pytest.mark.asyncio
+async def test_broker_sys_psutil_deprecation_warning() -> None:
+
+
+    with_sys_config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'plugins': [
+            {'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True}},
+            {'amqtt.plugins.sys.broker.BrokerSysPlugin': {'sys_interval': 1}},
+        ]
+    }
+
+    no_sys_config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'plugins': [
+            {'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True}},
+        ]
+    }
+
+
+    with pytest.warns(DeprecationWarning):
+        _ = Broker(plugin_namespace='tests.mock_plugins', config=with_sys_config)
+
+    with does_not_warn():
+        _ = Broker(plugin_namespace='tests.mock_plugins', config=no_sys_config)
