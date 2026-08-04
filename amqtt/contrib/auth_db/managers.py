@@ -74,7 +74,7 @@ class UserManager:
                 raise MQTTError(msg)
 
             user_auth = UserAuth(username=username)
-            user_auth.set_password(plain_password)  # nosemgrep / incorrectly identifies this as a django application
+            user_auth.password = plain_password  # nosemgrep / incorrectly identifies this as a django application
 
             db_session.add(user_auth)
             await db_session.commit()
@@ -99,10 +99,20 @@ class UserManager:
         """Change a user's password."""
         async with self._db_session_maker() as db_session, db_session.begin():
             user_auth = await self._get_auth_or_raise(db_session, username)
-            user_auth.set_password(plain_password)  # nosemgrep / incorrectly identifies this as a django application
+            user_auth.password = plain_password  # nosemgrep / incorrectly identifies this as a django application
             await db_session.commit()
             await db_session.flush()
             return user_auth
+
+    async def verify_user_auth_password(self, username: str, plain_password: str) -> bool:
+        """Verify a user's password and persist any password hash upgrade."""
+        async with self._db_session_maker() as db_session, db_session.begin():
+            try:
+                user_auth = await self._get_auth_or_raise(db_session, username)
+            except MQTTError:
+                return False
+
+            return user_auth.verify_password(plain_password)
 
 
 class TopicManager:
