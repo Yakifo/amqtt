@@ -6,7 +6,7 @@ from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable
 import sys
 
 if sys.platform == "android":
-    from amqtt.compat import psutil_android as psutil
+    from amqtt.compat import psutil_android_shim as psutil
 else:
     import psutil
 
