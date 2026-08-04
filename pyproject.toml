@@ -326,7 +326,11 @@ max-statements = 90           # too-many-statements
 # ---------------------------------- COVERAGE ----------------------------------
 [tool.coverage.run]
 branch = true
+parallel = true
 source = ["amqtt"]
+omit = [
+    "fuzz/*"
+]
 
 [tool.coverage.report]
 show_missing = true

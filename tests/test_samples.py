@@ -334,12 +334,12 @@ async def test_external_http_server(external_http_server):
 async def test_unix_connection():
 
     unix_socket_script = Path(__file__).parent.parent / "samples/unix_sockets.py"
-    broker_process = subprocess.Popen(["python", unix_socket_script, "broker", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    broker_process = subprocess.Popen(["python", "-m", "coverage", "-p", unix_socket_script, "broker", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # start the broker
     await asyncio.sleep(1)
 
     # start the client
-    client_process = subprocess.Popen(["python", unix_socket_script, "client", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    client_process = subprocess.Popen(["python", "-m", "coverage", "-p", unix_socket_script, "client", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     await asyncio.sleep(3)
 
