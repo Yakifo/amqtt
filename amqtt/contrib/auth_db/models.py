@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 import logging
-import warnings
 from typing import ClassVar, Union, cast
 from typing_extensions import Self
+import warnings
 
 from pwdlib import PasswordHash
 from pwdlib.hashers import HasherProtocol

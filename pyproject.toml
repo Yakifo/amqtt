@@ -326,6 +326,9 @@ max-public-methods = 25       # too-many-public-methods
 max-returns = 7               # too-many-returns
 max-statements = 90           # too-many-statements
 
+[tool.pylint.imports]
+known-standard-library = ["typing_extensions"]
+
 # ---------------------------------- COVERAGE ----------------------------------
 [tool.coverage.run]
 branch = true
