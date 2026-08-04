@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import signal
 import subprocess
+import sys
 
 from pathlib import Path
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.asyncio
 async def test_broker_acl():
     broker_acl_script = Path(__file__).parent.parent / "samples/broker_acl.py"
-    process = subprocess.Popen(["python", broker_acl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, broker_acl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
     await asyncio.sleep(2)
     process.send_signal(signal.SIGINT)
@@ -39,7 +40,7 @@ async def test_broker_acl():
 @pytest.mark.asyncio
 async def test_broker_simple():
     broker_simple_script = Path(__file__).parent.parent / "samples/broker_simple.py"
-    process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(2)
 
     # Send the interrupt signal
@@ -55,7 +56,7 @@ async def test_broker_simple():
 @pytest.mark.asyncio
 async def test_broker_start():
     broker_start_script = Path(__file__).parent.parent / "samples/broker_start.py"
-    process = subprocess.Popen(["python", broker_start_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, broker_start_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(2)
 
     # Send the interrupt signal to stop broker
@@ -70,7 +71,7 @@ async def test_broker_start():
 @pytest.mark.asyncio
 async def test_broker_taboo():
     broker_taboo_script = Path(__file__).parent.parent / "samples/broker_taboo.py"
-    process = subprocess.Popen(["python", broker_taboo_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, broker_taboo_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(2)
 
     # Send the interrupt signal to stop broker
@@ -91,7 +92,7 @@ async def test_client_keepalive():
     await asyncio.sleep(2)
 
     keep_alive_script = Path(__file__).parent.parent / "samples/client_keepalive.py"
-    process = subprocess.Popen(["python", keep_alive_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, keep_alive_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(1)
 
     stdout, stderr = process.communicate()
@@ -108,7 +109,7 @@ async def test_client_publish():
     await asyncio.sleep(2)
 
     client_publish = Path(__file__).parent.parent / "samples/client_publish.py"
-    process = subprocess.Popen(["python", client_publish], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, client_publish], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(2)
 
     stdout, stderr = process.communicate()
@@ -148,7 +149,7 @@ async def test_client_publish_ssl(broker_ssl_config, rsa_keys):
     await asyncio.sleep(2)
     # run the sample
     client_publish_ssl_script = Path(__file__).parent.parent / "samples/client_publish_ssl.py"
-    process = subprocess.Popen(["python", client_publish_ssl_script, '--cert', certfile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, client_publish_ssl_script, '--cert', certfile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(2)
     stdout, stderr = process.communicate()
 
@@ -166,7 +167,7 @@ async def test_client_publish_acl():
     await asyncio.sleep(2)
 
     broker_simple_script = Path(__file__).parent.parent / "samples/client_publish_acl.py"
-    process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
     await asyncio.sleep(2)
 
@@ -199,7 +200,7 @@ async def test_client_publish_ws():
     # run the sample
 
     client_publish_ssl_script = Path(__file__).parent.parent / "samples/client_publish_ws.py"
-    process = subprocess.Popen(["python", client_publish_ssl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, client_publish_ssl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(2)
     stdout, stderr = process.communicate()
 
@@ -235,8 +236,9 @@ async def test_client_subscribe():
     # run the sample
     client_subscribe_script = Path(__file__).parent.parent / "samples/client_subscribe.py"
 
-    process = await asyncio.create_subprocess_shell(
-        " ".join(["python", str(client_subscribe_script)]),
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        str(client_subscribe_script),
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -257,7 +259,7 @@ async def test_client_subscribe_plugin_acl():
     await broker.start()
 
     broker_simple_script = Path(__file__).parent.parent / "samples/client_subscribe_acl.py"
-    process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
     await asyncio.sleep(2)
     process.send_signal(signal.SIGINT)
@@ -276,7 +278,7 @@ async def test_client_subscribe_plugin_taboo():
     await broker.start()
 
     broker_simple_script = Path(__file__).parent.parent / "samples/client_subscribe_acl.py"
-    process = subprocess.Popen(["python", broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen([sys.executable, broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Send the interrupt signal
     await asyncio.sleep(2)
     process.send_signal(signal.SIGINT)
@@ -334,12 +336,12 @@ async def test_external_http_server(external_http_server):
 async def test_unix_connection():
 
     unix_socket_script = Path(__file__).parent.parent / "samples/unix_sockets.py"
-    broker_process = subprocess.Popen(["python", "-m", "coverage", "-p", unix_socket_script, "broker", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    broker_process = subprocess.Popen([sys.executable, "-m", "coverage", "run", unix_socket_script, "broker", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # start the broker
     await asyncio.sleep(1)
 
     # start the client
-    client_process = subprocess.Popen(["python", "-m", "coverage", "-p", unix_socket_script, "client", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    client_process = subprocess.Popen([sys.executable, "-m", "coverage", "run", unix_socket_script, "client", "-s", "/tmp/mqtt"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     await asyncio.sleep(3)
 
