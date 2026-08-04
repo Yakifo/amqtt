@@ -107,6 +107,8 @@ Details:
 * Sample: broker and client communicating with mqtt over unix socket https://github.com/Yakifo/amqtt/pull/291
 * Plugin: jwt authentication and authorization https://github.com/Yakifo/amqtt/pull/289
 
+---
+
 ## 0.11.2
 
 -  config-file based plugin loading   [PR #240](https://github.com/Yakifo/amqtt/pull/240)
@@ -133,12 +135,16 @@ Details:
 - [Issue 187](https://github.com/Yakifo/amqtt/issues/187) anonymous login allowed even if plugin isn't enabled
 - [Issue 123](https://github.com/Yakifo/amqtt/issues/123) Messages sent to mqtt can be consumed in time, but they occupy more and more memory
 
+---
+
 ## 0.11.1
 
 - [PR #226](https://github.com/Yakifo/amqtt/pull/226) Consolidate super classes for plugins
 - [PR #227](https://github.com/Yakifo/amqtt/pull/227) Update sample files
 - [PR #229](https://github.com/Yakifo/amqtt/pull/229) & [PR #228](https://github.com/Yakifo/amqtt/pull/228) Broken pypi and test.amqtt.io links
 - [PR #232](https://github.com/Yakifo/amqtt/pull/234) $SYS additions for cpu & mem.
+
+---
 
 ## 0.11.0
 
@@ -172,10 +178,13 @@ Details:
 - [Issue #48](https://github.com/Yakifo/amqtt/issues/48) Setup unit tests running against different versions of dependencies
 - [Issue #35](https://github.com/Yakifo/amqtt/issues/35) plugin interface and optimization
 
+---
 
 ## 0.10.2
 
 - create the necessary .readthedocs.yaml to generate sphinx docs from the 0.10.x series
+
+---
 
 ## 0.10.1
 
