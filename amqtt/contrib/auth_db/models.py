@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 import logging
 from typing import ClassVar, Union, cast
+from typing_extensions import Self
 import warnings
 
 from pwdlib import PasswordHash
@@ -50,13 +51,13 @@ class AllowedTopic:
 class PasswordHasher(PasswordHash):
     """Singleton password hashing context shared across auth DB models."""
 
-    _instance: ClassVar["PasswordHasher | None"] = None
+    _instance: ClassVar[Self | None] = None
 
     def __new__(
         cls,
         hashers: Sequence[HasherProtocol] | None = None,
         schemes: Sequence[str] | None = None,
-    ) -> "PasswordHasher":
+    ) -> Self:
         del hashers, schemes
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -78,14 +79,14 @@ class PasswordHasher(PasswordHash):
 
     @property
     def crypt_context(self) -> "PasswordHasher":
-        """Return self to preserve the previous ``PasswordHasher().crypt_context`` API."""
+        """Preserve the previous ``PasswordHasher().crypt_context`` API."""
         return self
 
-    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         password, password_hash = self._normalize_verify_args(password, hash)
         return super().verify(password, password_hash)
 
-    def verify_and_update(self, password: str | bytes, hash: str | bytes) -> tuple[bool, str | None]:  # noqa: A002# pylint: disable=redefined-builtin
+    def verify_and_update(self, password: str | bytes, hash: str | bytes) -> tuple[bool, str | None]:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         password, password_hash = self._normalize_verify_args(password, hash)
         return super().verify_and_update(password, password_hash)
 

@@ -75,7 +75,7 @@ def _ensure_str(value: str | bytes) -> str:
 class DeprecatedSHA512CryptHasher(HasherProtocol):
 
     @classmethod
-    def identify(cls, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def identify(cls, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         del cls
         try:
             password_hash = _ensure_str(hash)
@@ -95,7 +95,7 @@ class DeprecatedSHA512CryptHasher(HasherProtocol):
         )
         raise NotImplementedError(msg)
 
-    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         # Gracefully handle the absolute missing dependency on Python 3.13+
         if _native_crypt is None:
             warnings.warn(
@@ -130,7 +130,7 @@ class DeprecatedSHA512CryptHasher(HasherProtocol):
         except (ValueError, UnicodeDecodeError, binascii.Error):
             return False
 
-    def check_needs_rehash(self, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def check_needs_rehash(self, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         return True
 
 
