@@ -152,13 +152,13 @@ class UserAuth(Base):
     subscribe_acl: Mapped[list[AllowedTopic]] = mapped_column(DataClassListJSON(AllowedTopic), default=list)
     receive_acl: Mapped[list[AllowedTopic]] = mapped_column(DataClassListJSON(AllowedTopic), default=list)
 
-    @hybrid_property
+    @property
     def password(self) -> None:
         msg = "Password is write-only"
         raise AttributeError(msg)
 
-    @password.inplace.setter  # type: ignore[arg-type]
-    def _password_setter(self, plain_password: str) -> None:
+    @password.setter
+    def password(self, plain_password: str) -> None:
         self._password_hash = PasswordHasher().hash(plain_password)
 
     def verify_password(self, plain_password: str) -> bool:
