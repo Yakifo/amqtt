@@ -123,5 +123,3 @@ def cpu_count(logical=True):
         return os.cpu_count() or 1
     except Exception:
         return 1
-
-	print(cpu_count())
