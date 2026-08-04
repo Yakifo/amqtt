@@ -104,8 +104,11 @@ password_hasher = PasswordHasher()
 print(password_hasher.hash(passwd))
 ```
 
-??? warning "sha512 is no longer supported"
-    Starting in version `0.12.0`, support for `sha512_crypt` hashes has been dropped due to the removal of Python's underlying native `crypt` module in Python 3.13. Existing users using this legacy algorithm must re-generate their password with `argon2` or `bcrypt`.
+??? warning "`sha512` hashing is deprecated, replaced by `argon2` (v0.12.0)"
+
+     Due to the removal of Python's standard library `crypt` module in Python 3.13 and the no-longer-supported `passlib` library, `sha512_crypt` is deprecated in favor of `argon2` hashing.
+
+    Deprecation includes verifying of existing `sha512` but will also generate a warning. The password file will _not_ be updated with a newly hashed version. Password files should be re-generated with `argon2` or `bcrypt` (see script example above).
 
 ### Taboo (Topic Plugin)
 

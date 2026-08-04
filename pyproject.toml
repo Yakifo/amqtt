@@ -81,6 +81,7 @@ docs = [
     "mkdocs-redirects>=1.2.1",
     "mkdocs-section-index>=0.3",
     "mkdocstrings-python>=1.16.2",
+    "pymdown-extensions>=11.0.1",
     # YORE: EOL 3.10: Remove line.
     "tomli>=2.0; python_version < '3.11'",
     "mkdocs-typer2>=0.1.4",
