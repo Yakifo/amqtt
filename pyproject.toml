@@ -34,7 +34,7 @@ dependencies = [
   "PyYAML>=6.0.2", # https://pypi.org/project/PyYAML
   "typer>=0.24.0",
   "dacite>=1.9.2",
-  "psutil>=7.0.0; sys_platform!='android'",
+  #"psutil>=7.0.0; sys_platform!='android'",
   "typing_extensions>=4.0.0",
 ]
 
