@@ -5,10 +5,13 @@ from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable
 
 import sys
 
-if sys.platform == "android":
+if hasattr(sys, "getandroidapilevel"):
     from amqtt.compat import psutil_android_shim as psutil
 else:
-    import psutil
+    try:
+        import psutil
+    except ImportError:
+        print("Psutil not installed. Please run 'pip install psutil' in your terminal to install it")
 
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
