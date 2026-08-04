@@ -9,7 +9,6 @@ from pwdlib.hashers import HasherProtocol
 from pwdlib.hashers.argon2 import Argon2Hasher
 from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlalchemy import String
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from amqtt.contexts import Action
