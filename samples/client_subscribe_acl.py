@@ -42,7 +42,13 @@ async def uptime_coro() -> None:
 def __main__():
     formatter = "[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
-    asyncio.get_event_loop().run_until_complete(uptime_coro())
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(uptime_coro())
+
+
+
 
 if __name__ == "__main__":
     __main__()
