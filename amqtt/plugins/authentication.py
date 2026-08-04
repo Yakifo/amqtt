@@ -18,7 +18,7 @@ class AnonymousAuthPlugin(BaseAuthPlugin):
         super().__init__(context)
 
         # Default to allowing anonymous
-        self._allow_anonymous = self._get_config_option("allow-anonymous", True)  # noqa: FBT003
+        self._allow_anonymous = self._get_config_option("allow-anonymous", True)  # ruff: ignore[boolean-positional-value-in-call]
 
     async def authenticate(self, *, session: Session) -> bool:
         authenticated = await super().authenticate(session=session)

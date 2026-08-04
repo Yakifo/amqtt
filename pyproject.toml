@@ -195,7 +195,7 @@ ignore = [
     "ARG002", # Unused method argument
     "PERF203",# try-except penalty within loops (3.10 only),
     "COM812",  # rule causes conflicts when used with the formatter,
-
+    "non-empty-init-module",
     # ignore certain preview rules
     "DOC",
     "PLW",

@@ -299,7 +299,7 @@ class PluginManager(Generic[C]):
             except asyncio.CancelledError:
                 self.logger.warning("fired event was cancelled")
             # display plugin fault; don't allow it to cause a broker failure
-            except Exception as exc:  # noqa: BLE001, pylint: disable=W0718
+            except Exception as exc:  # ruff: ignore[blind-except], pylint: disable=W0718
                 traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
 
         with contextlib.suppress(KeyError, ValueError):
