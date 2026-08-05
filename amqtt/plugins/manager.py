@@ -77,6 +77,12 @@ class PluginManager(Generic[C]):
         self._is_auth_filtering_enabled = False
 
         self._load_plugins(namespace)
+
+        if self.get_plugin("BrokerSysPlugin"):
+            warnings.warn("The underlying library for the `BrokerSysPlugin` will be removed in future versions. "
+                          "Please explicitly update your environment to depend on 'amqtt[dollarsys]'"
+                          " to ensure compatibility.", DeprecationWarning, stacklevel=4)
+
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
 

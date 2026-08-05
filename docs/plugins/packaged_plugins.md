@@ -195,6 +195,12 @@ plugins:
 
 Publishes, on a periodic basis, statistics about the broker
 
+??? warning "Optional dependency required for `BrokerSysPlugin`" (v0.12.0)."
+
+    In a future major release, `psutil` will become an optional dependency. "
+    "If your application relies on the `BrokerSysPlugin`, please add `amqtt[dollarsys]` "
+    "to your project's dependency configurations.",
+
 **Configuration**
 
 - `sys_interval` - int, seconds between updates (default: 20)
@@ -204,6 +210,8 @@ plugins:
   amqtt.plugins.sys.broker.BrokerSysPlugin:
     sys_interval: 20  # int, seconds between updates
 ```
+
+
 
 **Supported Topics**
 
