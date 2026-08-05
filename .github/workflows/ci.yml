@@ -104,7 +104,7 @@ jobs:
 
       - name: Check if requirements.txt is up-to-date (needed for OpenSSF scorecard)
         run: |
-          uv pip compile pyproject.toml --generate-hashes --output-file /tmp/requirements.txt --custom-compile-command "uv pip compile pyproject.toml --generate-hashes --output-file requirements.txt"
+          uv export --frozen --format requirements.txt --no-default-groups --no-emit-project --no-header --output-file /tmp/requirements.txt
           diff -u requirements.txt /tmp/requirements.txt
 
   tests:
@@ -142,9 +142,9 @@ jobs:
 
       # https://github.com/actions/setup-go
       - name: 🏗 Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.22"
+          go-version: "1.25"
           cache-dependency-path: tests/support/go-mqtt-client/go.mod
 
       - name: 🏗 Install Go MQTT test dependencies
@@ -153,7 +153,7 @@ jobs:
 
       # https://github.com/actions/setup-java
       - name: 🏗 Install Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@d7793b545071e98d581d3bf084a51c3213318a07 # v4
         with:
           distribution: temurin
           java-version: "21"
@@ -174,7 +174,7 @@ jobs:
 
       # https://github.com/actions/setup-node
       - name: 🏗 Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: npm
