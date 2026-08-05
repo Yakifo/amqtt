@@ -2,11 +2,7 @@
 
 `amqtt.contrib.django` provides an optional Django app and broker plugins for authenticating MQTT clients with Django-owned users.
 
-Install the contrib extra:
-
-```bash
-pip install 'amqtt[contrib]'
-```
+if django is not already specified in your project's dependency configurations, install with `'amqtt[django]'`
 
 Add the app to `INSTALLED_APPS` and run migrations:
 

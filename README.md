@@ -1,5 +1,5 @@
 [![MIT licensed](https://img.shields.io/github/license/Yakifo/amqtt?style=plastic)](https://amqtt.readthedocs.io/en/latest/)
-[![CI](https://github.com/Yakifo/amqtt/actions/workflows/ci.yml/badge.svg?branch=rc)](https://github.com/Yakifo/amqtt/actions/workflows/ci.yml)
+[![CI](https://github.com/Yakifo/amqtt/actions/workflows/ci.yml/badge.svg)](https://github.com/Yakifo/amqtt/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/Yakifo/amqtt/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/Yakifo/amqtt/actions/workflows/codeql-analysis.yml)
 [![Read the Docs](https://img.shields.io/readthedocs/amqtt/v0.11.0?style=plastic&logo=readthedocs)](https://amqtt.readthedocs.io/)
 [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/S3sP6dDaF3?style=plastic)](https://discord.gg/S3sP6dDaF3)
