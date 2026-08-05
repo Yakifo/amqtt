@@ -91,14 +91,15 @@ docs = [
 ]
 
 [project.optional-dependencies]
+
 ci = ["coveralls==4.0.1"]
+
 contrib = [
     "cryptography>=48.0.1",
     "aiosqlite>=0.21.0",
     "greenlet>=3.2.3",
     "sqlalchemy[asyncio]>=2.0.41",
     "argon2-cffi>=25.1.0",
-    "django>=4.2",
     "aiohttp>=3.14.1",
     "pyjwt>=2.13.0",
     "python-ldap>=3.4.5",
@@ -108,6 +109,13 @@ contrib = [
     "pwdlib[argon2, bcrypt]>=0.3.0"
 ]
 
+django = [
+    "django>=4.2",
+]
+
+dollarsys = [
+    "psutil>=7.0.0"
+]
 
 [project.scripts]
 amqtt = "amqtt.scripts.broker_script:main"
