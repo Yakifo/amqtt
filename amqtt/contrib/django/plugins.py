@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 SERVICE_USER_SENTINEL = "service"
 # This is a Django model label, not a secret token.
-DEFAULT_TOKEN_MODEL = "amqtt_django.MqttToken"  # noqa: S105  # nosec B105
+DEFAULT_TOKEN_MODEL = "amqtt_django.MqttToken"  # ruff: ignore[hardcoded-password-string]  # nosec B105
 DJANGO_ROLE_ATTRIBUTE = "amqtt.contrib.django.role"
 
 

@@ -16,7 +16,7 @@ def _decode_passlib_b64(value: str) -> bytes:
 
 class LegacyPasslibScryptHasher(HasherProtocol):
     @classmethod
-    def identify(cls, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def identify(cls, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         del cls
         try:
             password_hash = _ensure_str(hash)
@@ -34,7 +34,7 @@ class LegacyPasslibScryptHasher(HasherProtocol):
         msg = "Use Argon2 or Bcrypt to hash new entries."
         raise NotImplementedError(msg)
 
-    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # noqa: A002 # pylint: disable=redefined-builtin
+    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing] # pylint: disable=redefined-builtin
         try:
             # Passlib format: $scrypt$ln=14,r=8,p=1$salt_b64$hash_b64
             parts = _ensure_str(hash).split("$")
@@ -75,13 +75,13 @@ class LegacyPasslibScryptHasher(HasherProtocol):
         except (KeyError, ValueError, UnicodeDecodeError, binascii.Error):
             return False
 
-    def check_needs_rehash(self, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def check_needs_rehash(self, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         return True
 
 
 class LegacyPasslibPBKDF2Hasher(HasherProtocol):
     @classmethod
-    def identify(cls, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def identify(cls, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         del cls
         try:
             password_hash = _ensure_str(hash)
@@ -99,7 +99,7 @@ class LegacyPasslibPBKDF2Hasher(HasherProtocol):
         msg = "Use Argon2/Bcrypt for new hashes."
         raise NotImplementedError(msg)
 
-    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def verify(self, password: str | bytes, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         try:
             parts = _ensure_str(hash).split("$")
             if len(parts) < 5 or parts[1] != "pbkdf2-sha256":
@@ -119,5 +119,5 @@ class LegacyPasslibPBKDF2Hasher(HasherProtocol):
         except (ValueError, UnicodeDecodeError, binascii.Error):
             return False
 
-    def check_needs_rehash(self, hash: str | bytes) -> bool:  # noqa: A002# pylint: disable=redefined-builtin
+    def check_needs_rehash(self, hash: str | bytes) -> bool:  # ruff: ignore[builtin-argument-shadowing]# pylint: disable=redefined-builtin
         return True

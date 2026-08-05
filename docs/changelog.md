@@ -18,6 +18,9 @@
 
 ### Features & Enhancements
 
+- added support for python 3.14
+
+---
 
 ## 0.11.4
 

@@ -38,7 +38,6 @@ dictConfig({
 logger = logging.getLogger(__name__)
 
 
-
 all_sys_topics = [
     '$SYS/broker/version',
     '$SYS/broker/load/bytes/received',
@@ -67,6 +66,52 @@ all_sys_topics = [
 ]
 
 
+async def _collect_expected_sys_topics(client: MQTTClient, sys_topic_flags: dict[str, bool]) -> int:
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + 5
+    sys_msg_count = 0
+
+    while not all(sys_topic_flags.values()):
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            break
+
+        try:
+            message = await client.deliver_message(timeout_duration=min(remaining, 1))
+        except asyncio.TimeoutError:
+            logger.debug(f"TimeoutError after {sys_msg_count} messages")
+            continue
+
+        if message and message.topic.startswith("$SYS/"):
+            sys_msg_count += 1
+            assert message.topic in sys_topic_flags
+            sys_topic_flags[message.topic] = True
+
+    return sys_msg_count
+
+
+def _cancel_sys_broadcast(broker: Broker) -> None:
+    sys_plugin = broker.plugins_manager.get_plugin("BrokerSysPlugin")
+    sys_handle = getattr(sys_plugin, "_sys_handle", None)
+    if sys_handle:
+        sys_handle.cancel()
+
+
+def _broker_uri(broker: Broker) -> str:
+    sockname = broker._servers["default"].instance.sockets[0].getsockname()
+    return f"mqtt://127.0.0.1:{sockname[1]}/"
+
+
+async def _disconnect_client(client: MQTTClient) -> None:
+    if client.session and client.session.transitions.is_connected():
+        await client.disconnect()
+
+
+async def _shutdown_broker(broker: Broker) -> None:
+    if broker.transitions.is_started():
+        await broker.shutdown()
+
+
 
 # test broker sys
 @pytest.mark.asyncio
@@ -91,7 +136,7 @@ async def test_broker_sys_plugin_deprecated_config() -> None:
 
         config = {
             "listeners": {
-                "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+                "default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
             },
             'sys_interval': 1,
             'auth': {
@@ -100,26 +145,18 @@ async def test_broker_sys_plugin_deprecated_config() -> None:
         }
 
         broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
-        await broker.start()
         client = MQTTClient()
-        await client.connect("mqtt://127.0.0.1:1883/")
-        await client.subscribe([("$SYS/#", QOS_0),])
-        await client.publish('test/topic', b'my test message')
-        await asyncio.sleep(2)
         sys_msg_count = 0
         try:
-            while sys_msg_count < 30:
-                message = await client.deliver_message(timeout_duration=1)
-                if '$SYS' in message.topic:
-                    sys_msg_count += 1
-                    assert message.topic in sys_topic_flags
-                    sys_topic_flags[message.topic] = True
-
-        except asyncio.TimeoutError:
-            logger.debug(f"TimeoutError after {sys_msg_count} messages")
-
-        await client.disconnect()
-        await broker.shutdown()
+            await broker.start()
+            await client.connect(_broker_uri(broker))
+            await client.subscribe([("$SYS/#", QOS_0),])
+            await client.publish('test/topic', b'my test message')
+            sys_msg_count = await _collect_expected_sys_topics(client, sys_topic_flags)
+        finally:
+            _cancel_sys_broadcast(broker)
+            await _disconnect_client(client)
+            await _shutdown_broker(broker)
 
         assert sys_msg_count > 1
 
@@ -133,7 +170,7 @@ async def test_broker_sys_plugin_config() -> None:
 
     config = {
         "listeners": {
-            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+            "default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
         },
         'plugins': [
             {'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True}},
@@ -143,26 +180,18 @@ async def test_broker_sys_plugin_config() -> None:
 
 
     broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
-    await broker.start()
     client = MQTTClient()
-    await client.connect("mqtt://127.0.0.1:1883/")
-    await client.subscribe([("$SYS/#", QOS_0), ])
-    await client.publish('test/topic', b'my test message')
-    await asyncio.sleep(2)
     sys_msg_count = 0
     try:
-        while sys_msg_count < 30:
-            message = await client.deliver_message(timeout_duration=1)
-            if '$SYS' in message.topic:
-                sys_msg_count += 1
-                assert message.topic in sys_topic_flags
-                sys_topic_flags[message.topic] = True
-
-    except asyncio.TimeoutError:
-        logger.debug(f"TimeoutError after {sys_msg_count} messages")
-
-    await client.disconnect()
-    await broker.shutdown()
+        await broker.start()
+        await client.connect(_broker_uri(broker))
+        await client.subscribe([("$SYS/#", QOS_0), ])
+        await client.publish('test/topic', b'my test message')
+        sys_msg_count = await _collect_expected_sys_topics(client, sys_topic_flags)
+    finally:
+        _cancel_sys_broadcast(broker)
+        await _disconnect_client(client)
+        await _shutdown_broker(broker)
 
     assert sys_msg_count > 1
 
@@ -177,7 +206,7 @@ async def test_broker_sys_plugin_without_interval_set(caplog) -> None:
 
     config = {
         "listeners": {
-            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+            "default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
         },
         'plugins': [
             {'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True}},
@@ -198,26 +227,28 @@ async def test_broker_sys_plugin_without_interval_set(caplog) -> None:
 
 
     client = MQTTClient()
-    await client.connect("mqtt://127.0.0.1:1883/")
-    await client.subscribe([("$SYS/#", QOS_0), ])
-    await client.publish('test/topic', b'my test message')
-    await asyncio.sleep(2)
     sys_msg_count = 0
     try:
-        while sys_msg_count < 30:
-            message = await client.deliver_message(timeout_duration=1)
-            if '$SYS' in message.topic:
-                sys_msg_count += 1
-                assert message.topic in sys_topic_flags
-                sys_topic_flags[message.topic] = True
+        await client.connect(_broker_uri(broker))
+        await client.subscribe([("$SYS/#", QOS_0), ])
+        await client.publish('test/topic', b'my test message')
+        await asyncio.sleep(2)
+        try:
+            while sys_msg_count < 30:
+                message = await client.deliver_message(timeout_duration=1)
+                if '$SYS' in message.topic:
+                    sys_msg_count += 1
+                    assert message.topic in sys_topic_flags
+                    sys_topic_flags[message.topic] = True
 
-    except asyncio.TimeoutError:
-        logger.debug(f"TimeoutError after {sys_msg_count} messages")
+        except asyncio.TimeoutError:
+            logger.debug(f"TimeoutError after {sys_msg_count} messages")
+    finally:
+        _cancel_sys_broadcast(broker)
+        await _disconnect_client(client)
+        await _shutdown_broker(broker)
 
-    await client.disconnect()
-    await broker.shutdown()
-
-    # the only message received should be the test message that was sent
+    # the only $SYS message received should be the retained broker version
     assert sys_msg_count == 1
 
 

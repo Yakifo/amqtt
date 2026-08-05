@@ -7,10 +7,10 @@ except ImportError:
     class InvalidStateError(Exception):  # type: ignore[no-redef]
         pass
 
-    class QueueFull(Exception):  # type: ignore[no-redef]  # noqa : N818
+    class QueueFull(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
         pass
 
-    class QueueShutDown(Exception):  # type: ignore[no-redef]  # noqa : N818
+    class QueueShutDown(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
         pass
 
 
@@ -536,7 +536,7 @@ class ProtocolHandler(Generic[C]):
                 self.handle_read_timeout()
             except NoDataError:
                 self.logger.debug(f"{self.session.client_id} No data available")
-            except Exception as e:  # noqa: BLE001, pylint: disable=W0718
+            except Exception as e:  # ruff: ignore[blind-except], pylint: disable=W0718
                 self.logger.warning(f"{type(self).__name__} Unhandled exception in reader coro: {e!r}")
                 break
         while running_tasks:
