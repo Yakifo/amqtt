@@ -16,7 +16,7 @@ connection_timeout: 60
 reconnect_retries: 2
 reconnect_max_interval: 10
 cleansession: true
-broker:
+connection:
   uri: "mqtt://127.0.0.1"
 plugins:
   amqtt.plugins.logging_amqtt.PacketLoggerPlugin:
@@ -72,7 +72,7 @@ will:
    message: "client ABC has disconnected"
    qos: 1
    retain: false
-broker:
+connection:
    uri: 'mqtt://localhost:1883'
    cafile: '/path/to/ca/file'
 plugins:
