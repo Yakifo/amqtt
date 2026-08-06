@@ -38,6 +38,9 @@ The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its C
 
 none
 
+- added support for python 3.14
+
+---
 
 ## 0.11.4
 

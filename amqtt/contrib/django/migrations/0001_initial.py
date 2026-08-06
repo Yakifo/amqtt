@@ -8,11 +8,11 @@ import django.db.models.deletion
 class Migration(migrations.Migration):  # type: ignore[misc]
     initial = True
 
-    dependencies = [  # noqa: RUF012
+    dependencies = [  # ruff: ignore[mutable-class-default]
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
-    operations = [  # noqa: RUF012
+    operations = [  # ruff: ignore[mutable-class-default]
         migrations.CreateModel(
             name="MqttToken",
             fields=[

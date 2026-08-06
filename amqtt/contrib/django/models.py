@@ -34,7 +34,7 @@ class AbstractMqttToken(models.Model):  # type: ignore[misc]
         """Django model metadata."""
 
         abstract = True
-        indexes = [models.Index(fields=["user", "revoked_at"])]  # noqa: RUF012
+        indexes = [models.Index(fields=["user", "revoked_at"])]  # ruff: ignore[mutable-class-default]
 
     def __str__(self) -> str:
         """Return a concise token description for Django admin and shell use."""
