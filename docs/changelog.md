@@ -32,8 +32,8 @@ The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its C
 `passlib` is no longer a supported library and, as of python 3.13, the standard library `crypt`has been removed. For this release, deprecation warnings will be displayed if using hash schemes other than `argon2` or `bcrypt`.
 - `AuthDBPlugin`'s hash schemes config now only support `argon2` and `bcrypt`. For this release, specifying `pbkdf2_sha256` or `scrypt` will result in (1) a `DeprecationWarning` and (2) upon positive verification of the provided password, it will use the `pwdlib`'s `verify_and_update` function to update the row to an `argon2` hash.
 - The `FileAuthPlugin` hash scheme has migrated from `sha512_crypt` to `argon2`. For this release, the `sha512_crypt` passwords will be accepted alongside `argon2` hashes. A `DeprecationWarning` is displayed, but automatic migration is not supported; see [FileAuthPlugin](plugins/packaged_plugins.md#password-file-auth-plugin) for information on how to create a new password file.
-- `BrokerSysPlugin` only: `psutil` installation as part of required `amqtt` dependencies has been deprecated. use `amqtt[dollarsys]` instead.
-- 
+- `BrokerSysPlugin` only: `psutil` installation as part of required `amqtt` dependencies has been deprecated. use `amqtt[dollarsys]` instead. will be removed as required dependency in a future release.
+
 ### Retired
 
 none
