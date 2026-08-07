@@ -3,7 +3,15 @@ from collections import deque  # pylint: disable=C0412
 from dataclasses import dataclass
 from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
 
-import psutil
+import sys
+
+if hasattr(sys, "getandroidapilevel"):
+    from amqtt.compat import psutil_android_shim as psutil
+else:
+    try:
+        import psutil
+    except ImportError:
+        print("Psutil not installed. Please run 'pip install psutil' in your terminal to install it")
 
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
