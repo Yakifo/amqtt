@@ -66,10 +66,10 @@ Please report security vulnerabilities privately according to the [security poli
 ## Python Version Compatibility
 
 | Version  | hbmqtt compatibility | Supported Python Versions |
-|----------|----------------------|---------------------------|
-| 0.10.x   | yes [^2]             | 3.7 - 3.9                 |
-| 0.11.x   | no [^3]              | 3.10 - 3.13               |
-| 0.12.x   | no [^3]              | 3.10 - 3.13               |
+|----------|----------------------|----------------------|
+| 0.10.x   | yes [^2]             | 3.7 - 3.9            |
+| 0.11.x   | no [^3]              | 3.10 - 3.13          |
+| 0.12.x   | no [^3]              | 3.10 - 3.14          |
 
 
 [^1]: Forked from [HBMQTT](https://github.com/beerfactory/hbmqtt) after it was deprecated by the original author.
