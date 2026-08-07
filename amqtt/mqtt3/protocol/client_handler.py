@@ -14,13 +14,14 @@ from amqtt.mqtt3.subscribe import SubscribePacket
 from amqtt.mqtt3.unsuback import UnsubackPacket
 from amqtt.mqtt3.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
+from amqtt.protocol import ClientProtocolHandlerBase
 from amqtt.session import Session
 
 if TYPE_CHECKING:
     from amqtt.client import ClientContext
 
 
-class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
+class ClientProtocolHandler(ProtocolHandler["ClientContext"], ClientProtocolHandlerBase["ClientContext"]):
     def __init__(
         self,
         plugins_manager: PluginManager["ClientContext"],

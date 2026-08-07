@@ -161,7 +161,7 @@ def default_broker_plugins() -> dict[str, Any]:
 class BrokerConfig(Dictable):
     """Structured configuration for a broker. Can be passed directly to `amqtt.broker.Broker` or created from a dictionary."""
 
-    listeners: dict[Literal["default"] | str, ListenerConfig] = field(default_factory=default_listeners)  # noqa: PYI051
+    listeners: dict[Literal["default"] | str, ListenerConfig] = field(default_factory=default_listeners)  # ruff: ignore[redundant-literal-union]
     """Network of listeners used by the services. a 'default' named listener is required; if another listener
      does not set a value, the 'default' settings are applied. See
      [`ListenerConfig`](broker_config.md#amqtt.contexts.ListenerConfig) for more information."""

@@ -4,6 +4,7 @@ import logging.config
 import secrets
 import socket
 import string
+import time
 from unittest.mock import MagicMock, call, patch
 
 import psutil
@@ -23,7 +24,8 @@ from amqtt.mqtt3.pubcomp import PubcompPacket
 from amqtt.mqtt3.publish import PublishPacket
 from amqtt.mqtt3.pubrec import PubrecPacket
 from amqtt.mqtt3.pubrel import PubrelPacket
-from amqtt.session import OutgoingApplicationMessage
+from amqtt.session import OutgoingApplicationMessage, Session
+from tests.asserts import assert_not_called_with_param
 
 # formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
 # logging.basicConfig(level=logging.DEBUG, format=formatter)
@@ -247,15 +249,22 @@ async def test_client_connect_clean_session_false(broker):
 
 
 @pytest.mark.asyncio
-async def test_client_subscribe(broker, mock_plugin_manager):
+@pytest.mark.parametrize('topic', [
+    "/topic",
+    "sport/#",
+    "#",
+    "sport/+",
+    "sport/+/player",
+])
+async def test_client_subscribe(broker, mock_plugin_manager, topic):
     client = MQTTClient()
     ret = await client.connect("mqtt://127.0.0.1/")
     assert ret == 0
-    await client.subscribe([("/topic", QOS_0)])
+    assert await client.subscribe([(topic, QOS_0)]) == [0x0]
 
     # Test if the client test client subscription is registered
-    assert "/topic" in broker._subscriptions
-    subs = broker._subscriptions["/topic"]
+    assert topic in broker._subscriptions
+    subs = broker._subscriptions[topic]
     assert len(subs) == 1
     (s, qos) = subs[0]
     assert s == client.session
@@ -264,18 +273,40 @@ async def test_client_subscribe(broker, mock_plugin_manager):
     await client.disconnect()
     await asyncio.sleep(0.1)
 
+
     mock_plugin_manager.assert_has_calls(
         [
             call().fire_event(
                 BrokerEvents.CLIENT_SUBSCRIBED,
                 client_id=client.session.client_id,
-                topic="/topic",
+                topic=topic,
                 qos=QOS_0,
             ),
         ],
         any_order=True,
     )
 
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('topic', [
+    "sport/#/player",
+    "sport/foo#",
+    "sport/##",
+    "sport/foo+bar",
+    "sport/++"
+])
+async def test_client_fails_subscribe(broker, mock_plugin_manager, topic):
+    client = MQTTClient()
+    ret = await client.connect("mqtt://127.0.0.1/")
+    assert ret == 0
+    assert await client.subscribe([(topic, QOS_0)]) == [0x80]
+
+    assert topic not in broker._subscriptions
+
+    await client.disconnect()
+    await asyncio.sleep(0.1)
+
+    assert_not_called_with_param(mock_plugin_manager, param_value=BrokerEvents.CLIENT_SUBSCRIBED)
 
 @pytest.mark.asyncio
 async def test_client_subscribe_twice(broker, mock_plugin_manager):
@@ -895,6 +926,96 @@ def test_matches_single_level_wildcard(broker):
         "sport/tennis/player2",
     ]:
         assert broker._matches(good_topic, test_filter)
+
+
+def test_matches_plus_wildcard_redos_protection(broker):
+    invalid_filter = "+/" + "+" * 60  # accepted by the broken validation, ReDoS in _matches
+    trigger_topic = "a/" + "b" * 12 + "/x"  # legal topic that makes the filter backtrack forever
+
+    start_time = time.perf_counter()
+    # It must return False, but it must also do it instantly
+    assert not broker._matches(trigger_topic, invalid_filter)
+    duration = time.perf_counter() - start_time
+
+    # If a regex backtracks exponentially, it takes seconds/minutes
+    #   pytest's timeout should catch this failure; also, do an explicit check
+    # An iterative or healthy parser will finish in less than 1 millisecond.
+    assert duration < 0.01, f"Possible ReDoS detected! Execution took {duration:.4f}s"
+
+
+@pytest.mark.parametrize(
+    ("subscription_filter", "topic", "expected"),
+    [
+        # Exact matching
+        ("sport/tennis", "sport/tennis", True),
+        ("sport/tennis", "sport/football", False),
+        ("sport/tennis", "sport/tennis/player1", False),
+        ("sport/tennis/player1", "sport/tennis", False),
+
+        # Valid single-level wildcard
+        ("sport/+", "sport/tennis", True),
+        ("sport/+/player1", "sport/tennis/player1", True),
+        ("sport/+", "sport/tennis/player1", False),
+        ("+", "sport", True),
+
+        # '+' may match an empty level
+        ("sport/+", "sport/", True),
+        ("sport/+/player1", "sport//player1", True),
+
+        # Valid multi-level wildcard
+        ("#", "sport/tennis/player1", True),
+        ("sport/#", "sport/tennis/player1", True),
+        ("sport/#", "sport", True),
+        ("sport/#", "sports", False),
+
+        # Embedded '+' is invalid
+        ("sport/tennis+", "sport/tennis", False),
+        ("sport/tennis+", "sport/tennis1", False),
+        ("foo+bar", "foo/bar", False),
+        ("foo+bar", "foobeefbeefbar", False),
+        ("sport/++++", "sport/tennis", False),
+
+        # Embedded or misplaced '#' is invalid
+        ("foo#", "foobar", False),
+        ("#foo", "anything", False),
+        ("foo#bar", "fooanythingbar", False),
+        ("sport/####", "sport/tennis/player1", False),
+        ("sport/#/player1", "sport/tennis/player1", False),
+        ("sport/tennis#", "sport/tennis", False),
+
+        # Mixed malformed wildcards
+        ("sport/+#", "sport/tennis", False),
+        ("sport/#+", "sport/tennis", False),
+
+        # Original pathological pattern
+        ("+/+" + "+" * 60, "a/b/c", False),
+    ],
+)
+def test_matches_fails_safely_on_all_invalid_filters(broker, subscription_filter, topic, expected):
+    # Defensive programming: even if a bad subscription leaks into the router,
+    # it must safely evaluate to False instead of throwing exceptions or false positives.
+    start_time = time.perf_counter()
+    assert broker._matches(topic, subscription_filter) is expected
+    duration = time.perf_counter() - start_time
+    assert duration < 0.01, f"Possible ReDoS detected! Execution took {duration:.4f}s"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(('topic', 'expected'), [
+    ("sport/#", True),
+    ("#", True),
+    ("sport/+", True),
+    ("sport/+/player", True),
+    ("sport/#/player", False),
+    ("sport/foo#", False),
+    ("sport/##", False),
+    ("sport/foo+bar", False),
+    ("sport/++", False),
+])
+async def test_invalid_wildcard_subscriptions(broker, topic, expected):
+
+    session = Session()
+    assert (await broker.add_subscription((topic, 0), session) != 0x80) is expected
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 """Plugin to determine authentication of clients with DB storage."""
 from dataclasses import dataclass
 
-import click
+import typer
 
 try:
     from enum import StrEnum
@@ -44,7 +44,7 @@ def db_connection_str(db_type: DBType, db_username: str, db_host: str, db_port: 
     db_info = _db_map[db_type]
     if db_type == DBType.SQLITE:
         return f"{db_info.connect_str}:///{db_filename}"
-    db_password = click.prompt("Enter the db password (press enter for none)", hide_input=True)
+    db_password = typer.prompt("Enter the db password (press enter for none)", hide_input=True)
     pwd = f":{db_password}" if db_password else ""
     return f"{db_info.connect_str}://{db_username}:{pwd}@{db_host}:{db_port or db_info.connect_port}"
 

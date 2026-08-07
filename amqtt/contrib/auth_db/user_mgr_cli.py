@@ -3,8 +3,6 @@ import logging
 from pathlib import Path
 from typing import Annotated
 
-import click
-import passlib
 import typer
 
 from amqtt.contrib.auth_db import DBType, db_connection_str
@@ -25,13 +23,18 @@ def main(
         db_host: Annotated[str, typer.Option("--host", "-h", help="database host")] = "localhost",
         db_filename: Annotated[str, typer.Option("--file", "-f", help="database file name (sqlite only)")] = "auth.db",
 ) -> None:
-    """Command line interface to list, create, remove and add clients.
+    """Command line interface to list, create, remove, and add clients.
 
     Passwords are not allowed to be passed via the command line for security reasons. You will be prompted for database
     password (if applicable) and the client id's password.
 
     If you need to create users programmatically, see `amqtt.contrib.auth_db.managers.UserManager` which provides
     the underlying functionality to this command line interface.
+
+    <details class="warning">
+        <summary>Implementation does not include any password validation.</summary>
+        <p>Use NIST or other password guidelines when calling functions that set or update passwords.</p>
+    </details>
     """
     if db_type == DBType.SQLITE and ctx.invoked_subcommand == "sync" and not Path(db_filename).exists():
         pass
@@ -92,15 +95,12 @@ def create_user_auth(
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
         mgr = UserManager(connect)
-        client_password = click.prompt("Enter the client's password", hide_input=True)
+        client_password = typer.prompt("Enter the client's password", hide_input=True)
         if not client_password.strip():
             logger.info("Error: client password cannot be empty.")
             raise typer.Exit(1)
-        try:
-            user = await mgr.create_user_auth(client_id, client_password.strip())
-        except passlib.exc.MissingBackendError as mbe:
-            logger.info(f"Please install backend: {mbe}")
-            raise typer.Exit(code=1) from mbe
+
+        user = await mgr.create_user_auth(client_id, client_password.strip())
 
         if not user:
             logger.info(f"Error: could not create user: {client_id}")
@@ -124,7 +124,7 @@ def remove_user_auth(ctx: typer.Context,
             logger.info(f"Error: client '{client_id}' does not exist.")
             raise typer.Exit(1)
 
-        if not click.confirm(f"Please confirm the removal of '{client_id}'?"):
+        if not typer.confirm(f"Please confirm the removal of '{client_id}'?"):
             raise typer.Exit(0)
 
         user = await mgr.delete_user_auth(client_id)
@@ -144,7 +144,7 @@ def change_password(
         ) -> None:
     """Update a user's password (prompted)."""
     async def run_password() -> None:
-        client_password = click.prompt("Enter the client's new password", hide_input=True)
+        client_password = typer.prompt("Enter the client's new password", hide_input=True)
         if not client_password.strip():
             logger.error("Error: client password cannot be empty.")
             raise typer.Exit(1)

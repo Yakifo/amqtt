@@ -135,7 +135,9 @@ async def websocket_handler(request: web.Request) -> web.StreamResponse:
 
 def main():
     # create an `aiohttp` server
-    lp = asyncio.get_event_loop()
+    lp = asyncio.new_event_loop()
+    asyncio.set_event_loop(lp)
+
     app = web.Application()
     app.add_routes(
         [

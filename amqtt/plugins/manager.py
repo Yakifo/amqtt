@@ -77,6 +77,12 @@ class PluginManager(Generic[C]):
         self._is_auth_filtering_enabled = False
 
         self._load_plugins(namespace)
+
+        if self.get_plugin("BrokerSysPlugin"):
+            warnings.warn("The underlying library for the `BrokerSysPlugin` will be removed in future versions. "
+                          "Please explicitly update your environment to depend on 'amqtt[dollarsys]'"
+                          " to ensure compatibility.", DeprecationWarning, stacklevel=4)
+
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
 
@@ -283,7 +289,7 @@ class PluginManager(Generic[C]):
 
     @property
     def plugins(self) -> list["BasePlugin[C]"]:
-        """Get the loaded plugins list.
+        """List of loaded plugins.
 
         :return:
         """
@@ -299,7 +305,7 @@ class PluginManager(Generic[C]):
             except asyncio.CancelledError:
                 self.logger.warning("fired event was cancelled")
             # display plugin fault; don't allow it to cause a broker failure
-            except Exception as exc:  # noqa: BLE001, pylint: disable=W0718
+            except Exception as exc:  # ruff: ignore[blind-except], pylint: disable=W0718
                 traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
 
         with contextlib.suppress(KeyError, ValueError):

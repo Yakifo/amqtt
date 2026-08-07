@@ -5,7 +5,11 @@ import unittest
 
 import pytest
 
+from amqtt.broker import Broker
+from amqtt.client import MQTTClient
+from amqtt.errors import ConnectError
 from amqtt.plugins.authentication import AnonymousAuthPlugin, FileAuthPlugin
+
 from amqtt.contexts import BaseContext
 from amqtt.plugins.base import BaseAuthPlugin
 from amqtt.session import Session
@@ -15,9 +19,9 @@ logging.basicConfig(level=logging.DEBUG, format=formatter)
 
 
 @pytest.mark.asyncio
-async def test_base_no_config(logdog):
+async def test_base_no_config(caplog):
     """Check BaseTopicPlugin returns false if no topic-check is present."""
-    with logdog() as pile:
+    with caplog.at_level(logging.DEBUG, logger="testlog"):
         context = BaseContext()
         context.logger = logging.getLogger("testlog")
         context.config = {}
@@ -27,63 +31,64 @@ async def test_base_no_config(logdog):
         authorised = await plugin.authenticate(session=s)
         assert authorised is False
 
-        # Warning messages are only generated if using deprecated plugin configuration on initial load
-        log_records = list(pile.drain(name="testlog"))
-        assert len(log_records) == 1
-        assert log_records[0].levelno == logging.WARNING
-        assert log_records[0].message == "'auth' section not found in context configuration"
+    # Warning messages are only generated if using deprecated plugin configuration on initial load
+    log_records = [record for record in caplog.records if record.name == "testlog"]
+    assert len(log_records) == 1
+    assert log_records[0].levelno == logging.WARNING
+    assert log_records[0].message == "'auth' section not found in context configuration"
 
 
 class TestAnonymousAuthPlugin(unittest.TestCase):
     def setUp(self) -> None:
         self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
 
-    def test_allow_anonymous_dict_config(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow_anonymous_dict_config(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": True}}
         s = Session()
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert auth_plugin.authenticate(session=s)
 
-    def test_allow_anonymous_dataclass_config(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow_anonymous_dataclass_config(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = AnonymousAuthPlugin.Config(allow_anonymous=True)
         s = Session()
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert await auth_plugin.authenticate(session=s)
 
-    def test_disallow_anonymous(self) -> None:
+    @pytest.mark.asyncio
+    async def test_disallow_anonymous(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": False}}
         s = Session()
         s.username = ""
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert not ret
+        assert not await auth_plugin.authenticate(session=s)
 
-    def test_allow_nonanonymous(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow_nonanonymous(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {"auth": {"allow-anonymous": False}}
         s = Session()
         s.username = "test"
         auth_plugin = AnonymousAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert await auth_plugin.authenticate(session=s)
 
 
 class TestFileAuthPlugin(unittest.TestCase):
     def setUp(self) -> None:
         self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
 
-    def test_allow(self) -> None:
+    @pytest.mark.asyncio
+    async def test_allow(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -95,10 +100,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.username = "user"
         s.password = "test"
         auth_plugin = FileAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert ret
+        assert await auth_plugin.authenticate(session=s)
 
-    def test_wrong_password(self) -> None:
+    @pytest.mark.asyncio
+    async def test_wrong_password(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -110,10 +115,10 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.username = "user"
         s.password = "wrong password"
         auth_plugin = FileAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert not ret
+        assert not await auth_plugin.authenticate(session=s)
 
-    def test_unknown_password(self) -> None:
+    @pytest.mark.asyncio
+    async def test_unknown_password(self) -> None:
         context = BaseContext()
         context.logger = logging.getLogger(__name__)
         context.config = {
@@ -125,5 +130,52 @@ class TestFileAuthPlugin(unittest.TestCase):
         s.username = "some user"
         s.password = "some password"
         auth_plugin = FileAuthPlugin(context)
-        ret = self.loop.run_until_complete(auth_plugin.authenticate(session=s))
-        assert not ret
+        assert not await auth_plugin.authenticate(session=s)
+
+
+    @pytest.mark.asyncio
+    async def test_legacy_deprecation(self):
+        context = BaseContext()
+        context.logger = logging.getLogger(__name__)
+        context.config = {
+            "auth": {
+                "password-file": Path(__file__).parent / "pass512",
+            },
+        }
+        with pytest.warns(DeprecationWarning):
+            auth_plugin = FileAuthPlugin(context)
+        s = Session()
+        s.username = "user"
+        s.password = "test"
+        auth_plugin = FileAuthPlugin(context)
+        assert await auth_plugin.authenticate(session=s)
+
+@pytest.mark.asyncio
+async def test_connack_failure_on_invalid_password():
+
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:1883", "max_connections": 10},
+        },
+        'plugins':[
+            {'amqtt.plugins.authentication.FileAuthPlugin': {
+                'password_file': Path(__file__).parent / "passwd"
+            }}
+        ]
+    }
+
+    broker = Broker(config=config)
+    await broker.start()
+    await asyncio.sleep(0.1)
+
+    client = MQTTClient(config={'auto_reconnect': False})
+
+    with pytest.raises(ConnectError) as exec:
+        ret = await client.connect("mqtt://user:badpass@127.0.0.1:1883/")
+
+    assert exec.value.return_code == 0x05
+
+    await client.disconnect()
+
+    await broker.shutdown()
+    await asyncio.sleep(0.1)
