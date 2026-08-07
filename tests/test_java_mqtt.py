@@ -16,6 +16,7 @@ from amqtt.mqtt.constants import QOS_1, QOS_2
 pytestmark = pytest.mark.extended
 
 JAVA_CLIENT_SOURCE = Path(__file__).parent / "support" / "MqttInteropClient.java"
+JAVA_CLIENT_TIMEOUT_SECONDS = 10
 PAHO_JAR_GLOBS = (
     ".m2/repository/org/eclipse/paho/org.eclipse.paho.client.mqttv3/*/org.eclipse.paho.client.mqttv3-*.jar",
     ".gradle/caches/modules-2/files-2.1/org.eclipse.paho/org.eclipse.paho.client.mqttv3/*/*/org.eclipse.paho.client.mqttv3-*.jar",
@@ -70,22 +71,31 @@ def java_mqtt_client(tmp_path_factory: pytest.TempPathFactory, paho_mqtt_java_ja
 
 
 async def run_java_mqtt_client(classpath: str, *args: str) -> subprocess.CompletedProcess[str]:
-    proc = await asyncio.create_subprocess_exec(
+    command = [
         "java",
         "-cp",
         classpath,
         "MqttInteropClient",
         *args,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
-    completed = subprocess.CompletedProcess(
-        args=["java", "-cp", classpath, "MqttInteropClient", *args],
-        returncode=proc.returncode,
-        stdout=stdout.decode(),
-        stderr=stderr.decode(),
-    )
+    ]
+    try:
+        completed = await asyncio.to_thread(
+            subprocess.run,
+            command,
+            capture_output=True,
+            text=True,
+            timeout=JAVA_CLIENT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        stderr = exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+        raise AssertionError(
+            f"Java MQTT client timed out after {JAVA_CLIENT_TIMEOUT_SECONDS}s\n"
+            f"stdout:\n{stdout}\n"
+            f"stderr:\n{stderr}",
+        ) from exc
+
     assert completed.returncode == 0, (
         f"Java MQTT client failed with {completed.returncode}\n"
         f"stdout:\n{completed.stdout}\n"
