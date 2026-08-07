@@ -1,23 +1,20 @@
 """INIT."""
-import re
 from typing import Any, Optional, cast
 from typing_extensions import Self
 
 
 class TopicMatcher:
+    """Singleton class originally provided to optimize topic matching."""
 
     _instance: Optional["TopicMatcher"] = None
-
-    def __init__(self) -> None:
-        if not hasattr(self, "_topic_filter_matchers"):
-            self._topic_filter_matchers: dict[str, re.Pattern[str]] = {}
 
     def __new__(cls, *args: list[Any], **kwargs: dict[str, Any]) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cast("Self", cls._instance)
 
-    def is_topic_allowed(self, topic: str, a_filter: str) -> bool:
+    @staticmethod
+    def is_topic_allowed(topic: str, a_filter: str) -> bool:
         if topic.startswith("$") and (a_filter.startswith(("+", "#"))):
             return False
 
@@ -25,14 +22,20 @@ class TopicMatcher:
             # if filter doesn't contain wildcard, return exact match
             return a_filter == topic
 
-        # else use regex (re.compile is an expensive operation, store the matcher for future use)
-        if a_filter not in self._topic_filter_matchers:
-            self._topic_filter_matchers[a_filter] = re.compile(re.escape(a_filter)
-                                                               .replace("\\#", "?.*")
-                                                               .replace("\\+", "[^/]*")
-                                                               .lstrip("?"))
-        match_pattern = self._topic_filter_matchers[a_filter]
-        return bool(match_pattern.fullmatch(topic))
+        sub_levels = a_filter.split("/")
+        pub_levels = topic.split("/")
+
+        for i, level in enumerate(sub_levels):
+            if ("+" in level and level != "+") or ("#" in level and level != "#"):
+                return False
+
+            if level == "#":
+                return i == len(sub_levels) - 1
+
+            if i >= len(pub_levels) or level not in ("+", pub_levels[i]):
+                return False
+
+        return len(sub_levels) == len(pub_levels)
 
     def are_topics_allowed(self, topic: str, many_filters: list[str]) -> bool:
 
