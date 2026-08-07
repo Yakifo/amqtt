@@ -17,7 +17,8 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13"
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 version = "0.11.4"
@@ -205,7 +206,7 @@ ignore = [
     "ARG002", # Unused method argument
     "PERF203",# try-except penalty within loops (3.10 only),
     "COM812",  # rule causes conflicts when used with the formatter,
-
+    "non-empty-init-module",
     # ignore certain preview rules
     "DOC",
     "PLW",
@@ -334,10 +335,17 @@ max-public-methods = 25       # too-many-public-methods
 max-returns = 7               # too-many-returns
 max-statements = 90           # too-many-statements
 
+[tool.pylint.imports]
+known-standard-library = ["typing_extensions"]
+
 # ---------------------------------- COVERAGE ----------------------------------
 [tool.coverage.run]
 branch = true
+parallel = true
 source = ["amqtt"]
+omit = [
+    "fuzz/*"
+]
 
 [tool.coverage.report]
 show_missing = true

@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import time
 from functools import partial
 from logging import getLogger
 from pathlib import Path
@@ -15,6 +16,7 @@ from amqtt.client import MQTTClient
 from amqtt.errors import PluginInitError, PluginImportError
 from amqtt.events import MQTTEvents, BrokerEvents
 from amqtt.mqtt3.constants import QOS_0, QOS_1
+from amqtt.plugins import TopicMatcher
 from amqtt.plugins.base import BasePlugin
 from amqtt.contexts import BaseContext
 from amqtt.contrib.persistence import RetainedMessage
@@ -238,3 +240,62 @@ async def test_retained_message_plugin_event():
     assert test_plugin.topic_retained_message_flag, "message to topic wasn't retained"
     assert test_plugin.session_retained_message_flag, "message to disconnected client wasn't retained"
     assert test_plugin.topic_clear_retained_message_flag, "message to retained topic wasn't cleared"
+
+
+@pytest.mark.parametrize(
+    ("subscription_filter", "topic", "expected"),
+    [
+        # Exact matching
+        ("sport/tennis", "sport/tennis", True),
+        ("sport/tennis", "sport/football", False),
+        ("sport/tennis", "sport/tennis/player1", False),
+        ("sport/tennis/player1", "sport/tennis", False),
+
+        # Valid single-level wildcard
+        ("sport/+", "sport/tennis", True),
+        ("sport/+/player1", "sport/tennis/player1", True),
+        ("sport/+", "sport/tennis/player1", False),
+        ("+", "sport", True),
+
+        # '+' may match an empty level
+        ("sport/+", "sport/", True),
+        ("sport/+/player1", "sport//player1", True),
+
+        # Valid multi-level wildcard
+        ("#", "sport/tennis/player1", True),
+        ("sport/#", "sport/tennis/player1", True),
+        ("sport/#", "sport", True),
+        ("sport/#", "sports", False),
+
+        # Embedded '+' is invalid
+        ("sport/tennis+", "sport/tennis", False),
+        ("sport/tennis+", "sport/tennis1", False),
+        ("foo+bar", "foo/bar", False),
+        ("foo+bar", "foobeefbeefbar", False),
+        ("sport/++++", "sport/tennis", False),
+
+        # Embedded or misplaced '#' is invalid
+        ("foo#", "foobar", False),
+        ("#foo", "anything", False),
+        ("foo#bar", "fooanythingbar", False),
+        ("sport/####", "sport/tennis/player1", False),
+        ("sport/#/player1", "sport/tennis/player1", False),
+        ("sport/tennis#", "sport/tennis", False),
+
+        # Mixed malformed wildcards
+        ("sport/+#", "sport/tennis", False),
+        ("sport/#+", "sport/tennis", False),
+
+        # Original pathological pattern
+        ("+/+" + "+" * 60, "a/b/c", False),
+    ],
+)
+def test_matches_fails_safely_on_all_invalid_filters(subscription_filter, topic, expected):
+    # Defensive programming: even if a bad subscription leaks into the router,
+    # it must safely evaluate to False instead of throwing exceptions or false positives.
+    tm = TopicMatcher()
+    start_time = time.perf_counter()
+    assert tm.is_topic_allowed(topic, subscription_filter) is expected
+    duration = time.perf_counter() - start_time
+    assert duration < 0.01, f"Possible ReDoS detected! Execution took {duration:.4f}s"
+

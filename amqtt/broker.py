@@ -130,7 +130,7 @@ class BrokerContext(BaseContext):
 
     @property
     def sessions(self) -> Generator[Session]:
-        """Yield all known broker sessions."""
+        """All known broker sessions."""
         for session in self._broker_instance.sessions.values():
             yield session[0]
 
@@ -140,12 +140,12 @@ class BrokerContext(BaseContext):
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
-        """Return retained messages keyed by topic name."""
+        """Retained messages keyed by topic name."""
         return self._broker_instance.retained_messages
 
     @property
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
-        """Return active subscriptions keyed by topic filter."""
+        """Active subscriptions keyed by topic filter."""
         return self._broker_instance.subscriptions
 
     async def add_subscription(self, client_id: str, topic: str | None, qos: int | None) -> None:
@@ -156,7 +156,7 @@ class BrokerContext(BaseContext):
         """
         if client_id not in self._broker_instance.sessions:
             broker_handler, session = self._broker_instance.create_offline_session(client_id)
-            self._broker_instance._sessions[client_id] = (session, broker_handler)  # noqa: SLF001
+            self._broker_instance._sessions[client_id] = (session, broker_handler)  # ruff: ignore[private-member-access]
 
         if topic is not None and qos is not None:
             session, _ = self._broker_instance.sessions[client_id]
@@ -500,7 +500,7 @@ class Broker:
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:
-            self.logger.error(  # noqa: TRY400
+            self.logger.error(  # ruff: ignore[error-instead-of-exception]
                 f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}",
             )
             raise AMQTTError(exc) from exc
