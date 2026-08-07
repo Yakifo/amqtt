@@ -1,8 +1,8 @@
 # Django Auth
 
-`amqtt.contrib.django` provides an optional Django app and broker plugins for authenticating MQTT clients with Django-owned users.
+`amqtt.contrib.django` provides an optional Django app and broker plugins for authenticating MQTT clients with Django-owned users. This is a way of enabling push notifications to web applications without the overhead of `Channels` & `Daphne` since MQTT protocol is supported over websockets. A django web application can send messages to one or more authenticated browser sessions and, when running with asgi, create a task for monitoring client-based published messages and handle accordingly.
 
-if django is not already specified in your project's dependency configurations, install with `'amqtt[django]'`
+If django is not already specified in your project's dependency configurations, install with `'amqtt[django]'`
 
 Add the app to `INSTALLED_APPS` and run migrations:
 
