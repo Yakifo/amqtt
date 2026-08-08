@@ -2,23 +2,43 @@
 
 ## 0.12.0
 
-
-### Deprecations & Migrations
-
-`passlib` is no longer a supported library and, as of python 3.13, the standard library `crypt`has been removed. For this release, deprecation warnings will be displayed if using hash schemes other than `argon2` or `bcrypt`.
-- `AuthDBPlugin`'s hash schemes config now only support `argon2` and `bcrypt`. For this release, specifying `pbkdf2_sha256` or `scrypt` will result in (1) a `DeprecationWarning` and (2) upon positive verification of the provided password, it will use the `pwdlib`'s `verify_and_update` function to update the row to an `argon2` hash.
-- The `FileAuthPlugin` hash scheme has migrated from `sha512_crypt` to `argon2`. For this release, the `sha512_crypt` passwords will be accepted alongside `argon2` hashes. A `DeprecationWarning` is displayed, but automatic migration is not supported; see [FileAuthPlugin](plugins/packaged_plugins.md#password-file-auth-plugin) for information on how to create a new password file.
-- `BrokerSysPlugin` only: `psutil` installation as part of required `amqtt` dependencies has been deprecated. use `amqtt[dollarsys]` instead.
-- 
-### Retired
-
+- new: added support for python 3.14
+- fix: authentication failure needs to send connack before disconnecting [PR #335](https://github.com/Yakifo/amqtt/pull/335)
+- new: enable multiple sqlalchemy db backends for persistence plugin [PR #333](https://github.com/Yakifo/amqtt/pull/333)
+- new: contrib plugin for authenticating against django's user models [PR #323](https://github.com/Yakifo/amqtt/pull/323)
+- new: example of plugin that allows clients to publish on `$` [PR #315](https://github.com/Yakifo/amqtt/pull/315)
+- disable TLS certificate verification via config `[PR #312](https://github.com/Yakifo/amqtt/pull/312)
+- fix: handle special characters in passwords [PR #307](https://github.com/Yakifo/amqtt/pull/307)
+- fix: explicit close/release allowing proper v3.10 cleanup  [PR #304](https://github.com/Yakifo/amqtt/pull/304)
+- fix: prevent failure when `sys_interval` is unset or `None` [PR #303](https://github.com/Yakifo/amqtt/pull/303)
+- reduce noisy reconnect logging  [PR #310](https://github.com/Yakifo/amqtt/pull/310)
+- fix: publish coroutines in client documentation  [PR #302](https://github.com/Yakifo/amqtt/pull/302)
+- fix: exception names in client documentation  [PR #305](https://github.com/Yakifo/amqtt/pull/305)
+- fix: `amqtt_sub` reference page name  [PR #299](https://github.com/Yakifo/amqtt/pull/299)
+- remove obselete pytests, add additional coverage  [PR #309](https://github.com/Yakifo/amqtt/pull/309)
+- documentation now includes version number alongside every deprecation warning
+- clarified `CONTRIBUTING.md`, expanded `SECURITY.md` with more robust security practices, added `ROADMAP.md`
 
 ### Security Fixes
 
+The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its CI, including usage of `bandit` and `semgrep` for static security checking. Current scorecard status for [openssf baseline level 1](https://www.bestpractices.dev/en/projects/13571/passing) and [openssf best practices](https://www.bestpractices.dev/en/projects/13571/passing),
 
-### Features & Enhancements
+### Test Coverage
 
-- added support for python 3.14
+- compatibility with [mqttjs](https://github.com/Yakifo/amqtt/pull/320), [java mqtt](https://github.com/Yakifo/amqtt/pull/321) and [go mqtt](https://github.com/Yakifo/amqtt/pull/322).
+- `fuzz` test cases
+- test cases for [PR #335](https://github.com/Yakifo/amqtt/pull/335), [PR #333](https://github.com/Yakifo/amqtt/pull/333), [PR #323](https://github.com/Yakifo/amqtt/pull/323), [PR #315](https://github.com/Yakifo/amqtt/pull/315), `[PR #312](https://github.com/Yakifo/amqtt/pull/312) and  [PR #307](https://github.com/Yakifo/amqtt/pull/307)
+
+### Deprecations & Migrations
+
+`passlib` is no longer a supported library and, as of python 3.13, the standard library `crypt`has been removed, reducing the project's ability to support `pbkdf2_sha256`, `sha512_crypt` and `script`. It has been replaced with `pwdlib` which only supports `argon2` or `bcrypt`. In this release, we provide legacy `HashProtocol` for each to enable backwards compatibility for verification of these deprecated hashing schemes.
+- `AuthDBPlugin`'s hash schemes config now only support `argon2` and `bcrypt`. For this release, specifying `pbkdf2_sha256` or `scrypt` will result in (1) a `DeprecationWarning` and (2) upon positive verification of the provided password, `pwdlib`'s `verify_and_update` function will be used to update the row to an `argon2` hash.
+- The `FileAuthPlugin` hash scheme has migrated from `sha512_crypt` to `argon2`. For this release, the `sha512_crypt` passwords will be accepted alongside `argon2` hashes. A `DeprecationWarning` is displayed, but automatic migration is not supported; see [FileAuthPlugin](plugins/packaged_plugins.md#password-file-auth-plugin) for information on how to create a new password file.
+- `BrokerSysPlugin`: `psutil` installation as part of required `amqtt` dependencies has been deprecated and will be removed in a future release. the package is now an optional dependency and can be installed with: `amqtt[dollarsys]`.
+
+### Retired
+
+none
 
 ---
 
@@ -38,7 +58,7 @@ Versions before 0.11.0 were not evaluated.
 
 A formal CVE identifier has been requested for this vulnerability and will be updated in these notes once assigned. Once assigned, the GHSA record will be updated automatically.
 
-### Testing Evidence
+### Test Coverage
 
 The 0.11.4 topic matching security fix is covered by automated regression tests in [`tests/test_broker.py`](https://github.com/Yakifo/amqtt/blob/v0.11.4/tests/test_broker.py), including:
 
@@ -90,6 +110,8 @@ Details:
 * Sample: broker and client communicating with mqtt over unix socket https://github.com/Yakifo/amqtt/pull/291
 * Plugin: jwt authentication and authorization https://github.com/Yakifo/amqtt/pull/289
 
+---
+
 ## 0.11.2
 
 -  config-file based plugin loading   [PR #240](https://github.com/Yakifo/amqtt/pull/240)
@@ -116,12 +138,16 @@ Details:
 - [Issue 187](https://github.com/Yakifo/amqtt/issues/187) anonymous login allowed even if plugin isn't enabled
 - [Issue 123](https://github.com/Yakifo/amqtt/issues/123) Messages sent to mqtt can be consumed in time, but they occupy more and more memory
 
+---
+
 ## 0.11.1
 
 - [PR #226](https://github.com/Yakifo/amqtt/pull/226) Consolidate super classes for plugins
 - [PR #227](https://github.com/Yakifo/amqtt/pull/227) Update sample files
 - [PR #229](https://github.com/Yakifo/amqtt/pull/229) & [PR #228](https://github.com/Yakifo/amqtt/pull/228) Broken pypi and test.amqtt.io links
 - [PR #232](https://github.com/Yakifo/amqtt/pull/234) $SYS additions for cpu & mem.
+
+---
 
 ## 0.11.0
 
@@ -155,10 +181,13 @@ Details:
 - [Issue #48](https://github.com/Yakifo/amqtt/issues/48) Setup unit tests running against different versions of dependencies
 - [Issue #35](https://github.com/Yakifo/amqtt/issues/35) plugin interface and optimization
 
+---
 
 ## 0.10.2
 
 - create the necessary .readthedocs.yaml to generate sphinx docs from the 0.10.x series
+
+---
 
 ## 0.10.1
 

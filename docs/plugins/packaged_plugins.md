@@ -15,7 +15,7 @@ and configured for the broker:
 ```
 
 
-??? warning "Loading plugins from EntryPoints in `pyproject.toml` has been deprecated"
+??? warning "Loading plugins from EntryPoints in `pyproject.toml` has been deprecated (v0.11.2)."
 
     Previously, all plugins were loaded from EntryPoints:
 
@@ -55,7 +55,7 @@ Authentication plugin allowing anonymous access.
     even if `allow_anonymous` is set to `false`, the plugin will still allow access if a username is provided by the client
 
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
 
     ```yaml
     auth:
@@ -78,7 +78,7 @@ Authentication plugin based on a file-stored user database.
         class_style: "simple"
 
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
     ```yaml
     
     auth:
@@ -123,7 +123,7 @@ plugins:
   amqtt.plugins.topic_checking.TopicTabooPlugin:
 ```
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
 
     ```yaml
     topic-check:
@@ -153,7 +153,7 @@ If set to `None`, no restrictions are placed on client subscriptions (legacy beh
 
 - `subscribe-acl` *(mapping)*: determines subscription access.
 
-- `acl` *(mapping)*: Deprecated and replaced by `subscribe-acl`.
+- `acl` *(mapping)*: Deprecated and replaced by `subscribe-acl` (v0.11.2).
 
 - `publish-acl` *(mapping)*: determines publish access.
 
@@ -175,7 +175,7 @@ plugins:
       - .
 ```
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
     ```yaml
     topic-check:
       enabled: true

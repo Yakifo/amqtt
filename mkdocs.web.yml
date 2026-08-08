@@ -1,4 +1,4 @@
-site_name: ""
+site_name: "amqtt.io"
 site_description: "MQTT broker and client natively implemented with Python's asyncio"
 site_url: http://github.com
 repo_url: https://github.com/Yakifo/amqtt
@@ -6,7 +6,7 @@ repo_name: Yakifo/amqtt
 site_dir: "dist/web"
 docs_dir: docs_web
 watch: [mkdocs.web.yml, docs_web]
-copyright: "amqtt.io © 2025"
+copyright: "amqtt.io © 2026"
 edit_uri: edit/main/docs/
 
 validation:

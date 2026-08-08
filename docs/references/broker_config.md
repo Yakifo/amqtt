@@ -27,7 +27,7 @@ plugins:
       extra:
         class_style: "simple"
 
-??? warning "Deprecated: `auth` configuration settings"
+??? warning "Deprecated: `auth` configuration settings (v0.11.2)."
 
     **`auth`**
     
@@ -54,13 +54,13 @@ plugins:
     - `password-file` *(string)*. Path to sha-512 encoded password file, used by `amqtt.plugins.authentication.FileAuthPlugin`.
 
 
-??? warning "Deprecated: `sys_interval` "
+??? warning "Deprecated: `sys_interval` (v0.11.2)."
     **`sys_interval`** *(int)*
     
     System status report interval in seconds, used by the `amqtt.plugins.sys.broker.BrokerSysPlugin`.
 
 
-??? warning "Deprecated: `topic-check` configuration settings"
+??? warning "Deprecated: `topic-check` configuration settings (v0.11.2)."
 
 
     **`topic-check`**
