@@ -3,7 +3,7 @@
 [![CodeQL](https://github.com/Yakifo/amqtt/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/Yakifo/amqtt/actions/workflows/codeql-analysis.yml)
 [![Read the Docs](https://img.shields.io/readthedocs/amqtt/v0.11.0?style=plastic&logo=readthedocs)](https://amqtt.readthedocs.io/)
 ![Python Version](https://img.shields.io/pypi/pyversions/amqtt?style=plastic&logo=python&logoColor=yellow)
-![Python Wheel](https://img.shields.io/pypi/wheel/amqtt?style=plastic)
+![Python Wheel](https://img.shields.io/pypi/wheel/amqtt?style=plastic&logo=python&logoColor=yellow)
 [![PyPI](https://img.shields.io/pypi/v/amqtt?style=plastic&logo=python&logoColor=yellow)](https://pypi.org/project/amqtt/)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/amqtt?label=pypi+downloads&logo=python&logoColor=yellow)](https://pypistats.org/packages/amqtt)
 [![OpenSSF Baseline](https://www.bestpractices.dev/projects/13571/baseline)](https://www.bestpractices.dev/projects/13571)
