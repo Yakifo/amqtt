@@ -41,8 +41,10 @@ jobs:
             tag_name="$RELEASE_TAG"
           fi
 
-          if [[ ! "$tag_name" =~ ^v[0-9]+(\.[0-9]+){1,2}([._-]?(a|b|rc|alpha|beta|pre|preview)[._-]?[0-9]+)?([._-]?post[._-]?[0-9]+)?([._-]?dev[._-]?[0-9]+)?$ ]]; then
-            echo "::error::Release tags must match a valid PyPI version such as vMAJOR.MINOR[.PATCH][-rc.N]"
+          # Keep in sync with publish-pypi.yml and ci.yml. This runs on tag push,
+          # so a malformed tag is caught before a draft release is ever created.
+          if [[ ! "$tag_name" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "::error::Release tags must be vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCHrcN (e.g. v0.12.0, v0.12.0rc1)"
             exit 1
           fi
 

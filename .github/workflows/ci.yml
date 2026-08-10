@@ -44,7 +44,7 @@ jobs:
             if [[ ! "$value" =~ ^[A-Za-z0-9._/-]{1,255}$ ]] ||
               [[ "$value" == -* || "$value" == */ || "$value" == *. ||
                 "$value" == *..* || "$value" == *//* ||
-                "$value" == *@{* || "$value" == *.lock ]]; then
+                "$value" == *"@{"* || "$value" == *.lock ]]; then
               echo "::error::$name contains unsupported characters for CI metadata"
               exit 1
             fi
@@ -54,9 +54,11 @@ jobs:
           check_ref HEAD_REF "$HEAD_REF"
           check_ref REF_NAME "$REF_NAME"
 
+          # Keep in sync with publish-pypi.yml and release-drafter.yml, so that a
+          # malformed tag fails here rather than after the release is published.
           if [[ "$REF_TYPE" == "tag" &&
-            ! "$REF_NAME" =~ ^v[0-9]+(\.[0-9]+){1,2}([.-][A-Za-z0-9]+)*$ ]]; then
-            echo "::error::Release tags must match vMAJOR.MINOR[.PATCH][-PRERELEASE]"
+            ! "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "::error::Release tags must be vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCHrcN (e.g. v0.12.0, v0.12.0rc1)"
             exit 1
           fi
 
@@ -81,6 +83,35 @@ jobs:
           cache-local-path: ${{ env.UV_CACHE_DIR }}
           save-cache: ${{ github.event_name != 'pull_request' }}
           python-version: "3.13"
+
+      - name: Check version consistency
+        run: |
+          set -euo pipefail
+
+          uv run --no-project python <<'PY'
+          import pathlib
+          import re
+          import tomllib
+
+
+          pyproject_version = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]
+
+          init_path = pathlib.Path("amqtt/__init__.py")
+          match = re.search(r'^__version__ = "([^"]+)"', init_path.read_text(), re.MULTILINE)
+
+          if match is None:
+              raise SystemExit(f"::error file={init_path}::Could not find a __version__ assignment")
+
+          init_version = match.group(1)
+
+          if pyproject_version != init_version:
+              raise SystemExit(
+                  f"::error file={init_path}::Version mismatch: pyproject.toml has "
+                  f"{pyproject_version!r} but {init_path} has {init_version!r}"
+              )
+
+          print(f"Version {pyproject_version} is consistent")
+          PY
 
       - name: install openldap dependencies
         run: sudo apt-get install -y libldap2-dev libsasl2-dev

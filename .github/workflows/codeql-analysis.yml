@@ -51,7 +51,7 @@ jobs:
             if [[ ! "$value" =~ ^[A-Za-z0-9._/-]{1,255}$ ]] ||
               [[ "$value" == -* || "$value" == */ || "$value" == *. ||
                 "$value" == *..* || "$value" == *//* ||
-                "$value" == *@{* || "$value" == *.lock ]]; then
+                "$value" == *"@{"* || "$value" == *.lock ]]; then
               echo "::error::$name contains unsupported characters for CI metadata"
               exit 1
             fi
