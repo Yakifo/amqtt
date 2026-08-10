@@ -79,7 +79,8 @@ pre-commit run --all-files
 
 ## Testing
 
-When adding a new feature, please add corollary tests. The testing coverage should not decrease.
+When adding a new feature, please add corollary tests. Pull requests must maintain or increase the reported test coverage percentage; changes that reduce coverage need additional tests before they can be merged.
+Run `uv run --frozen pytest` locally to see the coverage summary before opening a pull request.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
 
 ### Local fuzzing

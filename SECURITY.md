@@ -5,7 +5,8 @@
 Security fixes are provided for the latest minor release line listed below.
 
 | Version | Supported |
-| ------- | --------- |
+| ------- |-----------|
+| 0.12.x  | Yes       |
 | 0.11.x  | Yes       |
 | < 0.11  | No        |
 

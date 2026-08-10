@@ -21,7 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 
-version = "0.11.4"
+version = "0.12.0rc1"
 requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }
@@ -63,6 +63,7 @@ dev = [
   "ruff>=0.11.3", # https://pypi.org/project/ruff
   "semgrep>=1.100.0",
   "setuptools>=78.1.0",
+  "sigstore>=4.5.0",
   "sqlalchemy[mypy]>=2.0.41",
   "types-mock>=5.2.0.20250306", # https://pypi.org/project/types-mock
   "types-PyYAML>=6.0.12.20250402", # https://pypi.org/project/types-PyYAML
