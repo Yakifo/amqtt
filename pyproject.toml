@@ -21,7 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 
-version = "0.12.0"
+version = "0.12.0rc1"
 requires-python = ">=3.10.0"
 readme = "README.md"
 license = { text = "MIT" }

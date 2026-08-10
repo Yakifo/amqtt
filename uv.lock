@@ -179,7 +179,7 @@ wheels = [
 
 [[package]]
 name = "amqtt"
-version = "0.12.0"
+version = "0.12.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "dacite" },
