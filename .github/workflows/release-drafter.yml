@@ -73,6 +73,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # Read the changelog from the tag being released, not from the default
+          # branch. On a tag push this is what checkout would pick anyway; stating
+          # it explicitly is what makes `workflow_dispatch` correct, so a release
+          # can be drafted from a tag whose content never landed on main.
+          ref: ${{ steps.release.outputs.tag }}
           persist-credentials: false
 
       - name: Read changelog
