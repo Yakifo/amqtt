@@ -999,7 +999,7 @@ class Broker:
                         task.result()
                     except CancelledError:
                         self.logger.info(f"Task has been cancelled: {task}")
-                    except Exception:
+                    except Exception:  # pylint: disable=W0718
                         self.logger.exception(f"Task failed during broadcast shutdown: {task}")
 
                 if pending:
@@ -1088,7 +1088,7 @@ class Broker:
                     task.result()
                 except CancelledError:
                     self.logger.info(f"Broadcast task has been cancelled: {task}")
-                except Exception:
+                except Exception:  # pylint: disable=W0718
                     self.logger.exception(f"Broadcast task failed during shutdown: {task}")
             for task in pending:
                 task.cancel()
