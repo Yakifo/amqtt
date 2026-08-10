@@ -81,10 +81,25 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Take only the first "## " section -- the changelog is newest-first, so
+          # that is the release being drafted. Matching on position rather than on
+          # the tag name keeps this working whether the heading reads "0.12.0" or
+          # "0.12.0rc1". The heading itself is dropped, since the GitHub release
+          # already carries the version as its title.
+          notes="$(awk '
+            /^## / { if (found) exit; found = 1; next }
+            found
+          ' docs/changelog.md)"
+
+          if [[ -z "${notes//[[:space:]]/}" ]]; then
+            echo "::error file=docs/changelog.md::No release notes found under the first '## ' heading"
+            exit 1
+          fi
+
           delimiter="CHANGELOG_${RANDOM}_${RANDOM}"
           {
             echo "body<<$delimiter"
-            cat docs/changelog.md
+            printf '%s\n' "$notes"
             echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
