@@ -28,6 +28,8 @@ The `amqtt` project now includes OpenSSF's scorecard evaluation as part of its C
 - compatibility with [mqttjs](https://github.com/Yakifo/amqtt/pull/320), [java mqtt](https://github.com/Yakifo/amqtt/pull/321) and [go mqtt](https://github.com/Yakifo/amqtt/pull/322).
 - `fuzz` test cases
 - test cases for [PR #335](https://github.com/Yakifo/amqtt/pull/335), [PR #333](https://github.com/Yakifo/amqtt/pull/333), [PR #323](https://github.com/Yakifo/amqtt/pull/323), [PR #315](https://github.com/Yakifo/amqtt/pull/315), `[PR #312](https://github.com/Yakifo/amqtt/pull/312) and  [PR #307](https://github.com/Yakifo/amqtt/pull/307)
+- added test coverage for `handler.py`, `contexts.py` and `broker_handler.py`.
+- increased target coverage to 85%. PRs need to be within 0.5% of existing coverage. 
 
 ### Deprecations & Migrations
 
