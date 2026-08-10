@@ -24,6 +24,10 @@ class UserManager:
         self._engine = create_async_engine(connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
 
+    async def close(self) -> None:
+        """Dispose the database engine."""
+        await self._engine.dispose()
+
     async def db_sync(self) -> None:
         """Sync the database schema."""
         async with self._engine.begin() as conn:
@@ -120,6 +124,10 @@ class TopicManager:
     def __init__(self, connection: str) -> None:
         self._engine = create_async_engine(connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
+
+    async def close(self) -> None:
+        """Dispose the database engine."""
+        await self._engine.dispose()
 
     async def db_sync(self) -> None:
         """Sync the database schema."""

@@ -44,6 +44,11 @@ class UserAuthDBPlugin(BaseAuthPlugin):
 
         return await self._user_manager.verify_user_auth_password(session.username, session.password)
 
+    async def close(self) -> None:
+        """Dispose database resources."""
+        await self._user_manager.close()
+        await self._engine.dispose()
+
     @dataclass
     class Config:
         """Configuration for DB authentication."""
@@ -89,6 +94,11 @@ class TopicAuthDBPlugin(BaseTopicPlugin):
             return False
 
         return topic in topic_list
+
+    async def close(self) -> None:
+        """Dispose database resources."""
+        await self._topic_manager.close()
+        await self._engine.dispose()
 
     @dataclass
     class Config:

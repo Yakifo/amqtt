@@ -259,11 +259,11 @@ class Broker:
             msg = f"Broker instance can't be started: {exc}"
             raise BrokerError(msg) from exc
 
-        await self.plugins_manager.fire_event(BrokerEvents.PRE_START)
+        await self.plugins_manager.fire_event(BrokerEvents.PRE_START, wait=True)
         try:
             await self._start_listeners()
             self.transitions.starting_success()
-            await self.plugins_manager.fire_event(BrokerEvents.POST_START)
+            await self.plugins_manager.fire_event(BrokerEvents.POST_START, wait=True)
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
             self._session_monitor_task = asyncio.create_task(self._session_monitor())
             self.logger.debug("Broker started")
@@ -385,7 +385,7 @@ class Broker:
         """Stop broker instance."""
         self.logger.info("Shutting down broker...")
         # Fire broker_shutdown event to plugins
-        await self.plugins_manager.fire_event(BrokerEvents.PRE_SHUTDOWN)
+        await self.plugins_manager.fire_event(BrokerEvents.PRE_SHUTDOWN, wait=True)
 
         # Cleanup all sessions
         for client_id in list(self._sessions.keys()):
@@ -411,7 +411,9 @@ class Broker:
                 self._broadcast_queue.get_nowait()
 
         self.logger.info("Broker closed")
-        await self.plugins_manager.fire_event(BrokerEvents.POST_SHUTDOWN)
+        await self.plugins_manager.wait_fired_events()
+        await self.plugins_manager.fire_event(BrokerEvents.POST_SHUTDOWN, wait=True)
+        await self.plugins_manager.close()
         self.transitions.stopping_success()
 
     async def _cleanup_session(self, client_id: str) -> None:

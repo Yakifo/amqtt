@@ -44,14 +44,20 @@ def db_connection(db_file):
 async def user_manager(password_hasher, db_connection):
     um = UserManager(db_connection)
     await um.db_sync()
-    yield um
+    try:
+        yield um
+    finally:
+        await um.close()
 
 
 @pytest.fixture
 async def topic_manager(password_hasher, db_connection):
     tm = TopicManager(db_connection)
     await tm.db_sync()
-    yield tm
+    try:
+        yield tm
+    finally:
+        await tm.close()
 
 
 # ######################################

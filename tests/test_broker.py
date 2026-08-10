@@ -103,8 +103,8 @@ def test_split_bindaddr_port(input_str, output_addr, output_port):
 async def test_start_stop(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(BrokerEvents.PRE_START),
-            call().fire_event(BrokerEvents.POST_START),
+            call().fire_event(BrokerEvents.PRE_START, wait=True),
+            call().fire_event(BrokerEvents.POST_START, wait=True),
         ],
         any_order=True,
     )
@@ -112,8 +112,8 @@ async def test_start_stop(broker, mock_plugin_manager):
     await broker.shutdown()
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(BrokerEvents.PRE_SHUTDOWN),
-            call().fire_event(BrokerEvents.POST_SHUTDOWN),
+            call().fire_event(BrokerEvents.PRE_SHUTDOWN, wait=True),
+            call().fire_event(BrokerEvents.POST_SHUTDOWN, wait=True),
         ],
         any_order=True,
     )
