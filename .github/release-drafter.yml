@@ -1,4 +1,8 @@
 ---
 name-template: "v$RESOLVED_VERSION"
 tag-template: "v$RESOLVED_VERSION"
-template: ""
+# The release body comes entirely from the `header` input, which the workflow
+# fills with the most recent section of docs/changelog.md. `template` cannot be
+# empty -- the action's schema declares it `Joi.string().required()` with no
+# `.allow('')` -- so this is a deliberate no-op placeholder.
+template: " "
