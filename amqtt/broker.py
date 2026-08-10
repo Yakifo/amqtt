@@ -37,6 +37,7 @@ _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
+_BROADCAST_SHUTDOWN_TIMEOUT = 5
 
 
 class RetainedApplicationMessage(ApplicationMessage):
@@ -647,10 +648,10 @@ class Broker:
                 self.logger.debug("Client loop cancelled")
                 break
 
-        disconnect_waiter.cancel()
-        subscribe_waiter.cancel()
-        unsubscribe_waiter.cancel()
-        wait_deliver.cancel()
+        pending_waiters = [disconnect_waiter, subscribe_waiter, unsubscribe_waiter, wait_deliver]
+        for waiter in pending_waiters:
+            waiter.cancel()
+        await asyncio.gather(*pending_waiters, return_exceptions=True)
 
     async def _handle_disconnect(
         self,
@@ -980,15 +981,29 @@ class Broker:
                 # Shutdown has been triggered by the broker, so stop the loop execution
                 if self._broadcast_shutdown_waiter in completed:
                     run_broadcast_task.cancel()
+                    await asyncio.gather(run_broadcast_task, return_exceptions=True)
                     break
 
         except BaseException:
             self.logger.exception("Broadcast loop stopped by exception")
             raise
         finally:
-            # Wait until current broadcasting tasks end
             if running_tasks:
-                await asyncio.gather(*running_tasks)
+                for task in running_tasks:
+                    if not task.done():
+                        task.cancel()
+
+                done, pending = await asyncio.wait(running_tasks, timeout=_BROADCAST_SHUTDOWN_TIMEOUT)
+                for task in done:
+                    try:
+                        task.result()
+                    except CancelledError:
+                        self.logger.info(f"Task has been cancelled: {task}")
+                    except Exception:
+                        self.logger.exception(f"Task failed during broadcast shutdown: {task}")
+
+                if pending:
+                    self.logger.warning(f"{len(pending)} broadcast task(s) still pending after shutdown")
 
     async def _run_broadcast(self, running_tasks: deque[asyncio.Task[OutgoingApplicationMessage]]) -> None:
         """Process a single broadcast message."""
@@ -1064,10 +1079,21 @@ class Broker:
     async def _shutdown_broadcast_loop(self) -> None:
         if self._broadcast_task and not self._broadcast_shutdown_waiter.done():
             self._broadcast_shutdown_waiter.set_result(True)
-            try:
-                await asyncio.wait_for(self._broadcast_task, timeout=30)
-            except TimeoutError as e:
-                self.logger.warning(f"Failed to cleanly shutdown broadcast loop: {e}")
+            for task in self._tasks_queue:
+                if not task.done():
+                    task.cancel()
+            done, pending = await asyncio.wait([self._broadcast_task], timeout=_BROADCAST_SHUTDOWN_TIMEOUT)
+            for task in done:
+                try:
+                    task.result()
+                except CancelledError:
+                    self.logger.info(f"Broadcast task has been cancelled: {task}")
+                except Exception:
+                    self.logger.exception(f"Broadcast task failed during shutdown: {task}")
+            for task in pending:
+                task.cancel()
+            if pending:
+                self.logger.warning(f"Failed to cleanly shutdown broadcast loop within {_BROADCAST_SHUTDOWN_TIMEOUT} seconds")
 
         if not self._broadcast_queue.empty():
             self.logger.warning(f"{self._broadcast_queue.qsize()} messages not broadcasted")
