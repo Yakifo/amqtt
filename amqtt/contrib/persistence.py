@@ -85,8 +85,8 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         if configured_file:
             connection = f"sqlite+aiosqlite:///{configured_file}"
             warnings.warn(
-                "persistence plugin: `file` option is now deprecated, use full `connection` string instead."
-                " existing configurations will continue to work.",
+                "persistence plugin: `file` option is now deprecated, use full `connection` string instead. "
+                " Support for `file` will be removed in future versions.",
                 DeprecationWarning,
                 stacklevel=0
             )
@@ -294,7 +294,7 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         """
         file: str | Path | None = None
         """path & filename to store the sqlite session db
-        Deprecated in 0.11.4, use `connection` instead.
+        Deprecated: use `connection` instead.
         Existing configurations will continue to work.
         """
 

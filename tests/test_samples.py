@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import logging
 import multiprocessing
@@ -23,7 +24,53 @@ from samples.broker_dollar_topics import config as broker_dollar_topics_config
 
 logger = logging.getLogger(__name__)
 
+SAMPLES_DIR = Path(__file__).parent.parent / "samples"
+IGNORED_SAMPLE_FILES = frozenset()
+
+
+def _is_sample_marker(decorator: ast.expr) -> bool:
+    return (
+        isinstance(decorator, ast.Call)
+        and isinstance(decorator.func, ast.Attribute)
+        and decorator.func.attr == "sample"
+        and isinstance(decorator.func.value, ast.Attribute)
+        and decorator.func.value.attr == "mark"
+        and isinstance(decorator.func.value.value, ast.Name)
+        and decorator.func.value.value.id == "pytest"
+    )
+
+
+def _sample_marker_files() -> set[str]:
+    tree = ast.parse(Path(__file__).read_text())
+    sample_files = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for decorator in node.decorator_list:
+                if _is_sample_marker(decorator):
+                    sample_files.update(
+                        arg.value
+                        for arg in decorator.args
+                        if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+                    )
+
+    return sample_files
+
+
+def test_all_sample_files_are_accounted_for():
+    sample_files = {path.name for path in SAMPLES_DIR.glob("*.py")}
+    marked_sample_files = _sample_marker_files()
+    missing_tests = sorted(sample_files - marked_sample_files - IGNORED_SAMPLE_FILES)
+    stale_markers = sorted(marked_sample_files - sample_files)
+    stale_ignored = sorted(IGNORED_SAMPLE_FILES - sample_files)
+
+    assert not missing_tests, f"Add @pytest.mark.sample(...) coverage for new sample files: {missing_tests}"
+    assert not stale_markers, f"Remove stale sample markers: {stale_markers}"
+    assert not stale_ignored, f"Remove stale ignored sample entries: {stale_ignored}"
+
+
 @pytest.mark.asyncio
+@pytest.mark.sample("broker_acl.py")
 async def test_broker_acl():
     broker_acl_script = Path(__file__).parent.parent / "samples/broker_acl.py"
     process = subprocess.Popen([sys.executable, broker_acl_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -38,6 +85,22 @@ async def test_broker_acl():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("broker_custom_plugin.py")
+async def test_broker_custom_plugin():
+    broker_custom_plugin_script = SAMPLES_DIR / "broker_custom_plugin.py"
+    process = subprocess.Popen([sys.executable, broker_custom_plugin_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    await asyncio.sleep(2)
+
+    process.send_signal(signal.SIGINT)
+    stdout, stderr = process.communicate()
+    logger.debug(stderr.decode("utf-8"))
+    assert "Broker closed" in stderr.decode("utf-8")
+    assert "ERROR" not in stderr.decode("utf-8")
+    assert "Exception" not in stderr.decode("utf-8")
+
+
+@pytest.mark.asyncio
+@pytest.mark.sample("broker_simple.py")
 async def test_broker_simple():
     broker_simple_script = Path(__file__).parent.parent / "samples/broker_simple.py"
     process = subprocess.Popen([sys.executable, broker_simple_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -54,6 +117,7 @@ async def test_broker_simple():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("broker_start.py")
 async def test_broker_start():
     broker_start_script = Path(__file__).parent.parent / "samples/broker_start.py"
     process = subprocess.Popen([sys.executable, broker_start_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -69,6 +133,7 @@ async def test_broker_start():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("broker_taboo.py")
 async def test_broker_taboo():
     broker_taboo_script = Path(__file__).parent.parent / "samples/broker_taboo.py"
     process = subprocess.Popen([sys.executable, broker_taboo_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -84,6 +149,7 @@ async def test_broker_taboo():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_keepalive.py")
 async def test_client_keepalive():
 
     broker = Broker()
@@ -102,6 +168,7 @@ async def test_client_keepalive():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_publish.py")
 async def test_client_publish():
     broker = Broker()
     await broker.start()
@@ -138,6 +205,7 @@ def broker_ssl_config(rsa_keys):
     }
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_publish_ssl.py")
 async def test_client_publish_ssl(broker_ssl_config, rsa_keys):
     certfile, _ = rsa_keys
     # generate a self-signed certificate for this test
@@ -159,6 +227,7 @@ async def test_client_publish_ssl(broker_ssl_config, rsa_keys):
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_publish_acl.py")
 async def test_client_publish_acl():
 
     broker = Broker()
@@ -191,6 +260,7 @@ broker_ws_config = {
 }
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_publish_ws.py")
 async def test_client_publish_ws():
     # start a secure broker
     broker = Broker(config=broker_ws_config)
@@ -225,6 +295,7 @@ broker_std_config = {
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_subscribe.py")
 async def test_client_subscribe():
 
     # start a standard broker
@@ -253,6 +324,7 @@ async def test_client_subscribe():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_subscribe_acl.py")
 async def test_client_subscribe_plugin_acl():
     broker = Broker(config=broker_acl_config)
     await broker.start()
@@ -272,6 +344,7 @@ async def test_client_subscribe_plugin_acl():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("client_subscribe_acl.py")
 async def test_client_subscribe_plugin_taboo():
     broker = Broker(config=broker_taboo_config)
     await broker.start()
@@ -319,6 +392,7 @@ async def _wait_for_port(host: str, port: int, timeout: float = 15.0) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("http_server_integration.py")
 async def test_external_http_server(external_http_server):
 
     await _wait_for_port("127.0.0.1", 8080)
@@ -332,6 +406,7 @@ async def test_external_http_server(external_http_server):
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("unix_sockets.py")
 async def test_unix_connection():
 
     unix_socket_script = Path(__file__).parent.parent / "samples/unix_sockets.py"
@@ -360,6 +435,7 @@ async def test_unix_connection():
 
 
 @pytest.mark.asyncio
+@pytest.mark.sample("broker_dollar_topics.py")
 async def test_allowable_dollar_topics():
 
     broker = Broker(config=broker_dollar_topics_config)
