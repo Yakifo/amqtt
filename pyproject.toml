@@ -252,6 +252,7 @@ timeout = 15
 asyncio_default_fixture_loop_scope = "function"
 markers = [
   "extended: interoperability tests that require non-Python runtimes or external client dependencies",
+  "sample(name): sample script covered by a sample smoke test",
 ]
 #addopts = ["--tb=short", "--capture=tee-sys"]
 #log_cli = true
