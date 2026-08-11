@@ -8,7 +8,7 @@ import typer
 
 from amqtt.contexts import Action
 from amqtt.contrib.auth_db import DBType, db_connection_str
-from amqtt.contrib.auth_db.managers import TopicManager, UserManager
+from amqtt.contrib.auth_db.managers import TopicManager
 from amqtt.errors import MQTTError
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -53,7 +53,7 @@ def db_sync(ctx: typer.Context) -> None:
     """
     async def run_sync() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"], ctx.obj["filename"])
-        async with UserManager(connect) as mgr:
+        async with TopicManager(connect) as mgr:
             try:
                 await mgr.db_sync()
             except MQTTError as me:

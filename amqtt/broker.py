@@ -401,6 +401,7 @@ class Broker:
         await self._shutdown_broadcast_loop()
         if self._session_monitor_task:
             self._session_monitor_task.cancel()
+            await asyncio.gather(self._session_monitor_task, return_exceptions=True)
 
         for server in self._servers.values():
             await server.close_instance()
