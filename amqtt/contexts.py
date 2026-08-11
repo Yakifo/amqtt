@@ -255,7 +255,7 @@ class ConnectionConfig(Dictable):
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the client's private key associated with the certfile."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if (self.certfile is None) ^ (self.keyfile is None):
             msg = "If specifying the 'certfile' or 'keyfile', both are required."
@@ -278,7 +278,7 @@ class TopicConfig(Dictable):
     retain: bool = False
     """Determines if the message should be retained by the topic it was published."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.qos is not None and (self.qos < QOS_0 or self.qos > QOS_2):
             msg = "Topic config: default QoS must be 0, 1 or 2."
@@ -298,7 +298,7 @@ class WillConfig(Dictable):
     retain: bool | None = False
     """Determines if the message should be retained by the topic it was published."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.qos is not None and (self.qos < QOS_0 or self.qos > QOS_2):
             msg = "Will config: default QoS must be 0, 1 or 2."

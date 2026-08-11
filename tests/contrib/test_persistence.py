@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import suppress
 import logging
 from pathlib import Path
 import sqlite3
@@ -22,14 +23,47 @@ logging.basicConfig(level=logging.DEBUG, format=formatter)
 logger = logging.getLogger(__name__)
 
 @pytest.fixture
-async def db_file():
-    db_file = Path(__file__).parent / "amqtt.db"
-    if db_file.exists():
-        raise NotImplementedError("existing db file found, should it be cleaned up?")
+def db_file(tmp_path):
+    return tmp_path / "amqtt.db"
 
-    yield db_file
-    if db_file.exists():
-        db_file.unlink()
+
+async def disconnect_client(client: MQTTClient | None) -> None:
+    if client is not None and client.session and client.session.transitions.is_connected():
+        with suppress(Exception):
+            await client.disconnect()
+
+
+async def shutdown_broker(broker: Broker | None) -> None:
+    if broker is not None and not broker.transitions.is_stopped():
+        with suppress(Exception):
+            await broker.shutdown()
+
+
+class BrokerTestResources:
+    def __init__(self) -> None:
+        self.brokers: list[Broker] = []
+        self.clients: list[MQTTClient] = []
+
+    def broker(self, broker: Broker) -> Broker:
+        self.brokers.append(broker)
+        return broker
+
+    def client(self, client: MQTTClient) -> MQTTClient:
+        self.clients.append(client)
+        return client
+
+    async def cleanup(self) -> None:
+        for client in reversed(self.clients):
+            await disconnect_client(client)
+        for broker in reversed(self.brokers):
+            await shutdown_broker(broker)
+
+
+@pytest.fixture
+async def broker_test_resources():
+    resources = BrokerTestResources()
+    yield resources
+    await resources.cleanup()
 
 @pytest.fixture
 async def broker_context():
@@ -487,12 +521,12 @@ async def test_restoring_retained_message(db_file, broker_context, db_session_fa
 
 
 @pytest.fixture
-def db_config(db_file):
+def db_config(db_file, unused_tcp_port):
     return {
         'listeners': {
             'default': {
                 'type': 'tcp',
-                'bind': '127.0.0.1:1883'
+                'bind': f'127.0.0.1:{unused_tcp_port}'
             }
         },
         'plugins': {
@@ -506,17 +540,20 @@ def db_config(db_file):
     }
 
 
+def broker_uri(db_config, username):
+    bind = db_config['listeners']['default']['bind']
+    return f"mqtt://{username}@{bind}"
 
 
 @pytest.mark.asyncio
-async def test_broker_client_no_cleanup(db_file, db_config) -> None:
+async def test_broker_client_no_cleanup(db_config, broker_test_resources) -> None:
 
-    b1 = Broker(config=db_config)
+    b1 = broker_test_resources.broker(Broker(config=db_config))
     await b1.start()
     await asyncio.sleep(0.1)
 
-    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+    c1 = broker_test_resources.client(MQTTClient(client_id='test_client1', config={'auto_reconnect':False}))
+    await c1.connect(broker_uri(db_config, "myUsername"), cleansession=False)
 
     # test that this message is retained for the topic upon restore
     await c1.publish("my/retained/topic", b'retained message for topic my/retained/topic', retain=True)
@@ -525,13 +562,13 @@ async def test_broker_client_no_cleanup(db_file, db_config) -> None:
     await b1.shutdown()
 
     # new broker should load the previous broker's db file since clean_on_shutdown is false in config
-    b2 = Broker(config=db_config)
+    b2 = broker_test_resources.broker(Broker(config=db_config))
     await b2.start()
     await asyncio.sleep(0.1)
 
     # upon subscribing to topic with retained message, it should be received
-    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
-    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    c2 = broker_test_resources.client(MQTTClient(client_id='test_client2', config={'auto_reconnect':False}))
+    await c2.connect(broker_uri(db_config, "myOtherUsername"), cleansession=False)
     await c2.subscribe([
         ('my/retained/topic', QOS_1)
     ])
@@ -545,14 +582,14 @@ async def test_broker_client_no_cleanup(db_file, db_config) -> None:
 
 
 @pytest.mark.asyncio
-async def test_broker_client_retain_subscription(db_file, db_config) -> None:
+async def test_broker_client_retain_subscription(db_config, broker_test_resources) -> None:
 
-    b1 = Broker(config=db_config)
+    b1 = broker_test_resources.broker(Broker(config=db_config))
     await b1.start()
     await asyncio.sleep(0.1)
 
-    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+    c1 = broker_test_resources.client(MQTTClient(client_id='test_client1', config={'auto_reconnect':False}))
+    await c1.connect(broker_uri(db_config, "myUsername"), cleansession=False)
 
     # test to make sure the subscription is re-established upon reconnection after broker restart (clear_on_shutdown = False)
     ret = await c1.subscribe([
@@ -565,13 +602,13 @@ async def test_broker_client_retain_subscription(db_file, db_config) -> None:
     await b1.shutdown()
 
     # new broker should load the previous broker's db file
-    b2 = Broker(config=db_config)
+    b2 = broker_test_resources.broker(Broker(config=db_config))
     await b2.start()
     await asyncio.sleep(0.1)
 
     # client1's subscription should have been restored, so when it connects, it should receive this message
-    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
-    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    c2 = broker_test_resources.client(MQTTClient(client_id='test_client2', config={'auto_reconnect':False}))
+    await c2.connect(broker_uri(db_config, "myOtherUsername"), cleansession=False)
     await c2.publish('my/offline/topic', b'standard message to be retained for offline clients')
     await asyncio.sleep(0.1)
     await c2.disconnect()
@@ -588,16 +625,16 @@ async def test_broker_client_retain_subscription(db_file, db_config) -> None:
 
 
 @pytest.mark.asyncio
-async def test_broker_client_retain_message(db_file, db_config) -> None:
+async def test_broker_client_retain_message(db_config, broker_test_resources) -> None:
     """test to make sure that the retained message because client1 is offline,
      gets sent when back online after broker restart."""
 
-    b1 = Broker(config=db_config)
+    b1 = broker_test_resources.broker(Broker(config=db_config))
     await b1.start()
     await asyncio.sleep(0.1)
 
-    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+    c1 = broker_test_resources.client(MQTTClient(client_id='test_client1', config={'auto_reconnect':False}))
+    await c1.connect(broker_uri(db_config, "myUsername"), cleansession=False)
 
     # subscribe to a topic with QOS_1 so that we receive messages, even if we're disconnected when sent
     ret = await c1.subscribe([
@@ -610,8 +647,8 @@ async def test_broker_client_retain_message(db_file, db_config) -> None:
     await asyncio.sleep(0.1)
 
     # another client sends a message to previously subscribed to topic
-    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
-    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    c2 = broker_test_resources.client(MQTTClient(client_id='test_client2', config={'auto_reconnect':False}))
+    await c2.connect(broker_uri(db_config, "myOtherUsername"), cleansession=False)
 
     # this message should be delivered after broker stops and restarts (and client connects)
     await c2.publish('my/offline/topic', b'standard message to be retained for offline clients')
@@ -621,7 +658,7 @@ async def test_broker_client_retain_message(db_file, db_config) -> None:
     await b1.shutdown()
 
     # new broker should load the previous broker's db file since we declared clear_on_shutdown = False in config
-    b2 = Broker(config=db_config)
+    b2 = broker_test_resources.broker(Broker(config=db_config))
     await b2.start()
     await asyncio.sleep(0.1)
 

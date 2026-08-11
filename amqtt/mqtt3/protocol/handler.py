@@ -1,15 +1,10 @@
 import asyncio
+from asyncio import InvalidStateError, QueueFull
 
 try:
-    from asyncio import InvalidStateError, QueueFull, QueueShutDown
+    from asyncio import QueueShutDown
 except ImportError:
-    # Fallback for Python < 3.12
-    class InvalidStateError(Exception):  # type: ignore[no-redef]
-        pass
-
-    class QueueFull(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
-        pass
-
+    # Fallback for Python versions before asyncio.QueueShutDown was added.
     class QueueShutDown(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
         pass
 

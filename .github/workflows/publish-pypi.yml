@@ -1,10 +1,20 @@
 ---
 name: Publish Python Package
 
+# Publishing a GitHub release sends the tagged distributions to PyPI, including
+# release candidates -- PEP 440 keeps pre-releases out of ordinary resolution, so
+# only `--pre` or an exact pin installs them. TestPyPI is a manual rehearsal
+# target, reached by dispatching this workflow against an existing tag.
 on:
   release:
     types:
       - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to rehearse to TestPyPI, e.g. v0.12.0rc1"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -13,20 +23,45 @@ jobs:
   validate-metadata:
     name: Validate release metadata
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
 
     steps:
       - name: Validate release tag
+        id: resolve
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag || '' }}
           REF_NAME: ${{ github.ref_name }}
           REF_TYPE: ${{ github.ref_type }}
         run: |
           set -euo pipefail
 
-          if [[ "$REF_TYPE" != "tag" ||
-            ! "$REF_NAME" =~ ^v[0-9]+(\.[0-9]+){1,2}([.-][A-Za-z0-9]+)*$ ]]; then
-            echo "::error::Release tags must match vMAJOR.MINOR[.PATCH][-PRERELEASE]"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            tag_name="$INPUT_TAG"
+          else
+            if [[ "$REF_TYPE" != "tag" ]]; then
+              echo "::error::Release events must originate from a tag"
+              exit 1
+            fi
+            tag_name="$REF_NAME"
+          fi
+
+          # PEP 440 normalized form, so that "${tag_name#v}" is exactly the version
+          # recorded in pyproject.toml, amqtt/__init__.py, and published to the index.
+          # Validated before it reaches `actions/checkout`, so a dispatch input
+          # cannot smuggle arbitrary text into the ref.
+          # Keep in sync with ci.yml and release-drafter.yml.
+          if [[ ! "$tag_name" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "::error::Release tags must be vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCHrcN (e.g. v0.12.0, v0.12.0rc1)"
             exit 1
+          fi
+
+          echo "tag=$tag_name" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${BASH_REMATCH[1]:-}" ]]; then
+            echo "::notice::$tag_name is a release candidate; installers need --pre or an exact pin"
           fi
 
   build:
@@ -37,8 +72,11 @@ jobs:
     steps:
       # https://github.com/actions/checkout
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # Explicit, so a workflow_dispatch rehearsal builds the requested tag
+          # rather than whatever ref the dispatch happened to run against.
+          ref: ${{ needs.validate-metadata.outputs.tag }}
           persist-credentials: false
 
       # https://github.com/astral-sh/setup-uv
@@ -46,11 +84,70 @@ jobs:
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: |
+            uv.lock
+            .github/build-constraints.txt
           python-version: "3.13"
+          version: "0.12.1"
 
       - name: Build package distributions
-        run: uv build --sdist --wheel --out-dir dist
+        run: uv build --build-constraints .github/build-constraints.txt --sdist --wheel --out-dir dist
+
+      - name: Validate distribution version
+        env:
+          REF_NAME: ${{ needs.validate-metadata.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          uv run --no-project --with packaging==26.2 python <<'PY'
+          import email.parser
+          import os
+          import pathlib
+          import tarfile
+          import zipfile
+
+          from packaging.version import InvalidVersion, Version
+
+
+          expected = os.environ["REF_NAME"].removeprefix("v")
+
+          try:
+              expected_version = Version(expected)
+          except InvalidVersion as exc:
+              raise SystemExit(f"::error::Release tag {expected!r} is not a valid Python package version: {exc}") from exc
+
+          versions = {}
+
+          for path in pathlib.Path("dist").iterdir():
+              if path.suffix == ".whl":
+                  with zipfile.ZipFile(path) as wheel:
+                      metadata_name = next(name for name in wheel.namelist() if name.endswith(".dist-info/METADATA"))
+                      metadata = email.parser.Parser().parsestr(wheel.read(metadata_name).decode())
+              elif path.name.endswith(".tar.gz"):
+                  with tarfile.open(path, "r:gz") as sdist:
+                      metadata_name = next(member.name for member in sdist.getmembers() if member.name.endswith("PKG-INFO"))
+                      metadata_file = sdist.extractfile(metadata_name)
+
+                      if metadata_file is None:
+                          raise SystemExit(f"::error::{path} does not contain readable PKG-INFO metadata")
+
+                      metadata = email.parser.Parser().parsestr(metadata_file.read().decode())
+              else:
+                  continue
+
+              versions[path.name] = Version(metadata["Version"])
+
+          if not versions:
+              raise SystemExit("::error::No wheel or sdist metadata found in dist/")
+
+          mismatches = {name: version for name, version in versions.items() if version != expected_version}
+
+          if mismatches:
+              details = ", ".join(f"{name} has {version}" for name, version in sorted(mismatches.items()))
+              raise SystemExit(f"::error::Release tag v{expected_version} does not match built distribution metadata: {details}")
+
+          print(f"Validated {len(versions)} distribution file(s) for version {expected_version}")
+          PY
 
       # https://github.com/actions/upload-artifact
       - name: Upload distributions
@@ -61,9 +158,69 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  publish:
-    name: Publish distributions to PyPI
+  attest:
+    name: Generate artifact attestations
+    runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+
+    steps:
+      # https://github.com/actions/download-artifact
+      - name: Download distributions
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      # https://github.com/actions/attest
+      - name: Generate artifact attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/*
+
+  publish-testpypi:
+    name: Rehearse publishing to TestPyPI
+    if: github.event_name == 'workflow_dispatch'
+    needs:
+      - validate-metadata
+      - build
+      - attest
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/amqtt
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # https://github.com/actions/download-artifact
+      - name: Download distributions
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      # https://github.com/pypa/gh-action-pypi-publish
+      - name: Publish distributions
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          attestations: true
+          # RC re-uploads are routine on TestPyPI; production PyPI must fail loudly.
+          skip-existing: true
+
+  publish-pypi:
+    name: Publish distributions to PyPI
+    if: github.event_name == 'release'
+    needs:
+      - validate-metadata
+      - build
+      - attest
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -82,4 +239,6 @@ jobs:
 
       # https://github.com/pypa/gh-action-pypi-publish
       - name: Publish distributions
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        with:
+          attestations: true
