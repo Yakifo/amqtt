@@ -277,6 +277,10 @@ class SessionDBPlugin(BasePlugin[BrokerContext]):
         finally:
             await self._engine.dispose()
 
+    async def close(self) -> None:
+        """Dispose the database engine."""
+        await self._engine.dispose()
+
     @dataclass
     class Config:
         """Configuration variables."""

@@ -480,6 +480,20 @@ async def test_reader_loop_stops_when_reader_is_missing() -> None:
 
 
 @pytest.mark.asyncio
+async def test_reader_loop_self_stop_does_not_wait_on_itself() -> None:
+    handler = make_handler(make_session())
+    handler.reader = None
+    handler._reader_ready = asyncio.Event()
+
+    task = asyncio.create_task(handler._reader_loop())
+    handler._reader_task = task
+
+    await asyncio.wait_for(task, timeout=1)
+
+    assert handler._reader_stopped.is_set()
+
+
+@pytest.mark.asyncio
 async def test_reader_loop_handles_reserved_packet_then_eof() -> None:
     session = make_session()
     plugin_manager = DummyPluginManager()

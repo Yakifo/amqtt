@@ -103,8 +103,8 @@ def test_split_bindaddr_port(input_str, output_addr, output_port):
 async def test_start_stop(broker, mock_plugin_manager):
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(BrokerEvents.PRE_START),
-            call().fire_event(BrokerEvents.POST_START),
+            call().fire_event(BrokerEvents.PRE_START, wait=True),
+            call().fire_event(BrokerEvents.POST_START, wait=True),
         ],
         any_order=True,
     )
@@ -112,8 +112,9 @@ async def test_start_stop(broker, mock_plugin_manager):
     await broker.shutdown()
     mock_plugin_manager.assert_has_calls(
         [
-            call().fire_event(BrokerEvents.PRE_SHUTDOWN),
-            call().fire_event(BrokerEvents.POST_SHUTDOWN),
+            call().fire_event(BrokerEvents.PRE_SHUTDOWN, wait=True),
+            call().fire_event(BrokerEvents.POST_SHUTDOWN, wait=True),
+            call().close(),
         ],
         any_order=True,
     )
@@ -1041,6 +1042,17 @@ async def test_broker_broadcast_cancellation(broker):
     await _client_publish(topic, data, qos)
     message = await asyncio.wait_for(sub_client.deliver_message(), timeout=1)
     assert message
+    await sub_client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_broadcast_loop_cancels_pending_delivery_tasks(broker):
+    pending_delivery = asyncio.create_task(asyncio.sleep(60))
+    broker._tasks_queue.append(pending_delivery)
+
+    await asyncio.wait_for(broker._shutdown_broadcast_loop(), timeout=1)
+
+    assert pending_delivery.cancelled()
 
 
 @pytest.mark.asyncio

@@ -282,10 +282,22 @@ class PluginManager(Generic[C]):
 
     async def close(self) -> None:
         """Free PluginManager resources and cancel pending event methods."""
+        await self.wait_fired_events()
         await self.map_plugin_close()
         for task in self._fired_events:
             task.cancel()
         self._fired_events.clear()
+
+    async def wait_fired_events(self) -> None:
+        """Wait for already-scheduled fire-and-forget plugin events to finish."""
+        fired_events = list(self._fired_events)
+        if not fired_events:
+            return
+
+        await asyncio.gather(*fired_events, return_exceptions=True)
+        for task in fired_events:
+            with contextlib.suppress(KeyError, ValueError):
+                self._fired_events.remove(task)
 
     @property
     def plugins(self) -> list["BasePlugin[C]"]:

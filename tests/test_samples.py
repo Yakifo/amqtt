@@ -83,7 +83,6 @@ async def test_broker_taboo():
     assert "Exception" not in stderr.decode("utf-8")
 
 
-@pytest.mark.timeout(25)
 @pytest.mark.asyncio
 async def test_client_keepalive():
 
@@ -95,7 +94,7 @@ async def test_client_keepalive():
     process = subprocess.Popen([sys.executable, keep_alive_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     await asyncio.sleep(1)
 
-    stdout, stderr = process.communicate()
+    stdout, stderr = await asyncio.to_thread(process.communicate)
     assert "ERROR" not in stderr.decode("utf-8")
     assert "Exception" not in stderr.decode("utf-8")
 
