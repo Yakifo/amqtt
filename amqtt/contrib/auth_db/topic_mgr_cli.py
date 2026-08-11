@@ -53,12 +53,12 @@ def db_sync(ctx: typer.Context) -> None:
     """
     async def run_sync() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"], ctx.obj["filename"])
-        mgr = UserManager(connect)
-        try:
-            await mgr.db_sync()
-        except MQTTError as me:
-            logger.critical("Could not sync schema on db.")
-            raise typer.Exit(code=1) from me
+        async with UserManager(connect) as mgr:
+            try:
+                await mgr.db_sync()
+            except MQTTError as me:
+                logger.critical("Could not sync schema on db.")
+                raise typer.Exit(code=1) from me
     asyncio.run(run_sync())
     logger.info("Success: database synced.")
 
@@ -69,14 +69,14 @@ def list_clients(ctx: typer.Context) -> None:
 
     async def run_list() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"], ctx.obj["filename"])
-        mgr = TopicManager(connect)
-        user_count = 0
-        for user in await mgr.list_topic_auths():
-            user_count += 1
-            logger.info(user)
+        async with TopicManager(connect) as mgr:
+            user_count = 0
+            for user in await mgr.list_topic_auths():
+                user_count += 1
+                logger.info(user)
 
-        if not user_count:
-            logger.info("No client authorizations exist.")
+            if not user_count:
+                logger.info("No client authorizations exist.")
 
     asyncio.run(run_list())
 
@@ -93,23 +93,23 @@ def add_topic_allowance(
 
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
-        mgr = TopicManager(connect)
+        async with TopicManager(connect) as mgr:
 
-        with contextlib.suppress(MQTTError):
-            await mgr.create_topic_auth(client_id)
+            with contextlib.suppress(MQTTError):
+                await mgr.create_topic_auth(client_id)
 
-        topic_auth = await mgr.get_topic_auth(client_id)
-        if not topic_auth:
-            logger.info(f"Topic auth doesn't exist for '{client_id}'")
-            raise typer.Exit(code=1)
+            topic_auth = await mgr.get_topic_auth(client_id)
+            if not topic_auth:
+                logger.info(f"Topic auth doesn't exist for '{client_id}'")
+                raise typer.Exit(code=1)
 
-        if topic in [allowed_topic.topic for allowed_topic in topic_auth.get_topic_list(action)]:
-            logger.info(f"Topic '{topic}' already exists for '{action}'.")
-            raise typer.Exit(1)
+            if topic in [allowed_topic.topic for allowed_topic in topic_auth.get_topic_list(action)]:
+                logger.info(f"Topic '{topic}' already exists for '{action}'.")
+                raise typer.Exit(1)
 
-        await mgr.add_allowed_topic(client_id, topic, action)
+            await mgr.add_allowed_topic(client_id, topic, action)
 
-        logger.info(f"Success: topic '{topic}' added to {action} for '{client_id}'")
+            logger.info(f"Success: topic '{topic}' added to {action} for '{client_id}'")
 
     asyncio.run(run_add())
 
@@ -124,25 +124,25 @@ def remove_topic_allowance(ctx: typer.Context,
     async def run_remove() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
-        mgr = TopicManager(connect)
+        async with TopicManager(connect) as mgr:
 
-        topic_auth = await mgr.get_topic_auth(client_id)
+            topic_auth = await mgr.get_topic_auth(client_id)
 
-        if not topic_auth:
-            logger.info(f"client '{client_id}' doesn't exist.")
-            raise typer.Exit(1)
+            if not topic_auth:
+                logger.info(f"client '{client_id}' doesn't exist.")
+                raise typer.Exit(1)
 
-        if topic not in getattr(topic_auth, f"{action}_acl"):
-            logger.info(f"Error: topic '{topic}' not in the {action} allow list for {client_id}.")
-            raise typer.Exit(1)
+            if topic not in getattr(topic_auth, f"{action}_acl"):
+                logger.info(f"Error: topic '{topic}' not in the {action} allow list for {client_id}.")
+                raise typer.Exit(1)
 
-        try:
-            await mgr.remove_allowed_topic(client_id, topic, action)
-        except MQTTError as me:
-            logger.info(f"'Error: could not remove '{topic}' for client '{client_id}'.")
-            raise typer.Exit(1) from me
+            try:
+                await mgr.remove_allowed_topic(client_id, topic, action)
+            except MQTTError as me:
+                logger.info(f"'Error: could not remove '{topic}' for client '{client_id}'.")
+                raise typer.Exit(1) from me
 
-        logger.info(f"Success: removed topic '{topic}' from {action} for '{client_id}'")
+            logger.info(f"Success: removed topic '{topic}' from {action} for '{client_id}'")
 
     asyncio.run(run_remove())
 

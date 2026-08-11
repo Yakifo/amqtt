@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 import logging
+from typing_extensions import Self
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -27,6 +28,14 @@ class UserManager:
     async def close(self) -> None:
         """Dispose the database engine."""
         await self._engine.dispose()
+
+    async def __aenter__(self) -> Self:
+        """Enter the context, returning the manager itself."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Dispose the database engine on exit."""
+        await self.close()
 
     async def db_sync(self) -> None:
         """Sync the database schema."""
@@ -128,6 +137,14 @@ class TopicManager:
     async def close(self) -> None:
         """Dispose the database engine."""
         await self._engine.dispose()
+
+    async def __aenter__(self) -> Self:
+        """Enter the context, returning the manager itself."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Dispose the database engine on exit."""
+        await self.close()
 
     async def db_sync(self) -> None:
         """Sync the database schema."""

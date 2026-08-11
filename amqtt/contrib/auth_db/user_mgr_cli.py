@@ -56,12 +56,12 @@ def db_sync(ctx: typer.Context) -> None:
     """
     async def run_sync() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"], ctx.obj["filename"])
-        mgr = UserManager(connect)
-        try:
-            await mgr.db_sync()
-        except MQTTError as me:
-            logger.critical("Could not sync schema on db.")
-            raise typer.Exit(code=1) from me
+        async with UserManager(connect) as mgr:
+            try:
+                await mgr.db_sync()
+            except MQTTError as me:
+                logger.critical("Could not sync schema on db.")
+                raise typer.Exit(code=1) from me
 
     asyncio.run(run_sync())
     logger.info("Success: database synced.")
@@ -73,14 +73,14 @@ def list_user_auths(ctx: typer.Context) -> None:
 
     async def run_list() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"], ctx.obj["filename"])
-        mgr = UserManager(connect)
-        user_count = 0
-        for user in await mgr.list_user_auths():
-            user_count += 1
-            logger.info(user)
+        async with UserManager(connect) as mgr:
+            user_count = 0
+            for user in await mgr.list_user_auths():
+                user_count += 1
+                logger.info(user)
 
-        if not user_count:
-            logger.info("No client authentications exist.")
+            if not user_count:
+                logger.info("No client authentications exist.")
 
     asyncio.run(run_list())
 
@@ -94,19 +94,19 @@ def create_user_auth(
     async def run_create() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
-        mgr = UserManager(connect)
-        client_password = typer.prompt("Enter the client's password", hide_input=True)
-        if not client_password.strip():
-            logger.info("Error: client password cannot be empty.")
-            raise typer.Exit(1)
+        async with UserManager(connect) as mgr:
+            client_password = typer.prompt("Enter the client's password", hide_input=True)
+            if not client_password.strip():
+                logger.info("Error: client password cannot be empty.")
+                raise typer.Exit(1)
 
-        user = await mgr.create_user_auth(client_id, client_password.strip())
+            user = await mgr.create_user_auth(client_id, client_password.strip())
 
-        if not user:
-            logger.info(f"Error: could not create user: {client_id}")
-            raise typer.Exit(code=1)
+            if not user:
+                logger.info(f"Error: could not create user: {client_id}")
+                raise typer.Exit(code=1)
 
-        logger.info(f"Success: created {user}")
+            logger.info(f"Success: created {user}")
 
     asyncio.run(run_create())
 
@@ -118,21 +118,21 @@ def remove_user_auth(ctx: typer.Context,
     async def run_remove() -> None:
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
-        mgr = UserManager(connect)
-        user = await mgr.get_user_auth(client_id)
-        if not user:
-            logger.info(f"Error: client '{client_id}' does not exist.")
-            raise typer.Exit(1)
+        async with UserManager(connect) as mgr:
+            user = await mgr.get_user_auth(client_id)
+            if not user:
+                logger.info(f"Error: client '{client_id}' does not exist.")
+                raise typer.Exit(1)
 
-        if not typer.confirm(f"Please confirm the removal of '{client_id}'?"):
-            raise typer.Exit(0)
+            if not typer.confirm(f"Please confirm the removal of '{client_id}'?"):
+                raise typer.Exit(0)
 
-        user = await mgr.delete_user_auth(client_id)
-        if not user:
-            logger.info(f"Error: client '{client_id}' does not exist.")
-            raise typer.Exit(1)
+            user = await mgr.delete_user_auth(client_id)
+            if not user:
+                logger.info(f"Error: client '{client_id}' does not exist.")
+                raise typer.Exit(1)
 
-        logger.info(f"Success: '{user.username}' was removed.")
+            logger.info(f"Success: '{user.username}' was removed.")
 
     asyncio.run(run_remove())
 
@@ -150,9 +150,9 @@ def change_password(
             raise typer.Exit(1)
         connect = db_connection_str(ctx.obj["type"], ctx.obj["username"], ctx.obj["host"], ctx.obj["port"],
                                     ctx.obj["filename"])
-        mgr = UserManager(connect)
-        await mgr.update_user_auth_password(client_id, client_password.strip())
-        logger.info(f"Success: client '{client_id}' password updated.")
+        async with UserManager(connect) as mgr:
+            await mgr.update_user_auth_password(client_id, client_password.strip())
+            logger.info(f"Success: client '{client_id}' password updated.")
 
     asyncio.run(run_password())
 

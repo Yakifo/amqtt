@@ -60,6 +60,23 @@ async def topic_manager(password_hasher, db_connection):
         await tm.close()
 
 
+@pytest.fixture
+async def auth_plugin():
+    """Build auth db plugins, releasing their connection pools on teardown."""
+    plugins = []
+
+    def factory(plugin_cls, context):
+        plugin = plugin_cls(context=context)
+        plugins.append(plugin)
+        return plugin
+
+    try:
+        yield factory
+    finally:
+        for plugin in plugins:
+            await plugin.close()
+
+
 # ######################################
 # Tests for the UserAuthDBPlugin
 
@@ -151,7 +168,7 @@ async def test_remove_users(user_manager, db_file, db_connection):
     ("mypassword", "myotherpassword", False),
 ])
 @pytest.mark.asyncio
-async def test_db_auth(db_connection, user_manager, user_pwd, session_pwd, outcome):
+async def test_db_auth(db_connection, user_manager, auth_plugin, user_pwd, session_pwd, outcome):
 
     await user_manager.create_user_auth("myuser", user_pwd)
 
@@ -159,7 +176,7 @@ async def test_db_auth(db_connection, user_manager, user_pwd, session_pwd, outco
     broker_context.config = UserAuthDBPlugin.Config(
         connection=db_connection
     )
-    db_auth_plugin = UserAuthDBPlugin(context=broker_context)
+    db_auth_plugin = auth_plugin(UserAuthDBPlugin, broker_context)
 
     s = Session()
     s.username = "myuser"
@@ -169,7 +186,7 @@ async def test_db_auth(db_connection, user_manager, user_pwd, session_pwd, outco
 
 
 @pytest.mark.asyncio
-async def test_db_auth_rehashes_outdated_password_hash(user_manager, db_file, db_connection):
+async def test_db_auth_rehashes_outdated_password_hash(user_manager, db_file, db_connection, auth_plugin):
     bcrypt_hash = BcryptHasher().hash("mypassword")
 
     async with aiosqlite.connect(db_file) as db_conn:
@@ -182,7 +199,7 @@ async def test_db_auth_rehashes_outdated_password_hash(user_manager, db_file, db
 
     broker_context = BrokerContext(broker=Broker())
     broker_context.config = UserAuthDBPlugin.Config(connection=db_connection)
-    db_auth_plugin = UserAuthDBPlugin(context=broker_context)
+    db_auth_plugin = auth_plugin(UserAuthDBPlugin, broker_context)
 
     s = Session()
     s.username = "myuser"
@@ -462,7 +479,7 @@ async def test_remove_topic_wrong_action(db_file, user_manager, topic_manager, d
     ("my/#", "my/another/topic", True),
 ])
 @pytest.mark.asyncio
-async def test_topic_publish_filter_plugin(db_file, topic_manager, db_connection, acl_topic, msg_topic, outcome):
+async def test_topic_publish_filter_plugin(db_file, topic_manager, db_connection, auth_plugin, acl_topic, msg_topic, outcome):
     client_id = "myuser"
 
     user = await topic_manager.create_topic_auth(client_id)
@@ -474,7 +491,7 @@ async def test_topic_publish_filter_plugin(db_file, topic_manager, db_connection
     broker_context.config = TopicAuthDBPlugin.Config(
         connection=db_connection
     )
-    db_auth_plugin = TopicAuthDBPlugin(context=broker_context)
+    db_auth_plugin = auth_plugin(TopicAuthDBPlugin, broker_context)
 
     s = Session()
     s.username = client_id
