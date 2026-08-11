@@ -79,9 +79,9 @@ class PluginManager(Generic[C]):
         self._load_plugins(namespace)
 
         if self.get_plugin("BrokerSysPlugin"):
-            warnings.warn("The underlying library for the `BrokerSysPlugin` will be removed in future versions. "
-                          "Please explicitly update your environment to depend on 'amqtt[dollarsys]'"
-                          " to ensure compatibility.", DeprecationWarning, stacklevel=4)
+            warnings.warn("`BrokerSysPlugin`: `psutil` will be removed as a project-level dependency in future versions. "
+                          "Please explicitly update your environment to use the optional dependency "
+                          "to ensure compatibility: 'amqtt[dollarsys]'", DeprecationWarning, stacklevel=4)
 
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
@@ -105,9 +105,11 @@ class PluginManager(Generic[C]):
             # plugins loaded directly from config dictionary
 
             if "auth" in self.app_context.config and self.app_context.config["auth"] is not None:
-                self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
+                warnings.warn("Loading plugins from config will ignore 'auth' section of config.",
+                              DeprecationWarning, stacklevel=1)
             if "topic-check" in self.app_context.config and self.app_context.config["topic-check"] is not None:
-                self.logger.warning("Loading plugins from config will ignore 'topic-check' section of config")
+                warnings.warn("Loading plugins from config will ignore 'topic-check' section of config.",
+                              DeprecationWarning, stacklevel=1)
 
             plugins_config: list[Any] | dict[str, Any] = self.app_context.config.get("plugins", [])
 
