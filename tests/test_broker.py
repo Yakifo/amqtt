@@ -114,6 +114,7 @@ async def test_start_stop(broker, mock_plugin_manager):
         [
             call().fire_event(BrokerEvents.PRE_SHUTDOWN, wait=True),
             call().fire_event(BrokerEvents.POST_SHUTDOWN, wait=True),
+            call().close(),
         ],
         any_order=True,
     )
