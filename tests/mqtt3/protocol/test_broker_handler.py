@@ -6,20 +6,21 @@ import pytest
 from amqtt.adapters import BufferReader, BufferWriter
 from amqtt.errors import MQTTError
 from amqtt.events import MQTTEvents
-from amqtt.mqtt.connack import (
+from amqtt.mqtt3.connack import (
     BAD_USERNAME_PASSWORD,
     CONNECTION_ACCEPTED,
     IDENTIFIER_REJECTED,
     NOT_AUTHORIZED,
     UNACCEPTABLE_PROTOCOL_VERSION,
 )
-from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
-from amqtt.mqtt.disconnect import DisconnectPacket
-from amqtt.mqtt.pingreq import PingReqPacket
-from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler, Subscription, UnSubscription
-from amqtt.mqtt.subscribe import SubscribePacket, SubscribePayload
-from amqtt.mqtt.unsubscribe import UnsubscribePacket, UnubscribePayload
-from amqtt.mqtt.packet import PacketIdVariableHeader
+from amqtt.mqtt3.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
+from amqtt.mqtt3.disconnect import DisconnectPacket
+from amqtt.mqtt3.packet import PacketIdVariableHeader
+from amqtt.mqtt3.pingreq import PingReqPacket
+from amqtt.mqtt3.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.mqtt3.subscribe import SubscribePacket, SubscribePayload
+from amqtt.mqtt3.unsubscribe import UnsubscribePacket, UnubscribePayload
+from amqtt.protocol import ClientDisconnect, SubscriptionRequest, SubscriptionTopic, UnsubscriptionRequest
 from amqtt.session import Session
 
 
@@ -117,35 +118,41 @@ async def test_wait_disconnect_returns_none_without_waiter() -> None:
 @pytest.mark.asyncio
 async def test_handle_disconnect_resolves_waiter_and_resets_it() -> None:
     handler = make_handler(make_session())
-    waiter: asyncio.Future[DisconnectPacket | None] = asyncio.Future()
+    waiter: asyncio.Future[ClientDisconnect | None] = asyncio.Future()
     packet = DisconnectPacket()
     handler._disconnect_waiter = waiter
 
     await handler.handle_disconnect(packet)
 
-    assert waiter.result() is packet
+    result = waiter.result()
+    assert result is not None
+    assert result.is_clean is True
+    assert result.packet is packet
     assert handler._disconnect_waiter is None
 
 
 @pytest.mark.asyncio
 async def test_handle_connection_closed_resolves_waiter_with_none() -> None:
     handler = make_handler(make_session())
-    waiter: asyncio.Future[DisconnectPacket | None] = asyncio.Future()
+    waiter: asyncio.Future[ClientDisconnect | None] = asyncio.Future()
     handler._disconnect_waiter = waiter
 
     await handler.handle_connection_closed()
 
-    assert waiter.result() is None
+    result = waiter.result()
+    assert result is not None
+    assert result.is_clean is False
+    assert result.packet is None
     assert handler._disconnect_waiter is None
 
 
 @pytest.mark.asyncio
 async def test_stop_resolves_disconnect_waiter_and_clears_pending_queues() -> None:
     handler = make_handler(make_session())
-    waiter: asyncio.Future[DisconnectPacket | None] = asyncio.Future()
+    waiter: asyncio.Future[ClientDisconnect | None] = asyncio.Future()
     handler._disconnect_waiter = waiter
-    await handler._pending_subscriptions.put(Subscription(1, [("topic/a", 0)]))
-    await handler._pending_unsubscriptions.put(UnSubscription(2, ["topic/b"]))
+    await handler._pending_subscriptions.put(SubscriptionRequest(1, [SubscriptionTopic("topic/a", 0)]))
+    await handler._pending_unsubscriptions.put(UnsubscriptionRequest(2, ["topic/b"]))
 
     await handler.stop()
 
@@ -160,7 +167,7 @@ async def test_stop_resolves_disconnect_waiter_and_clears_pending_queues() -> No
 @pytest.mark.asyncio
 async def test_handle_connect_resolves_disconnect_waiter() -> None:
     handler = make_handler(make_session())
-    waiter: asyncio.Future[DisconnectPacket | None] = asyncio.Future()
+    waiter: asyncio.Future[ClientDisconnect | None] = asyncio.Future()
     handler._disconnect_waiter = waiter
 
     await handler.handle_connect(make_connect())
@@ -201,7 +208,7 @@ async def test_handle_subscribe_queues_subscription() -> None:
     subscription = await handler.get_next_pending_subscription()
 
     assert subscription.packet_id == 7
-    assert subscription.topics == [("topic/a", 0), ("topic/b", 1)]
+    assert subscription.topics == [SubscriptionTopic("topic/a", 0), SubscriptionTopic("topic/b", 1)]
 
 
 @pytest.mark.parametrize(

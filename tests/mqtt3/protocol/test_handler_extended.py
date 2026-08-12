@@ -8,15 +8,15 @@ import pytest
 from amqtt.adapters import BufferReader, BufferWriter
 from amqtt.errors import AMQTTError, ProtocolHandlerError
 from amqtt.events import MQTTEvents
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.pingreq import PingReqPacket
-from amqtt.mqtt.protocol import handler as handler_module
-from amqtt.mqtt.protocol.handler import ProtocolHandler
-from amqtt.mqtt.puback import PubackPacket
-from amqtt.mqtt.pubcomp import PubcompPacket
-from amqtt.mqtt.publish import PublishPacket
-from amqtt.mqtt.pubrec import PubrecPacket
-from amqtt.mqtt.pubrel import PubrelPacket
+from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt3.pingreq import PingReqPacket
+from amqtt.mqtt3.protocol import handler as handler_module
+from amqtt.mqtt3.protocol.handler import ProtocolHandler
+from amqtt.mqtt3.puback import PubackPacket
+from amqtt.mqtt3.pubcomp import PubcompPacket
+from amqtt.mqtt3.publish import PublishPacket
+from amqtt.mqtt3.pubrec import PubrecPacket
+from amqtt.mqtt3.pubrel import PubrelPacket
 from amqtt.session import IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
 
@@ -393,7 +393,7 @@ async def test_ack_handlers_log_unknown_and_done_waiters(
     packet_factory: Callable[[int], Any],
 ) -> None:
     handler = make_handler(make_session())
-    caplog.set_level(logging.WARNING, logger="amqtt.mqtt.protocol.handler")
+    caplog.set_level(logging.WARNING, logger="amqtt.mqtt3.protocol.handler")
 
     await getattr(handler, method_name)(packet_factory(41))
 
