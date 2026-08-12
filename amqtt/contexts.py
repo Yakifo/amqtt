@@ -162,7 +162,7 @@ def default_broker_plugins() -> dict[str, Any]:
 class BrokerConfig(Dictable):
     """Structured configuration for a broker. Can be passed directly to `amqtt.broker.Broker` or created from a dictionary."""
 
-    listeners: dict[Literal["default"] | str, ListenerConfig] = field(default_factory=default_listeners)  # noqa: PYI051
+    listeners: dict[Literal["default"] | str, ListenerConfig] = field(default_factory=default_listeners)  # ruff: ignore[redundant-literal-union]
     """Network of listeners used by the services. a 'default' named listener is required; if another listener
      does not set a value, the 'default' settings are applied. See
      [`ListenerConfig`](broker_config.md#amqtt.contexts.ListenerConfig) for more information."""
@@ -206,10 +206,12 @@ class BrokerConfig(Dictable):
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.sys_interval is not None:
-            logger.warning("sys_interval is deprecated, use 'plugins' to define configuration")
+            warnings.warn("sys_interval is deprecated, use 'plugins' to define configuration",
+                          DeprecationWarning, stacklevel=1)
 
         if self.auth is not None or self.topic_check is not None:
-            logger.warning("'auth' and 'topic-check' are deprecated, use 'plugins' to define configuration")
+            warnings.warn("'auth' and 'topic-check' are deprecated, use 'plugins' to define configuration",
+                          DeprecationWarning, stacklevel=1)
 
         if isinstance(self.receive_maximum, bool) or self.receive_maximum < 1 or self.receive_maximum > 0xFFFF:
             msg = "receive_maximum must be an integer from 1 to 65535."
@@ -296,7 +298,7 @@ class ConnectionConfig(Dictable):
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the client's private key associated with the certfile."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if (self.certfile is None) ^ (self.keyfile is None):
             msg = "If specifying the 'certfile' or 'keyfile', both are required."
@@ -319,7 +321,7 @@ class TopicConfig(Dictable):
     retain: bool = False
     """Determines if the message should be retained by the topic it was published."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.qos is not None and (self.qos < QOS_0 or self.qos > QOS_2):
             msg = "Topic config: default QoS must be 0, 1 or 2."
@@ -339,7 +341,7 @@ class WillConfig(Dictable):
     retain: bool | None = False
     """Determines if the message should be retained by the topic it was published."""
 
-    def __post__init__(self) -> None:
+    def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.qos is not None and (self.qos < QOS_0 or self.qos > QOS_2):
             msg = "Will config: default QoS must be 0, 1 or 2."
@@ -402,7 +404,9 @@ class ClientConfig(Dictable):
             raise ValueError(msg)
 
         if self.broker is not None:
-            warnings.warn("The 'broker' option is deprecated, please use 'connection' instead.", stacklevel=2)
+            warnings.warn("The 'broker' option is deprecated, please use 'connection' instead. "
+                          "Support for 'broker' will be removed in a future release.",
+                          DeprecationWarning, stacklevel=2)
             self.connection = self.broker
 
         if bool(not self.connection.keyfile) ^ bool(not self.connection.certfile):

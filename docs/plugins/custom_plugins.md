@@ -63,7 +63,7 @@ and then run via `amqtt -c myBroker.yaml`.
     --8<-- "samples/broker_custom_plugin.py"
     ```
 
-??? warning "Deprecated: activating plugins using `EntryPoints`"
+??? warning "Deprecated: activating plugins using `EntryPoints`(v0.11.2)"
     With the aMQTT plugins framework, one can add additional functionality to the client or broker without
     having to rewrite any of the core logic. To define a custom list of plugins to be loaded, add this section
     to your `pyproject.toml`"

@@ -1,10 +1,10 @@
 import asyncio
 import logging
+import re
 import tempfile
 from pathlib import Path
 
 import pytest
-from passlib.context import CryptContext
 from typer.testing import CliRunner
 
 from amqtt.contexts import Action
@@ -14,11 +14,15 @@ from amqtt.contrib.auth_db.topic_mgr_cli import topic_app
 from amqtt.contrib.auth_db.user_mgr_cli import user_app
 
 runner = CliRunner()
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def strip_ansi_codes(text):
+    return ANSI_ESCAPE_RE.sub("", text)
 
 @pytest.fixture
 def password_hasher():
     pwd_hasher = PasswordHasher()
-    pwd_hasher.crypt_context = CryptContext(schemes=["argon2", ], deprecated="auto")
     yield pwd_hasher
 
 
@@ -39,14 +43,20 @@ def db_connection(db_file):
 async def user_manager(password_hasher, db_connection):
     um = UserManager(db_connection)
     await um.db_sync()
-    yield um
+    try:
+        yield um
+    finally:
+        await um.close()
 
 
 @pytest.fixture
 async def topic_manager(password_hasher, db_connection):
     tm = TopicManager(db_connection)
     await tm.db_sync()
-    yield tm
+    try:
+        yield tm
+    finally:
+        await tm.close()
 
 
 @pytest.mark.parametrize("app,error_msg", [
@@ -56,7 +66,10 @@ async def topic_manager(password_hasher, db_connection):
 def test_cli_mgr_no_params(app, error_msg):
 
     result = runner.invoke(app, [])
-    assert result.exit_code == 0, f"{result.output}"
+    output = strip_ansi_codes(result.output)
+    assert result.exit_code == 2, f"{result.output}"
+    assert "Usage:" in output
+    assert "--db" in output
 
 
 @pytest.mark.parametrize("app,error_msg", [

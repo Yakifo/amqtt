@@ -58,6 +58,10 @@ class ShadowPlugin(BasePlugin[BrokerContext]):
         async with self._engine.begin() as conn:
             await sync_shadow_base(conn)
 
+    async def close(self) -> None:
+        """Dispose the database engine."""
+        await self._engine.dispose()
+
     @staticmethod
     def shadow_topic_match(topic: str) -> ShadowTopic | None:
         """Check if topic matches the shadow topic format."""

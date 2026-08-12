@@ -14,7 +14,6 @@ from amqtt.plugins.base import BasePlugin
 
 log = logging.getLogger(__name__)
 
-pytest_plugins = ["pytest_logdog"]
 
 @pytest.fixture
 def rsa_keys():
@@ -165,3 +164,19 @@ def pytest_addoption(parser):
         default="false",
         help="for environments where docker isn't available, mock calls which require docker",
     )
+    parser.addoption(
+        "--extended",
+        action="store_true",
+        default=False,
+        help="run extended interoperability tests that require non-Python runtimes",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--extended"):
+        return
+
+    skip_extended = pytest.mark.skip(reason="need --extended option to run")
+    for item in items:
+        if "extended" in item.keywords:
+            item.add_marker(skip_extended)
