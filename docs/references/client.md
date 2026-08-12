@@ -64,7 +64,6 @@ import asyncio
 from amqtt.client import MQTTClient, ConnectError
 from amqtt.mqtt3.constants import QOS_0, QOS_1, QOS_2
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -75,11 +74,7 @@ async def test_coro():
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_0', qos=QOS_0)
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_1', qos=QOS_1)
         message = await C.publish('a/b', b'TEST MESSAGE WITH QOS_2', qos=QOS_2)
-<<<<<<< HEAD
 
-=======
-        # print(message)
->>>>>>> 0.11.5-rc1
         logger.info("messages published")
         await C.disconnect()
     except ConnectError as ce:
