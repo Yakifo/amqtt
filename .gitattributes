@@ -18,3 +18,5 @@
 *.ps1 linguist-detectable=true
 *.j2 linguist-detectable=true
 *.md linguist-documentation
+
+requirements.txt linguist-generated=true
