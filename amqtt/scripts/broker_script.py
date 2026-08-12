@@ -31,7 +31,7 @@ def _version(v: bool) -> None:
 def broker_main(
         config_file: str | None = typer.Option(None, "-c", help="broker configuration file"),
         debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
-        version: bool = typer.Option(  # noqa : ARG001
+        version: bool = typer.Option(  # ruff: ignore[unused-function-argument]
             False,
             "--version",
             callback=_version,
@@ -65,7 +65,7 @@ def broker_main(
         typer.echo(f"❌ Broker failed to start: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-    _ = loop.create_task(broker.start())  # noqa : RUF006
+    _ = loop.create_task(broker.start())  # ruff: ignore[asyncio-dangling-task]
     try:
         loop.run_forever()
     except KeyboardInterrupt:

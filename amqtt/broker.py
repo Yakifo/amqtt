@@ -5,7 +5,6 @@ from collections.abc import Generator
 from functools import partial
 import logging
 from math import floor
-import re
 import ssl
 import time
 from typing import Any, ClassVar, TypeAlias
@@ -39,6 +38,7 @@ _SUBSCRIPTION_INPUT: TypeAlias = SubscriptionTopic | tuple[str, int]
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
+_BROADCAST_SHUTDOWN_TIMEOUT = 5
 
 
 class RetainedApplicationMessage(ApplicationMessage):
@@ -109,7 +109,12 @@ class ExternalServer(Server):
 
 
 class BrokerContext(BaseContext):
-    """Used to provide the server's context as well as public methods for accessing internal state."""
+    """Broker runtime context passed to broker plugins.
+
+    Broker plugins use this object to inspect broker state, publish internal
+    messages, retain messages, and manage sessions or subscriptions without
+    reaching into the broker's private attributes.
+    """
 
     def __init__(self, broker: "Broker") -> None:
         super().__init__()
@@ -121,10 +126,12 @@ class BrokerContext(BaseContext):
         await self._broker_instance.internal_message_broadcast(topic, data, qos)
 
     async def retain_message(self, topic_name: str, data: bytes | bytearray, qos: int | None = None) -> None:
+        """Retain a message on behalf of the broker."""
         await self._broker_instance.retain_message(None, topic_name, data, qos)
 
     @property
     def sessions(self) -> Generator[Session]:
+        """All known broker sessions."""
         for session in self._broker_instance.sessions.values():
             yield session[0]
 
@@ -134,10 +141,12 @@ class BrokerContext(BaseContext):
 
     @property
     def retained_messages(self) -> dict[str, RetainedApplicationMessage]:
+        """Retained messages keyed by topic name."""
         return self._broker_instance.retained_messages
 
     @property
     def subscriptions(self) -> dict[str, list[tuple[Session, int]]]:
+        """Active subscriptions keyed by topic filter."""
         return self._broker_instance.subscriptions
 
     async def add_subscription(self, client_id: str, topic: str | None, qos: int | None) -> None:
@@ -148,7 +157,7 @@ class BrokerContext(BaseContext):
         """
         if client_id not in self._broker_instance.sessions:
             broker_handler, session = self._broker_instance.create_offline_session(client_id)
-            self._broker_instance._sessions[client_id] = (session, broker_handler)  # noqa: SLF001
+            self._broker_instance._sessions[client_id] = (session, broker_handler)  # ruff: ignore[private-member-access]
 
         if topic is not None and qos is not None:
             session, _ = self._broker_instance.sessions[client_id]
@@ -207,8 +216,6 @@ class Broker:
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
 
-        self._topic_filter_matchers: dict[str, re.Pattern[str]] = {}
-
         # Broadcast queue for outgoing messages
         self._broadcast_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self._broadcast_task: asyncio.Task[Any] | None = None
@@ -257,11 +264,11 @@ class Broker:
             msg = f"Broker instance can't be started: {exc}"
             raise BrokerError(msg) from exc
 
-        await self.plugins_manager.fire_event(BrokerEvents.PRE_START)
+        await self.plugins_manager.fire_event(BrokerEvents.PRE_START, wait=True)
         try:
             await self._start_listeners()
             self.transitions.starting_success()
-            await self.plugins_manager.fire_event(BrokerEvents.POST_START)
+            await self.plugins_manager.fire_event(BrokerEvents.POST_START, wait=True)
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
             self._session_monitor_task = asyncio.create_task(self._session_monitor())
             self.logger.debug("Broker started")
@@ -383,7 +390,7 @@ class Broker:
         """Stop broker instance."""
         self.logger.info("Shutting down broker...")
         # Fire broker_shutdown event to plugins
-        await self.plugins_manager.fire_event(BrokerEvents.PRE_SHUTDOWN)
+        await self.plugins_manager.fire_event(BrokerEvents.PRE_SHUTDOWN, wait=True)
 
         # Cleanup all sessions
         for client_id in list(self._sessions.keys()):
@@ -398,6 +405,7 @@ class Broker:
         await self._shutdown_broadcast_loop()
         if self._session_monitor_task:
             self._session_monitor_task.cancel()
+            await asyncio.gather(self._session_monitor_task, return_exceptions=True)
 
         for server in self._servers.values():
             await server.close_instance()
@@ -409,7 +417,9 @@ class Broker:
                 self._broadcast_queue.get_nowait()
 
         self.logger.info("Broker closed")
-        await self.plugins_manager.fire_event(BrokerEvents.POST_SHUTDOWN)
+        await self.plugins_manager.wait_fired_events()
+        await self.plugins_manager.fire_event(BrokerEvents.POST_SHUTDOWN, wait=True)
+        await self.plugins_manager.close()
         self.transitions.stopping_success()
 
     async def _cleanup_session(self, client_id: str) -> None:
@@ -488,13 +498,13 @@ class Broker:
             )
             raise AMQTTError(exc) from exc
         except MQTTError as exc:
-            self.logger.exception(
+            self.logger.warning(
                 f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
             )
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:
-            self.logger.error(  # noqa: TRY400
+            self.logger.error(  # ruff: ignore[error-instead-of-exception]
                 f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}",
             )
             raise AMQTTError(exc) from exc
@@ -554,9 +564,6 @@ class Broker:
     ) -> None:
         """Handle the lifecycle of a client session."""
         authenticated = await self._authenticate(client_session, self.listeners_config[listener_name])
-        if not authenticated:
-            await writer.close()
-            return
 
         if client_session.client_id is None:
             msg = "Client ID was not correctly created/set."
@@ -580,6 +587,11 @@ class Broker:
         self._sessions[client_session.client_id] = (client_session, handler)
 
         await handler.mqtt_connack_authorize(authenticated)
+
+        if not authenticated:
+            await writer.close()
+            return
+
         await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
                                               client_id=client_session.client_id,
                                               client_session=client_session)
@@ -644,10 +656,10 @@ class Broker:
                 self.logger.debug("Client loop cancelled")
                 break
 
-        disconnect_waiter.cancel()
-        subscribe_waiter.cancel()
-        unsubscribe_waiter.cancel()
-        wait_deliver.cancel()
+        pending_waiters = [disconnect_waiter, subscribe_waiter, unsubscribe_waiter, wait_deliver]
+        for waiter in pending_waiters:
+            waiter.cancel()
+        await asyncio.gather(*pending_waiters, return_exceptions=True)
 
     async def _handle_disconnect(
         self,
@@ -812,7 +824,7 @@ class Broker:
         """
         returns = await self.plugins_manager.map_plugin_auth(session=session)
 
-        results = [result for _, result in returns.items() if result is not None] if returns else []
+        results = [result for result in returns.values() if result is not None] if returns else []
         if len(results) < 1:
             self.logger.debug("Authentication failed: no plugin responded with a boolean")
             return False
@@ -857,11 +869,15 @@ class Broker:
 
     async def add_subscription(self, subscription: _SUBSCRIPTION_INPUT, session: Session) -> int:
         topic_filter, qos = self._subscription_parts(subscription)
-        if "#" in topic_filter and not topic_filter.endswith("#"):
-            # [MQTT-4.7.1-2] Wildcard character '#' is only allowed as last character in filter
+        levels = topic_filter.split("/")
+        if any(
+                "#" in level and (level != "#" or index != len(levels) - 1)
+                for index, level in enumerate(levels)
+        ):
+            # [MQTT-4.7.1-2] '#' must occupy the final filter level without multiples
             return 0x80
-        if topic_filter != "+" and "+" in topic_filter and ("/+" not in topic_filter and "+/" not in topic_filter):
-            # [MQTT-4.7.1-3] + wildcard character must occupy entire level
+        if any("+" in level and level != "+" for level in levels):
+            # [MQTT-4.7.1-3] '+' must occupy an entire level without multiples
             return 0x80
         # Check if the client is authorised to connect to the topic
         if not await self._topic_filtering(session, topic_filter, Action.SUBSCRIBE):
@@ -973,15 +989,29 @@ class Broker:
                 # Shutdown has been triggered by the broker, so stop the loop execution
                 if self._broadcast_shutdown_waiter in completed:
                     run_broadcast_task.cancel()
+                    await asyncio.gather(run_broadcast_task, return_exceptions=True)
                     break
 
         except BaseException:
             self.logger.exception("Broadcast loop stopped by exception")
             raise
         finally:
-            # Wait until current broadcasting tasks end
             if running_tasks:
-                await asyncio.gather(*running_tasks)
+                for task in running_tasks:
+                    if not task.done():
+                        task.cancel()
+
+                done, pending = await asyncio.wait(running_tasks, timeout=_BROADCAST_SHUTDOWN_TIMEOUT)
+                for task in done:
+                    try:
+                        task.result()
+                    except CancelledError:
+                        self.logger.info(f"Task has been cancelled: {task}")
+                    except Exception:  # pylint: disable=W0718
+                        self.logger.exception(f"Task failed during broadcast shutdown: {task}")
+
+                if pending:
+                    self.logger.warning(f"{len(pending)} broadcast task(s) still pending after shutdown")
 
     async def _run_broadcast(self, running_tasks: deque[asyncio.Task[OutgoingApplicationMessage]]) -> None:
         """Process a single broadcast message."""
@@ -1057,10 +1087,21 @@ class Broker:
     async def _shutdown_broadcast_loop(self) -> None:
         if self._broadcast_task and not self._broadcast_shutdown_waiter.done():
             self._broadcast_shutdown_waiter.set_result(True)
-            try:
-                await asyncio.wait_for(self._broadcast_task, timeout=30)
-            except TimeoutError as e:
-                self.logger.warning(f"Failed to cleanly shutdown broadcast loop: {e}")
+            for task in self._tasks_queue:
+                if not task.done():
+                    task.cancel()
+            done, pending = await asyncio.wait([self._broadcast_task], timeout=_BROADCAST_SHUTDOWN_TIMEOUT)
+            for task in done:
+                try:
+                    task.result()
+                except CancelledError:
+                    self.logger.info(f"Broadcast task has been cancelled: {task}")
+                except Exception:  # pylint: disable=W0718
+                    self.logger.exception(f"Broadcast task failed during shutdown: {task}")
+            for task in pending:
+                task.cancel()
+            if pending:
+                self.logger.warning(f"Failed to cleanly shutdown broadcast loop within {_BROADCAST_SHUTDOWN_TIMEOUT} seconds")
 
         if not self._broadcast_queue.empty():
             self.logger.warning(f"{self._broadcast_queue.qsize()} messages not broadcasted")
@@ -1138,14 +1179,20 @@ class Broker:
             # if filter doesn't contain wildcard, return exact match
             return a_filter == topic
 
-        # else use regex (re.compile is an expensive operation, store the matcher for future use)
-        if a_filter not in self._topic_filter_matchers:
-            self._topic_filter_matchers[a_filter] = re.compile(re.escape(a_filter)
-                                                               .replace("\\#", "?.*")
-                                                               .replace("\\+", "[^/]*")
-                                                               .lstrip("?"))
-        match_pattern = self._topic_filter_matchers[a_filter]
-        return bool(match_pattern.fullmatch(topic))
+        sub_levels = a_filter.split("/")
+        pub_levels = topic.split("/")
+
+        for i, level in enumerate(sub_levels):
+            if ("+" in level and level != "+") or ("#" in level and level != "#"):
+                return False
+
+            if level == "#":
+                return i == len(sub_levels) - 1
+
+            if i >= len(pub_levels) or level not in ("+", pub_levels[i]):
+                return False
+
+        return len(sub_levels) == len(pub_levels)
 
     def _get_handler(self, session: Session) -> _BROKER_HANDLER | None:
         client_id = session.client_id

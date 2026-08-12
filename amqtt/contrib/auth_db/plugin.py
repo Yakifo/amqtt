@@ -1,13 +1,10 @@
 from dataclasses import dataclass, field
 import logging
 
-from passlib.context import CryptContext
-from sqlalchemy.ext.asyncio import create_async_engine
-
 from amqtt.broker import BrokerContext
 from amqtt.contexts import Action
 from amqtt.contrib.auth_db.managers import TopicManager, UserManager
-from amqtt.contrib.auth_db.models import Base, PasswordHasher
+from amqtt.contrib.auth_db.models import PasswordHasher
 from amqtt.errors import MQTTError
 from amqtt.plugins.base import BaseAuthPlugin, BaseTopicPlugin
 from amqtt.session import Session
@@ -17,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def default_hash_scheme() -> list[str]:
     """Create config dataclass defaults."""
-    return ["argon2", "bcrypt", "pbkdf2_sha256", "scrypt"]
+    return ["argon2", "bcrypt"]
 
 
 class UserAuthDBPlugin(BaseAuthPlugin):
@@ -25,30 +22,27 @@ class UserAuthDBPlugin(BaseAuthPlugin):
     def __init__(self, context: BrokerContext) -> None:
         super().__init__(context)
 
-        # access the singleton and set the proper crypt context
-        pwd_hasher = PasswordHasher()
-        pwd_hasher.crypt_context = CryptContext(schemes=self.config.hash_schemes, deprecated="auto")
+        # Initialize the singleton with the configured hash schemes.
+        PasswordHasher(schemes=self.config.hash_schemes)
 
         self._user_manager = UserManager(self.config.connection)
-        self._engine = create_async_engine(f"{self.config.connection}")
 
     async def on_broker_pre_start(self) -> None:
         """Sync the schema (if configured)."""
         if not self.config.sync_schema:
             return
-        async with self._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        await self._user_manager.db_sync()
 
     async def authenticate(self, *, session: Session) -> bool | None:
         """Authenticate a client's session."""
         if not session.username or not session.password:
             return False
 
-        user_auth = await self._user_manager.get_user_auth(session.username)
-        if not user_auth:
-            return False
+        return await self._user_manager.verify_user_auth_password(session.username, session.password)
 
-        return bool(session.password) and user_auth.verify_password(session.password)
+    async def close(self) -> None:
+        """Dispose database resources."""
+        await self._user_manager.close()
 
     @dataclass
     class Config:
@@ -73,14 +67,12 @@ class TopicAuthDBPlugin(BaseTopicPlugin):
         super().__init__(context)
 
         self._topic_manager = TopicManager(self.config.connection)
-        self._engine = create_async_engine(f"{self.config.connection}")
 
     async def on_broker_pre_start(self) -> None:
         """Sync the schema (if configured)."""
         if not self.config.sync_schema:
             return
-        async with self._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        await self._topic_manager.db_sync()
 
     async def topic_filtering(
         self, *, session: Session | None = None, topic: str | None = None, action: Action | None = None
@@ -95,6 +87,10 @@ class TopicAuthDBPlugin(BaseTopicPlugin):
             return False
 
         return topic in topic_list
+
+    async def close(self) -> None:
+        """Dispose database resources."""
+        await self._topic_manager.close()
 
     @dataclass
     class Config:

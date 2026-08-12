@@ -1,0 +1,119 @@
+---
+name: Release Drafter
+
+on:
+  push:
+    tags:
+      # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to draft, e.g. v0.12.0"
+        required: true
+        type: string
+
+permissions: read-all
+
+jobs:
+  update_release_draft:
+    name: Update Release Draft
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Validate tag metadata
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          RELEASE_TAG: ${{ github.event.inputs.release_tag || '' }}
+        run: |
+          set -euo pipefail
+
+          tag_name="$REF_NAME"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            tag_name="$RELEASE_TAG"
+          fi
+
+          # Keep in sync with publish-pypi.yml and ci.yml. This runs on tag push,
+          # so a malformed tag is caught before a draft release is ever created.
+          if [[ ! "$tag_name" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "::error::Release tags must be vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCHrcN (e.g. v0.12.0, v0.12.0rc1)"
+            exit 1
+          fi
+
+      - name: Resolve release metadata
+        id: release
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event.inputs.release_tag || '' }}
+        run: |
+          set -euo pipefail
+
+          tag_name="$REF_NAME"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            tag_name="$RELEASE_TAG"
+          fi
+
+          {
+            echo "name=$tag_name"
+            echo "tag=$tag_name"
+          } >> "$GITHUB_OUTPUT"
+
+      # https://github.com/actions/checkout
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Read the changelog from the tag being released, not from the default
+          # branch. On a tag push this is what checkout would pick anyway; stating
+          # it explicitly is what makes `workflow_dispatch` correct, so a release
+          # can be drafted from a tag whose content never landed on main.
+          ref: ${{ steps.release.outputs.tag }}
+          persist-credentials: false
+
+      - name: Read changelog
+        id: changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Take only the first "## " section -- the changelog is newest-first, so
+          # that is the release being drafted. Matching on position rather than on
+          # the tag name keeps this working whether the heading reads "0.12.0" or
+          # "0.12.0rc1". The heading itself is dropped, since the GitHub release
+          # already carries the version as its title.
+          notes="$(awk '
+            /^## / { if (found) exit; found = 1; next }
+            found
+          ' docs/changelog.md)"
+
+          if [[ -z "${notes//[[:space:]]/}" ]]; then
+            echo "::error file=docs/changelog.md::No release notes found under the first '## ' heading"
+            exit 1
+          fi
+
+          delimiter="CHANGELOG_${RANDOM}_${RANDOM}"
+          {
+            echo "body<<$delimiter"
+            printf '%s\n' "$notes"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      # https://github.com/release-drafter/release-drafter
+      - name: Update release draft
+        uses: release-drafter/release-drafter@67e173cadb2fbd3de94f4a861e0c48c913b462ae # v6
+        with:
+          name: ${{ steps.release.outputs.name }}
+          tag: ${{ steps.release.outputs.tag }}
+          header: ${{ steps.changelog.outputs.body }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
