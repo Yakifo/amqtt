@@ -141,14 +141,14 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @property
     def bytes_length(self) -> int:
-        """Return the number of bytes consumed by this variable header."""
+        """Number of bytes consumed by this variable header."""
         if self._wire_length is not None:
             return self._wire_length
         return len(self.to_bytes())
 
     @property
     def username_flag(self) -> bool:
-        """Return whether the payload contains a User Name field."""
+        """Payload contains a User Name field."""
         return self._get_flag(self.USERNAME_FLAG)
 
     @username_flag.setter
@@ -157,7 +157,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @property
     def password_flag(self) -> bool:
-        """Return whether the payload contains a Password field."""
+        """Payload contains a Password field."""
         return self._get_flag(self.PASSWORD_FLAG)
 
     @password_flag.setter
@@ -166,7 +166,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @property
     def will_retain_flag(self) -> bool:
-        """Return whether the Will Message should be retained."""
+        """Will Message should be retained."""
         return self._get_flag(self.WILL_RETAIN_FLAG)
 
     @will_retain_flag.setter
@@ -175,7 +175,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @property
     def will_flag(self) -> bool:
-        """Return whether the payload contains Will fields."""
+        """Payload contains Will fields."""
         return self._get_flag(self.WILL_FLAG)
 
     @will_flag.setter
@@ -184,7 +184,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @property
     def clean_start_flag(self) -> bool:
-        """Return the MQTT 5.0 Clean Start flag."""
+        """MQTT 5.0 Clean Start flag."""
         return self._get_flag(self.CLEAN_START_FLAG)
 
     @clean_start_flag.setter
@@ -193,7 +193,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @property
     def reserved_flag(self) -> bool:
-        """Return whether the reserved CONNECT flag bit is set."""
+        """Reserved CONNECT flag bit is set."""
         return self._get_flag(self.RESERVED_FLAG)
 
     @reserved_flag.setter
@@ -202,7 +202,7 @@ class ConnectVariableHeader(MQTTVariableHeader):
 
     @property
     def will_qos(self) -> int:
-        """Return the Will QoS value from the CONNECT flags."""
+        """Will QoS value from the CONNECT flags."""
         return (self.flags & self.WILL_QOS_MASK) >> 3
 
     @will_qos.setter
@@ -354,7 +354,7 @@ class ConnectPayload(MQTTPayload[ConnectVariableHeader]):
         return out
 
 
-class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedHeader]):  # type: ignore[type-var]
+class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedHeader]):
     """MQTT 5.0 CONNECT packet (§3.1)."""
 
     VARIABLE_HEADER = ConnectVariableHeader
@@ -460,7 +460,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def proto_name(self) -> str:
-        """Return the CONNECT Protocol Name."""
+        """CONNECT Protocol Name."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -475,7 +475,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def proto_level(self) -> int:
-        """Return the CONNECT Protocol Level."""
+        """CONNECT Protocol Level."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -490,7 +490,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def username_flag(self) -> bool:
-        """Return whether the CONNECT User Name Flag is set."""
+        """CONNECT User Name Flag is set."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -505,7 +505,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def password_flag(self) -> bool:
-        """Return whether the CONNECT Password Flag is set."""
+        """CONNECT Password Flag is set."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -520,7 +520,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def clean_start_flag(self) -> bool:
-        """Return the CONNECT Clean Start flag."""
+        """CONNECT Clean Start flag."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -535,7 +535,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def will_retain_flag(self) -> bool:
-        """Return whether the CONNECT Will Retain flag is set."""
+        """CONNECT Will Retain flag is set."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -550,7 +550,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def will_qos(self) -> int:
-        """Return the CONNECT Will QoS value."""
+        """CONNECT Will QoS value."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -565,7 +565,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def will_flag(self) -> bool:
-        """Return whether the CONNECT Will Flag is set."""
+        """CONNECT Will Flag is set."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -580,7 +580,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def reserved_flag(self) -> bool:
-        """Return whether the CONNECT reserved flag bit is set."""
+        """CONNECT reserved flag bit is set."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -595,7 +595,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def keep_alive(self) -> int:
-        """Return the CONNECT Keep Alive value."""
+        """CONNECT Keep Alive value."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -610,7 +610,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def properties(self) -> Properties:
-        """Return the CONNECT properties."""
+        """CONNECT properties."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -618,7 +618,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def client_id(self) -> str | None:
-        """Return the CONNECT Client Identifier."""
+        """CONNECT Client Identifier."""
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)
@@ -633,7 +633,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def client_id_is_random(self) -> bool:
-        """Return whether the Client Identifier was generated locally."""
+        """Client Identifier was generated locally."""
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)
@@ -648,7 +648,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def will_topic(self) -> str | None:
-        """Return the CONNECT Will Topic."""
+        """CONNECT Will Topic."""
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)
@@ -663,7 +663,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def will_message(self) -> bytes | bytearray | None:
-        """Return the CONNECT Will Payload."""
+        """CONNECT Will Payload."""
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)
@@ -678,7 +678,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def will_properties(self) -> Properties:
-        """Return the CONNECT Will Properties."""
+        """CONNECT Will Properties."""
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)
@@ -686,7 +686,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def username(self) -> str | None:
-        """Return the CONNECT User Name."""
+        """CONNECT User Name."""
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)
@@ -701,7 +701,7 @@ class ConnectPacket(MQTTPacket[ConnectVariableHeader, ConnectPayload, MQTTFixedH
 
     @property
     def password(self) -> bytes | bytearray | None:
-        """Return the CONNECT Password binary data."""
+        """CONNECT Password binary data."""
         if self.payload is None:
             msg = "Payload is not set"
             raise ValueError(msg)

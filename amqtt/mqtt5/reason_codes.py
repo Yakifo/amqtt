@@ -60,7 +60,7 @@ class ReasonCode(IntEnum):
 
     @property
     def description(self) -> str:
-        """Return a human-readable reason-code description."""
+        """Human-readable reason-code description."""
         return _DESCRIPTIONS[int(self)]
 
 
