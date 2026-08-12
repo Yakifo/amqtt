@@ -112,7 +112,7 @@ def subscribe_main(  # pylint: disable=R0914,R0917
     config_file: str | None = typer.Option(None, "-c", help="Client configuration file"),
     client_id: str | None = typer.Option(None, "-i", "--client-id", help="client identification for mqtt connection. *default: process id and the hostname of the client*"), max_count: int | None = typer.Option(None, "-n", help="Number of messages to read before ending *default: read indefinitely*"),
     qos: int = typer.Option(0, "--qos", "-q", help="Quality of service (0, 1, or 2)"),
-    topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe, can be used multiple times."),  # noqa: B008
+    topics: list[str] = typer.Option(..., "-t", help="Topic filter to subscribe, can be used multiple times."),  # ruff: ignore[function-call-in-default-argument]
     keep_alive: int | None = typer.Option(None, "-k", help="Keep alive timeout in seconds"),
     clean_session: bool = typer.Option(False, "--clean-session", help="Clean session on connect. *default: False*"),
     ca_file: str | None = typer.Option(None, "--ca-file", help="Define the path to a file containing PEM encoded CA certificates that are trusted. Used to enable SSL communication."),
@@ -124,7 +124,7 @@ def subscribe_main(  # pylint: disable=R0914,R0917
     will_retain: bool = typer.Option(False, "--will-retain", help="If the client disconnects unexpectedly the message sent out will be treated as a retained message. *only valid, if `--will-topic` is specified*"),
     extra_headers_json: str | None = typer.Option(None, "--extra-headers", help="Specify a JSON object string with key-value pairs representing additional headers that are transmitted on the initial connection. *websocket connections only*."),
     debug: bool = typer.Option(False, "-d", help="Enable debug messages"),
-    version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"),  # noqa : ARG001
+    version: bool = typer.Option(False, "--version", callback=_version, is_eager=True, help="Show version and exit"),  # ruff: ignore[unused-function-argument]
 ) -> None:
     """Command line MQTT client to subscribe to one or more topics and display any messages received."""
     if bool(will_message) != bool(will_topic):

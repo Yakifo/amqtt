@@ -2,7 +2,7 @@
 
 These are fully supported plugins but require additional dependencies to be installed: 
 
-`$ pip install '.[contrib]'`
+`$ pip install '.[contrib]'` (unless otherwise noted)
 
 
 - [Relational Database Auth](auth_db.md)<br/>
@@ -39,6 +39,12 @@ These are fully supported plugins but require additional dependencies to be inst
   Plugin to determine user authentication and topic authorization based on claims in a JWT.
     - `amqtt.contrib.jwt.UserAuthJwtPlugin` (client authentication)
     - `amqtt.contrib.jwt.TopicAuthJwtPlugin` (topic authorization) 
+
+- [Django Auth](django.md)<br/>
+  Authenticate MQTT clients with Django users and optional hashed MQTT tokens.<br/>
+  **Note**: if django is not already specified in your project's dependency configurations, install with `'amqtt[django]'`.<br/>
+    - `amqtt.contrib.django.plugins.DjangoAuthPlugin`
+    - `amqtt.contrib.django.plugins.UserTopicACLPlugin`
 
 - [Session Persistence](session.md)<br/>
   Plugin to store session information and retained topic messages in the event that the broker terminates abnormally.<br/>
