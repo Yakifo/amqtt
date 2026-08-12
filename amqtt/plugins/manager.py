@@ -77,6 +77,12 @@ class PluginManager(Generic[C]):
         self._is_auth_filtering_enabled = False
 
         self._load_plugins(namespace)
+
+        if self.get_plugin("BrokerSysPlugin"):
+            warnings.warn("`BrokerSysPlugin`: `psutil` will be removed as a project-level dependency in future versions. "
+                          "Please explicitly update your environment to use the optional dependency "
+                          "to ensure compatibility: 'amqtt[dollarsys]'", DeprecationWarning, stacklevel=4)
+
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
 
@@ -99,9 +105,11 @@ class PluginManager(Generic[C]):
             # plugins loaded directly from config dictionary
 
             if "auth" in self.app_context.config and self.app_context.config["auth"] is not None:
-                self.logger.warning("Loading plugins from config will ignore 'auth' section of config")
+                warnings.warn("Loading plugins from config will ignore 'auth' section of config.",
+                              DeprecationWarning, stacklevel=1)
             if "topic-check" in self.app_context.config and self.app_context.config["topic-check"] is not None:
-                self.logger.warning("Loading plugins from config will ignore 'topic-check' section of config")
+                warnings.warn("Loading plugins from config will ignore 'topic-check' section of config.",
+                              DeprecationWarning, stacklevel=1)
 
             plugins_config: list[Any] | dict[str, Any] = self.app_context.config.get("plugins", [])
 
@@ -276,14 +284,26 @@ class PluginManager(Generic[C]):
 
     async def close(self) -> None:
         """Free PluginManager resources and cancel pending event methods."""
+        await self.wait_fired_events()
         await self.map_plugin_close()
         for task in self._fired_events:
             task.cancel()
         self._fired_events.clear()
 
+    async def wait_fired_events(self) -> None:
+        """Wait for already-scheduled fire-and-forget plugin events to finish."""
+        fired_events = list(self._fired_events)
+        if not fired_events:
+            return
+
+        await asyncio.gather(*fired_events, return_exceptions=True)
+        for task in fired_events:
+            with contextlib.suppress(KeyError, ValueError):
+                self._fired_events.remove(task)
+
     @property
     def plugins(self) -> list["BasePlugin[C]"]:
-        """Get the loaded plugins list.
+        """List of loaded plugins.
 
         :return:
         """
@@ -299,7 +319,7 @@ class PluginManager(Generic[C]):
             except asyncio.CancelledError:
                 self.logger.warning("fired event was cancelled")
             # display plugin fault; don't allow it to cause a broker failure
-            except Exception as exc:  # noqa: BLE001, pylint: disable=W0718
+            except Exception as exc:  # ruff: ignore[blind-except], pylint: disable=W0718
                 traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
 
         with contextlib.suppress(KeyError, ValueError):

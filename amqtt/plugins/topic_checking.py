@@ -30,7 +30,9 @@ class TopicAccessControlListPlugin(BaseTopicPlugin):
         super().__init__(context)
 
         if self._get_config_option("acl", None):
-            warnings.warn("The 'acl' option is deprecated, please use 'subscribe-acl' instead.", stacklevel=1)
+            warnings.warn("The 'acl' option is deprecated, please use 'subscribe-acl' instead. "
+                          "Support will dropped in future versions.",
+                          DeprecationWarning, stacklevel=1)
 
         if self._get_config_option("acl", None) and self._get_config_option("subscribe-acl", None):
             msg = "'acl' has been replaced with 'subscribe-acl'; only one may be included"

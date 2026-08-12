@@ -18,4 +18,5 @@ _Describe breaking changes, including changes a users might need to make due to 
 
 1. [ ] Does your submission pass the existing tests?
 2. [ ] Are there new tests that cover these additions/changes?
-3. [ ] Have you linted your code locally before submission?
+3. [ ] Does this PR maintain or increase test coverage?
+4. [ ] Have you linted your code locally before submission?

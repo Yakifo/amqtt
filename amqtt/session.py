@@ -129,6 +129,7 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
 
 class Session:
+
     """MQTT session state shared by broker and client handlers.
 
     The negotiated protocol version is stored here for state and diagnostics.
@@ -174,7 +175,6 @@ class Session:
         retained_messages: Offline messages retained for this session.
         delivered_message_queue: Incoming application messages ready for broker/client processing.
         is_anonymous: Whether this session belongs to an anonymous or generated-identifier client.
-
     """
 
     states: ClassVar[list[str]] = ["new", "connected", "disconnected"]
@@ -206,6 +206,12 @@ class Session:
         self.last_connect_time: int | None = None
         self.ssl_object: ssl.SSLObject | None = None
         self.last_disconnect_time: int | None = None
+        self.attributes: dict[str, Any] = {}
+        """Application and plugin-owned session attributes.
+
+        Keys should be namespaced, for example ``"amqtt.contrib.django.role"``,
+        to avoid collisions between independent extensions.
+        """
 
         # MQTT 5.0 session properties.
         self.session_expiry_interval: int = MQTT5_DEFAULT_SESSION_EXPIRY_INTERVAL

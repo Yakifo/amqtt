@@ -1,0 +1,15 @@
+hatch-vcs==0.5.0
+hatchling==1.31.0
+uv-dynamic-versioning==0.14.0
+
+dunamai==1.26.2
+jinja2==3.1.6
+markupsafe==3.0.3
+packaging==26.2
+pathspec==1.1.1
+pluggy==1.6.0
+setuptools==83.0.0
+setuptools-scm==10.2.1
+tomlkit==0.15.1
+trove-classifiers==2026.6.1.19
+vcs-versioning==2.2.4

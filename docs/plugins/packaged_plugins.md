@@ -15,7 +15,7 @@ and configured for the broker:
 ```
 
 
-??? warning "Loading plugins from EntryPoints in `pyproject.toml` has been deprecated"
+??? warning "Loading plugins from EntryPoints in `pyproject.toml` has been deprecated (v0.11.2)."
 
     Previously, all plugins were loaded from EntryPoints:
 
@@ -55,7 +55,7 @@ Authentication plugin allowing anonymous access.
     even if `allow_anonymous` is set to `false`, the plugin will still allow access if a username is provided by the client
 
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
 
     ```yaml
     auth:
@@ -78,7 +78,7 @@ Authentication plugin based on a file-stored user database.
         class_style: "simple"
 
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
     ```yaml
     
     auth:
@@ -92,16 +92,23 @@ Authentication plugin based on a file-stored user database.
 
 The file includes `username:password` pairs, one per line.
 
-The password should be encoded using sha-512 with `mkpasswd -m sha-512` or:
+The password should be encoded using argon2:
 
 ```python
 import sys
 from getpass import getpass
-from passlib.hash import sha512_crypt
+from argon2 import PasswordHasher
 
 passwd = input() if not sys.stdin.isatty() else getpass()
-print(sha512_crypt.hash(passwd))
+password_hasher = PasswordHasher()
+print(password_hasher.hash(passwd))
 ```
+
+??? warning "`sha512` hashing is deprecated, replaced by `argon2` (v0.12.0)"
+
+     Due to the removal of Python's standard library `crypt` module in Python 3.13 and the no-longer-supported `passlib` library, `sha512_crypt` is deprecated in favor of `argon2` hashing.
+
+    Deprecation includes verifying of existing `sha512` but will also generate a warning. The password file will _not_ be updated with a newly hashed version. Password files should be re-generated with `argon2` or `bcrypt` (see script example above).
 
 ### Taboo (Topic Plugin)
 
@@ -116,7 +123,7 @@ plugins:
   amqtt.plugins.topic_checking.TopicTabooPlugin:
 ```
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
 
     ```yaml
     topic-check:
@@ -146,7 +153,7 @@ If set to `None`, no restrictions are placed on client subscriptions (legacy beh
 
 - `subscribe-acl` *(mapping)*: determines subscription access.
 
-- `acl` *(mapping)*: Deprecated and replaced by `subscribe-acl`.
+- `acl` *(mapping)*: Deprecated and replaced by `subscribe-acl` (v0.11.2).
 
 - `publish-acl` *(mapping)*: determines publish access.
 
@@ -168,7 +175,7 @@ plugins:
       - .
 ```
 
-??? warning "EntryPoint-style configuration is deprecated"
+??? warning "EntryPoint-style configuration is deprecated (v0.11.2)."
     ```yaml
     topic-check:
       enabled: true
@@ -188,6 +195,12 @@ plugins:
 
 Publishes, on a periodic basis, statistics about the broker
 
+??? warning "Optional dependency required for `BrokerSysPlugin`" (v0.12.0)."
+
+    In a future major release, `psutil` will become an optional dependency. "
+    "If your application relies on the `BrokerSysPlugin`, please add `amqtt[dollarsys]` "
+    "to your project's dependency configurations.",
+
 **Configuration**
 
 - `sys_interval` - int, seconds between updates (default: 20)
@@ -197,6 +210,8 @@ plugins:
   amqtt.plugins.sys.broker.BrokerSysPlugin:
     sys_interval: 20  # int, seconds between updates
 ```
+
+
 
 **Supported Topics**
 
