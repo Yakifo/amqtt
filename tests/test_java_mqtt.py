@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_1, QOS_2
+from amqtt.constants import QOS_1, QOS_2
 
 
 pytestmark = pytest.mark.extended
