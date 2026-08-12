@@ -4,6 +4,8 @@ source = bumper
 
 omit =
     tests/*
+    fuzz/*
+    samples/*
     amqtt/scripts/*.py
 
 [report]

@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 import logging
+from typing_extensions import Self
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -12,10 +13,29 @@ logger = logging.getLogger(__name__)
 
 
 class UserManager:
+    """Interface to create, retrieve, update, validate, and delete users.
+
+    Hashes passwords using `passlib.context.CryptContext`.
+
+    ??? warning "Implementation does not include any password validation."
+        Use NIST or other password guidelines when calling functions that set or update passwords.
+    """
 
     def __init__(self, connection: str) -> None:
         self._engine = create_async_engine(connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
+
+    async def close(self) -> None:
+        """Dispose the database engine."""
+        await self._engine.dispose()
+
+    async def __aenter__(self) -> Self:
+        """Enter the context, returning the manager itself."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Dispose the database engine on exit."""
+        await self.close()
 
     async def db_sync(self) -> None:
         """Sync the database schema."""
@@ -34,7 +54,11 @@ class UserManager:
         return user_auth
 
     async def get_user_auth(self, username: str) -> UserAuth | None:
-        """Retrieve a user by username."""
+        """Retrieve a user by username.
+
+        Use `UserAuth.verify_password` to verify password match.
+
+        """
         async with self._db_session_maker() as db_session, db_session.begin():
             try:
                 return await self._get_auth_or_raise(db_session, username)
@@ -63,7 +87,7 @@ class UserManager:
                 raise MQTTError(msg)
 
             user_auth = UserAuth(username=username)
-            user_auth.password = plain_password
+            user_auth.password = plain_password  # nosemgrep / incorrectly identifies this as a django application
 
             db_session.add(user_auth)
             await db_session.commit()
@@ -88,10 +112,20 @@ class UserManager:
         """Change a user's password."""
         async with self._db_session_maker() as db_session, db_session.begin():
             user_auth = await self._get_auth_or_raise(db_session, username)
-            user_auth.password = plain_password
+            user_auth.password = plain_password  # nosemgrep / incorrectly identifies this as a django application
             await db_session.commit()
             await db_session.flush()
             return user_auth
+
+    async def verify_user_auth_password(self, username: str, plain_password: str) -> bool:
+        """Verify a user's password and persist any password hash upgrade."""
+        async with self._db_session_maker() as db_session, db_session.begin():
+            try:
+                user_auth = await self._get_auth_or_raise(db_session, username)
+            except MQTTError:
+                return False
+
+            return user_auth.verify_password(plain_password)
 
 
 class TopicManager:
@@ -99,6 +133,18 @@ class TopicManager:
     def __init__(self, connection: str) -> None:
         self._engine = create_async_engine(connection)
         self._db_session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
+
+    async def close(self) -> None:
+        """Dispose the database engine."""
+        await self._engine.dispose()
+
+    async def __aenter__(self) -> Self:
+        """Enter the context, returning the manager itself."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Dispose the database engine on exit."""
+        await self.close()
 
     async def db_sync(self) -> None:
         """Sync the database schema."""
@@ -137,7 +183,7 @@ class TopicManager:
             return topic_auth
 
     async def get_topic_auth(self, username: str) -> TopicAuth | None:
-        """Retrieve a allowed topics by username."""
+        """Retrieve allowed topics by username."""
         async with self._db_session_maker() as db_session, db_session.begin():
             try:
                 return await self._get_auth_or_raise(db_session, username)
@@ -145,7 +191,7 @@ class TopicManager:
                 return None
 
     async def list_topic_auths(self) -> Iterator[TopicAuth]:
-        """Return list of all authorized clients."""
+        """Return a list of all authorized clients."""
         async with self._db_session_maker() as db_session, db_session.begin():
             stmt = select(TopicAuth).order_by(TopicAuth.username)
             topics = await db_session.scalars(stmt)
