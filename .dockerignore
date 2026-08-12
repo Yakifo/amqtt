@@ -5,3 +5,14 @@ tests/**
 htmlcov/**
 cache/**
 dist/**
+.coverage
+.git/**
+.mypy_cache/**
+.pytest_cache/**
+.ruff_cache/**
+.venv*/
+__pycache__/**
+*.py[cod]
+build/**
+coverage.xml
+node_modules/**
