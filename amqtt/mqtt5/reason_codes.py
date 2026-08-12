@@ -14,12 +14,12 @@ class ReasonCode(IntEnum):
     SUCCESS = 0x00
 
     def is_error(self) -> bool:
-        """Return whether this reason code represents an error."""
+        """Reason code represents an error."""
         return self >= 0x80
 
     @property
     def description(self) -> str:
-        """Return a human-readable reason-code description."""
+        """Human-readable reason-code description."""
         return _DESCRIPTIONS[self]
 
 
