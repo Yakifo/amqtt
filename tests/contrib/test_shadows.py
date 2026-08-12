@@ -36,7 +36,10 @@ async def db_session_maker(db_connection):
     engine = create_async_engine(f"{db_connection}")
     db_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
-    yield db_session_maker
+    try:
+        yield db_session_maker
+    finally:
+        await engine.dispose()
 
 
 @pytest.fixture
@@ -48,7 +51,10 @@ async def shadow_plugin(db_connection):
 
     shadow_plugin = ShadowPlugin(ctx)
     await shadow_plugin.on_broker_pre_start()
-    yield shadow_plugin
+    try:
+        yield shadow_plugin
+    finally:
+        await shadow_plugin.close()
 
 
 @pytest.mark.asyncio
