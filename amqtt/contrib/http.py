@@ -133,7 +133,7 @@ class AuthHttpPlugin(BasePlugin[BrokerContext]):
                         return False
                     data: dict[str, Any] = await r.json()
                     data = {k.lower(): v for k, v in data.items()}
-                    return data.get("ok", None)
+                    return data.get("ok")
 
     def get_url(self, uri: str) -> str:
         return f"{'https' if self.config.with_tls else 'http'}://{self.config.host}:{self.config.port}{uri}"

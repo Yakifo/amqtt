@@ -12,8 +12,7 @@ build:
       - pip install --upgrade pip
       - pip install uv
       - uv venv
-      - uv pip install --group dev --group docs ".[contrib]"
-      - uv run pytest --mock-docker=true
+      - uv sync --all-groups --all-extras
     build:
       html:
         - uv run python -m mkdocs build --clean --site-dir $READTHEDOCS_OUTPUT/html --config-file mkdocs.rtd.yml

@@ -1,17 +1,20 @@
 import asyncio
+from contextlib import suppress
 import logging
 from pathlib import Path
 import sqlite3
 import pytest
 import aiosqlite
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy import select
+from sqlalchemy.dialects import mysql, postgresql, sqlite
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.schema import CreateTable
 
 from amqtt.broker import Broker, BrokerContext, RetainedApplicationMessage
 from amqtt.client import MQTTClient
 from amqtt.mqtt3.constants import QOS_1
-from amqtt.contrib.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage
+from amqtt.contrib.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage, Base, StoredMessage
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
@@ -20,14 +23,47 @@ logging.basicConfig(level=logging.DEBUG, format=formatter)
 logger = logging.getLogger(__name__)
 
 @pytest.fixture
-async def db_file():
-    db_file = Path(__file__).parent / "amqtt.db"
-    if db_file.exists():
-        raise NotImplementedError("existing db file found, should it be cleaned up?")
+def db_file(tmp_path):
+    return tmp_path / "amqtt.db"
 
-    yield db_file
-    if db_file.exists():
-        db_file.unlink()
+
+async def disconnect_client(client: MQTTClient | None) -> None:
+    if client is not None and client.session and client.session.transitions.is_connected():
+        with suppress(Exception):
+            await client.disconnect()
+
+
+async def shutdown_broker(broker: Broker | None) -> None:
+    if broker is not None and not broker.transitions.is_stopped():
+        with suppress(Exception):
+            await broker.shutdown()
+
+
+class BrokerTestResources:
+    def __init__(self) -> None:
+        self.brokers: list[Broker] = []
+        self.clients: list[MQTTClient] = []
+
+    def broker(self, broker: Broker) -> Broker:
+        self.brokers.append(broker)
+        return broker
+
+    def client(self, client: MQTTClient) -> MQTTClient:
+        self.clients.append(client)
+        return client
+
+    async def cleanup(self) -> None:
+        for client in reversed(self.clients):
+            await disconnect_client(client)
+        for broker in reversed(self.brokers):
+            await shutdown_broker(broker)
+
+
+@pytest.fixture
+async def broker_test_resources():
+    resources = BrokerTestResources()
+    yield resources
+    await resources.cleanup()
 
 @pytest.fixture
 async def broker_context():
@@ -43,32 +79,150 @@ async def broker_context():
 async def db_session_factory(db_file):
     engine = create_async_engine(f"sqlite+aiosqlite:///{str(db_file)}")
     factory = async_sessionmaker(engine, expire_on_commit=False)
-    yield factory
+    try:
+        yield factory
+    finally:
+        await engine.dispose()
 
+
+@pytest.fixture
+async def session_db_plugin_factory():
+    plugins: list[SessionDBPlugin] = []
+
+    def make_plugin(context: BrokerContext) -> SessionDBPlugin:
+        plugin = SessionDBPlugin(context)
+        plugins.append(plugin)
+        return plugin
+
+    yield make_plugin
+
+    for plugin in reversed(plugins):
+        await plugin.close()
+
+
+def assert_stored_sessions_table_initialized(db_file: Path) -> None:
+    conn = sqlite3.connect(str(db_file))
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(stored_sessions);")
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    column_names = [row[1] for row in rows]
+    assert len(column_names) > 1
+
+
+def table_row_count(db_file: Path, table_name: str) -> int:
+    conn = sqlite3.connect(str(db_file))
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+        count = cursor.fetchone()[0]
+    finally:
+        conn.close()
+
+    return count
+
+
+@pytest.mark.parametrize("dialect", [sqlite.dialect(), postgresql.dialect(), mysql.dialect()])
+def test_persistence_schema_compiles_for_supported_dialects(dialect):
+    for table in Base.metadata.sorted_tables:
+        str(CreateTable(table).compile(dialect=dialect))
+
+
+@pytest.mark.parametrize("dialect", [sqlite.dialect(), postgresql.dialect(), mysql.dialect()])
+def test_persistence_statements_compile_for_supported_dialects(dialect):
+    statements = [
+        select(StoredSession).where(StoredSession.client_id == "client-1"),
+        select(StoredMessage).where(StoredMessage.topic == "topic/1"),
+        StoredSession.__table__.insert(),
+        StoredMessage.__table__.delete().where(StoredMessage.topic == "topic/1"),
+        *[table.delete() for table in Base.metadata.sorted_tables],
+    ]
+
+    for statement in statements:
+        str(statement.compile(dialect=dialect))
 
 
 @pytest.mark.asyncio
-async def test_initialize_tables(db_file, broker_context):
+async def test_initialize_tables(db_file, broker_context, session_db_plugin_factory):
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     assert db_file.exists()
 
-    conn = sqlite3.connect(str(db_file))
-    cursor = conn.cursor()
-    table_name = 'stored_sessions'
-    cursor.execute(f"PRAGMA table_info({table_name});")
-    rows = cursor.fetchall()
-    column_names = [row[1] for row in rows]
-    assert len(column_names) > 1
+    assert_stored_sessions_table_initialized(db_file)
+
 
 @pytest.mark.asyncio
-async def test_create_stored_session(db_file, broker_context, db_session_factory):
+async def test_legacy_file_config_initializes_sqlite_db(db_file, broker_context, session_db_plugin_factory):
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+
+    with pytest.deprecated_call(match="`file` option is now deprecated"):
+        session_db_plugin = session_db_plugin_factory(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    assert db_file.exists()
+    assert_stored_sessions_table_initialized(db_file)
+
+
+@pytest.mark.asyncio
+async def test_blank_file_config_initializes_default_sqlite_db(tmp_path, monkeypatch, broker_context, session_db_plugin_factory):
+    monkeypatch.chdir(tmp_path)
+    db_file = tmp_path / "amqtt.db"
+    broker_context.config = SessionDBPlugin.Config()
+
+    session_db_plugin = session_db_plugin_factory(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    assert db_file.exists()
+    assert_stored_sessions_table_initialized(db_file)
+
+
+@pytest.mark.asyncio
+async def test_clear_on_shutdown_deletes_legacy_sqlite_file(db_file, broker_context, session_db_plugin_factory):
+    broker_context.config = SessionDBPlugin.Config(file=db_file)
+
+    with pytest.deprecated_call(match="`file` option is now deprecated"):
+        session_db_plugin = session_db_plugin_factory(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    assert db_file.exists()
+
+    await session_db_plugin.on_broker_post_shutdown()
+
+    assert not db_file.exists()
+
+
+@pytest.mark.asyncio
+async def test_clear_on_shutdown_clears_database_tables_for_connection(db_file, broker_context, session_db_plugin_factory):
+    broker_context.config = SessionDBPlugin.Config(connection=f"sqlite+aiosqlite:///{db_file}")
+    session_db_plugin = session_db_plugin_factory(broker_context)
+    await session_db_plugin.on_broker_pre_start()
+
+    async with session_db_plugin._db_session_maker() as db_session, db_session.begin():
+        db_session.add(StoredSession(client_id="client-1"))
+        db_session.add(StoredMessage(topic="topic/1", data=b"payload", qos=1))
+
+    assert table_row_count(db_file, "stored_sessions") == 1
+    assert table_row_count(db_file, "stored_messages") == 1
+
+    await session_db_plugin.on_broker_post_shutdown()
+
+    assert db_file.exists()
+    assert_stored_sessions_table_initialized(db_file)
+    assert table_row_count(db_file, "stored_sessions") == 0
+    assert table_row_count(db_file, "stored_messages") == 0
+
+
+@pytest.mark.asyncio
+async def test_create_stored_session(db_file, broker_context, db_session_factory, session_db_plugin_factory):
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     async with db_session_factory() as db_session:
@@ -82,9 +236,9 @@ async def test_create_stored_session(db_file, broker_context, db_session_factory
                 assert row[1] == 'test_client_1'
 
 @pytest.mark.asyncio
-async def test_get_stored_session(db_file, broker_context, db_session_factory):
+async def test_get_stored_session(db_file, broker_context, db_session_factory, session_db_plugin_factory):
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     async with aiosqlite.connect(str(db_file)) as db:
@@ -111,7 +265,7 @@ async def test_get_stored_session(db_file, broker_context, db_session_factory):
 
 
 @pytest.mark.asyncio
-async def test_update_stored_session(db_file, broker_context, db_session_factory):
+async def test_update_stored_session(db_file, broker_context, db_session_factory, session_db_plugin_factory):
     broker_context.config = SessionDBPlugin.Config(file=db_file)
 
     # create session for client id (without subscription)
@@ -121,7 +275,7 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
     assert session is not None
     session.clean_session = False
 
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     # initialize with stored client session
@@ -156,10 +310,12 @@ async def test_update_stored_session(db_file, broker_context, db_session_factory
 
 
 @pytest.mark.asyncio
-async def test_client_connected_with_clean_session(db_file, broker_context, db_session_factory) -> None:
+async def test_client_connected_with_clean_session(
+    db_file, broker_context, db_session_factory, session_db_plugin_factory
+) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     session = Session()
@@ -177,10 +333,12 @@ async def test_client_connected_with_clean_session(db_file, broker_context, db_s
 
 
 @pytest.mark.asyncio
-async def test_client_connected_anonymous_session(db_file, broker_context, db_session_factory) -> None:
+async def test_client_connected_anonymous_session(
+    db_file, broker_context, db_session_factory, session_db_plugin_factory
+) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     session = Session()
@@ -196,10 +354,12 @@ async def test_client_connected_anonymous_session(db_file, broker_context, db_se
 
 
 @pytest.mark.asyncio
-async def test_client_connected_and_stored_session(db_file, broker_context, db_session_factory) -> None:
+async def test_client_connected_and_stored_session(
+    db_file, broker_context, db_session_factory, session_db_plugin_factory
+) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     session = Session()
@@ -234,10 +394,10 @@ async def test_client_connected_and_stored_session(db_file, broker_context, db_s
 
 
 @pytest.mark.asyncio
-async def test_repopulate_stored_sessions(db_file, broker_context, db_session_factory) -> None:
+async def test_repopulate_stored_sessions(db_file, broker_context, db_session_factory, session_db_plugin_factory) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     async with aiosqlite.connect(str(db_file)) as db:
@@ -270,10 +430,10 @@ async def test_repopulate_stored_sessions(db_file, broker_context, db_session_fa
 
 
 @pytest.mark.asyncio
-async def test_client_retained_message(db_file, broker_context, db_session_factory) -> None:
+async def test_client_retained_message(db_file, broker_context, db_session_factory, session_db_plugin_factory) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     # add a session to the broker
@@ -299,10 +459,10 @@ async def test_client_retained_message(db_file, broker_context, db_session_facto
 
 
 @pytest.mark.asyncio
-async def test_topic_retained_message(db_file, broker_context, db_session_factory) -> None:
+async def test_topic_retained_message(db_file, broker_context, db_session_factory, session_db_plugin_factory) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file, clear_on_shutdown=False)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     # add a session to the broker
@@ -334,10 +494,12 @@ async def test_topic_retained_message(db_file, broker_context, db_session_factor
 
 
 @pytest.mark.asyncio
-async def test_topic_clear_retained_message(db_file, broker_context, db_session_factory) -> None:
+async def test_topic_clear_retained_message(
+    db_file, broker_context, db_session_factory, session_db_plugin_factory
+) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     # add a session to the broker
@@ -361,10 +523,10 @@ async def test_topic_clear_retained_message(db_file, broker_context, db_session_
 
 
 @pytest.mark.asyncio
-async def test_restoring_retained_message(db_file, broker_context, db_session_factory) -> None:
+async def test_restoring_retained_message(db_file, broker_context, db_session_factory, session_db_plugin_factory) -> None:
 
     broker_context.config = SessionDBPlugin.Config(file=db_file)
-    session_db_plugin = SessionDBPlugin(broker_context)
+    session_db_plugin = session_db_plugin_factory(broker_context)
     await session_db_plugin.on_broker_pre_start()
 
     stmts = ("INSERT INTO stored_messages VALUES(1,'my/retained/topic1',X'72657461696e6564206d657373616765',2)",
@@ -385,12 +547,12 @@ async def test_restoring_retained_message(db_file, broker_context, db_session_fa
 
 
 @pytest.fixture
-def db_config(db_file):
+def db_config(db_file, unused_tcp_port):
     return {
         'listeners': {
             'default': {
                 'type': 'tcp',
-                'bind': '127.0.0.1:1883'
+                'bind': f'127.0.0.1:{unused_tcp_port}'
             }
         },
         'plugins': {
@@ -404,17 +566,20 @@ def db_config(db_file):
     }
 
 
+def broker_uri(db_config, username):
+    bind = db_config['listeners']['default']['bind']
+    return f"mqtt://{username}@{bind}"
 
 
 @pytest.mark.asyncio
-async def test_broker_client_no_cleanup(db_file, db_config) -> None:
+async def test_broker_client_no_cleanup(db_config, broker_test_resources) -> None:
 
-    b1 = Broker(config=db_config)
+    b1 = broker_test_resources.broker(Broker(config=db_config))
     await b1.start()
     await asyncio.sleep(0.1)
 
-    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+    c1 = broker_test_resources.client(MQTTClient(client_id='test_client1', config={'auto_reconnect':False}))
+    await c1.connect(broker_uri(db_config, "myUsername"), cleansession=False)
 
     # test that this message is retained for the topic upon restore
     await c1.publish("my/retained/topic", b'retained message for topic my/retained/topic', retain=True)
@@ -423,13 +588,13 @@ async def test_broker_client_no_cleanup(db_file, db_config) -> None:
     await b1.shutdown()
 
     # new broker should load the previous broker's db file since clean_on_shutdown is false in config
-    b2 = Broker(config=db_config)
+    b2 = broker_test_resources.broker(Broker(config=db_config))
     await b2.start()
     await asyncio.sleep(0.1)
 
     # upon subscribing to topic with retained message, it should be received
-    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
-    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    c2 = broker_test_resources.client(MQTTClient(client_id='test_client2', config={'auto_reconnect':False}))
+    await c2.connect(broker_uri(db_config, "myOtherUsername"), cleansession=False)
     await c2.subscribe([
         ('my/retained/topic', QOS_1)
     ])
@@ -443,14 +608,14 @@ async def test_broker_client_no_cleanup(db_file, db_config) -> None:
 
 
 @pytest.mark.asyncio
-async def test_broker_client_retain_subscription(db_file, db_config) -> None:
+async def test_broker_client_retain_subscription(db_config, broker_test_resources) -> None:
 
-    b1 = Broker(config=db_config)
+    b1 = broker_test_resources.broker(Broker(config=db_config))
     await b1.start()
     await asyncio.sleep(0.1)
 
-    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+    c1 = broker_test_resources.client(MQTTClient(client_id='test_client1', config={'auto_reconnect':False}))
+    await c1.connect(broker_uri(db_config, "myUsername"), cleansession=False)
 
     # test to make sure the subscription is re-established upon reconnection after broker restart (clear_on_shutdown = False)
     ret = await c1.subscribe([
@@ -463,13 +628,13 @@ async def test_broker_client_retain_subscription(db_file, db_config) -> None:
     await b1.shutdown()
 
     # new broker should load the previous broker's db file
-    b2 = Broker(config=db_config)
+    b2 = broker_test_resources.broker(Broker(config=db_config))
     await b2.start()
     await asyncio.sleep(0.1)
 
     # client1's subscription should have been restored, so when it connects, it should receive this message
-    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
-    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    c2 = broker_test_resources.client(MQTTClient(client_id='test_client2', config={'auto_reconnect':False}))
+    await c2.connect(broker_uri(db_config, "myOtherUsername"), cleansession=False)
     await c2.publish('my/offline/topic', b'standard message to be retained for offline clients')
     await asyncio.sleep(0.1)
     await c2.disconnect()
@@ -486,16 +651,16 @@ async def test_broker_client_retain_subscription(db_file, db_config) -> None:
 
 
 @pytest.mark.asyncio
-async def test_broker_client_retain_message(db_file, db_config) -> None:
+async def test_broker_client_retain_message(db_config, broker_test_resources) -> None:
     """test to make sure that the retained message because client1 is offline,
      gets sent when back online after broker restart."""
 
-    b1 = Broker(config=db_config)
+    b1 = broker_test_resources.broker(Broker(config=db_config))
     await b1.start()
     await asyncio.sleep(0.1)
 
-    c1 = MQTTClient(client_id='test_client1', config={'auto_reconnect':False})
-    await c1.connect("mqtt://myUsername@127.0.0.1:1883", cleansession=False)
+    c1 = broker_test_resources.client(MQTTClient(client_id='test_client1', config={'auto_reconnect':False}))
+    await c1.connect(broker_uri(db_config, "myUsername"), cleansession=False)
 
     # subscribe to a topic with QOS_1 so that we receive messages, even if we're disconnected when sent
     ret = await c1.subscribe([
@@ -508,8 +673,8 @@ async def test_broker_client_retain_message(db_file, db_config) -> None:
     await asyncio.sleep(0.1)
 
     # another client sends a message to previously subscribed to topic
-    c2 = MQTTClient(client_id='test_client2', config={'auto_reconnect':False})
-    await c2.connect("mqtt://myOtherUsername@localhost:1883", cleansession=False)
+    c2 = broker_test_resources.client(MQTTClient(client_id='test_client2', config={'auto_reconnect':False}))
+    await c2.connect(broker_uri(db_config, "myOtherUsername"), cleansession=False)
 
     # this message should be delivered after broker stops and restarts (and client connects)
     await c2.publish('my/offline/topic', b'standard message to be retained for offline clients')
@@ -519,7 +684,7 @@ async def test_broker_client_retain_message(db_file, db_config) -> None:
     await b1.shutdown()
 
     # new broker should load the previous broker's db file since we declared clear_on_shutdown = False in config
-    b2 = Broker(config=db_config)
+    b2 = broker_test_resources.broker(Broker(config=db_config))
     await b2.start()
     await asyncio.sleep(0.1)
 
