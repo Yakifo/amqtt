@@ -129,7 +129,6 @@ class OutgoingApplicationMessage(ApplicationMessage):
 
 
 class Session:
-
     """MQTT session state shared by broker and client handlers.
 
     The negotiated protocol version is stored here for state and diagnostics.
@@ -175,6 +174,7 @@ class Session:
         retained_messages: Offline messages retained for this session.
         delivered_message_queue: Incoming application messages ready for broker/client processing.
         is_anonymous: Whether this session belongs to an anonymous or generated-identifier client.
+
     """
 
     states: ClassVar[list[str]] = ["new", "connected", "disconnected"]
