@@ -5,7 +5,9 @@ from pathlib import Path
 
 import pytest
 import aiosqlite
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
+from pwdlib.hashers.argon2 import Argon2Hasher
+from pwdlib.hashers.bcrypt import BcryptHasher
 
 from amqtt.broker import BrokerContext, Broker
 from amqtt.client import MQTTClient
@@ -16,13 +18,12 @@ from amqtt.contrib.auth_db.managers import UserManager, TopicManager
 from amqtt.errors import ConnectError, MQTTError
 from amqtt.mqtt3.constants import QOS_1, QOS_0
 from amqtt.session import Session
-from argon2 import PasswordHasher as ArgonPasswordHasher
-from argon2.exceptions import VerifyMismatchError
+
 
 @pytest.fixture
 def password_hasher():
-    pwd_hasher = PasswordHasher()
-    pwd_hasher.crypt_context = CryptContext(schemes=["argon2", ], deprecated="auto")
+
+    pwd_hasher = PasswordHash((Argon2Hasher(),))
     yield pwd_hasher
 
 
@@ -43,14 +44,37 @@ def db_connection(db_file):
 async def user_manager(password_hasher, db_connection):
     um = UserManager(db_connection)
     await um.db_sync()
-    yield um
+    try:
+        yield um
+    finally:
+        await um.close()
 
 
 @pytest.fixture
 async def topic_manager(password_hasher, db_connection):
     tm = TopicManager(db_connection)
     await tm.db_sync()
-    yield tm
+    try:
+        yield tm
+    finally:
+        await tm.close()
+
+
+@pytest.fixture
+async def auth_plugin():
+    """Build auth db plugins, releasing their connection pools on teardown."""
+    plugins = []
+
+    def factory(plugin_cls, context):
+        plugin = plugin_cls(context=context)
+        plugins.append(plugin)
+        return plugin
+
+    try:
+        yield factory
+    finally:
+        for plugin in plugins:
+            await plugin.close()
 
 
 # ######################################
@@ -58,7 +82,7 @@ async def topic_manager(password_hasher, db_connection):
 
 
 @pytest.mark.asyncio
-async def test_create_user(user_manager, db_file, db_connection):
+async def test_create_user(user_manager, db_file, db_connection, password_hasher):
     await user_manager.create_user_auth("myuser", "mypassword")
 
     async with aiosqlite.connect(db_file) as db_conn:
@@ -70,11 +94,9 @@ async def test_create_user(user_manager, db_file, db_connection):
                 assert row['username'] == "myuser"
                 assert row['password_hash'] != "mypassword"
                 assert '$argon2' in row['password_hash']
-                ph = ArgonPasswordHasher()
-                ph.verify(row['password_hash'], "mypassword")
 
-                with pytest.raises(VerifyMismatchError):
-                    ph.verify(row['password_hash'], "mywrongpassword")
+                assert password_hasher.verify("mypassword", row['password_hash'])
+                assert not password_hasher.verify("mywrongpassword", row['password_hash'])
 
                 has_user = True
 
@@ -108,9 +130,9 @@ async def test_password_change(user_manager, db_file, db_connection):
         async with await db_conn.execute("SELECT * FROM user_auth") as cursor:
             for row in await cursor.fetchall():
                 assert row['password_hash'] != new_user._password_hash
-                ph = ArgonPasswordHasher()
-                with pytest.raises(VerifyMismatchError):
-                    ph.verify(row['password_hash'], "mypassword")
+                ph = PasswordHasher()
+
+                assert not ph.verify("mypassword", row['password_hash'])
 
                 has_user = True
 
@@ -146,7 +168,7 @@ async def test_remove_users(user_manager, db_file, db_connection):
     ("mypassword", "myotherpassword", False),
 ])
 @pytest.mark.asyncio
-async def test_db_auth(db_connection, user_manager, user_pwd, session_pwd, outcome):
+async def test_db_auth(db_connection, user_manager, auth_plugin, user_pwd, session_pwd, outcome):
 
     await user_manager.create_user_auth("myuser", user_pwd)
 
@@ -154,13 +176,46 @@ async def test_db_auth(db_connection, user_manager, user_pwd, session_pwd, outco
     broker_context.config = UserAuthDBPlugin.Config(
         connection=db_connection
     )
-    db_auth_plugin = UserAuthDBPlugin(context=broker_context)
+    db_auth_plugin = auth_plugin(UserAuthDBPlugin, broker_context)
 
     s = Session()
     s.username = "myuser"
     s.password = session_pwd
 
     assert await db_auth_plugin.authenticate(session=s) == outcome
+
+
+@pytest.mark.asyncio
+async def test_db_auth_rehashes_outdated_password_hash(user_manager, db_file, db_connection, auth_plugin):
+    bcrypt_hash = BcryptHasher().hash("mypassword")
+
+    async with aiosqlite.connect(db_file) as db_conn:
+        await db_conn.execute(
+            "INSERT INTO user_auth (username, password_hash, publish_acl, subscribe_acl, receive_acl) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("myuser", bcrypt_hash, "[]", "[]", "[]"),
+        )
+        await db_conn.commit()
+
+    broker_context = BrokerContext(broker=Broker())
+    broker_context.config = UserAuthDBPlugin.Config(connection=db_connection)
+    db_auth_plugin = auth_plugin(UserAuthDBPlugin, broker_context)
+
+    s = Session()
+    s.username = "myuser"
+    s.password = "mypassword"
+
+    assert await db_auth_plugin.authenticate(session=s) is True
+
+    async with aiosqlite.connect(db_file) as db_conn:
+        db_conn.row_factory = sqlite3.Row
+        async with await db_conn.execute("SELECT password_hash FROM user_auth WHERE username = ?", ("myuser",)) as cursor:
+            row = await cursor.fetchone()
+
+    assert row is not None
+    assert row["password_hash"] != bcrypt_hash
+    assert row["password_hash"].startswith("$argon2")
+    assert PasswordHasher().verify("mypassword", row["password_hash"])
 
 
 @pytest.mark.asyncio
@@ -424,7 +479,7 @@ async def test_remove_topic_wrong_action(db_file, user_manager, topic_manager, d
     ("my/#", "my/another/topic", True),
 ])
 @pytest.mark.asyncio
-async def test_topic_publish_filter_plugin(db_file, topic_manager, db_connection, acl_topic, msg_topic, outcome):
+async def test_topic_publish_filter_plugin(db_file, topic_manager, db_connection, auth_plugin, acl_topic, msg_topic, outcome):
     client_id = "myuser"
 
     user = await topic_manager.create_topic_auth(client_id)
@@ -436,7 +491,7 @@ async def test_topic_publish_filter_plugin(db_file, topic_manager, db_connection
     broker_context.config = TopicAuthDBPlugin.Config(
         connection=db_connection
     )
-    db_auth_plugin = TopicAuthDBPlugin(context=broker_context)
+    db_auth_plugin = auth_plugin(TopicAuthDBPlugin, broker_context)
 
     s = Session()
     s.username = client_id

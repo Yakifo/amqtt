@@ -27,7 +27,6 @@ subscribe, publish and receive messages on topics.
 
 ## CLI
 
-
 ::: mkdocs-typer2
     :module: amqtt.contrib.auth_db.user_mgr_cli
     :name: user_mgr
@@ -37,3 +36,9 @@ subscribe, publish and receive messages on topics.
     :module: amqtt.contrib.auth_db.topic_mgr_cli
     :name: topic_mgr
 
+
+## Managers
+
+::: amqtt.contrib.auth_db.managers.UserManager
+    options:
+      heading_level: 4

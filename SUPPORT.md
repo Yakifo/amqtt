@@ -8,9 +8,11 @@ Please read through the following guidelines.
 > By interacting with this repository, organization, or community you agree to
 > abide by its terms.
 
+> ‼️**Note: for any security related questions or concerns, please see `amqtt`'s [security policy](security.md).
+
 ## Asking quality questions
 
-Questions can go to [GitHub discussions][chat].
+Questions can go to [GitHub discussions](https://github.com/Yakifo/amqtt/discussions), [Discord](https://discord.gg/S3sP6dDaF3) or [support@amqtt.io](mailto:support@amqtt.io).
 
 Help us help you!
 
@@ -25,7 +27,7 @@ Here are some tips:
   * What problem are you encountering and what steps have you taken to try
     and fix it?
   * Is there a concept you don’t understand?
-* Provide sample code, such as a [CodeSandbox][cs] or video, if possible
+* Provide sample code, such as a [CodeSandbox](https://codesandbox.io/) or video, if possible
 * Screenshots can help, but if there’s important text such as code or error
   messages in them, please also provide those as text
 * The more time you put into asking your question, the better we can help you
