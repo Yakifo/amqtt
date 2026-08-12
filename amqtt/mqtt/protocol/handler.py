@@ -84,7 +84,7 @@ class ProtocolHandler(Generic[C]):
             asyncio.set_event_loop(self._loop)
 
         self._reader_task: asyncio.Task[None] | None = None
-        self._keepalive_task: asyncio.TimerHandle | None = None
+        self._keepalive_watcher: asyncio.Task[None] | None = None
         self._reader_ready: asyncio.Event | None = None
         self._reader_stopped = asyncio.Event()
         self._puback_waiters: dict[int, asyncio.Future[PubackPacket]] = {}
@@ -120,6 +120,14 @@ class ProtocolHandler(Generic[C]):
     def _is_attached(self) -> bool:
         return bool(self.session)
 
+    async def timeout_watcher(self) -> None:
+        while self._is_attached() and self.keepalive_timeout is not None:
+            await asyncio.sleep(self.keepalive_timeout)
+            if self.session is None:
+                break
+            if self.session.last_write_at + self.keepalive_timeout <= self._loop.time():
+                self.handle_write_timeout()
+
     async def start(self) -> None:
         if not self._is_attached():
             msg = "Handler is not attached to a stream"
@@ -129,7 +137,11 @@ class ProtocolHandler(Generic[C]):
         self._reader_task = asyncio.create_task(self._reader_loop())
         await self._reader_ready.wait()
         if self._loop is not None and self.keepalive_timeout is not None:
-            self._keepalive_task = self._loop.call_later(self.keepalive_timeout, self.handle_write_timeout)
+            if self.session is None:
+                msg = "Session is not initialized."
+                raise AMQTTError(msg)
+            self.session.last_write_at = self._loop.time()
+            self._keepalive_watcher = self._loop.create_task(self.timeout_watcher())
         self.logger.debug("Handler tasks started")
         await self._retry_deliveries()
         self.logger.debug("Handler ready")
@@ -137,8 +149,8 @@ class ProtocolHandler(Generic[C]):
     async def stop(self) -> None:
         # Stop messages flow waiter
         self._stop_waiters()
-        if self._keepalive_task:
-            self._keepalive_task.cancel()
+        if self._keepalive_watcher:
+            self._keepalive_watcher.cancel()
         self.logger.debug("Waiting for tasks to be stopped")
         if self._reader_task and self._reader_task is not asyncio.current_task() and not self._reader_task.done():
             self._reader_task.cancel()
@@ -562,10 +574,8 @@ class ProtocolHandler(Generic[C]):
             if self.writer:
                 async with self._write_lock:
                     await packet.to_stream(self.writer)
-            if self._keepalive_task:
-                self._keepalive_task.cancel()
-                if self.keepalive_timeout is not None:
-                    self._keepalive_task = self._loop.call_later(self.keepalive_timeout, self.handle_write_timeout)
+            if self._keepalive_watcher and self.session is not None:
+                self.session.last_write_at = self._loop.time()
             await self.plugins_manager.fire_event(MQTTEvents.PACKET_SENT, packet=packet, session=self.session)
         except (ConnectionResetError, BrokenPipeError):
             await self.handle_connection_closed()

@@ -84,7 +84,9 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
         pass
 
     def handle_read_timeout(self) -> None:
-        pass
+        if self._disconnect_waiter and not self._disconnect_waiter.done():
+            self.logger.debug("Client keep-alive timeout, closing connection")
+            self._disconnect_waiter.set_result(None)
 
     async def handle_disconnect(self, disconnect: DisconnectPacket | None) -> None:
         """Handle a disconnect packet and notify the disconnect waiter."""

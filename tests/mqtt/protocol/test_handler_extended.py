@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 import logging
 from typing import Any
 
@@ -415,19 +416,24 @@ async def test_puback_handler_requires_variable_header() -> None:
 
 
 @pytest.mark.asyncio
-async def test_send_packet_resets_keepalive_timer_and_fires_event() -> None:
+async def test_send_packet_refreshes_keepalive_timestamp_and_fires_event() -> None:
     session = make_session()
     session.keep_alive = 10
+    session.last_write_at = 0.0
     handler = make_handler(session)
-    previous_timer = asyncio.get_running_loop().call_later(60, lambda: None)
-    handler._keepalive_task = previous_timer
+    handler._keepalive_watcher = asyncio.create_task(asyncio.sleep(60))
 
-    await handler._send_packet(PingReqPacket())
+    try:
+        before_send = handler._loop.time()
+        await handler._send_packet(PingReqPacket())
+        after_send = handler._loop.time()
 
-    assert previous_timer.cancelled()
-    assert handler._keepalive_task is not previous_timer
-    assert handler.plugins_manager.events[-1][0] == (MQTTEvents.PACKET_SENT,)
-    handler._keepalive_task.cancel()
+        assert before_send <= session.last_write_at <= after_send
+        assert handler.plugins_manager.events[-1][0] == (MQTTEvents.PACKET_SENT,)
+    finally:
+        handler._keepalive_watcher.cancel()
+        with suppress(asyncio.CancelledError):
+            await handler._keepalive_watcher
 
 
 @pytest.mark.asyncio
