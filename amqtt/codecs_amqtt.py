@@ -3,7 +3,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from struct import pack, unpack
 
 from amqtt.adapters import ReaderAdapter
-from amqtt.errors import NoDataError, ZeroLengthReadError
+from amqtt.errors import CodecError, MQTTError, NoDataError, ZeroLengthReadError
+
+MAX_VARIABLE_BYTE_INTEGER = 268_435_455
 
 
 def bytes_to_hex_str(data: bytes | bytearray) -> str:
@@ -31,7 +33,7 @@ def int_to_bytes(int_value: int, length: int) -> bytes:
     """Convert an integer to a sequence of bytes using big endian byte ordering.
 
     :param int_value: integer value to convert
-    :param length: byte length (must be 1 or 2)
+    :param length: byte length (must be 1, 2, or 4)
     :return: byte sequence
     :raises ValueError: if the length is unsupported
     """
@@ -39,14 +41,102 @@ def int_to_bytes(int_value: int, length: int) -> bytes:
     fmt_mapping = {
         1: "!B",  # 1 byte, unsigned char
         2: "!H",  # 2 bytes, unsigned short
+        4: "!L",  # 4 bytes, unsigned long
     }
 
     fmt = fmt_mapping.get(length)
     if not fmt:
-        msg = "Unsupported length for int to bytes conversion. Only lengths 1 or 2 are allowed."
+        msg = "Unsupported length for int to bytes conversion. Only lengths 1, 2, or 4 are allowed."
         raise ValueError(msg)
 
     return pack(fmt, int_value)
+
+
+def encode_variable_byte_int(value: int) -> bytes:
+    """Encode an MQTT Variable Byte Integer.
+
+    MQTT uses this format for Remaining Length and MQTT 5 Properties length
+    fields. The valid range is 0 through 268,435,455.
+
+    :param value: integer value to encode
+    :return: MQTT Variable Byte Integer bytes.
+    :raises CodecError: if the value is outside the MQTT range.
+    """
+    if value < 0 or value > MAX_VARIABLE_BYTE_INTEGER:
+        msg = f"Variable Byte Integer out of range: {value}"
+        raise CodecError(msg)
+
+    encoded = bytearray()
+    while True:
+        encoded_byte = value % 0x80
+        value //= 0x80
+        if value > 0:
+            encoded_byte |= 0x80
+        encoded.append(encoded_byte)
+        if value <= 0:
+            break
+    return bytes(encoded)
+
+
+def decode_variable_byte_int(data: bytes | bytearray, offset: int = 0) -> tuple[int, int]:
+    """Decode an MQTT Variable Byte Integer from bytes.
+
+    :param data: bytes containing the encoded integer.
+    :param offset: first byte to decode.
+    :return: tuple of decoded value and next unread offset.
+    :raises MQTTError: if the encoding is malformed or incomplete.
+    """
+    multiplier = 1
+    value = 0
+    index = offset
+    buffer = bytearray()
+
+    while True:
+        if index >= len(data):
+            msg = f"Incomplete Variable Byte Integer bytes:{bytes_to_hex_str(buffer)}"
+            raise MQTTError(msg)
+
+        encoded_byte = data[index]
+        buffer.append(encoded_byte)
+        index += 1
+
+        value += (encoded_byte & 0x7F) * multiplier
+        if (encoded_byte & 0x80) == 0:
+            return value, index
+
+        multiplier *= 128
+        if multiplier > 128**3:
+            msg = f"Invalid Variable Byte Integer bytes:{bytes_to_hex_str(buffer)}"
+            raise MQTTError(msg)
+
+
+async def decode_variable_byte_int_from_stream(reader: ReaderAdapter | asyncio.StreamReader) -> int:
+    """Read and decode an MQTT Variable Byte Integer from a stream.
+
+    :param reader: reader adapter
+    :return: decoded integer value.
+    :raises MQTTError: if the encoding uses more than four bytes.
+    :raises NoDataError: if the stream closes before a byte is available.
+    """
+    multiplier = 1
+    value = 0
+    buffer = bytearray()
+
+    while True:
+        encoded = await read_or_raise(reader, 1)
+        if len(encoded) != 1:
+            msg = "No more data"
+            raise NoDataError(msg)
+        encoded_byte = unpack("!B", encoded)[0]
+        buffer.append(encoded_byte)
+        value += (encoded_byte & 0x7F) * multiplier
+        if (encoded_byte & 0x80) == 0:
+            return int(value)
+
+        multiplier *= 128
+        if multiplier > 128**3:
+            msg = f"Invalid Variable Byte Integer bytes:{bytes_to_hex_str(buffer)}"
+            raise MQTTError(msg)
 
 
 async def read_or_raise(reader: ReaderAdapter | asyncio.StreamReader, n: int = -1) -> bytes:
