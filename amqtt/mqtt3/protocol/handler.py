@@ -141,7 +141,7 @@ class ProtocolHandler(ProtocolHandlerBase[C], Generic[C]):
         if self._keepalive_task:
             self._keepalive_task.cancel()
         self.logger.debug("Waiting for tasks to be stopped")
-        if self._reader_task and not self._reader_task.done():
+        if self._reader_task and self._reader_task is not asyncio.current_task() and not self._reader_task.done():
             self._reader_task.cancel()
             await self._reader_stopped.wait()
         self.logger.debug("Closing writer")

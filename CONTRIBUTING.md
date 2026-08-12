@@ -83,6 +83,21 @@ When adding a new feature, please add corollary tests. Pull requests must mainta
 Run `uv run --frozen pytest` locally to see the coverage summary before opening a pull request.
 If you encounter a bug when using aMQTT which you then resolve, please reproduce the issue in a test as well.
 
+### Sample tests
+
+Sample scripts in `samples/` are excluded from coverage scoring, but they still need smoke tests. When adding or updating
+a Python sample, add or update a test in `tests/test_samples.py` and mark the test with the sample script it covers:
+
+```python
+@pytest.mark.sample("client_publish.py")
+async def test_client_publish():
+    ...
+```
+
+The `test_all_sample_files_are_accounted_for` guard checks every `samples/*.py` file against these markers. If a sample is
+intentionally not testable, add it to `IGNORED_SAMPLE_FILES` in `tests/test_samples.py` with a short explanation in the
+pull request.
+
 ### Local fuzzing
 
 The MQTT packet parser has local fuzz coverage using Hypothesis. These tests

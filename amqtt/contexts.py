@@ -189,10 +189,12 @@ class BrokerConfig(Dictable):
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
         if self.sys_interval is not None:
-            logger.warning("sys_interval is deprecated, use 'plugins' to define configuration")
+            warnings.warn("sys_interval is deprecated, use 'plugins' to define configuration",
+                          DeprecationWarning, stacklevel=1)
 
         if self.auth is not None or self.topic_check is not None:
-            logger.warning("'auth' and 'topic-check' are deprecated, use 'plugins' to define configuration")
+            warnings.warn("'auth' and 'topic-check' are deprecated, use 'plugins' to define configuration",
+                          DeprecationWarning, stacklevel=1)
 
         default_listener = self.listeners["default"]
         for listener_name, listener in self.listeners.items():
@@ -361,7 +363,9 @@ class ClientConfig(Dictable):
             raise ValueError(msg)
 
         if self.broker is not None:
-            warnings.warn("The 'broker' option is deprecated, please use 'connection' instead.", stacklevel=2)
+            warnings.warn("The 'broker' option is deprecated, please use 'connection' instead. "
+                          "Support for 'broker' will be removed in a future release.",
+                          DeprecationWarning, stacklevel=2)
             self.connection = self.broker
 
         if bool(not self.connection.keyfile) ^ bool(not self.connection.certfile):

@@ -154,7 +154,7 @@ def test_client_config_rejects_invalid_default_qos() -> None:
 def test_client_config_uses_deprecated_broker_config() -> None:
     broker_connection = ConnectionConfig(uri="mqtt://broker.example:1883")
 
-    with pytest.warns(UserWarning, match="broker"):
+    with pytest.warns(DeprecationWarning, match="broker"):
         client_config = ClientConfig(broker=broker_connection)
 
     assert client_config.connection is broker_connection
