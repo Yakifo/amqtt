@@ -25,7 +25,10 @@ def device_creds(  # pylint: disable=too-many-locals
         ca_key_fn: str = typer.Option("ca.key", "--ca-key", help="root key filename used for signing."),
         ca_crt_fn: str = typer.Option("ca.crt", "--ca-crt", help="root cert filename used for signing."),
 ) -> None:
-    """Generate a key and certificate for each device in pem format, signed by the provided CA credentials. With a key size of 2048 and a 1-year expiration."""  # noqa: E501
+    """Generate a key and certificate for each device in pem format, signed by the provided CA credentials.
+
+    Uses a key size of 2048 and a 1-year expiration.
+    """
     formatter = "[%(asctime)s] :: %(levelname)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=formatter)
     try:

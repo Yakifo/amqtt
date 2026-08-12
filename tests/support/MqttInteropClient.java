@@ -4,6 +4,9 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 public final class MqttInteropClient {
+    private static final long MQTT_OPERATION_TIMEOUT_MS = 5000L;
+    private static final long MQTT_DISCONNECT_QUIESCE_MS = 1000L;
+
     private MqttInteropClient() {
     }
 
@@ -38,9 +41,12 @@ public final class MqttInteropClient {
 
     private static void connect(String brokerUri, String clientId) throws Exception {
         MqttClient client = new MqttClient(brokerUri, clientId, null);
-        client.connect(connectOptions());
-        client.disconnect();
-        client.close();
+        client.setTimeToWait(MQTT_OPERATION_TIMEOUT_MS);
+        try {
+            client.connect(connectOptions());
+        } finally {
+            close(client);
+        }
     }
 
     private static void publish(
@@ -52,14 +58,17 @@ public final class MqttInteropClient {
             int count
     ) throws Exception {
         MqttClient client = new MqttClient(brokerUri, clientId, null);
-        client.connect(connectOptions());
-        for (int i = 0; i < count; i++) {
-            MqttMessage message = new MqttMessage(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            message.setQos(qos);
-            client.publish(topic, message);
+        client.setTimeToWait(MQTT_OPERATION_TIMEOUT_MS);
+        try {
+            client.connect(connectOptions());
+            for (int i = 0; i < count; i++) {
+                MqttMessage message = new MqttMessage(payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                message.setQos(qos);
+                client.publish(topic, message);
+            }
+        } finally {
+            close(client);
         }
-        client.disconnect();
-        client.close();
     }
 
     private static MqttConnectOptions connectOptions() {
@@ -68,5 +77,15 @@ public final class MqttInteropClient {
         options.setCleanSession(true);
         options.setConnectionTimeout(5);
         return options;
+    }
+
+    private static void close(MqttClient client) throws Exception {
+        try {
+            if (client.isConnected()) {
+                client.disconnect(MQTT_DISCONNECT_QUIESCE_MS);
+            }
+        } finally {
+            client.close(true);
+        }
     }
 }

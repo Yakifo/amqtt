@@ -142,7 +142,7 @@ class ConnackPacket(MQTTPacket[ConnackVariableHeader, None, MQTTFixedHeader]):
 
     @property
     def reason_code(self) -> ReasonCode:
-        """Return the CONNACK reason code."""
+        """CONNACK reason code."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -150,7 +150,7 @@ class ConnackPacket(MQTTPacket[ConnackVariableHeader, None, MQTTFixedHeader]):
 
     @property
     def session_present(self) -> bool:
-        """Return the CONNACK Session Present flag."""
+        """CONNACK Session Present flag."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
@@ -158,7 +158,7 @@ class ConnackPacket(MQTTPacket[ConnackVariableHeader, None, MQTTFixedHeader]):
 
     @property
     def properties(self) -> Properties:
-        """Return the CONNACK properties."""
+        """CONNACK properties."""
         if self.variable_header is None:
             msg = "Variable header is not set"
             raise ValueError(msg)
