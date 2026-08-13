@@ -21,7 +21,15 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
+from amqtt.contexts import (
+    Action,
+    BaseContext,
+    BrokerConfig,
+    ListenerConfig,
+    ListenerType,
+    ListenerVerifyFlags,
+    ListenerVerifyMode,
+)
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -38,6 +46,16 @@ _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
 _BROADCAST_SHUTDOWN_TIMEOUT = 5
+_CLIENT_CERT_VERIFY_MODE = {
+    ListenerVerifyMode.NONE: ssl.CERT_NONE,
+    ListenerVerifyMode.OPTIONAL: ssl.CERT_OPTIONAL,
+    ListenerVerifyMode.REQUIRED: ssl.CERT_REQUIRED,
+}
+_CRL_VERIFY_FLAGS = {
+    ListenerVerifyFlags.NONE: ssl.VerifyFlags(0),
+    ListenerVerifyFlags.LEAF: ssl.VERIFY_CRL_CHECK_LEAF,
+    ListenerVerifyFlags.CHAIN: ssl.VERIFY_CRL_CHECK_CHAIN,
+}
 
 
 class RetainedApplicationMessage(ApplicationMessage):
@@ -314,7 +332,10 @@ class Broker:
                 cadata=listener.get("cadata"),
             )
             ssl_context.load_cert_chain(listener["certfile"], listener["keyfile"])
-            ssl_context.verify_mode = ssl.CERT_OPTIONAL
+            ssl_context.verify_mode = _CLIENT_CERT_VERIFY_MODE[listener.client_cert]
+            if listener.crlfile or listener.crlpath:
+                ssl_context.load_verify_locations(cafile=listener.crlfile, capath=listener.crlpath)
+            ssl_context.verify_flags |= _CRL_VERIFY_FLAGS[listener.crl_check]
         except KeyError as ke:
             msg = f"'certfile' or 'keyfile' configuration parameter missing: {ke}"
             raise BrokerError(msg) from ke

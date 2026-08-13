@@ -124,6 +124,7 @@ async def test_client_broker_cert_authentication(ca_creds, server_creds, device_
                 'keyfile': server_key,
                 'certfile': server_crt,
                 'cafile': ca_crt,
+                'client_cert': 'required',
             }
         },
         'plugins': {
@@ -138,7 +139,7 @@ async def test_client_broker_cert_authentication(ca_creds, server_creds, device_
 
     client_config = {
         'auto_reconnect': False,
-        'broker': {
+        'connection': {
             'cafile': ca_crt,
             'certfile': device_crt,
             'keyfile': device_key
@@ -157,6 +158,47 @@ async def test_client_broker_cert_authentication(ca_creds, server_creds, device_
     await c.disconnect()
     await asyncio.sleep(0.1)
     await b.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_client_cert_required_rejects_client_without_certificate(ca_creds, server_creds):
+    _, ca_crt = ca_creds
+    server_key, server_crt = server_creds
+    broker_config = {
+        'listeners': {
+            'default': {
+                'type':'tcp',
+                'bind':'127.0.0.1:0',
+                'ssl': True,
+                'keyfile': server_key,
+                'certfile': server_crt,
+                'cafile': ca_crt,
+                'client_cert': 'required',
+            }
+        },
+        'plugins': {
+            'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True},
+        }
+    }
+
+    b = Broker(config=broker_config)
+    await b.start()
+    server_socket = b._servers['default'].instance.sockets[0]
+    port = server_socket.getsockname()[1]
+
+    client_config = {
+        'auto_reconnect': False,
+        'connection': {
+            'cafile': ca_crt,
+        }
+    }
+
+    c = MQTTClient(config=client_config, client_id='mydeviceid')
+    try:
+        with pytest.raises(ConnectError):
+            await c.connect(f'mqtts://127.0.0.1:{port}')
+    finally:
+        await b.shutdown()
 
 
 def ssl_error_logger(loop, context):

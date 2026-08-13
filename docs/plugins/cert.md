@@ -32,6 +32,7 @@ listeners:
     certfile: server.crt
     keyfile: server.key
     cafile: ca.crt
+    client_cert: required
 plugins:
   amqtt.contrib.cert.CertificateAuthPlugin:
     uri_domain: my.domain.name
@@ -89,6 +90,12 @@ and `device_creds`.
 !!! note "Configuring broker & client for using Self-signed root CA"
     If using self-signed root credentials, the `cafile` configuration for both broker and client need to be
     configured with `cafile` set to the `ca.crt`.
+
+!!! note "Client certificate policy and revocation checks"
+    TLS listeners default to `client_cert: optional`, which preserves existing behavior. Set
+    `client_cert: required` to require clients to provide certificates during the TLS handshake.
+    To enforce certificate revocation lists, configure `crlfile` or `crlpath` and set
+    `crl_check` to `leaf` or `chain`.
 
 ## Root & Certificate Credentials
 
