@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
 
 import psutil
-from amqtt.errors import PluginInitError
 
+from amqtt.errors import PluginInitError
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
 
@@ -249,6 +249,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         """QoS level for system topic updates. Blank to inherit subscriber QoS. Otherwise: 0, 1 or 2 only."""
 
         def __post_init__(self) -> None:
+            """Check config for errors."""
             if self.qos is not None and (self.qos < 0 or self.qos > 2):
                 msg = "BrokerSysPlugin: QoS level must be 0, 1 or 2."
                 raise PluginInitError(msg)
