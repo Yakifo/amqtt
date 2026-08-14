@@ -248,7 +248,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         qos: int | None = None
         """QoS level for system topic updates. Blank to inherit subscriber QoS. Otherwise: 0, 1 or 2 only."""
 
-        def __post_init__(self):
+        def __post_init__(self) -> None:
             if self.qos is not None and (self.qos < 0 or self.qos > 2):
                 msg = "QoS level must be 0, 1 or 2."
                 raise PluginInitError(f"BrokerSysPlugin: {msg}")
