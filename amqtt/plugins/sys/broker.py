@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, SupportsIndex, SupportsInt, TypeAlias  # pylint: disable=C0412
 
 import psutil
+from amqtt.errors import PluginInitError
 
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
@@ -73,6 +74,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         self._sys_handle: asyncio.Handle | None = None
 
         self._sys_interval: int = 0
+        self._sys_qos: int | None = None
         self._current_process = psutil.Process()
 
     def _clear_stats(self) -> None:
@@ -94,7 +96,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
 
     async def _broadcast_sys_topic(self, topic_basename: str, data: bytes) -> None:
         """Broadcast a system topic."""
-        await self.context.broadcast_message(topic_basename, data)
+        await self.context.broadcast_message(topic_basename, data, self._sys_qos)
 
     def schedule_broadcast_sys_topic(self, topic_basename: str, data: bytes) -> asyncio.Task[None]:
         """Schedule broadcasting of system topics."""
@@ -115,6 +117,7 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
 
         # Start $SYS topics management
         self._sys_interval = self._get_config_option("sys_interval", None)
+        self._sys_qos = self._get_config_option("qos", None)
 
         if not self._sys_interval:
             self.context.logger.warning("'sys_interval' key is not set or is None")
@@ -241,3 +244,11 @@ class BrokerSysPlugin(BasePlugin[BrokerContext]):
         """Configuration struct for plugin."""
 
         sys_interval: int = 20
+        """Interval in seconds between system topic updates."""
+        qos: int | None = None
+        """QoS level for system topic updates. Blank to inherit subscriber QoS. Otherwise: 0, 1 or 2 only."""
+
+        def __post_init__(self):
+            if self.qos is not None and (self.qos < 0 or self.qos > 2):
+                msg = "QoS level must be 0, 1 or 2."
+                raise PluginInitError(f"BrokerSysPlugin: {msg}")

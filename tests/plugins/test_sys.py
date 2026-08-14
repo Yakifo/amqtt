@@ -8,7 +8,8 @@ import pytest
 
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_0
+from amqtt.errors import PluginInitError
+from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from tests.asserts import does_not_warn
 
 dictConfig({
@@ -66,7 +67,11 @@ all_sys_topics = [
 ]
 
 
-async def _collect_expected_sys_topics(client: MQTTClient, sys_topic_flags: dict[str, bool]) -> int:
+async def _collect_expected_sys_topics(
+    client: MQTTClient,
+    sys_topic_flags: dict[str, bool],
+    expected_qos: int | None = None,
+) -> int:
     loop = asyncio.get_running_loop()
     deadline = loop.time() + 5
     sys_msg_count = 0
@@ -85,6 +90,8 @@ async def _collect_expected_sys_topics(client: MQTTClient, sys_topic_flags: dict
         if message and message.topic.startswith("$SYS/"):
             sys_msg_count += 1
             assert message.topic in sys_topic_flags
+            if expected_qos is not None:
+                assert message.qos == expected_qos
             sys_topic_flags[message.topic] = True
 
     return sys_msg_count
@@ -197,6 +204,69 @@ async def test_broker_sys_plugin_config() -> None:
 
     assert all(
         sys_topic_flags.values()), f'topic not received: {[topic for topic, flag in sys_topic_flags.items() if not flag]}'
+
+
+@pytest.mark.asyncio
+async def test_broker_sys_plugin_configured_qos_is_used_for_broadcasts() -> None:
+
+    sys_topic_flags = {
+        sys_topic: False
+        for sys_topic in all_sys_topics
+        if sys_topic != "$SYS/broker/version"
+    }
+
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
+        },
+        'plugins': [
+            {'amqtt.plugins.authentication.AnonymousAuthPlugin': {'allow_anonymous': True}},
+            {'amqtt.plugins.sys.broker.BrokerSysPlugin': {'sys_interval': 60, 'qos': QOS_1}},
+        ]
+    }
+
+    broker = Broker(plugin_namespace='tests.mock_plugins', config=config)
+    client = MQTTClient()
+    sys_msg_count = 0
+    try:
+        await broker.start()
+        await client.connect(_broker_uri(broker))
+        await client.subscribe([("$SYS/#", QOS_2), ])
+
+        retained_version = await client.deliver_message(timeout_duration=1)
+        assert retained_version is not None
+        assert retained_version.topic == "$SYS/broker/version"
+        assert retained_version.qos == QOS_2
+
+        _cancel_sys_broadcast(broker)
+        broker.plugins_manager.get_plugin('BrokerSysPlugin').broadcast_dollar_sys_topics()
+        sys_msg_count = await _collect_expected_sys_topics(client, sys_topic_flags, expected_qos=QOS_1)
+    finally:
+        _cancel_sys_broadcast(broker)
+        await _disconnect_client(client)
+        await _shutdown_broker(broker)
+
+    assert sys_msg_count > 1
+
+    assert all(
+        sys_topic_flags.values()), f'topic not received: {[topic for topic, flag in sys_topic_flags.items() if not flag]}'
+
+
+@pytest.mark.parametrize("qos", [-1, 3])
+@pytest.mark.asyncio
+async def test_broker_sys_plugin_invalid_qos_config(qos: int) -> None:
+
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:0", "max_connections": 10},
+        },
+        'plugins': [
+            {'amqtt.plugins.sys.broker.BrokerSysPlugin': {'qos': qos}},
+        ]
+    }
+
+    with pytest.raises(PluginInitError, match="QoS level must be 0, 1 or 2"):
+        _ = Broker(plugin_namespace='tests.mock_plugins', config=config)
 
 
 @pytest.mark.asyncio
