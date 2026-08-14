@@ -434,6 +434,23 @@ async def test_unix_connection():
     assert "on_broker_client_disconnected" in broker_stderr.decode("utf-8")
 
 
+@pytest.mark.sample("reloadable_external_tls_listener.py")
+def test_reloadable_external_tls_listener_sample_configuration(rsa_keys):
+    import ssl
+
+    from amqtt.contexts import ListenerType
+    from samples.reloadable_external_tls_listener import build_broker_config, build_tls_context_factory
+
+    certfile, keyfile = rsa_keys
+
+    broker_config = build_broker_config()
+    assert broker_config.listeners["default"].type == ListenerType.EXTERNAL
+
+    context = build_tls_context_factory(certfile=certfile, keyfile=keyfile)()
+    assert isinstance(context, ssl.SSLContext)
+    assert context.verify_mode == ssl.CERT_NONE
+
+
 @pytest.mark.asyncio
 @pytest.mark.sample("broker_dollar_topics.py")
 async def test_allowable_dollar_topics():
