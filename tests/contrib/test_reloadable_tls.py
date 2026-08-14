@@ -9,7 +9,7 @@ import pytest
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
-from amqtt.contrib.reloadable_tls import PEMTLSMaterial, ReloadableExternalTLSListener, create_server_ssl_context
+from amqtt.contrib.reloadable_tls import ReloadableExternalTLSListener
 
 
 def external_broker_config() -> BrokerConfig:
@@ -43,8 +43,14 @@ async def external_broker():
         await broker.shutdown()
 
 
+def make_server_ssl_context(certfile: Path, keyfile: Path) -> ssl.SSLContext:
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(str(certfile), str(keyfile))
+    return context
+
+
 def make_file_context_factory(certfile: Path, keyfile: Path) -> Callable[[], ssl.SSLContext]:
-    return lambda: create_server_ssl_context(certfile=certfile, keyfile=keyfile)
+    return lambda: make_server_ssl_context(certfile, keyfile)
 
 
 def make_unstarted_listener(
@@ -86,13 +92,12 @@ async def test_reloadable_tls_listener_accepts_mqtts_and_tracks_connections(
     rsa_keys: tuple[Path, Path],
 ) -> None:
     certfile, keyfile = rsa_keys
-    material = PEMTLSMaterial(certfile.read_bytes(), keyfile.read_bytes())
     listener = ReloadableExternalTLSListener(
         broker=external_broker,
         listener_name="default",
         host="127.0.0.1",
         port=0,
-        ssl_context_factory=material.create_ssl_context,
+        ssl_context_factory=make_file_context_factory(certfile, keyfile),
     )
     client = make_tls_client("client-1")
 
@@ -118,8 +123,8 @@ async def test_reload_replaces_accept_socket_without_dropping_existing_connectio
     unused_tcp_port: int,
 ) -> None:
     certfile, keyfile = rsa_keys
-    first_context = create_server_ssl_context(certfile=certfile, keyfile=keyfile)
-    second_context = create_server_ssl_context(certfile=certfile, keyfile=keyfile)
+    first_context = make_server_ssl_context(certfile, keyfile)
+    second_context = make_server_ssl_context(certfile, keyfile)
     listener = ReloadableExternalTLSListener(
         broker=external_broker,
         listener_name="default",
@@ -212,23 +217,6 @@ async def test_listener_requires_started_external_broker_listener(
 
     with pytest.raises(ValueError, match="ListenerType.EXTERNAL"):
         await listener.start()
-
-
-def test_create_server_ssl_context_applies_optional_settings(rsa_keys: tuple[Path, Path]) -> None:
-    certfile, keyfile = rsa_keys
-    context = create_server_ssl_context(
-        certfile=certfile,
-        keyfile=keyfile,
-        cadata=certfile.read_bytes(),
-        verify_mode=ssl.CERT_OPTIONAL,
-        minimum_version=ssl.TLSVersion.TLSv1_2,
-        maximum_version=ssl.TLSVersion.TLSv1_2,
-        alpn_protocols=("mqtt",),
-    )
-
-    assert context.verify_mode is ssl.CERT_OPTIONAL
-    assert context.minimum_version is ssl.TLSVersion.TLSv1_2
-    assert context.maximum_version is ssl.TLSVersion.TLSv1_2
 
 
 @pytest.mark.asyncio
@@ -342,8 +330,8 @@ async def test_reload_rolls_back_when_replacement_socket_cannot_start(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     certfile, keyfile = rsa_keys
-    first_context = create_server_ssl_context(certfile=certfile, keyfile=keyfile)
-    second_context = create_server_ssl_context(certfile=certfile, keyfile=keyfile)
+    first_context = make_server_ssl_context(certfile, keyfile)
+    second_context = make_server_ssl_context(certfile, keyfile)
     listener = make_unstarted_listener(external_broker, certfile, keyfile, ssl_context_factory=lambda: first_context)
     original_create_server = listener._create_server
 

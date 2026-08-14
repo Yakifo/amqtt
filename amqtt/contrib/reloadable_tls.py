@@ -3,14 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager, suppress
-from dataclasses import dataclass
+from collections.abc import Callable
 import logging
-import os
-from pathlib import Path
 import ssl
-import tempfile
 from typing import TYPE_CHECKING, Any
 from typing_extensions import Self
 
@@ -25,104 +20,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 SSLContextFactory = Callable[[], ssl.SSLContext]
-NO_VERIFY_FLAGS = ssl.VerifyFlags(0)
-
-
-def _path_string(path: str | Path) -> str:
-    return str(path)
-
-
-def _coerce_cadata(cadata: str | bytes | None) -> str | bytes | None:
-    if isinstance(cadata, bytes):
-        with suppress(UnicodeDecodeError):
-            text = cadata.decode("ascii")
-            if "-----BEGIN CERTIFICATE-----" in text:
-                return text
-    return cadata
-
-
-@contextmanager
-def _temporary_pem_file(data: bytes) -> Iterator[str]:
-    fd, name = tempfile.mkstemp(suffix=".pem")
-    try:
-        with os.fdopen(fd, "wb") as file:
-            file.write(data)
-        yield name
-    finally:
-        with suppress(FileNotFoundError):
-            Path(name).unlink()
-
-
-def create_server_ssl_context(
-    *,
-    certfile: str | Path,
-    keyfile: str | Path,
-    cafile: str | Path | None = None,
-    capath: str | Path | None = None,
-    cadata: str | bytes | None = None,
-    password: str | bytes | Callable[[], str | bytes] | None = None,
-    verify_mode: ssl.VerifyMode = ssl.CERT_NONE,
-    verify_flags: ssl.VerifyFlags = NO_VERIFY_FLAGS,
-    minimum_version: ssl.TLSVersion | None = None,
-    maximum_version: ssl.TLSVersion | None = None,
-    alpn_protocols: tuple[str, ...] | None = None,
-) -> ssl.SSLContext:
-    """Build a server-side SSL context for a reloadable external listener."""
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(_path_string(certfile), _path_string(keyfile), password=password)
-    if cafile is not None or capath is not None or cadata is not None:
-        context.load_verify_locations(
-            cafile=_path_string(cafile) if cafile is not None else None,
-            capath=_path_string(capath) if capath is not None else None,
-            cadata=_coerce_cadata(cadata),
-        )
-    context.verify_mode = verify_mode
-    context.verify_flags |= verify_flags
-    if minimum_version is not None:
-        context.minimum_version = minimum_version
-    if maximum_version is not None:
-        context.maximum_version = maximum_version
-    if alpn_protocols is not None:
-        context.set_alpn_protocols(list(alpn_protocols))
-    return context
-
-
-@dataclass(frozen=True)
-class PEMTLSMaterial:
-    """PEM-encoded TLS material for building a server SSL context.
-
-    The Python standard library requires file paths for loading the server
-    certificate chain and private key. This helper writes those values to
-    temporary files only while constructing the SSL context, then removes them.
-    """
-
-    cert_chain_pem: bytes
-    private_key_pem: bytes
-    ca_pem: str | bytes | None = None
-    password: str | bytes | Callable[[], str | bytes] | None = None
-    verify_mode: ssl.VerifyMode = ssl.CERT_NONE
-    verify_flags: ssl.VerifyFlags = NO_VERIFY_FLAGS
-    minimum_version: ssl.TLSVersion | None = None
-    maximum_version: ssl.TLSVersion | None = None
-    alpn_protocols: tuple[str, ...] | None = None
-
-    def create_ssl_context(self) -> ssl.SSLContext:
-        """Create a server SSL context from the PEM material."""
-        with (
-            _temporary_pem_file(self.cert_chain_pem) as certfile,
-            _temporary_pem_file(self.private_key_pem) as keyfile,
-        ):
-            return create_server_ssl_context(
-                certfile=certfile,
-                keyfile=keyfile,
-                cadata=self.ca_pem,
-                password=self.password,
-                verify_mode=self.verify_mode,
-                verify_flags=self.verify_flags,
-                minimum_version=self.minimum_version,
-                maximum_version=self.maximum_version,
-                alpn_protocols=self.alpn_protocols,
-            )
 
 
 class ReloadableExternalTLSListener:

@@ -18,7 +18,7 @@ import ssl
 
 from amqtt.broker import Broker
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
-from amqtt.contrib.reloadable_tls import ReloadableExternalTLSListener, create_server_ssl_context
+from amqtt.contrib.reloadable_tls import ReloadableExternalTLSListener
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +49,12 @@ def build_tls_context_factory(
     """Return a factory that builds the current server TLS context."""
 
     def factory() -> ssl.SSLContext:
-        return create_server_ssl_context(
-            certfile=certfile,
-            keyfile=keyfile,
-            cafile=cafile,
-            verify_mode=ssl.CERT_REQUIRED if require_client_cert else ssl.CERT_NONE,
-        )
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(str(certfile), str(keyfile))
+        if cafile is not None:
+            context.load_verify_locations(cafile=str(cafile))
+        context.verify_mode = ssl.CERT_REQUIRED if require_client_cert else ssl.CERT_NONE
+        return context
 
     return factory
 
