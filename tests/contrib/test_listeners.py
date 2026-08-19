@@ -9,6 +9,7 @@ import pytest
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
+from amqtt.contrib import listeners as listeners_module
 from amqtt.contrib.listeners import ReloadableExternalTLSListener
 
 
@@ -361,22 +362,29 @@ async def test_connection_failure_closes_writer_and_clears_tracking(
 ) -> None:
     certfile, keyfile = rsa_keys
     listener = make_unstarted_listener(external_broker, certfile, keyfile)
-    server = await asyncio.start_server(lambda _reader, _writer: None, "127.0.0.1", 0)
-    port = server.sockets[0].getsockname()[1]
-    reader, writer = await asyncio.open_connection("127.0.0.1", port)
+    adapters = []
+
+    class RecordingWriterAdapter:
+        def __init__(self, writer) -> None:
+            self.writer = writer
+            self.close_count = 0
+            adapters.append(self)
+
+        async def close(self) -> None:
+            self.close_count += 1
 
     async def fail_external_connected(*_args, **_kwargs) -> None:
+        assert listener.active_connection_count == 1
         msg = "handoff failed"
         raise RuntimeError(msg)
 
+    monkeypatch.setattr(listeners_module, "StreamWriterAdapter", RecordingWriterAdapter)
     monkeypatch.setattr(external_broker, "external_connected", fail_external_connected)
-    try:
-        await listener._client_connected(reader, writer)
 
-        assert listener.active_connection_count == 0
-        assert writer.is_closing()
-    finally:
-        writer.close()
-        await writer.wait_closed()
-        server.close()
-        await server.wait_closed()
+    writer = object()
+    await listener._client_connected(asyncio.StreamReader(), writer)
+
+    assert listener.active_connection_count == 0
+    assert len(adapters) == 1
+    assert adapters[0].writer is writer
+    assert adapters[0].close_count == 1
