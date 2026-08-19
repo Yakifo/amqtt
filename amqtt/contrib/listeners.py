@@ -11,7 +11,6 @@ from typing_extensions import Self
 
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
 from amqtt.contexts import ListenerType
-from amqtt.errors import BrokerError, ProtocolHandlerError
 
 if TYPE_CHECKING:
     import socket
@@ -216,8 +215,8 @@ class ReloadableExternalTLSListener:
                 writer_adapter,
                 self.listener_name,
             )
-        except (BrokerError, ProtocolHandlerError, ssl.SSLError, OSError, ConnectionError, TimeoutError):
-            logger.warning("External TLS listener '%s' connection failed", self.listener_name)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logger.exception("External TLS listener '%s' connection failed", self.listener_name)
             await writer_adapter.close()
         finally:
             if task is not None:
