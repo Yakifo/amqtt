@@ -18,7 +18,7 @@ import ssl
 
 from amqtt.broker import Broker
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
-from amqtt.contrib.reloadable_tls import ReloadableExternalTLSListener
+from amqtt.contrib.listeners import ReloadableExternalTLSListener
 
 logger = logging.getLogger(__name__)
 
