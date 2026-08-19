@@ -9,7 +9,7 @@ import pytest
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
-from amqtt.contrib.reloadable_tls import ReloadableExternalTLSListener
+from amqtt.contrib.listeners import ReloadableExternalTLSListener
 
 
 def external_broker_config() -> BrokerConfig:
@@ -335,7 +335,7 @@ async def test_reload_rolls_back_when_replacement_socket_cannot_start(
     listener = make_unstarted_listener(external_broker, certfile, keyfile, ssl_context_factory=lambda: first_context)
     original_create_server = listener._create_server
 
-    async def create_server_or_fail(context: ssl.SSLContext) -> asyncio.AbstractServer:
+    async def create_server_or_fail(context: ssl.SSLContext) -> asyncio.Server:
         if context is second_context:
             msg = "replacement socket failed"
             raise OSError(msg)

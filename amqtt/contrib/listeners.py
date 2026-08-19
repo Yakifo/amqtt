@@ -11,6 +11,7 @@ from typing_extensions import Self
 
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
 from amqtt.contexts import ListenerType
+from amqtt.errors import BrokerError, ProtocolHandlerError
 
 if TYPE_CHECKING:
     import socket
@@ -55,7 +56,7 @@ class ReloadableExternalTLSListener:
         self.ssl_handshake_timeout = ssl_handshake_timeout
         self._ssl_context_factory = ssl_context_factory
         self._ssl_context: ssl.SSLContext | None = None
-        self._server: asyncio.AbstractServer | None = None
+        self._server: asyncio.Server | None = None
         self._connection_tasks: set[asyncio.Task[None]] = set()
         self._reload_lock = asyncio.Lock()
 
@@ -184,13 +185,13 @@ class ReloadableExternalTLSListener:
             raise RuntimeError(msg)
 
     def _build_ssl_context(self, factory: SSLContextFactory) -> ssl.SSLContext:
-        context = factory()
+        context: object = factory()
         if not isinstance(context, ssl.SSLContext):
             msg = "ssl_context_factory must return ssl.SSLContext"
             raise TypeError(msg)
         return context
 
-    async def _create_server(self, context: ssl.SSLContext) -> asyncio.AbstractServer:
+    async def _create_server(self, context: ssl.SSLContext) -> asyncio.Server:
         kwargs: dict[str, Any] = {
             "ssl": context,
             "backlog": self.backlog,
@@ -199,7 +200,7 @@ class ReloadableExternalTLSListener:
             kwargs["ssl_handshake_timeout"] = self.ssl_handshake_timeout
         return await asyncio.start_server(self._client_connected, self.host, self.port, **kwargs)
 
-    async def _close_accept_socket(self, server: asyncio.AbstractServer) -> None:
+    async def _close_accept_socket(self, server: asyncio.Server) -> None:
         server.close()
         await asyncio.sleep(0)
 
@@ -215,10 +216,8 @@ class ReloadableExternalTLSListener:
                 writer_adapter,
                 self.listener_name,
             )
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            logger.exception("External TLS listener '%s' connection failed", self.listener_name)
+        except (BrokerError, ProtocolHandlerError, ssl.SSLError, OSError, ConnectionError, TimeoutError):
+            logger.warning("External TLS listener '%s' connection failed", self.listener_name)
             await writer_adapter.close()
         finally:
             if task is not None:
