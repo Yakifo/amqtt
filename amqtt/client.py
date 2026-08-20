@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, TypeAlias, cast
 from urllib.parse import unquote, urlparse, urlunparse
 
 import websockets
-from amqtt.mqtt.protocol.handler import ProtocolHandlerConfig
 from websockets import HeadersLike, InvalidHandshake, InvalidURI
 
 from amqtt.adapters import (
@@ -21,8 +20,9 @@ from amqtt.adapters import (
 from amqtt.contexts import BaseContext, ClientConfig
 from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError, PubAckTimeoutError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2, DEFAULT_QOS1_PUBACK_TIMEOUT
+from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandlerConfig
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id
@@ -327,6 +327,7 @@ class MQTTClient:
             )
         except PubAckTimeoutError as e:
             self.logger.info("QoS 1 publish acknowledgement timed out: %s", e)
+            return cast("OutgoingApplicationMessage", e.app_message)
 
     @mqtt_connected
     async def subscribe(self, topics: list[tuple[str, int]]) -> list[int]:

@@ -1,16 +1,7 @@
 import asyncio
 from asyncio import InvalidStateError, QueueFull
-from dataclasses import dataclass
-
-try:
-    from asyncio import QueueShutDown
-except ImportError:
-    # Fallback for Python versions before asyncio.QueueShutDown was added.
-    class QueueShutDown(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
-        pass
-
-
 import collections
+from dataclasses import dataclass
 import itertools
 import logging
 from typing import Generic, TypeVar, cast
@@ -22,7 +13,7 @@ from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2, DEFAULT_QOS1_PUBACK_TIMEOUT
+from amqtt.mqtt.constants import DEFAULT_QOS1_PUBACK_TIMEOUT, QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.packet import (
     CONNACK,
@@ -56,6 +47,13 @@ from amqtt.mqtt.unsuback import UnsubackPacket
 from amqtt.mqtt.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
+
+try:
+    QueueShutDown = asyncio.QueueShutDown
+except AttributeError:
+    # Fallback for Python versions before asyncio.QueueShutDown was added.
+    class QueueShutDown(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
+        pass
 
 C = TypeVar("C", bound=BaseContext)
 
@@ -328,7 +326,8 @@ class ProtocolHandler(Generic[C]):
                 app_message.puback_packet = await asyncio.wait_for(waiter, timeout=self.handler_config.qos1_puback_timeout)
             except asyncio.TimeoutError:
                 msg = f"Timeout waiting for PUBACK for packet ID {app_message.packet_id}"
-                raise PubAckTimeoutError(msg) from None
+                app_message.puback_packet = None
+                raise PubAckTimeoutError(msg, app_message) from None
             finally:
                 self._puback_waiters.pop(app_message.packet_id, None)
                 # Discard inflight message

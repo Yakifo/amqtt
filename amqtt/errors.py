@@ -1,4 +1,9 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from amqtt.session import IncomingApplicationMessage, OutgoingApplicationMessage
 
 
 class AMQTTError(Exception):
@@ -65,3 +70,7 @@ class PluginLoadError(Exception):
 
 class PubAckTimeoutError(Exception):
     """Exception thrown when publish ack is not received within timeout."""
+
+    def __init__(self, msg: str, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
+        self.app_message = app_message
+        super().__init__(msg)

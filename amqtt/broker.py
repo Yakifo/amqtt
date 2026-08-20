@@ -485,12 +485,14 @@ class Broker:
         remote_port: int,
     ) -> tuple[BrokerProtocolHandler, Session]:
         """Initialize a client session and protocol handler."""
-
         handler_config = ProtocolHandlerConfig(qos1_puback_timeout=self.config.qos1_puback_timeout)
 
         # Wait for first packet and expect a CONNECT
         try:
-            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager, handler_config=handler_config)
+            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader,
+                                                                                    writer,
+                                                                                    self.plugins_manager,
+                                                                                    handler_config=handler_config)
         except AMQTTError as exc:
             self.logger.warning(
                 f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"

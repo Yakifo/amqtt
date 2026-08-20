@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
-from amqtt.mqtt.constants import QOS_0, QOS_2, DEFAULT_QOS1_PUBACK_TIMEOUT
+from amqtt.mqtt.constants import DEFAULT_QOS1_PUBACK_TIMEOUT, QOS_0, QOS_2
 
 if TYPE_CHECKING:
     import asyncio
