@@ -61,3 +61,7 @@ class ProtocolHandlerError(Exception):
 
 class PluginLoadError(Exception):
     """Exception thrown when loading a plugin."""
+
+
+class PublishAckTimeoutError(Exception):
+    """Exception thrown when publish ack is not received within timeout."""

@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 
 from amqtt.adapters import BufferWriter
+from amqtt.errors import PublishAckTimeoutError
 from amqtt.mqtt.constants import QOS_1
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
 from amqtt.mqtt.protocol.handler import ProtocolHandlerConfig
@@ -46,7 +47,7 @@ async def test_client_qos1_puback_timeout_expires_and_cleans_state() -> None:
     message = make_qos1_message()
 
     started_at = asyncio.get_running_loop().time()
-    with pytest.raises(TimeoutError, match="Timeout waiting for PUBACK"):
+    with pytest.raises(PublishAckTimeoutError, match="Timeout waiting for PUBACK"):
         await asyncio.wait_for(handler._handle_qos1_message_flow(message), timeout=1)
     elapsed = asyncio.get_running_loop().time() - started_at
 
@@ -84,7 +85,7 @@ async def test_client_qos1_puback_timeout_is_variable() -> None:
         assert not handler.session.inflight_out
         return message
 
-    with pytest.raises(TimeoutError, match="Timeout waiting for PUBACK"):
+    with pytest.raises(PublishAckTimeoutError, match="Timeout waiting for PUBACK"):
         await publish_with_delayed_puback(qos1_timeout=0.01, puback_delay=0.05)
 
     message = await publish_with_delayed_puback(qos1_timeout=0.2, puback_delay=0.05)

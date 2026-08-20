@@ -19,7 +19,7 @@ from amqtt.adapters import (
     WebSocketsWriter,
 )
 from amqtt.contexts import BaseContext, ClientConfig
-from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
+from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError, PublishAckTimeoutError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2, DEFAULT_QOS1_PUBACK_TIMEOUT
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
@@ -317,13 +317,16 @@ class MQTTClient:
             return _qos, _retain
 
         (app_qos, app_retain) = get_retain_and_qos()
-        return await self._handler.mqtt_publish(
-            topic,
-            message,
-            app_qos,
-            app_retain,
-            ack_timeout,
-        )
+        try:
+            return await self._handler.mqtt_publish(
+                topic,
+                message,
+                app_qos,
+                app_retain,
+                ack_timeout,
+            )
+        except PublishAckTimeoutError as e:
+            self.logger.info("QoS 1 publish acknowledgement timed out: %s", e)
 
     @mqtt_connected
     async def subscribe(self, topics: list[tuple[str, int]]) -> list[int]:

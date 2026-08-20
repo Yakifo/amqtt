@@ -7,6 +7,7 @@ import unittest
 import pytest
 
 from amqtt.adapters import BufferWriter, StreamReaderAdapter, StreamWriterAdapter
+from amqtt.errors import PublishAckTimeoutError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.handler import ProtocolHandler, ProtocolHandlerConfig
 from amqtt.mqtt.puback import PubackPacket
@@ -204,7 +205,7 @@ class ProtocolHandlerTest(unittest.TestCase):
             message = OutgoingApplicationMessage(1, "/topic", QOS_1, b"test_data", False)
 
             started_at = self.loop.time()
-            with pytest.raises(TimeoutError, match="Timeout waiting for PUBACK"):
+            with pytest.raises(PublishAckTimeoutError, match="Timeout waiting for PUBACK"):
                 await asyncio.wait_for(handler._handle_qos1_message_flow(message), timeout=1)
             elapsed = self.loop.time() - started_at
 
