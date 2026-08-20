@@ -17,7 +17,7 @@ from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.contexts import BaseContext
-from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError, PublishAckTimeoutError
+from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError, PubAckTimeoutError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
@@ -328,7 +328,7 @@ class ProtocolHandler(Generic[C]):
                 app_message.puback_packet = await asyncio.wait_for(waiter, timeout=self.handler_config.qos1_puback_timeout)
             except asyncio.TimeoutError:
                 msg = f"Timeout waiting for PUBACK for packet ID {app_message.packet_id}"
-                raise PublishAckTimeoutError(msg) from None
+                raise PubAckTimeoutError(msg) from None
             finally:
                 self._puback_waiters.pop(app_message.packet_id, None)
                 # Discard inflight message

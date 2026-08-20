@@ -22,7 +22,7 @@ from amqtt.adapters import (
     WriterAdapter,
 )
 from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
-from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError, PublishAckTimeoutError
+from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError, PubAckTimeoutError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id
@@ -975,7 +975,7 @@ class Broker:
                         task.result()
                     except CancelledError:
                         self.logger.info(f"Task has been cancelled: {task}")
-                    except PublishAckTimeoutError as e:
+                    except PubAckTimeoutError as e:
                         self.logger.info("QoS 1 publish acknowledgement timed out: %s", e)
                     # if a task fails, don't want it to cause the broker to fail
                     except Exception:  # pylint: disable=W0718

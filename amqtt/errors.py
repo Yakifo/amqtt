@@ -63,5 +63,5 @@ class PluginLoadError(Exception):
     """Exception thrown when loading a plugin."""
 
 
-class PublishAckTimeoutError(Exception):
+class PubAckTimeoutError(Exception):
     """Exception thrown when publish ack is not received within timeout."""
