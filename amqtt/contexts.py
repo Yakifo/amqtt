@@ -357,6 +357,8 @@ class ClientConfig(Dictable):
     will: WillConfig | None = None
     """Message, topic and flags that should be sent to if the client disconnects. See
     [`WillConfig`](client_config.md#amqtt.contexts.WillConfig) for more information."""
+    qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
+    """Timeout for QoS 1 PUBACK messages. Defaults to 5 seconds."""
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""

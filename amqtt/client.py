@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias, cast
 from urllib.parse import unquote, urlparse, urlunparse
 
 import websockets
+from amqtt.mqtt.protocol.handler import ProtocolHandlerConfig
 from websockets import HeadersLike, InvalidHandshake, InvalidURI
 
 from amqtt.adapters import (
@@ -20,7 +21,7 @@ from amqtt.adapters import (
 from amqtt.contexts import BaseContext, ClientConfig
 from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2, DEFAULT_QOS1_PUBACK_TIMEOUT
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -451,7 +452,10 @@ class MQTTClient:
             self.session.broker_uri = str(urlunparse(uri))
         # Init protocol handler
         # if not self._handler:
-        self._handler = ClientProtocolHandler(self.plugins_manager)
+        handler_config = ProtocolHandlerConfig(
+            qos1_puback_timeout=self.config.qos1_puback_timeout
+        )
+        self._handler = ClientProtocolHandler(self.plugins_manager, handler_config=handler_config)
 
         connection_timeout = self.config.get("connection_timeout", None)
 
