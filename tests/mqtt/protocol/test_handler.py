@@ -4,9 +4,11 @@ import secrets
 from typing import Any
 import unittest
 
-from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
+import pytest
+
+from amqtt.adapters import BufferWriter, StreamReaderAdapter, StreamWriterAdapter
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from amqtt.mqtt.protocol.handler import ProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandler, ProtocolHandlerConfig
 from amqtt.mqtt.puback import PubackPacket
 from amqtt.mqtt.pubcomp import PubcompPacket
 from amqtt.mqtt.publish import PublishPacket
@@ -188,6 +190,67 @@ class ProtocolHandlerTest(unittest.TestCase):
         exception = future.exception()
         if exception:
             raise exception
+
+    def test_publish_qos1_times_out_after_configured_interval(self):
+        async def test_coro() -> None:
+            qos1_timeout = 0.01
+            session = Session()
+            handler = ProtocolHandler(
+                self.plugin_manager,
+                session,
+                handler_config=ProtocolHandlerConfig(qos1_puback_timeout=qos1_timeout),
+            )
+            handler.writer = BufferWriter()
+            message = OutgoingApplicationMessage(1, "/topic", QOS_1, b"test_data", False)
+
+            started_at = self.loop.time()
+            with pytest.raises(TimeoutError, match="Timeout waiting for PUBACK"):
+                await asyncio.wait_for(handler._handle_qos1_message_flow(message), timeout=1)
+            elapsed = self.loop.time() - started_at
+
+            assert elapsed >= qos1_timeout
+            assert not handler._puback_waiters
+            assert not session.inflight_out
+            assert message.puback_packet is None
+
+        self.loop.run_until_complete(test_coro())
+
+    def test_publish_qos1_timeout_is_variable(self):
+        async def publish_with_delayed_puback(qos1_timeout: float, puback_delay: float) -> OutgoingApplicationMessage:
+            session = Session()
+            handler = ProtocolHandler(
+                self.plugin_manager,
+                session,
+                handler_config=ProtocolHandlerConfig(qos1_puback_timeout=qos1_timeout),
+            )
+            handler.writer = BufferWriter()
+            message = OutgoingApplicationMessage(1, "/topic", QOS_1, b"test_data", False)
+
+            async def send_puback() -> None:
+                while 1 not in handler._puback_waiters:
+                    await asyncio.sleep(0)
+                await asyncio.sleep(puback_delay)
+                await handler.handle_puback(PubackPacket.build(1))
+
+            puback_task = asyncio.create_task(send_puback())
+            try:
+                await handler._handle_qos1_message_flow(message)
+            finally:
+                puback_task.cancel()
+                await asyncio.gather(puback_task, return_exceptions=True)
+
+            assert not handler._puback_waiters
+            assert not session.inflight_out
+            return message
+
+        async def test_coro() -> None:
+            with self.assertRaisesRegex(TimeoutError, "Timeout waiting for PUBACK"):
+                await publish_with_delayed_puback(qos1_timeout=0.01, puback_delay=0.05)
+
+            message = await publish_with_delayed_puback(qos1_timeout=0.2, puback_delay=0.05)
+            assert message.puback_packet is not None
+
+        self.loop.run_until_complete(test_coro())
 
     def test_publish_qos2(self):
         async def server_mock(reader, writer) -> None:

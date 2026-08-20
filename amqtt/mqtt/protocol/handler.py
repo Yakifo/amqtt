@@ -1,5 +1,6 @@
 import asyncio
 from asyncio import InvalidStateError, QueueFull
+from dataclasses import dataclass
 
 try:
     from asyncio import QueueShutDown
@@ -21,7 +22,7 @@ from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2, DEFAULT_QOS1_PUBACK_TIMEOUT
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.packet import (
     CONNACK,
@@ -59,6 +60,11 @@ from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplic
 C = TypeVar("C", bound=BaseContext)
 
 
+@dataclass(frozen=True)
+class ProtocolHandlerConfig:
+    qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
+
+
 class ProtocolHandler(Generic[C]):
     """Class implementing the MQTT communication protocol using asyncio features."""
 
@@ -67,6 +73,7 @@ class ProtocolHandler(Generic[C]):
         plugins_manager: PluginManager[C],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
+        handler_config: ProtocolHandlerConfig | None = None
     ) -> None:
         self.logger: logging.Logger | logging.LoggerAdapter[logging.Logger] = logging.getLogger(__name__)
         if session is not None:
@@ -76,6 +83,7 @@ class ProtocolHandler(Generic[C]):
         self.reader: ReaderAdapter | None = None
         self.writer: WriterAdapter | None = None
         self.plugins_manager: PluginManager[C] = plugins_manager
+        self.handler_config = handler_config or ProtocolHandlerConfig()
 
         try:
             self._loop = loop if loop is not None else asyncio.get_running_loop()
@@ -317,7 +325,7 @@ class ProtocolHandler(Generic[C]):
             waiter: asyncio.Future[PubackPacket] = asyncio.Future()
             self._puback_waiters[app_message.packet_id] = waiter
             try:
-                app_message.puback_packet = await asyncio.wait_for(waiter, timeout=5)
+                app_message.puback_packet = await asyncio.wait_for(waiter, timeout=self.handler_config.qos1_puback_timeout)
             except asyncio.TimeoutError:
                 msg = f"Timeout waiting for PUBACK for packet ID {app_message.packet_id}"
                 self.logger.warning(msg)

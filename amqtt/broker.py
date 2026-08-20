@@ -30,6 +30,7 @@ from amqtt.utils import format_client_message, gen_client_id
 from .events import BrokerEvents
 from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
+from .mqtt.protocol.handler import ProtocolHandlerConfig
 from .plugins.manager import PluginManager
 
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
@@ -484,9 +485,12 @@ class Broker:
         remote_port: int,
     ) -> tuple[BrokerProtocolHandler, Session]:
         """Initialize a client session and protocol handler."""
+
+        handler_config = ProtocolHandlerConfig(qos1_puback_timeout=self.config.qos1_puback_timeout)
+
         # Wait for first packet and expect a CONNECT
         try:
-            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
+            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager, handler_config=handler_config)
         except AMQTTError as exc:
             self.logger.warning(
                 f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"
@@ -542,7 +546,9 @@ class Broker:
         session = Session()
         session.client_id = client_id
 
-        bph = BrokerProtocolHandler(self.plugins_manager, session)
+        handler_config = ProtocolHandlerConfig(qos1_puback_timeout=self.config.qos1_puback_timeout)
+
+        bph = BrokerProtocolHandler(self.plugins_manager, session, handler_config=handler_config)
         session.transitions.disconnect()
         return bph, session
 
@@ -792,7 +798,8 @@ class Broker:
 
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
         """Create a BrokerProtocolHandler and attach to a session."""
-        handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop)
+        handler_config = ProtocolHandlerConfig(qos1_puback_timeout=self.config.qos1_puback_timeout)
+        handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop, handler_config=handler_config)
         handler.attach(session, reader, writer)
         return handler
 

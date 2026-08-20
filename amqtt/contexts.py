@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from dacite import Config as DaciteConfig, from_dict as dict_to_dataclass
 
-from amqtt.mqtt.constants import QOS_0, QOS_2
+from amqtt.mqtt.constants import QOS_0, QOS_2, DEFAULT_QOS1_PUBACK_TIMEOUT
 
 if TYPE_CHECKING:
     import asyncio
@@ -185,6 +185,8 @@ class BrokerConfig(Dictable):
      or `BaseTopicPlugin`; the value is a dictionary of configuration options for that plugin. See
      [custom plugins](../plugins/custom_plugins.md) for more information. `list[str | dict[str,Any]]` is deprecated but available
       to support legacy use cases."""
+    qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
+    """Timeout for QoS 1 PUBACK messages. Defaults to 5 seconds."""
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
