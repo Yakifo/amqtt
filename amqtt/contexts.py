@@ -121,7 +121,7 @@ class ListenerConfig(Dictable):
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the server's private key."""
     ssl_context: SSLContext | None = None
-    """SSL context to use for the connection. Mutual exclusive with other ssl options. API only; not applicable to yaml-config."""
+    """SSL context to use for the connection. Mutually exclusive with other ssl options. API only; not applicable to yaml-config."""
     reader: str | None = None
     writer: str | None = None
 
