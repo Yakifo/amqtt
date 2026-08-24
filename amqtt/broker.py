@@ -526,6 +526,7 @@ class Broker:
             existing_client_session.keep_alive = client_session.keep_alive
             existing_client_session.username = client_session.username
             existing_client_session.password = client_session.password
+            existing_client_session.ssl_object = writer.get_ssl_info()
             client_session = existing_client_session
             client_session.parent = 1
         else:
