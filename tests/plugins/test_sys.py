@@ -8,8 +8,10 @@ import pytest
 
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_0
+from amqtt.mqtt3.constants import QOS_0
+
 from tests.asserts import does_not_warn
+
 
 dictConfig({
     'version': 1,

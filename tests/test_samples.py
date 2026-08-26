@@ -10,7 +10,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from amqtt.mqtt.constants import QOS_0
+from amqtt.constants import QOS_0
 from samples.http_server_integration import main as http_server_main
 from samples.unix_sockets import app as unix_sockets_app
 

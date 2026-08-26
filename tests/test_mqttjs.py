@@ -18,7 +18,7 @@ from yaml import Loader
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.events import BrokerEvents
-from amqtt.mqtt.constants import QOS_1, QOS_2
+from amqtt.constants import QOS_1, QOS_2
 
 pytestmark = pytest.mark.extended
 

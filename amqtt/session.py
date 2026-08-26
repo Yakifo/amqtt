@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from transitions import Machine
 
 from amqtt.errors import AMQTTError
-from amqtt.mqtt.publish import PublishPacket
+from amqtt.mqtt3.publish import PublishPacket
 
 OUTGOING = 0
 INCOMING = 1
