@@ -13,8 +13,8 @@ from sqlalchemy.schema import CreateTable
 
 from amqtt.broker import Broker, BrokerContext, RetainedApplicationMessage
 from amqtt.client import MQTTClient
-from amqtt.mqtt.constants import QOS_1
-from amqtt.contrib.persistence import Base, RetainedMessage, SessionDBPlugin, StoredMessage, StoredSession, Subscription
+from amqtt.mqtt3.constants import QOS_1
+from amqtt.contrib.persistence import SessionDBPlugin, Subscription, StoredSession, RetainedMessage, Base, StoredMessage
 from amqtt.session import Session
 
 formatter = "[%(asctime)s] %(name)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"

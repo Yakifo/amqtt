@@ -8,8 +8,8 @@ import atheris
 with atheris.instrument_imports():
     from amqtt.adapters import BufferReader
     from amqtt.errors import AMQTTError, CodecError, MQTTError, NoDataError
-    from amqtt.mqtt import packet_class
-    from amqtt.mqtt.packet import MQTTFixedHeader
+    from amqtt.mqtt3 import packet_class
+    from amqtt.mqtt3.packet import MQTTFixedHeader
 
 
 EXPECTED_DECODE_ERRORS = (AMQTTError, CodecError, MQTTError, NoDataError, ValueError)
