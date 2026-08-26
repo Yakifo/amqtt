@@ -52,6 +52,22 @@ class ListenerType(StrEnum):
         return f'"{self.value!s}"'
 
 
+class ListenerVerifyMode(StrEnum):
+    """TLS listener client certificate verify mode."""
+
+    NONE = "none"
+    OPTIONAL = "optional"
+    REQUIRED = "required"
+
+
+class ListenerVerifyFlags(StrEnum):
+    """TLS listener certificate revocation verify flags."""
+
+    NONE = "none"
+    LEAF = "leaf"
+    CHAIN = "chain"
+
+
 class Dictable:
     """Add dictionary methods to a dataclass."""
 
@@ -117,6 +133,14 @@ class ListenerConfig(Dictable):
     certificates needed to establish the certificate's authenticity.)"""
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the server's private key."""
+    client_cert: ListenerVerifyMode = ListenerVerifyMode.OPTIONAL
+    """Client certificate policy for TLS listeners: `none`, `optional`, or `required`."""
+    crlfile: str | Path | None = None
+    """Path to a file containing certificate revocation list material in PEM format."""
+    crlpath: str | Path | None = None
+    """Path to a directory containing certificate revocation list material."""
+    crl_check: ListenerVerifyFlags = ListenerVerifyFlags.NONE
+    """Certificate revocation check policy for TLS listeners: `none`, `leaf`, or `chain`."""
     reader: str | None = None
     writer: str | None = None
 
@@ -126,7 +150,7 @@ class ListenerConfig(Dictable):
             msg = "If specifying the 'certfile' or 'keyfile', both are required."
             raise ValueError(msg)
 
-        for fn in ("cafile", "capath", "certfile", "keyfile"):
+        for fn in ("cafile", "capath", "certfile", "keyfile", "crlfile", "crlpath"):
             if isinstance(getattr(self, fn), str):
                 setattr(self, fn, Path(getattr(self, fn)))
             if getattr(self, fn) and not getattr(self, fn).exists():
@@ -230,7 +254,7 @@ class BrokerConfig(Dictable):
         return dict_to_dataclass(data_class=BrokerConfig,
                                  data=d,
                                  config=DaciteConfig(
-                                     cast=[StrEnum, ListenerType],
+                                     cast=[StrEnum, ListenerType, ListenerVerifyMode, ListenerVerifyFlags],
                                      strict=True,
                                      type_hooks={list[dict[str, Any]]: cls._coerce_lists}
                                  ))
