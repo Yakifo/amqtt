@@ -186,7 +186,7 @@ class BrokerConfig(Dictable):
      [custom plugins](../plugins/custom_plugins.md) for more information. `list[str | dict[str,Any]]` is deprecated but available
       to support legacy use cases."""
     qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
-    """Timeout for QoS 1 PUBACK messages. Defaults to 5 seconds."""
+    """Timeout for QoS 1 PUBACK messages. Defaults to 5 seconds. `None` will wait forever to retry on reconnect."""
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
