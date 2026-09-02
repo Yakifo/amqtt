@@ -8,6 +8,7 @@ from math import floor
 import ssl
 import time
 from typing import Any, ClassVar, TypeAlias
+from weakref import WeakKeyDictionary
 
 from transitions import Machine, MachineError
 import websockets.asyncio.server
@@ -222,6 +223,7 @@ class Broker:
 
         # Task for session monitor
         self._session_monitor_task: asyncio.Task[Any] | None = None
+        self._inbound_sni_by_ssl_object: WeakKeyDictionary[ssl.SSLObject, str] = WeakKeyDictionary()
 
         # Initialize plugins manager
 
@@ -303,8 +305,16 @@ class Broker:
 
                 self.logger.info(f"Listener '{listener_name}' bind to {listener['bind']} (max_connections={max_connections})")
 
-    @staticmethod
-    def _create_ssl_context(listener: ListenerConfig) -> ssl.SSLContext:
+    def _sni_callback(self, ssl_object: ssl.SSLObject, server_name: str | None, _ssl_context: ssl.SSLContext) -> None:
+        if server_name:
+            self._inbound_sni_by_ssl_object[ssl_object] = server_name
+
+    def _pop_inbound_sni(self, ssl_object: ssl.SSLObject | None) -> str | None:
+        if ssl_object is None:
+            return None
+        return self._inbound_sni_by_ssl_object.pop(ssl_object, None)
+
+    def _create_ssl_context(self, listener: ListenerConfig) -> ssl.SSLContext:
         """Create an SSL context for a listener."""
         try:
             ssl_context = ssl.create_default_context(
@@ -314,6 +324,7 @@ class Broker:
                 cadata=listener.get("cadata"),
             )
             ssl_context.load_cert_chain(listener["certfile"], listener["keyfile"])
+            ssl_context.set_servername_callback(self._sni_callback)
             ssl_context.verify_mode = ssl.CERT_OPTIONAL
         except KeyError as ke:
             msg = f"'certfile' or 'keyfile' configuration parameter missing: {ke}"
@@ -462,7 +473,13 @@ class Broker:
         self.logger.info(f"Connection from {remote_address}:{remote_port} on listener '{listener_name}'")
 
         try:
-            handler, client_session = await self._initialize_client_session(reader, writer, remote_address, remote_port)
+            handler, client_session = await self._initialize_client_session(
+                reader,
+                writer,
+                remote_address,
+                remote_port,
+                listener_name,
+            )
         except (AMQTTError, MQTTError, NoDataError) as exc:
             self.logger.warning(f"Failed to initialize client session: {exc}")
             server.release_connection()
@@ -482,28 +499,41 @@ class Broker:
         writer: WriterAdapter,
         remote_address: str,
         remote_port: int,
+        listener_name: str,
     ) -> tuple[BrokerProtocolHandler, Session]:
         """Initialize a client session and protocol handler."""
         # Wait for first packet and expect a CONNECT
+        ssl_object = writer.get_ssl_info()
         try:
             handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
         except AMQTTError as exc:
+            self._pop_inbound_sni(ssl_object)
             self.logger.warning(
                 f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"
                 f" Can't read first packet as CONNECT: {exc}",
             )
             raise AMQTTError(exc) from exc
         except MQTTError as exc:
+            self._pop_inbound_sni(ssl_object)
             self.logger.warning(
                 f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
             )
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:
-            self.logger.error(  # ruff: ignore[error-instead-of-exception]
-                f"No data from {format_client_message(address=remote_address, port=remote_port)} : {exc}",
-            )
+            inbound_sni = self._pop_inbound_sni(ssl_object)
+            client = format_client_message(address=remote_address, port=remote_port)
+            if ssl_object is not None:
+                self.logger.warning(
+                    f"TLS connection from {client} on listener '{listener_name}' closed before MQTT CONNECT; "
+                    f"inbound_sni={inbound_sni!r}: {exc}",
+                )
+            else:
+                self.logger.error(f"No data from {client} : {exc}")  # ruff: ignore[error-instead-of-exception]
             raise AMQTTError(exc) from exc
+
+        client_session.ssl_object = ssl_object
+        client_session.inbound_sni = self._pop_inbound_sni(ssl_object)
 
         if client_session.clean_session:
             # Delete existing session and create a new one
@@ -526,6 +556,10 @@ class Broker:
             existing_client_session.keep_alive = client_session.keep_alive
             existing_client_session.username = client_session.username
             existing_client_session.password = client_session.password
+            existing_client_session.remote_address = client_session.remote_address
+            existing_client_session.remote_port = client_session.remote_port
+            existing_client_session.ssl_object = client_session.ssl_object
+            existing_client_session.inbound_sni = client_session.inbound_sni
             client_session = existing_client_session
             client_session.parent = 1
         else:

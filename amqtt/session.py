@@ -178,6 +178,8 @@ class Session:
         # identify anonymous client sessions or clients which didn't identify themselves
         self.is_anonymous: bool = False
 
+        self.inbound_sni: str | None = None
+
     def _init_states(self) -> None:
         self.transitions = Machine(states=Session.states, initial="new")
         self.transitions.add_transition(
