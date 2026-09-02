@@ -55,6 +55,7 @@ except AttributeError:
     class QueueShutDown(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
         pass
 
+
 C = TypeVar("C", bound=BaseContext)
 
 
@@ -71,7 +72,7 @@ class ProtocolHandler(Generic[C]):
         plugins_manager: PluginManager[C],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        handler_config: ProtocolHandlerConfig | None = None
+        handler_config: ProtocolHandlerConfig | None = None,
     ) -> None:
         self.logger: logging.Logger | logging.LoggerAdapter[logging.Logger] = logging.getLogger(__name__)
         if session is not None:
@@ -98,6 +99,7 @@ class ProtocolHandler(Generic[C]):
         self._pubrel_waiters: dict[int, asyncio.Future[PubrelPacket]] = {}
         self._pubcomp_waiters: dict[int, asyncio.Future[PubcompPacket]] = {}
         self._write_lock = asyncio.Lock()
+        self._stopping = False
 
     def _init_session(self, session: Session) -> None:
         if not session:
@@ -130,6 +132,7 @@ class ProtocolHandler(Generic[C]):
         if not self._is_attached():
             msg = "Handler is not attached to a stream"
             raise ProtocolHandlerError(msg)
+        self._stopping = False
         self._reader_ready = asyncio.Event()
         self._reader_stopped = asyncio.Event()
         self._reader_task = asyncio.create_task(self._reader_loop())
@@ -141,6 +144,7 @@ class ProtocolHandler(Generic[C]):
         self.logger.debug("Handler ready")
 
     async def stop(self) -> None:
+        self._stopping = True
         # Stop messages flow waiter
         self._stop_waiters()
         if self._keepalive_task:
@@ -214,7 +218,7 @@ class ProtocolHandler(Generic[C]):
         :param qos: quality of service to use for message flow. Can be QOS_0, QOS_1 or QOS_2
         :param retain: retain message flag
         :param ack_timeout: acknowledge timeout. If set, this method will return a TimeOut error if the acknowledgment
-        is not completed before ack_timeout second
+        is not completed before `ack_timeout` seconds. Separate from QoS acknowledgement timeout.
         :return: ApplicationMessage used during inflight operations.
         """
         if self.session is None:
@@ -330,8 +334,9 @@ class ProtocolHandler(Generic[C]):
                 raise PubAckTimeoutError(msg, app_message) from None
             finally:
                 self._puback_waiters.pop(app_message.packet_id, None)
-                # Discard inflight message
-                self.session.inflight_out.pop(app_message.packet_id, None)
+                # stop() cancels waiters during connection teardown; keep QoS 1 state so reconnect can republish.
+                if app_message.puback_packet is not None or not self._stopping:
+                    self.session.inflight_out.pop(app_message.packet_id, None)
         elif app_message.direction == INCOMING:
             # Initiate delivery
             self.logger.debug("Add message to delivery")
@@ -364,7 +369,7 @@ class ProtocolHandler(Generic[C]):
                 msg = f"Message '{app_message.packet_id}' has already been acknowledged"
                 raise AMQTTError(msg)
 
-            if not app_message.pubrel_packet:
+            if not app_message.pubrec_packet:
                 # Store message
                 publish_packet: PublishPacket
                 if app_message.publish_packet is not None:
@@ -394,11 +399,14 @@ class ProtocolHandler(Generic[C]):
                     app_message.pubrec_packet = await waiter_pub_rec
                 finally:
                     self._pubrec_waiters.pop(app_message.packet_id, None)
-                    self.session.inflight_out.pop(app_message.packet_id, None)
+                    # stop() cancels waiters during connection teardown; keep QoS 2 state so reconnect can retry.
+                    if app_message.pubrec_packet is None and not self._stopping:
+                        self.session.inflight_out.pop(app_message.packet_id, None)
 
             if not app_message.pubcomp_packet:
                 # Send pubrel
-                app_message.pubrel_packet = PubrelPacket.build(app_message.packet_id)
+                if app_message.pubrel_packet is None:
+                    app_message.pubrel_packet = PubrelPacket.build(app_message.packet_id)
                 await self._send_packet(app_message.pubrel_packet)
                 # Wait for PUBCOMP
                 waiter_pub_comp: asyncio.Future[PubcompPacket] = asyncio.Future()
@@ -407,7 +415,9 @@ class ProtocolHandler(Generic[C]):
                     app_message.pubcomp_packet = await waiter_pub_comp
                 finally:
                     self._pubcomp_waiters.pop(app_message.packet_id, None)
-                    self.session.inflight_out.pop(app_message.packet_id, None)
+                    # Only PUBCOMP completes the flow; teardown cancellation must leave PUBREL retry state intact.
+                    if app_message.pubcomp_packet is not None or not self._stopping:
+                        self.session.inflight_out.pop(app_message.packet_id, None)
         elif app_message.direction == INCOMING and isinstance(app_message, IncomingApplicationMessage):
             self.session.inflight_in[app_message.packet_id] = app_message
             # Send pubrec
