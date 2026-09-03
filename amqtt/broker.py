@@ -1,13 +1,13 @@
 import asyncio
 from asyncio import CancelledError, futures
 from collections import deque
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from functools import partial
 import logging
 from math import floor
 import ssl
 import time
-from typing import Any, ClassVar, TypeAlias
+from typing import Any, ClassVar, TypeAlias, cast
 from weakref import WeakKeyDictionary
 
 from transitions import Machine, MachineError
@@ -34,6 +34,7 @@ from .mqtt.disconnect import DisconnectPacket
 from .plugins.manager import PluginManager
 
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
+_SniCallback: TypeAlias = Callable[[ssl.SSLObject | ssl.SSLSocket, str | None, ssl.SSLSocket], int | None]
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
@@ -305,8 +306,13 @@ class Broker:
 
                 self.logger.info(f"Listener '{listener_name}' bind to {listener['bind']} (max_connections={max_connections})")
 
-    def _sni_callback(self, ssl_object: ssl.SSLObject, server_name: str | None, _ssl_context: ssl.SSLContext) -> None:
-        if server_name:
+    def _sni_callback(
+        self,
+        ssl_object: ssl.SSLObject | ssl.SSLSocket,
+        server_name: str | None,
+        _ssl_context: ssl.SSLContext,
+    ) -> None:
+        if server_name and isinstance(ssl_object, ssl.SSLObject):
             self._inbound_sni_by_ssl_object[ssl_object] = server_name
 
     def _pop_inbound_sni(self, ssl_object: ssl.SSLObject | None) -> str | None:
@@ -324,7 +330,12 @@ class Broker:
                 cadata=listener.get("cadata"),
             )
             ssl_context.load_cert_chain(listener["certfile"], listener["keyfile"])
-            ssl_context.set_servername_callback(self._sni_callback)
+            ssl_context.set_servername_callback(
+                cast(
+                    "_SniCallback",
+                    self._sni_callback,
+                ),
+            )
             ssl_context.verify_mode = ssl.CERT_OPTIONAL
         except KeyError as ke:
             msg = f"'certfile' or 'keyfile' configuration parameter missing: {ke}"
