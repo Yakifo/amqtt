@@ -1,27 +1,19 @@
 import asyncio
 from asyncio import InvalidStateError, QueueFull
-
-try:
-    from asyncio import QueueShutDown
-except ImportError:
-    # Fallback for Python versions before asyncio.QueueShutDown was added.
-    class QueueShutDown(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
-        pass
-
-
 import collections
+from dataclasses import dataclass
 import itertools
 import logging
 from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
 from amqtt.contexts import BaseContext
-from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError
+from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError, PubAckTimeoutError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.constants import DEFAULT_QOS1_PUBACK_TIMEOUT, QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.packet import (
     CONNACK,
@@ -56,7 +48,19 @@ from amqtt.mqtt.unsubscribe import UnsubscribePacket
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import INCOMING, OUTGOING, ApplicationMessage, IncomingApplicationMessage, OutgoingApplicationMessage, Session
 
+try:
+    QueueShutDown = asyncio.QueueShutDown
+except AttributeError:
+    # Fallback for Python versions before asyncio.QueueShutDown was added.
+    class QueueShutDown(Exception):  # type: ignore[no-redef]  # ruff: ignore[error-suffix-on-exception-name]
+        pass
+
 C = TypeVar("C", bound=BaseContext)
+
+
+@dataclass(frozen=True)
+class ProtocolHandlerConfig:
+    qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
 
 
 class ProtocolHandler(Generic[C]):
@@ -67,6 +71,7 @@ class ProtocolHandler(Generic[C]):
         plugins_manager: PluginManager[C],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
+        handler_config: ProtocolHandlerConfig | None = None
     ) -> None:
         self.logger: logging.Logger | logging.LoggerAdapter[logging.Logger] = logging.getLogger(__name__)
         if session is not None:
@@ -76,6 +81,7 @@ class ProtocolHandler(Generic[C]):
         self.reader: ReaderAdapter | None = None
         self.writer: WriterAdapter | None = None
         self.plugins_manager: PluginManager[C] = plugins_manager
+        self.handler_config = handler_config or ProtocolHandlerConfig()
 
         try:
             self._loop = loop if loop is not None else asyncio.get_running_loop()
@@ -317,11 +323,11 @@ class ProtocolHandler(Generic[C]):
             waiter: asyncio.Future[PubackPacket] = asyncio.Future()
             self._puback_waiters[app_message.packet_id] = waiter
             try:
-                app_message.puback_packet = await asyncio.wait_for(waiter, timeout=5)
+                app_message.puback_packet = await asyncio.wait_for(waiter, timeout=self.handler_config.qos1_puback_timeout)
             except asyncio.TimeoutError:
                 msg = f"Timeout waiting for PUBACK for packet ID {app_message.packet_id}"
-                self.logger.warning(msg)
-                raise TimeoutError(msg) from None
+                app_message.puback_packet = None
+                raise PubAckTimeoutError(msg, app_message) from None
             finally:
                 self._puback_waiters.pop(app_message.packet_id, None)
                 # Discard inflight message
