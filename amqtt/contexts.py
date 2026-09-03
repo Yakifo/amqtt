@@ -186,7 +186,9 @@ class BrokerConfig(Dictable):
      [custom plugins](../plugins/custom_plugins.md) for more information. `list[str | dict[str,Any]]` is deprecated but available
       to support legacy use cases."""
     qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
-    """Timeout for QoS 1 PUBACK messages. Defaults to 5 seconds. `None` will wait forever to retry on reconnect."""
+    """Timeout for peer PUBACKs after sending QoS 1 messages. Defaults to 5 seconds.
+    `None` waits indefinitely for PUBACK.
+    """
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
@@ -358,7 +360,9 @@ class ClientConfig(Dictable):
     """Message, topic and flags that should be sent to if the client disconnects. See
     [`WillConfig`](client_config.md#amqtt.contexts.WillConfig) for more information."""
     qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
-    """Timeout for QoS 1 PUBACK messages. Defaults to 5 seconds."""
+    """Timeout for peer PUBACKs after sending QoS 1 messages. Defaults to 5 seconds.
+    `None` waits indefinitely for PUBACK.
+    """
 
     def __post_init__(self) -> None:
         """Check config for errors and transform fields for easier use."""
