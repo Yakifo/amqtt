@@ -269,6 +269,44 @@ async def test_qos1_outgoing_timeout_cleans_waiter_and_inflight(monkeypatch: pyt
     assert 7 not in session.inflight_out
 
 
+@pytest.mark.parametrize(
+    ("timeout_stage", "expected_message"),
+    [
+        ("pubrec", "Timeout waiting for PUBREC"),
+        ("pubcomp", "Timeout waiting for PUBCOMP"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_qos2_outgoing_timeout_cleans_waiter_and_inflight(
+    monkeypatch: pytest.MonkeyPatch,
+    timeout_stage: str,
+    expected_message: str,
+) -> None:
+    session = make_session()
+    handler = make_handler(session)
+    message = OutgoingApplicationMessage(8, "/topic", QOS_2, b"data", False)
+    wait_for_calls = 0
+
+    async def timeout_wait_for(awaitable: Awaitable[Any], timeout: float | None = None) -> Any:
+        nonlocal wait_for_calls
+        del timeout
+        wait_for_calls += 1
+        if timeout_stage == "pubcomp" and wait_for_calls == 1:
+            return PubrecPacket.build(8)
+        if isinstance(awaitable, asyncio.Future):
+            awaitable.cancel()
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(handler_module.asyncio, "wait_for", timeout_wait_for)
+
+    with pytest.raises(TimeoutError, match=expected_message):
+        await handler._handle_qos2_message_flow(message)
+
+    assert not handler._pubrec_waiters
+    assert not handler._pubcomp_waiters
+    assert 8 not in session.inflight_out
+
+
 @pytest.mark.asyncio
 async def test_qos2_flow_validates_message_state() -> None:
     handler = make_handler(make_session())
