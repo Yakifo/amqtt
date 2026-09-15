@@ -28,10 +28,14 @@ Publishing.
 
 ## Step 1. Create a Release Branch
 
+Create release branches from the last release point, not necessarily from
+`main`. This keeps patch and security releases scoped to the fixes intended for
+that release when `main` already contains changes planned for a later version.
+
 ```shell
-git switch main
-git pull --ff-only
-git switch -c release/0.12.0
+git fetch origin --tags
+git switch --detach v0.12.0
+git switch -c release/0.12.1
 ```
 
 ## Step 2. Update Version References
@@ -72,10 +76,19 @@ Optionally run the same constrained package build used by the PyPI workflow:
 uv build --build-constraints .github/build-constraints.txt --sdist --wheel --out-dir dist
 ```
 
-## Step 4. Open and Merge a Release PR
+## Step 4. Review the Release Branch
 
-Open a release PR on GitHub. Merge it into `main` after CI passes and the PR is
-approved.
+Push the release branch and open a release PR on GitHub for review:
+
+```shell
+git push -u origin release/0.12.1
+```
+
+For patch or security releases where `main` already contains changes for a later
+version, the commit being released does not have to be on `main`. Review and
+test the release branch itself, then tag the release branch tip. Merge or
+cherry-pick the release changes back to `main` after the release tag is pushed so
+future development also contains the fix.
 
 ## Step 5. Push the Release Tag
 
@@ -101,15 +114,17 @@ resolve to the latest stable version, and testers opt in explicitly with
 same dependency resolution real users get.
 
 ```shell
-git switch main
+git switch release/0.12.1
 git pull --ff-only
-git tag -a v0.12.0 -m "aMQTT 0.12.0"
-git push origin v0.12.0
+git tag -a v0.12.1 -m "aMQTT 0.12.1"
+git push origin v0.12.1
 ```
 
 Pushing the tag runs `.github/workflows/release-drafter.yml`, which validates the
 tag and creates or updates a draft GitHub release using `docs/changelog.md` as
-the release body.
+the release body. The release automation checks out the tag itself, so the
+published distributions are built from the tagged commit rather than from
+`main`.
 
 ## Step 6. Publish the GitHub Release
 
