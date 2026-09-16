@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.12.1
+
+This is a security and maintenance release addressing a vulnerability in the handling of QoS2 messages.
+
+### Security Fixes
+
+- A remote denial of service can be caused by incomplete MQTT QoS 2 transactions remaining allocated after the associated client disconnects. An attacker can repeatedly connect to the broker, initiate QoS 2 transactions, and disconnect before completing the handshake. Each incomplete transaction leaves state allocated in memory. Repeating this process causes broker memory consumption to grow continuously.
+
+**Official Advisory:** [GHSA-wcqj-wx85-c75p](https://github.com/Yakifo/amqtt/security/advisories/GHSA-wcqj-wx85-c75p)
+
+**Known affected versions:** `>= 0.11.0, <= 0.12.0`
+
+Versions before 0.11.0 were not evaluated.
+
+A formal CVE identifier has been requested for this vulnerability and will be updated in these notes once assigned. Once assigned, the GHSA record will be updated automatically.
+
+### Test Coverage
+
+The 0.12.1 QoS 2 security fix is covered by automated regression tests in [`tests/mqtt/protocol/test_handler_extended.py`](https://github.com/Yakifo/amqtt/blob/v0.12.1/tests/mqtt/protocol/test_handler_extended.py), including:
+
+- `test_qos2_outgoing_timeout_cleans_waiter_and_inflight`
+
+### Features & Enhancements
+
+This release strictly contains the security patch.
+
+
 ## 0.12.0
 
 - new: added support for python 3.14

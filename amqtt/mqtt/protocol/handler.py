@@ -385,7 +385,11 @@ class ProtocolHandler(Generic[C]):
                 waiter_pub_rec: asyncio.Future[PubrecPacket] = asyncio.Future()
                 self._pubrec_waiters[app_message.packet_id] = waiter_pub_rec
                 try:
-                    app_message.pubrec_packet = await waiter_pub_rec
+                    app_message.pubrec_packet = await asyncio.wait_for(waiter_pub_rec, timeout=5)
+                except asyncio.TimeoutError:
+                    msg = f"Timeout waiting for PUBREC for packet ID {app_message.packet_id}"
+                    self.logger.warning(msg)
+                    raise TimeoutError(msg) from None
                 finally:
                     self._pubrec_waiters.pop(app_message.packet_id, None)
                     self.session.inflight_out.pop(app_message.packet_id, None)
@@ -398,7 +402,11 @@ class ProtocolHandler(Generic[C]):
                 waiter_pub_comp: asyncio.Future[PubcompPacket] = asyncio.Future()
                 self._pubcomp_waiters[app_message.packet_id] = waiter_pub_comp
                 try:
-                    app_message.pubcomp_packet = await waiter_pub_comp
+                    app_message.pubcomp_packet = await asyncio.wait_for(waiter_pub_comp, timeout=5)
+                except asyncio.TimeoutError:
+                    msg = f"Timeout waiting for PUBCOMP for packet ID {app_message.packet_id}"
+                    self.logger.warning(msg)
+                    raise TimeoutError(msg) from None
                 finally:
                     self._pubcomp_waiters.pop(app_message.packet_id, None)
                     self.session.inflight_out.pop(app_message.packet_id, None)
