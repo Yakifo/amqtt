@@ -18,10 +18,11 @@ from amqtt.adapters import (
     WebSocketsWriter,
 )
 from amqtt.contexts import BaseContext, ClientConfig
-from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError
+from amqtt.errors import ClientError, ConnectError, ProtocolHandlerError, PubAckTimeoutError
 from amqtt.mqtt.connack import CONNECTION_ACCEPTED
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.client_handler import ClientProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandlerConfig
 from amqtt.plugins.manager import PluginManager
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import gen_client_id
@@ -316,13 +317,17 @@ class MQTTClient:
             return _qos, _retain
 
         (app_qos, app_retain) = get_retain_and_qos()
-        return await self._handler.mqtt_publish(
-            topic,
-            message,
-            app_qos,
-            app_retain,
-            ack_timeout,
-        )
+        try:
+            return await self._handler.mqtt_publish(
+                topic,
+                message,
+                app_qos,
+                app_retain,
+                ack_timeout,
+            )
+        except PubAckTimeoutError as e:
+            self.logger.info("QoS 1 publish acknowledgement timed out: %s", e)
+            return cast("OutgoingApplicationMessage", e.app_message)
 
     @mqtt_connected
     async def subscribe(self, topics: list[tuple[str, int]]) -> list[int]:
@@ -451,7 +456,10 @@ class MQTTClient:
             self.session.broker_uri = str(urlunparse(uri))
         # Init protocol handler
         # if not self._handler:
-        self._handler = ClientProtocolHandler(self.plugins_manager)
+        handler_config = ProtocolHandlerConfig(
+            qos1_puback_timeout=self.config.qos1_puback_timeout
+        )
+        self._handler = ClientProtocolHandler(self.plugins_manager, handler_config=handler_config)
 
         connection_timeout = self.config.get("connection_timeout", None)
 
