@@ -282,7 +282,11 @@ class Broker:
                 continue
 
             max_connections = listener.get("max_connections", -1)
-            ssl_context = self._create_ssl_context(listener) if listener.get("ssl", False) else None
+
+            ssl_context = listener.get("ssl_context", None) if listener.get("ssl", False) else None
+
+            if ssl_context is None:
+                ssl_context = self._create_ssl_context(listener) if listener.get("ssl", False) else None
 
             # for listeners which are external, don't need to create a server
             if listener.type == ListenerType.EXTERNAL:

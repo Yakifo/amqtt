@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import ssl
 from typing import Any
 
 import pytest
@@ -17,6 +18,10 @@ from dacite import from_dict, Config
 from amqtt.contexts import BrokerConfig, ClientConfig, ConnectionConfig, ListenerConfig, ListenerType, TopicConfig, WillConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _ssl_context() -> ssl.SSLContext:
+    return ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 
 
 def test_entrypoint_broker_config(caplog):
@@ -166,3 +171,68 @@ def test_client_config_rejects_mismatched_connection_cert_and_key() -> None:
 
     with pytest.raises(ValueError, match="both"):
         ClientConfig(connection=connection)
+
+def test_external_listener_accepts_default_fields() -> None:
+    broker_config = BrokerConfig.from_dict({"listeners": {"default": {"type": "external"}}})
+
+    assert broker_config.listeners["default"].type == ListenerType.EXTERNAL
+
+
+def test_ssl_context_with_false_ssl() -> None:
+    with pytest.raises(ValueError, match="'ssl' must be True"):
+        _ = ListenerConfig(ssl=False, ssl_context=_ssl_context())
+
+
+def test_ssl_context_with_other_ssl_config(tmp_path: Path) -> None:
+    cafile = tmp_path / "ca.pem"
+    cafile.write_text("ca", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="other ssl options are not allowed"):
+        _ = ListenerConfig(ssl=True, ssl_context=_ssl_context(), cafile=cafile)
+
+
+def test_ssl_context_for_broker_config() -> None:
+    context = _ssl_context()
+    broker_config = BrokerConfig.from_dict({"listeners": {"default": {"ssl": True, "ssl_context": context}}})
+
+    assert broker_config.listeners["default"].ssl_context is context
+
+
+def test_ssl_context_listener_does_not_inherit_default_certificate_paths(tmp_path: Path) -> None:
+    certfile = tmp_path / "cert.pem"
+    keyfile = tmp_path / "key.pem"
+    certfile.write_text("cert", encoding="utf-8")
+    keyfile.write_text("key", encoding="utf-8")
+    context = _ssl_context()
+
+    broker_config = BrokerConfig(
+        listeners={
+            "default": ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile),
+            "custom": ListenerConfig(bind="127.0.0.1:1884", ssl=True, ssl_context=context),
+        },
+    )
+
+    custom = broker_config.listeners["custom"]
+    assert custom.ssl_context is context
+    assert custom.certfile is None
+    assert custom.keyfile is None
+
+
+def test_certificate_path_listener_does_not_inherit_default_ssl_context(tmp_path: Path) -> None:
+    certfile = tmp_path / "cert.pem"
+    keyfile = tmp_path / "key.pem"
+    certfile.write_text("cert", encoding="utf-8")
+    keyfile.write_text("key", encoding="utf-8")
+    context = _ssl_context()
+
+    broker_config = BrokerConfig(
+        listeners={
+            "default": ListenerConfig(ssl=True, ssl_context=context),
+            "custom": ListenerConfig(bind="127.0.0.1:1884", ssl=True, certfile=certfile, keyfile=keyfile),
+        },
+    )
+
+    custom = broker_config.listeners["custom"]
+    assert custom.ssl_context is None
+    assert custom.certfile == certfile
+    assert custom.keyfile == keyfile
