@@ -250,6 +250,42 @@ async def test_client_connect_clean_session_false(broker):
 
 
 @pytest.mark.asyncio
+async def test_existing_session_reconnect_updates_ssl_object(broker, monkeypatch):
+    client_id = "persisted-client"
+    old_ssl_object = object()
+    new_ssl_object = object()
+
+    existing_session = Session()
+    existing_session.client_id = client_id
+    existing_session.clean_session = False
+    existing_session.ssl_object = old_ssl_object
+    broker._sessions[client_id] = (existing_session, BrokerProtocolHandler(broker.plugins_manager, existing_session))
+
+    reconnect_session = Session()
+    reconnect_session.client_id = client_id
+    reconnect_session.clean_session = False
+    reconnect_session.keep_alive = 30
+
+    reconnect_handler = BrokerProtocolHandler(broker.plugins_manager, reconnect_session)
+
+    async def init_from_connect(reader, writer, plugins_manager):
+        return reconnect_handler, reconnect_session
+
+    monkeypatch.setattr(BrokerProtocolHandler, "init_from_connect", init_from_connect)
+    writer = MagicMock()
+    writer.get_ssl_info.return_value = new_ssl_object
+
+    handler, session = await broker._initialize_client_session(MagicMock(), writer, "127.0.0.1", 1883)
+
+    assert handler is reconnect_handler
+    assert session is existing_session
+    assert session.parent == 1
+    assert session.ssl_object is new_ssl_object
+    assert session.ssl_object is not old_ssl_object
+    writer.get_ssl_info.assert_called_once_with()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize('topic', [
     "/topic",
     "sport/#",
