@@ -17,7 +17,7 @@ from amqtt.mqtt.connect import ConnectPacket
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.pingreq import PingReqPacket
 from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.protocol.handler import ProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandler, ProtocolHandlerConfig
 from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
@@ -50,8 +50,9 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
         plugins_manager: PluginManager["BrokerContext"],
         session: Session | None = None,
         loop: AbstractEventLoop | None = None,
+        handler_config: ProtocolHandlerConfig | None = None
     ) -> None:
-        super().__init__(plugins_manager, session, loop)
+        super().__init__(plugins_manager, session, loop, handler_config)
         self._disconnect_waiter: asyncio.Future[DisconnectPacket | None] | None = None
         self._pending_subscriptions: Queue[Subscription] = Queue()
         self._pending_unsubscriptions: Queue[UnSubscription] = Queue()
@@ -161,7 +162,8 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
         writer: WriterAdapter,
         plugins_manager: PluginManager["BrokerContext"],
         loop: asyncio.AbstractEventLoop | None = None,
-    ) -> tuple["BrokerProtocolHandler", Session]:
+        handler_config: ProtocolHandlerConfig | None = None
+        ) -> tuple["BrokerProtocolHandler", Session]:
         """Initialize from a CONNECT packet and validates the connection."""
         connect = await ConnectPacket.from_stream(reader)
         await plugins_manager.fire_event(MQTTEvents.PACKET_RECEIVED, packet=connect)
@@ -245,5 +247,5 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
         else:
             incoming_session.keep_alive = 0
 
-        handler = cls(plugins_manager, loop=loop)
+        handler = cls(plugins_manager, loop=loop, handler_config=handler_config)
         return handler, incoming_session

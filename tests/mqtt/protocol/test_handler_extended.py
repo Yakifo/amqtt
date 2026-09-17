@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from amqtt.adapters import BufferReader, BufferWriter
-from amqtt.errors import AMQTTError, ProtocolHandlerError
+from amqtt.errors import AMQTTError, ProtocolHandlerError, PubAckTimeoutError
 from amqtt.events import MQTTEvents
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.pingreq import PingReqPacket
@@ -262,7 +262,7 @@ async def test_qos1_outgoing_timeout_cleans_waiter_and_inflight(monkeypatch: pyt
 
     monkeypatch.setattr(handler_module.asyncio, "wait_for", timeout_wait_for)
 
-    with pytest.raises(TimeoutError, match="Timeout waiting for PUBACK"):
+    with pytest.raises(PubAckTimeoutError, match="Timeout waiting for PUBACK"):
         await handler._handle_qos1_message_flow(message)
 
     assert not handler._puback_waiters
