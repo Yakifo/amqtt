@@ -113,6 +113,7 @@ listeners:
         capath: 'certificate data'
         certfile: /some/certfile
         keyfile: /some/keyfile
+        maximum_version: TLSv1_2
     my-ws-1:
         bind: 0.0.0.0:8080
         type: ws
@@ -134,6 +135,8 @@ plugins:
         username2: ['calendar/2025/#', 'data/memes']
         anonymous: ['calendar/2025/#']
 ```
+
+TLS listeners may optionally set `maximum_version` to `TLSv1_2` or `TLSv1_3` to cap the protocol version used by the broker-built `SSLContext`. When omitted, Python's default SSL maximum version is kept.
 
 This configuration file would create the following listeners:
 

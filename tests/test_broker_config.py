@@ -1,4 +1,7 @@
 import logging
+import socket
+import ssl
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +17,18 @@ except ImportError:
 
 from dacite import from_dict, Config
 
-from amqtt.contexts import BrokerConfig, ClientConfig, ConnectionConfig, ListenerConfig, ListenerType, TopicConfig, WillConfig
+from amqtt.broker import Broker
+from amqtt.contexts import (
+    BrokerConfig,
+    ClientConfig,
+    ConnectionConfig,
+    ListenerConfig,
+    ListenerTLSVersion,
+    ListenerType,
+    TopicConfig,
+    WillConfig,
+)
+from amqtt.errors import BrokerError
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +118,159 @@ def test_listener_config_rejects_missing_file_fields(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError, match="certfile"):
         ListenerConfig(certfile=tmp_path / "missing-cert.pem", keyfile=keyfile)
+
+
+def test_broker_config_from_dict_casts_listener_maximum_version() -> None:
+    broker_config = BrokerConfig.from_dict(
+        {
+            "listeners": {
+                "default": {
+                    "bind": "127.0.0.1:8883",
+                    "maximum_version": "TLSv1_2",
+                },
+            },
+        },
+    )
+
+    listener_config = broker_config.listeners["default"]
+    assert listener_config.maximum_version is ListenerTLSVersion.TLSV1_2
+
+
+def test_broker_config_from_dict_rejects_invalid_maximum_version() -> None:
+    with pytest.raises(ValueError, match="incorrect"):
+        _ = BrokerConfig.from_dict(
+            {
+                "listeners": {
+                    "default": {
+                        "bind": "127.0.0.1:8883",
+                        "maximum_version": "incorrect",
+                    },
+                },
+            },
+        )
+
+
+def test_listener_config_normalizes_maximum_version_string(tmp_path: Path) -> None:
+    certfile = tmp_path / "cert.pem"
+    keyfile = tmp_path / "key.pem"
+    certfile.write_text("cert", encoding="utf-8")
+    keyfile.write_text("key", encoding="utf-8")
+
+    listener = ListenerConfig(
+        certfile=certfile,
+        keyfile=keyfile,
+        maximum_version="TLSv1_2",
+    )
+
+    assert listener.maximum_version is ListenerTLSVersion.TLSV1_2
+
+
+def test_listener_config_rejects_invalid_maximum_version_string() -> None:
+    with pytest.raises(ValueError, match="expected one of"):
+        ListenerConfig(maximum_version="bogus")
+
+
+def test_listener_config_rejects_legacy_tls_maximum_versions() -> None:
+    with pytest.raises(ValueError, match="expected one of"):
+        ListenerConfig(maximum_version="TLSv1")
+
+
+@pytest.mark.parametrize(
+    ("maximum_version", "tls_version"),
+    [
+        (ListenerTLSVersion.TLSV1_2, ssl.TLSVersion.TLSv1_2),
+        (ListenerTLSVersion.TLSV1_3, ssl.TLSVersion.TLSv1_3),
+    ],
+)
+def test_broker_ssl_context_applies_maximum_version(
+    rsa_keys: tuple[Path, Path],
+    maximum_version: ListenerTLSVersion,
+    tls_version: ssl.TLSVersion,
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(
+        ssl=True,
+        certfile=certfile,
+        keyfile=keyfile,
+        maximum_version=maximum_version,
+    )
+
+    ssl_context = Broker._create_ssl_context(listener)
+
+    assert ssl_context.maximum_version == tls_version
+
+
+def test_broker_ssl_context_default_maximum_version_unchanged(rsa_keys: tuple[Path, Path]) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
+    default_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+
+    ssl_context = Broker._create_ssl_context(listener)
+
+    assert ssl_context.maximum_version == default_ctx.maximum_version
+
+
+def test_broker_ssl_context_invalid_maximum_version_not_misreported_as_cert_error(
+    rsa_keys: tuple[Path, Path],
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
+    # Bypass __post_init__ normalization to prove lookup errors are attributed correctly.
+    listener.maximum_version = "bogus"  # type: ignore[assignment]
+
+    with pytest.raises(BrokerError, match="Invalid listener maximum_version") as exc_info:
+        Broker._create_ssl_context(listener)
+
+    assert "certfile" not in str(exc_info.value)
+
+
+def test_broker_ssl_context_tls12_ceiling_rejects_tls13_only_client(rsa_keys: tuple[Path, Path]) -> None:
+    certfile, keyfile = rsa_keys
+    server_ctx = Broker._create_ssl_context(
+        ListenerConfig(
+            ssl=True,
+            certfile=certfile,
+            keyfile=keyfile,
+            maximum_version=ListenerTLSVersion.TLSV1_2,
+        ),
+    )
+
+    client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    client_ctx.check_hostname = False
+    client_ctx.verify_mode = ssl.CERT_NONE
+    client_ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+    client_ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+
+    listener_sock = socket.socket()
+    listener_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener_sock.bind(("127.0.0.1", 0))
+    listener_sock.listen(1)
+    port = listener_sock.getsockname()[1]
+    server_errors: list[BaseException] = []
+
+    def accept_and_handshake() -> None:
+        conn, _ = listener_sock.accept()
+        try:
+            with server_ctx.wrap_socket(conn, server_side=True) as tls_conn:
+                tls_conn.do_handshake()
+        except BaseException as exc:  # noqa: BLE001 - collect handshake failure for assertion
+            server_errors.append(exc)
+        finally:
+            conn.close()
+
+    thread = threading.Thread(target=accept_and_handshake)
+    thread.start()
+    try:
+        client_sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+        with pytest.raises(ssl.SSLError):
+            with client_ctx.wrap_socket(client_sock, server_hostname="localhost") as tls_client:
+                tls_client.do_handshake()
+    finally:
+        thread.join(timeout=5)
+        listener_sock.close()
+
+    assert server_errors
+    assert any(isinstance(error, ssl.SSLError) for error in server_errors)
 
 
 def test_connection_config_requires_certfile_and_keyfile_together() -> None:

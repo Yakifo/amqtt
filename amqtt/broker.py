@@ -21,7 +21,14 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-from amqtt.contexts import Action, BaseContext, BrokerConfig, ListenerConfig, ListenerType
+from amqtt.contexts import (
+    Action,
+    BaseContext,
+    BrokerConfig,
+    ListenerConfig,
+    ListenerTLSVersion,
+    ListenerType,
+)
 from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
@@ -36,6 +43,10 @@ _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
+_LISTENER_TLS_MAXIMUM_VERSION = {
+    ListenerTLSVersion.TLSV1_2: ssl.TLSVersion.TLSv1_2,
+    ListenerTLSVersion.TLSV1_3: ssl.TLSVersion.TLSv1_3,
+}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
 _BROADCAST_SHUTDOWN_TIMEOUT = 5
 
@@ -321,6 +332,17 @@ class Broker:
         except FileNotFoundError as fnfe:
             msg = f"Can't read cert files '{listener['certfile']}' or '{listener['keyfile']}' : {fnfe}"
             raise BrokerError(msg) from fnfe
+
+        if listener.maximum_version is not None:
+            try:
+                ssl_context.maximum_version = _LISTENER_TLS_MAXIMUM_VERSION[listener.maximum_version]
+            except KeyError as ke:
+                accepted = ", ".join(version.value for version in ListenerTLSVersion)
+                msg = (
+                    f"Invalid listener maximum_version {listener.maximum_version!r}; "
+                    f"expected one of: {accepted}"
+                )
+                raise BrokerError(msg) from ke
         return ssl_context
 
     async def _create_server_instance(
