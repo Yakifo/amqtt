@@ -110,7 +110,7 @@ async def test_server_connection_logs_distinguish_acquire_and_release(
 
     messages = [record.getMessage() for record in caplog.records if record.name == "amqtt.broker"]
     assert messages == [
-        "Listener 'default': 1/10 connections in use",
+        "Listener 'default': Connection acquired; 1/10 connections in use",
         "Listener 'default': Connection released; 0/10 connections in use",
     ]
 

@@ -72,7 +72,7 @@ class Server:
             await self.semaphore.acquire()
         self.conn_count += 1
         self.logger.info(
-            f"Listener '{self.listener_name}': {self.conn_count}/"
+            f"Listener '{self.listener_name}': Connection acquired; {self.conn_count}/"
             f"{self.max_connections if self.max_connections > 0 else '∞'} connections in use",
         )
 
