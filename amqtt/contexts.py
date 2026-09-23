@@ -52,6 +52,17 @@ class ListenerType(StrEnum):
         return f'"{self.value!s}"'
 
 
+class ListenerTLSVersion(StrEnum):
+    """TLS protocol version ceiling for a listener SSL context.
+
+    Limited to TLS 1.2+ because Python's default SSLContext minimum is TLS 1.2;
+    lower ceilings would leave maximum_version below minimum_version.
+    """
+
+    TLSV1_2 = "TLSv1_2"
+    TLSV1_3 = "TLSv1_3"
+
+
 class Dictable:
     """Add dictionary methods to a dataclass."""
 
@@ -117,6 +128,9 @@ class ListenerConfig(Dictable):
     certificates needed to establish the certificate's authenticity.)"""
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the server's private key."""
+    max_tls_version: ListenerTLSVersion | None = None
+    """Optional TLS protocol version ceiling for this listener: `TLSv1_2` or `TLSv1_3`.
+    When unset, Python's default SSL maximum version is used."""
     reader: str | None = None
     writer: str | None = None
 
@@ -125,6 +139,17 @@ class ListenerConfig(Dictable):
         if (self.certfile is None) ^ (self.keyfile is None):
             msg = "If specifying the 'certfile' or 'keyfile', both are required."
             raise ValueError(msg)
+
+        if self.max_tls_version is not None:
+            try:
+                self.max_tls_version = ListenerTLSVersion(self.max_tls_version)
+            except ValueError as exc:
+                accepted = ", ".join(version.value for version in ListenerTLSVersion)
+                msg = (
+                    f"Invalid max_tls_version {self.max_tls_version!r}; "
+                    f"expected one of: {accepted}"
+                )
+                raise ValueError(msg) from exc
 
         for fn in ("cafile", "capath", "certfile", "keyfile"):
             if isinstance(getattr(self, fn), str):
@@ -230,7 +255,7 @@ class BrokerConfig(Dictable):
         return dict_to_dataclass(data_class=BrokerConfig,
                                  data=d,
                                  config=DaciteConfig(
-                                     cast=[StrEnum, ListenerType],
+                                     cast=[StrEnum, ListenerType, ListenerTLSVersion],
                                      strict=True,
                                      type_hooks={list[dict[str, Any]]: cls._coerce_lists}
                                  ))
