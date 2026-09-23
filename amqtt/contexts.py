@@ -128,7 +128,7 @@ class ListenerConfig(Dictable):
     certificates needed to establish the certificate's authenticity.)"""
     keyfile: str | Path | None = None
     """Full path to file in PEM format containing the server's private key."""
-    maximum_version: ListenerTLSVersion | None = None
+    max_tls_version: ListenerTLSVersion | None = None
     """Optional TLS protocol version ceiling for this listener: `TLSv1_2` or `TLSv1_3`.
     When unset, Python's default SSL maximum version is used."""
     reader: str | None = None
@@ -140,13 +140,13 @@ class ListenerConfig(Dictable):
             msg = "If specifying the 'certfile' or 'keyfile', both are required."
             raise ValueError(msg)
 
-        if self.maximum_version is not None and not isinstance(self.maximum_version, ListenerTLSVersion):
+        if self.max_tls_version is not None:
             try:
-                self.maximum_version = ListenerTLSVersion(self.maximum_version)
+                self.max_tls_version = ListenerTLSVersion(self.max_tls_version)
             except ValueError as exc:
                 accepted = ", ".join(version.value for version in ListenerTLSVersion)
                 msg = (
-                    f"Invalid maximum_version {self.maximum_version!r}; "
+                    f"Invalid max_tls_version {self.max_tls_version!r}; "
                     f"expected one of: {accepted}"
                 )
                 raise ValueError(msg) from exc

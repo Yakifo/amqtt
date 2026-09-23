@@ -120,37 +120,37 @@ def test_listener_config_rejects_missing_file_fields(tmp_path: Path) -> None:
         ListenerConfig(certfile=tmp_path / "missing-cert.pem", keyfile=keyfile)
 
 
-def test_broker_config_from_dict_casts_listener_maximum_version() -> None:
+def test_broker_config_from_dict_casts_listener_max_tls_version() -> None:
     broker_config = BrokerConfig.from_dict(
         {
             "listeners": {
                 "default": {
                     "bind": "127.0.0.1:8883",
-                    "maximum_version": "TLSv1_2",
+                    "max_tls_version": "TLSv1_2",
                 },
             },
         },
     )
 
     listener_config = broker_config.listeners["default"]
-    assert listener_config.maximum_version is ListenerTLSVersion.TLSV1_2
+    assert listener_config.max_tls_version is ListenerTLSVersion.TLSV1_2
 
 
-def test_broker_config_from_dict_rejects_invalid_maximum_version() -> None:
+def test_broker_config_from_dict_rejects_invalid_max_tls_version() -> None:
     with pytest.raises(ValueError, match="incorrect"):
         _ = BrokerConfig.from_dict(
             {
                 "listeners": {
                     "default": {
                         "bind": "127.0.0.1:8883",
-                        "maximum_version": "incorrect",
+                        "max_tls_version": "incorrect",
                     },
                 },
             },
         )
 
 
-def test_listener_config_normalizes_maximum_version_string(tmp_path: Path) -> None:
+def test_listener_config_normalizes_max_tls_version_string(tmp_path: Path) -> None:
     certfile = tmp_path / "cert.pem"
     keyfile = tmp_path / "key.pem"
     certfile.write_text("cert", encoding="utf-8")
@@ -159,32 +159,32 @@ def test_listener_config_normalizes_maximum_version_string(tmp_path: Path) -> No
     listener = ListenerConfig(
         certfile=certfile,
         keyfile=keyfile,
-        maximum_version="TLSv1_2",
+        max_tls_version="TLSv1_2",
     )
 
-    assert listener.maximum_version is ListenerTLSVersion.TLSV1_2
+    assert listener.max_tls_version is ListenerTLSVersion.TLSV1_2
 
 
-def test_listener_config_rejects_invalid_maximum_version_string() -> None:
+def test_listener_config_rejects_invalid_max_tls_version_string() -> None:
     with pytest.raises(ValueError, match="expected one of"):
-        ListenerConfig(maximum_version="bogus")
+        ListenerConfig(max_tls_version="bogus")
 
 
-def test_listener_config_rejects_legacy_tls_maximum_versions() -> None:
+def test_listener_config_rejects_legacy_tls_max_tls_versions() -> None:
     with pytest.raises(ValueError, match="expected one of"):
-        ListenerConfig(maximum_version="TLSv1")
+        ListenerConfig(max_tls_version="TLSv1")
 
 
 @pytest.mark.parametrize(
-    ("maximum_version", "tls_version"),
+    ("max_tls_version", "tls_version"),
     [
         (ListenerTLSVersion.TLSV1_2, ssl.TLSVersion.TLSv1_2),
         (ListenerTLSVersion.TLSV1_3, ssl.TLSVersion.TLSv1_3),
     ],
 )
-def test_broker_ssl_context_applies_maximum_version(
+def test_broker_ssl_context_applies_max_tls_version(
     rsa_keys: tuple[Path, Path],
-    maximum_version: ListenerTLSVersion,
+    max_tls_version: ListenerTLSVersion,
     tls_version: ssl.TLSVersion,
 ) -> None:
     certfile, keyfile = rsa_keys
@@ -192,7 +192,7 @@ def test_broker_ssl_context_applies_maximum_version(
         ssl=True,
         certfile=certfile,
         keyfile=keyfile,
-        maximum_version=maximum_version,
+        max_tls_version=max_tls_version,
     )
 
     ssl_context = Broker._create_ssl_context(listener)
@@ -200,7 +200,7 @@ def test_broker_ssl_context_applies_maximum_version(
     assert ssl_context.maximum_version == tls_version
 
 
-def test_broker_ssl_context_default_maximum_version_unchanged(rsa_keys: tuple[Path, Path]) -> None:
+def test_broker_ssl_context_default_max_tls_version_unchanged(rsa_keys: tuple[Path, Path]) -> None:
     certfile, keyfile = rsa_keys
     listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
     default_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -210,15 +210,15 @@ def test_broker_ssl_context_default_maximum_version_unchanged(rsa_keys: tuple[Pa
     assert ssl_context.maximum_version == default_ctx.maximum_version
 
 
-def test_broker_ssl_context_invalid_maximum_version_not_misreported_as_cert_error(
+def test_broker_ssl_context_invalid_max_tls_version_not_misreported_as_cert_error(
     rsa_keys: tuple[Path, Path],
 ) -> None:
     certfile, keyfile = rsa_keys
     listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
     # Bypass __post_init__ normalization to prove lookup errors are attributed correctly.
-    listener.maximum_version = "bogus"  # type: ignore[assignment]
+    listener.max_tls_version = "bogus"  # type: ignore[assignment]
 
-    with pytest.raises(BrokerError, match="Invalid listener maximum_version") as exc_info:
+    with pytest.raises(BrokerError, match="Invalid listener max_tls_version") as exc_info:
         Broker._create_ssl_context(listener)
 
     assert "certfile" not in str(exc_info.value)
@@ -231,7 +231,7 @@ def test_broker_ssl_context_tls12_ceiling_rejects_tls13_only_client(rsa_keys: tu
             ssl=True,
             certfile=certfile,
             keyfile=keyfile,
-            maximum_version=ListenerTLSVersion.TLSV1_2,
+            max_tls_version=ListenerTLSVersion.TLSV1_2,
         ),
     )
 

@@ -43,7 +43,7 @@ _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
-_LISTENER_TLS_MAXIMUM_VERSION = {
+_LISTENER_MAX_TLS_VERSION = {
     ListenerTLSVersion.TLSV1_2: ssl.TLSVersion.TLSv1_2,
     ListenerTLSVersion.TLSV1_3: ssl.TLSVersion.TLSv1_3,
 }
@@ -333,13 +333,13 @@ class Broker:
             msg = f"Can't read cert files '{listener['certfile']}' or '{listener['keyfile']}' : {fnfe}"
             raise BrokerError(msg) from fnfe
 
-        if listener.maximum_version is not None:
+        if listener.max_tls_version is not None:
             try:
-                ssl_context.maximum_version = _LISTENER_TLS_MAXIMUM_VERSION[listener.maximum_version]
+                ssl_context.maximum_version = _LISTENER_MAX_TLS_VERSION[listener.max_tls_version]
             except KeyError as ke:
                 accepted = ", ".join(version.value for version in ListenerTLSVersion)
                 msg = (
-                    f"Invalid listener maximum_version {listener.maximum_version!r}; "
+                    f"Invalid listener max_tls_version {listener.max_tls_version!r}; "
                     f"expected one of: {accepted}"
                 )
                 raise BrokerError(msg) from ke
