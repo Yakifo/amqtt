@@ -12,7 +12,7 @@ import pytest
 
 from amqtt.events import BrokerEvents
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
-from amqtt.broker import Broker
+from amqtt.broker import Broker, Server
 from amqtt.client import MQTTClient
 from amqtt.errors import ConnectError
 from amqtt.mqtt.connack import ConnackPacket
@@ -97,6 +97,22 @@ MagicMock.__await__ = lambda _: async_magic().__await__()
 )
 def test_split_bindaddr_port(input_str, output_addr, output_port):
     assert Broker._split_bindaddr_port(input_str, 5678) == (output_addr, output_port)
+
+
+@pytest.mark.asyncio
+async def test_server_connection_logs_distinguish_acquire_and_release(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    server = Server("default", MagicMock(), max_connections=10)
+    with caplog.at_level(logging.INFO, logger="amqtt.broker"):
+        await server.acquire_connection()
+        server.release_connection()
+
+    messages = [record.getMessage() for record in caplog.records if record.name == "amqtt.broker"]
+    assert messages == [
+        "Listener 'default': Connection acquired; 1/10 connections in use",
+        "Listener 'default': Connection released; 0/10 connections in use",
+    ]
 
 
 @pytest.mark.asyncio
