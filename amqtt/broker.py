@@ -241,7 +241,8 @@ class Broker:
         self.transitions.add_transition(trigger="start", source="stopped", dest="starting")
 
     def _log_state_change(self) -> None:
-        self.logger.debug(f"State transition: {self.transitions.state}")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"State transition: {self.transitions.state}")
 
     async def start(self) -> None:
         """Start the broker to serve with the given configuration.
@@ -253,7 +254,8 @@ class Broker:
             self._subscriptions.clear()
             self._retained_messages.clear()
             self.transitions.start()
-            self.logger.debug("Broker starting")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug("Broker starting")
         except (MachineError, ValueError) as exc:
             # Backwards compat: MachineError is raised by transitions < 0.5.0.
             self.logger.warning(f"[WARN-0001] Invalid method call at this moment: {exc}")
@@ -267,7 +269,8 @@ class Broker:
             await self.plugins_manager.fire_event(BrokerEvents.POST_START, wait=True)
             self._broadcast_task = asyncio.ensure_future(self._broadcast_loop())
             self._session_monitor_task = asyncio.create_task(self._session_monitor())
-            self.logger.debug("Broker started")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug("Broker started")
         except Exception as e:
             self.logger.exception("Broker startup failed")
             self.transitions.starting_fail()
@@ -278,7 +281,8 @@ class Broker:
         """Start network listeners based on the configuration."""
         for listener_name, listener in self.listeners_config.items():
             if "bind" not in listener:
-                self.logger.debug(f"Listener configuration '{listener_name}' is not bound")
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"Listener configuration '{listener_name}' is not bound")
                 continue
 
             max_connections = listener.get("max_connections", -1)
@@ -377,7 +381,8 @@ class Broker:
             for client_id in sessions_to_remove:
                 await self._cleanup_session(client_id)
 
-            if session_count_before > (session_count_after := len(self._sessions)):
+            session_count_after = len(self._sessions)
+            if session_count_before > session_count_after and self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Expired {session_count_before - session_count_after} sessions")
 
             await asyncio.sleep(1)
@@ -393,7 +398,8 @@ class Broker:
             await self._cleanup_session(client_id)
 
         # Clear retained messages
-        self.logger.debug(f"Clearing {len(self._retained_messages)} retained messages")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Clearing {len(self._retained_messages)} retained messages")
         self._retained_messages.clear()
 
         self.transitions.shutdown()
@@ -423,10 +429,12 @@ class Broker:
         session, handler = self._sessions.pop(client_id, (None, None))
 
         if handler:
-            self.logger.debug(f"Stopping handler for session {client_id}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Stopping handler for session {client_id}")
             await self._stop_handler(handler)
         if session:
-            self.logger.debug(f"Clearing all subscriptions for session {client_id}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Clearing all subscriptions for session {client_id}")
             await self._del_all_subscriptions(session)
             session.clear_queues()
 
@@ -473,7 +481,8 @@ class Broker:
         except (AMQTTError, MQTTError, NoDataError) as exc:
             self.logger.warning(f"Error while handling client session: {exc}")
         finally:
-            self.logger.debug(f"{client_session.client_id} Client disconnected")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"{client_session.client_id} Client disconnected")
             server.release_connection()
 
     async def _initialize_client_session(
@@ -515,7 +524,8 @@ class Broker:
             client_session.parent = 0
         # Get session from cache
         elif client_session.client_id in self._sessions:
-            self.logger.debug(f"Found old session {self._sessions[client_session.client_id]!r}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Found old session {self._sessions[client_session.client_id]!r}")
 
             # even though the session previously existed, the new connection can bring updated configuration and credentials
             existing_client_session, _ = self._sessions[client_session.client_id]
@@ -535,7 +545,8 @@ class Broker:
         if client_session.keep_alive > 0 and isinstance(timeout_disconnect_delay, int):
             client_session.keep_alive += timeout_disconnect_delay
 
-        self.logger.debug(f"Keep-alive timeout={client_session.keep_alive}")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Keep-alive timeout={client_session.keep_alive}")
         return handler, client_session
 
     def create_offline_session(self, client_id: str) -> tuple[BrokerProtocolHandler, Session]:
@@ -589,15 +600,18 @@ class Broker:
                                               client_id=client_session.client_id,
                                               client_session=client_session)
 
-        self.logger.debug(f"{client_session.client_id} Start messages handling")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"{client_session.client_id} Start messages handling")
         await handler.start()
 
         # publish messages that were retained because the client session was disconnected
-        self.logger.debug(f"Retained messages queue size: {client_session.retained_messages.qsize()}")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Retained messages queue size: {client_session.retained_messages.qsize()}")
         await self._publish_session_retained_messages(client_session)
 
         # if this is not a new session, there are subscriptions associated with them; publish any topic retained messages
-        self.logger.debug("Publish retained messages to a pre-existing session's subscriptions.")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug("Publish retained messages to a pre-existing session's subscriptions.")
         for topic in self._subscriptions:
             await self._publish_retained_messages_for_subscription((topic, QOS_0), client_session)
 
@@ -634,7 +648,8 @@ class Broker:
                 if subscribe_waiter in done:
                     await self._handle_subscription(client_session, handler, subscribe_waiter)
                     subscribe_waiter = asyncio.ensure_future(handler.get_next_pending_subscription())
-                    self.logger.debug(repr(self._subscriptions))
+                    if self.logger.isEnabledFor(logging.DEBUG):
+                        self.logger.debug(repr(self._subscriptions))
 
                 if unsubscribe_waiter in done:
                     await self._handle_unsubscription(client_session, handler, unsubscribe_waiter)
@@ -646,7 +661,8 @@ class Broker:
                     wait_deliver = asyncio.ensure_future(handler.mqtt_deliver_next_message())
 
             except asyncio.CancelledError:
-                self.logger.debug("Client loop cancelled")
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug("Client loop cancelled")
                 break
 
         pending_waiters = [disconnect_waiter, subscribe_waiter, unsubscribe_waiter, wait_deliver]
@@ -670,14 +686,17 @@ class Broker:
         """
         # check the disconnected waiter result
         result = disconnect_waiter.result()
-        self.logger.debug(f"{client_session.client_id} Result from wait_disconnect: {result}")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"{client_session.client_id} Result from wait_disconnect: {result}")
         # if the client disconnects abruptly by sending no message or the message isn't a disconnect packet
         if result is None or not isinstance(result, DisconnectPacket):
-            self.logger.debug(f"Will flag: {client_session.will_flag}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Will flag: {client_session.will_flag}")
             if client_session.will_flag:
-                self.logger.debug(
-                    f"Client {format_client_message(client_session)} disconnected abnormally, sending will message",
-                )
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(
+                        f"Client {format_client_message(client_session)} disconnected abnormally, sending will message",
+                    )
                 await self._broadcast_message(
                     client_session,
                     client_session.will_topic,
@@ -693,7 +712,8 @@ class Broker:
                     )
 
         # normal or not, let's end the client's session
-        self.logger.debug(f"{client_session.client_id} Disconnecting session")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"{client_session.client_id} Disconnecting session")
         await self._stop_handler(handler)
         client_session.transitions.disconnect()
         await self.plugins_manager.fire_event(BrokerEvents.CLIENT_DISCONNECTED,
@@ -707,7 +727,8 @@ class Broker:
         subscribe_waiter: asyncio.Future[Any],
     ) -> None:
         """Handle client subscription."""
-        self.logger.debug(f"{client_session.client_id} handling subscription")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"{client_session.client_id} handling subscription")
         subscriptions = subscribe_waiter.result()
         return_codes = [await self.add_subscription(subscription, client_session) for subscription in subscriptions.topics]
         await handler.mqtt_acknowledge_subscription(subscriptions.packet_id, return_codes)
@@ -728,7 +749,8 @@ class Broker:
         unsubscribe_waiter: asyncio.Future[Any],
     ) -> None:
         """Handle client unsubscription."""
-        self.logger.debug(f"{client_session.client_id} handling unsubscription")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"{client_session.client_id} handling unsubscription")
         unsubscription = unsubscribe_waiter.result()
         for topic in unsubscription.topics:
             self._del_subscription(topic, client_session)
@@ -746,7 +768,8 @@ class Broker:
         wait_deliver: asyncio.Future[Any],
     ) -> bool:
         """Handle message delivery to the client."""
-        self.logger.debug(f"{client_session.client_id} handling message delivery")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"{client_session.client_id} handling message delivery")
         app_message = wait_deliver.result()
 
         # notify of a message's receipt, even if a client isn't necessarily allowed to send it
@@ -757,7 +780,8 @@ class Broker:
         )
 
         if app_message is None:
-            self.logger.debug("app_message was empty!")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug("app_message was empty!")
             return True
         if not app_message.topic:
             self.logger.warning(
@@ -819,15 +843,18 @@ class Broker:
 
         results = [result for result in returns.values() if result is not None] if returns else []
         if len(results) < 1:
-            self.logger.debug("Authentication failed: no plugin responded with a boolean")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug("Authentication failed: no plugin responded with a boolean")
             return False
 
         if all(results):
-            self.logger.debug("Authentication succeeded")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug("Authentication succeeded")
             return True
 
         for plugin, result in returns.items():
-            self.logger.debug(f"Authentication '{plugin.__class__.__name__}' result: {result}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Authentication '{plugin.__class__.__name__}' result: {result}")
 
         return False
 
@@ -840,7 +867,8 @@ class Broker:
     ) -> None:
         if data and topic_name is not None:
             # If retained flag set, store the message for further subscriptions
-            self.logger.debug(f"Retaining message on topic {topic_name}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Retaining message on topic {topic_name}")
             self._retained_messages[topic_name] = RetainedApplicationMessage(source_session, topic_name, data, qos)
 
             await self.plugins_manager.fire_event(BrokerEvents.RETAINED_MESSAGE,
@@ -849,7 +877,8 @@ class Broker:
 
         # [MQTT-3.3.1-10]
         elif topic_name in self._retained_messages:
-            self.logger.debug(f"Clearing retained messages for topic '{topic_name}'")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Clearing retained messages for topic '{topic_name}'")
 
             cleared_message = self._retained_messages[topic_name]
             cleared_message.data = b""
@@ -887,7 +916,8 @@ class Broker:
         if all(s.client_id != session.client_id for s, _ in self._subscriptions[topic_filter]):
             self._subscriptions[topic_filter].append((session, qos))
         else:
-            self.logger.debug(f"Client {format_client_message(session=session)} has already subscribed to {topic_filter}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Client {format_client_message(session=session)} has already subscribed to {topic_filter}")
         return qos
 
     async def _topic_filtering(self, session: Session, topic: str, action: Action) -> bool:
@@ -914,12 +944,15 @@ class Broker:
         session = self._sessions.pop(client_id, (None, None))[0]
 
         if session is None:
-            self.logger.debug(f"Delete session : session {client_id} doesn't exist")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Delete session : session {client_id} doesn't exist")
             return
-        self.logger.debug(f"Deleted existing session {session!r}")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Deleted existing session {session!r}")
 
         # Delete subscriptions
-        self.logger.debug(f"Deleting session {session!r} subscriptions")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Deleting session {session!r} subscriptions")
         await self._del_all_subscriptions(session)
         session.clear_queues()
 
@@ -945,14 +978,16 @@ class Broker:
             subscriptions = self._subscriptions[a_filter]
             for index, (sub_session, _qos) in enumerate(subscriptions):
                 if sub_session.client_id == session.client_id:
-                    self.logger.debug(
-                        f"Removing subscription on topic '{a_filter}' for client {format_client_message(session=session)}",
-                    )
+                    if self.logger.isEnabledFor(logging.DEBUG):
+                        self.logger.debug(
+                            f"Removing subscription on topic '{a_filter}' for client {format_client_message(session=session)}",
+                        )
                     subscriptions.pop(index)
                     deleted += 1
                     break
         except KeyError:
-            self.logger.debug(f"Unsubscription on topic '{a_filter}' for client {format_client_message(session=session)}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Unsubscription on topic '{a_filter}' for client {format_client_message(session=session)}")
 
         return deleted
 
@@ -1010,13 +1045,15 @@ class Broker:
         """Process a single broadcast message."""
         broadcast = await self._broadcast_queue.get()
 
-        self.logger.debug(f"Processing broadcast message: {broadcast}")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Processing broadcast message: {broadcast}")
 
         for k_filter, subscriptions in self._subscriptions.items():
 
             # Skip all subscriptions which do not match the topic
             if not self._matches(broadcast["topic"], k_filter):
-                self.logger.debug(f"Topic '{broadcast['topic']}' does not match filter '{k_filter}'")
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"Topic '{broadcast['topic']}' does not match filter '{k_filter}'")
                 continue
 
             for target_session, sub_qos in subscriptions:
@@ -1035,7 +1072,8 @@ class Broker:
                         and not target_session.clean_session
                         and qos in (QOS_1, QOS_2)
                         and not target_session.is_anonymous):
-                    self.logger.debug(f"Session {target_session.client_id} is not connected, retaining message.")
+                    if self.logger.isEnabledFor(logging.DEBUG):
+                        self.logger.debug(f"Session {target_session.client_id} is not connected, retaining message.")
                     await self._retain_broadcast_message(broadcast, qos, target_session)
                     continue
 
@@ -1043,10 +1081,11 @@ class Broker:
                 if target_session.transitions.state != "connected":
                     continue
 
-                self.logger.debug(
-                    f"Broadcasting message from {format_client_message(session=broadcast['session'])}"
-                    f" on topic '{broadcast['topic']}' to {format_client_message(session=target_session)}",
-                )
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(
+                        f"Broadcasting message from {format_client_message(session=broadcast['session'])}"
+                        f" on topic '{broadcast['topic']}' to {format_client_message(session=target_session)}",
+                    )
 
                 handler = self._get_handler(target_session)
                 if handler:
@@ -1114,10 +1153,11 @@ class Broker:
         await self._broadcast_queue.put(broadcast)
 
     async def _publish_session_retained_messages(self, session: Session) -> None:
-        self.logger.debug(
-            f"Publishing {session.retained_messages.qsize()}"
-            f" messages retained for session {format_client_message(session=session)}",
-        )
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                f"Publishing {session.retained_messages.qsize()}"
+                f" messages retained for session {format_client_message(session=session)}",
+            )
         publish_tasks = []
         handler = self._get_handler(session)
         if handler:
@@ -1132,17 +1172,20 @@ class Broker:
             await asyncio.wait(publish_tasks)
 
     async def _publish_retained_messages_for_subscription(self, subscription: tuple[str, int], session: Session) -> None:
-        self.logger.debug(
-            f"Begin broadcasting messages retained due to subscription on '{subscription[0]}'"
-            f" from {format_client_message(session=session)}",
-        )
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                f"Begin broadcasting messages retained due to subscription on '{subscription[0]}'"
+                f" from {format_client_message(session=session)}",
+            )
         publish_tasks = []
 
         topic_filter, qos = subscription
         for topic, retained in self._retained_messages.items():
-            self.logger.debug(f"matching : {topic} {topic_filter}")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"matching : {topic} {topic_filter}")
             if self._matches(topic, topic_filter):
-                self.logger.debug(f"{topic} and {topic_filter} match")
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"{topic} and {topic_filter} match")
                 handler = self._get_handler(session)
                 if handler:
                     publish_tasks.append(
@@ -1152,14 +1195,16 @@ class Broker:
                     )
         if publish_tasks:
             await asyncio.wait(publish_tasks)
-        self.logger.debug(
-            f"End broadcasting messages retained due to subscription on '{subscription[0]}'"
-            f" from {format_client_message(session=session)}",
-        )
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                f"End broadcasting messages retained due to subscription on '{subscription[0]}'"
+                f" from {format_client_message(session=session)}",
+            )
 
     def _matches(self, topic: str, a_filter: str) -> bool:
         if topic.startswith("$") and (a_filter.startswith(("+", "#"))):
-            self.logger.debug("[MQTT-4.7.2-1] - ignoring broadcasting $ topic to subscriptions starting with + or #")
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug("[MQTT-4.7.2-1] - ignoring broadcasting $ topic to subscriptions starting with + or #")
             return False
 
         if "#" not in a_filter and "+" not in a_filter:
