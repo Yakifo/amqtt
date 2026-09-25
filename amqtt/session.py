@@ -154,6 +154,7 @@ class Session:
         self._packet_id: int = 0
         self.parent: int = 0
         self.last_connect_time: int | None = None
+        self.last_write_at: float = 0.0
         self.ssl_object: ssl.SSLObject | None = None
         self.last_disconnect_time: int | None = None
         self.attributes: dict[str, Any] = {}

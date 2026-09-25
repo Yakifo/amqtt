@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import suppress
 import logging
 import secrets
 from typing import Any
@@ -26,6 +27,39 @@ def rand_packet_id():
 
 def adapt(reader, writer):
     return StreamReaderAdapter(reader), StreamWriterAdapter(writer)
+
+
+class BlockingReader:
+    def __init__(self):
+        self._waiter = asyncio.Future()
+
+    async def read(self, n=-1):
+        return await self._waiter
+
+    def feed_eof(self):
+        self._waiter.cancel()
+
+
+class BufferWriter:
+    def __init__(self):
+        self.data = bytearray()
+        self.drained = False
+        self.closed = False
+
+    def write(self, data):
+        self.data.extend(data)
+
+    async def drain(self):
+        self.drained = True
+
+    def get_peer_info(self):
+        return "127.0.0.1", 0
+
+    def get_ssl_info(self):
+        return None
+
+    async def close(self):
+        self.closed = True
 
 
 class ProtocolHandlerTest(unittest.TestCase):
@@ -83,6 +117,55 @@ class ProtocolHandlerTest(unittest.TestCase):
         exception = future.exception()
         if exception:
             raise exception
+
+    def test_start_enables_keepalive_watcher(self):
+        async def test_coro() -> None:
+            session = Session()
+            session.keep_alive = 30
+            handler = ProtocolHandler(self.plugin_manager)
+            handler.attach(session, BlockingReader(), BufferWriter())
+
+            before_start = self.loop.time()
+            await handler.start()
+            after_start = self.loop.time()
+
+            try:
+                assert handler._keepalive_watcher is not None
+                assert not handler._keepalive_watcher.done()
+                assert before_start <= session.last_write_at <= after_start
+            finally:
+                await self.stop_handler(handler, session)
+                await asyncio.sleep(0)
+                assert handler._keepalive_watcher is not None
+                assert handler._keepalive_watcher.cancelled()
+
+        self.loop.run_until_complete(test_coro())
+
+    def test_send_packet_refreshes_keepalive_timestamp(self):
+        async def test_coro() -> None:
+            session = Session()
+            session.keep_alive = 30
+            session.last_write_at = 0.0
+            writer = BufferWriter()
+            handler = ProtocolHandler(self.plugin_manager, session=session, loop=self.loop)
+            handler.writer = writer
+            handler._keepalive_watcher = asyncio.create_task(asyncio.sleep(60))
+
+            try:
+                packet = PublishPacket.build("/topic", b"test_data", None, False, QOS_0, False)
+                before_send = self.loop.time()
+                await handler._send_packet(packet)
+                after_send = self.loop.time()
+
+                assert writer.data
+                assert writer.drained
+                assert before_send <= session.last_write_at <= after_send
+            finally:
+                handler._keepalive_watcher.cancel()
+                with suppress(asyncio.CancelledError):
+                    await handler._keepalive_watcher
+
+        self.loop.run_until_complete(test_coro())
 
     def test_publish_qos0(self):
         async def server_mock(reader, writer) -> None:
