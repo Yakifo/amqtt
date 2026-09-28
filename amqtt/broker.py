@@ -612,14 +612,14 @@ class Broker:
             existing_client_session.keep_alive = client_session.keep_alive
             existing_client_session.username = client_session.username
             existing_client_session.password = client_session.password
-<<<<<<< HEAD
+
             existing_client_session.remote_address = client_session.remote_address
             existing_client_session.remote_port = client_session.remote_port
             existing_client_session.ssl_object = client_session.ssl_object
             existing_client_session.inbound_sni = client_session.inbound_sni
-=======
+
             existing_client_session.ssl_object = writer.get_ssl_info()
->>>>>>> origin/main
+
             client_session = existing_client_session
             client_session.parent = 1
         else:
