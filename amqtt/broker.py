@@ -30,7 +30,7 @@ from amqtt.contexts import (
     ListenerVerifyFlags,
     ListenerVerifyMode,
 )
-from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError
+from amqtt.errors import AMQTTError, BrokerError, MQTTError, NoDataError, PubAckTimeoutError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
 from amqtt.session import ApplicationMessage, OutgoingApplicationMessage, Session
 from amqtt.utils import format_client_message, gen_client_id
@@ -38,6 +38,7 @@ from amqtt.utils import format_client_message, gen_client_id
 from .events import BrokerEvents
 from .mqtt.constants import QOS_0, QOS_1, QOS_2
 from .mqtt.disconnect import DisconnectPacket
+from .mqtt.protocol.handler import ProtocolHandlerConfig
 from .plugins.manager import PluginManager
 
 _BROADCAST: TypeAlias = dict[str, Session | str | bytes | bytearray | int | None]
@@ -514,9 +515,14 @@ class Broker:
         remote_port: int,
     ) -> tuple[BrokerProtocolHandler, Session]:
         """Initialize a client session and protocol handler."""
+        handler_config = ProtocolHandlerConfig.init_from_config(self.config)
+
         # Wait for first packet and expect a CONNECT
         try:
-            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader, writer, self.plugins_manager)
+            handler, client_session = await BrokerProtocolHandler.init_from_connect(reader,
+                                                                                    writer,
+                                                                                    self.plugins_manager,
+                                                                                    handler_config=handler_config)
         except AMQTTError as exc:
             self.logger.warning(
                 f"[MQTT-3.1.0-1] {format_client_message(address=remote_address, port=remote_port)}:"
@@ -544,7 +550,7 @@ class Broker:
 
             client_session.parent = 0
         # Get session from cache
-        elif client_session.client_id in self._sessions:
+        elif client_session.client_id and client_session.client_id in self._sessions:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Found old session {self._sessions[client_session.client_id]!r}")
 
@@ -574,7 +580,9 @@ class Broker:
         session = Session()
         session.client_id = client_id
 
-        bph = BrokerProtocolHandler(self.plugins_manager, session)
+        handler_config = ProtocolHandlerConfig.init_from_config(self.config)
+
+        bph = BrokerProtocolHandler(self.plugins_manager, session, handler_config=handler_config)
         session.transitions.disconnect()
         return bph, session
 
@@ -837,7 +845,8 @@ class Broker:
 
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
         """Create a BrokerProtocolHandler and attach to a session."""
-        handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop)
+        handler_config = ProtocolHandlerConfig.init_from_config(self.config)
+        handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop, handler_config=handler_config)
         handler.attach(session, reader, writer)
         return handler
 
@@ -897,7 +906,7 @@ class Broker:
                                                   retained_message=self._retained_messages[topic_name])
 
         # [MQTT-3.3.1-10]
-        elif topic_name in self._retained_messages:
+        elif topic_name and topic_name in self._retained_messages:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Clearing retained messages for topic '{topic_name}'")
 
@@ -1024,6 +1033,8 @@ class Broker:
                         task.result()
                     except CancelledError:
                         self.logger.info(f"Task has been cancelled: {task}")
+                    except PubAckTimeoutError as e:
+                        self.logger.info("QoS 1 publish acknowledgement timed out: %s", e)
                     # if a task fails, don't want it to cause the broker to fail
                     except Exception:  # pylint: disable=W0718
                         self.logger.exception(f"Task failed and will be skipped: {task}")
