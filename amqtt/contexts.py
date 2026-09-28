@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 _SSL_CONTEXT_EXCLUSIVE_FIELDS = ("cafile", "capath", "certfile", "keyfile", "cadata")
-_SSL_CONTEXT_PATH_FIELDS = ("cafile", "capath", "certfile", "keyfile")
+_SSL_CONTEXT_PATH_FIELDS = ("cafile", "capath", "certfile", "keyfile", "crlfile", "crlpath")
 
 
 class BaseContext:
@@ -53,6 +53,22 @@ class ListenerType(StrEnum):
     def __repr__(self) -> str:
         """Display the string value, instead of the enum member."""
         return f'"{self.value!s}"'
+
+
+class ListenerVerifyMode(StrEnum):
+    """TLS listener client certificate verify mode."""
+
+    NONE = "none"
+    OPTIONAL = "optional"
+    REQUIRED = "required"
+
+
+class ListenerVerifyFlags(StrEnum):
+    """TLS listener certificate revocation verify flags."""
+
+    NONE = "none"
+    LEAF = "leaf"
+    CHAIN = "chain"
 
 
 class Dictable:
@@ -123,6 +139,14 @@ class ListenerConfig(Dictable):
     ssl_context: SSLContext | None = None
     """SSL context to use for the connection. Mutually exclusive with other ssl options.
      API only; not applicable to yaml-config."""
+    client_cert: ListenerVerifyMode = ListenerVerifyMode.OPTIONAL
+    """Client certificate policy for TLS listeners: `none`, `optional`, or `required`."""
+    crlfile: str | Path | None = None
+    """Path to a file containing certificate revocation list material in PEM format."""
+    crlpath: str | Path | None = None
+    """Path to a directory containing certificate revocation list material."""
+    crl_check: ListenerVerifyFlags = ListenerVerifyFlags.NONE
+    """Certificate revocation check policy for TLS listeners: `none`, `leaf`, or `chain`."""
     reader: str | None = None
     writer: str | None = None
 
@@ -253,7 +277,7 @@ class BrokerConfig(Dictable):
         return dict_to_dataclass(data_class=BrokerConfig,
                                  data=d,
                                  config=DaciteConfig(
-                                     cast=[StrEnum, ListenerType],
+                                     cast=[StrEnum, ListenerType, ListenerVerifyMode, ListenerVerifyFlags],
                                      strict=True,
                                      type_hooks={list[dict[str, Any]]: cls._coerce_lists}
                                  ))
