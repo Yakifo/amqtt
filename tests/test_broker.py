@@ -143,6 +143,31 @@ async def test_client_connect(broker, mock_plugin_manager):
 
 
 @pytest.mark.asyncio
+async def test_client_keep_alive_timeout_closes_connection(broker):
+    conn_reader, conn_writer = await asyncio.open_connection("127.0.0.1", 1883)
+    reader = StreamReaderAdapter(conn_reader)
+    writer = StreamWriterAdapter(conn_writer)
+
+    vh = ConnectVariableHeader()
+    payload = ConnectPayload()
+    vh.keep_alive = 1
+    vh.clean_session_flag = True
+    payload.client_id = "keep-alive-timeout-client"
+    connect = ConnectPacket(variable_header=vh, payload=payload)
+
+    await connect.to_stream(writer)
+    connack = await ConnackPacket.from_stream(reader)
+    assert connack.return_code == 0
+    assert payload.client_id in broker._sessions
+
+    try:
+        assert await asyncio.wait_for(conn_reader.read(1), timeout=3) == b""
+    finally:
+        conn_writer.close()
+        await conn_writer.wait_closed()
+
+
+@pytest.mark.asyncio
 async def _connect_tcp(broker):
     process = psutil.Process()
     connections_number = 10
