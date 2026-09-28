@@ -3,6 +3,7 @@ import logging
 import logging.config
 import secrets
 import socket
+import ssl
 import string
 import time
 from unittest.mock import MagicMock, call, patch
@@ -14,6 +15,7 @@ from amqtt.events import BrokerEvents
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
+from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
 from amqtt.errors import ConnectError
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
@@ -122,6 +124,51 @@ async def test_start_stop(broker, mock_plugin_manager):
 
 
 @pytest.mark.asyncio
+async def test_start_listeners_uses_supplied_ssl_context(monkeypatch):
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    broker = Broker(
+        BrokerConfig(
+            listeners={
+                "default": ListenerConfig(
+                    type=ListenerType.TCP,
+                    bind="127.0.0.1:0",
+                    ssl=True,
+                    ssl_context=ssl_context,
+                ),
+            },
+            plugins={},
+        ),
+    )
+    captured = {}
+
+    async def create_server_instance(listener_name, listener_type, address, port, server_ssl_context):
+        captured.update(
+            listener_name=listener_name,
+            listener_type=listener_type,
+            address=address,
+            port=port,
+            ssl_context=server_ssl_context,
+        )
+        return MagicMock()
+
+    def create_ssl_context(_listener):
+        raise AssertionError("Broker should use the listener's supplied SSLContext")
+
+    monkeypatch.setattr(broker, "_create_server_instance", create_server_instance)
+    monkeypatch.setattr(broker, "_create_ssl_context", create_ssl_context)
+
+    await broker._start_listeners()
+
+    assert captured == {
+        "listener_name": "default",
+        "listener_type": ListenerType.TCP,
+        "address": "127.0.0.1",
+        "port": 0,
+        "ssl_context": ssl_context,
+    }
+
+
+@pytest.mark.asyncio
 async def test_client_connect(broker, mock_plugin_manager):
     client = MQTTClient(config={'auto_reconnect':False})
 
@@ -140,6 +187,31 @@ async def test_client_connect(broker, mock_plugin_manager):
     events = [c[0][0] for c in broker.plugins_manager.fire_event.call_args_list]
     assert BrokerEvents.CLIENT_CONNECTED in events
     assert BrokerEvents.CLIENT_DISCONNECTED in events
+
+
+@pytest.mark.asyncio
+async def test_client_keep_alive_timeout_closes_connection(broker):
+    conn_reader, conn_writer = await asyncio.open_connection("127.0.0.1", 1883)
+    reader = StreamReaderAdapter(conn_reader)
+    writer = StreamWriterAdapter(conn_writer)
+
+    vh = ConnectVariableHeader()
+    payload = ConnectPayload()
+    vh.keep_alive = 1
+    vh.clean_session_flag = True
+    payload.client_id = "keep-alive-timeout-client"
+    connect = ConnectPacket(variable_header=vh, payload=payload)
+
+    await connect.to_stream(writer)
+    connack = await ConnackPacket.from_stream(reader)
+    assert connack.return_code == 0
+    assert payload.client_id in broker._sessions
+
+    try:
+        assert await asyncio.wait_for(conn_reader.read(1), timeout=3) == b""
+    finally:
+        conn_writer.close()
+        await conn_writer.wait_closed()
 
 
 @pytest.mark.asyncio
@@ -247,6 +319,42 @@ async def test_client_connect_clean_session_false(broker):
     assert client.session.client_id not in broker._sessions
     await client.disconnect()
     await asyncio.sleep(0.1)
+
+
+@pytest.mark.asyncio
+async def test_existing_session_reconnect_updates_ssl_object(broker, monkeypatch):
+    client_id = "persisted-client"
+    old_ssl_object = object()
+    new_ssl_object = object()
+
+    existing_session = Session()
+    existing_session.client_id = client_id
+    existing_session.clean_session = False
+    existing_session.ssl_object = old_ssl_object
+    broker._sessions[client_id] = (existing_session, BrokerProtocolHandler(broker.plugins_manager, existing_session))
+
+    reconnect_session = Session()
+    reconnect_session.client_id = client_id
+    reconnect_session.clean_session = False
+    reconnect_session.keep_alive = 30
+
+    reconnect_handler = BrokerProtocolHandler(broker.plugins_manager, reconnect_session)
+
+    async def init_from_connect(reader, writer, plugins_manager):
+        return reconnect_handler, reconnect_session
+
+    monkeypatch.setattr(BrokerProtocolHandler, "init_from_connect", init_from_connect)
+    writer = MagicMock()
+    writer.get_ssl_info.return_value = new_ssl_object
+
+    handler, session = await broker._initialize_client_session(MagicMock(), writer, "127.0.0.1", 1883)
+
+    assert handler is reconnect_handler
+    assert session is existing_session
+    assert session.parent == 1
+    assert session.ssl_object is new_ssl_object
+    assert session.ssl_object is not old_ssl_object
+    writer.get_ssl_info.assert_called_once_with()
 
 
 @pytest.mark.asyncio
