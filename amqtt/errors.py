@@ -68,7 +68,7 @@ class PluginLoadError(Exception):
     """Exception thrown when loading a plugin."""
 
 
-class PubAckTimeoutError(Exception):
+class PubAckTimeoutError(TimeoutError):
     """Exception thrown when publish ack is not received within timeout."""
 
     def __init__(self, msg: str, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
@@ -76,7 +76,7 @@ class PubAckTimeoutError(Exception):
         super().__init__(msg)
 
 
-class PubRecTimeoutError(Exception):
+class PubRecTimeoutError(TimeoutError):
     """Exception thrown when publish rec is not received within timeout."""
 
     def __init__(self, msg: str, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
@@ -84,7 +84,7 @@ class PubRecTimeoutError(Exception):
         super().__init__(msg)
 
 
-class PubCompTimeoutError(Exception):
+class PubCompTimeoutError(TimeoutError):
     """Exception thrown when publish comp is not received within timeout."""
 
     def __init__(self, msg: str, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
