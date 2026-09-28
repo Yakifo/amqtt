@@ -7,13 +7,28 @@ import logging
 from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.contexts import BaseContext
-from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError, PubAckTimeoutError
+from amqtt.contexts import BaseContext, BrokerConfig, ClientConfig
+from amqtt.errors import (
+    AMQTTError,
+    MQTTError,
+    NoDataError,
+    ProtocolHandlerError,
+    PubAckTimeoutError,
+    PubCompTimeoutError,
+    PubRecTimeoutError,
+)
 from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.constants import DEFAULT_QOS1_PUBACK_TIMEOUT, QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.constants import (
+    DEFAULT_QOS1_PUBACK_TIMEOUT,
+    DEFAULT_QOS2_PUBCOMP_TIMEOUT,
+    DEFAULT_QOS2_PUBREC_TIMEOUT,
+    QOS_0,
+    QOS_1,
+    QOS_2,
+)
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.packet import (
     CONNACK,
@@ -61,6 +76,16 @@ C = TypeVar("C", bound=BaseContext)
 @dataclass(frozen=True)
 class ProtocolHandlerConfig:
     qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
+    qos2_pubrec_timeout: int | float | None = DEFAULT_QOS2_PUBREC_TIMEOUT
+    qos2_pubcomp_timeout: int | float | None = DEFAULT_QOS2_PUBCOMP_TIMEOUT
+
+    @classmethod
+    def init_from_config(cls, config: BrokerConfig | ClientConfig) -> "ProtocolHandlerConfig":
+        return cls(
+            qos1_puback_timeout=config.get("qos1_puback_timeout", DEFAULT_QOS1_PUBACK_TIMEOUT),
+            qos2_pubrec_timeout=config.get("qos2_pubrec_timeout", DEFAULT_QOS2_PUBREC_TIMEOUT),
+            qos2_pubcomp_timeout=config.get("qos2_pubcomp_timeout", DEFAULT_QOS2_PUBCOMP_TIMEOUT),
+        )
 
 
 class ProtocolHandler(Generic[C]):
@@ -403,11 +428,12 @@ class ProtocolHandler(Generic[C]):
                 waiter_pub_rec: asyncio.Future[PubrecPacket] = asyncio.Future()
                 self._pubrec_waiters[app_message.packet_id] = waiter_pub_rec
                 try:
-                    app_message.pubrec_packet = await asyncio.wait_for(waiter_pub_rec, timeout=5)
+                    app_message.pubrec_packet = await asyncio.wait_for(waiter_pub_rec,
+                                                                       timeout=self.handler_config.qos2_pubrec_timeout)
                 except asyncio.TimeoutError:
                     msg = f"Timeout waiting for PUBREC for packet ID {app_message.packet_id}"
-                    self.logger.warning(msg)
-                    raise TimeoutError(msg) from None
+                    app_message.pubrec_packet = None
+                    raise PubRecTimeoutError(msg, app_message) from None
                 finally:
                     self._pubrec_waiters.pop(app_message.packet_id, None)
                     self.session.inflight_out.pop(app_message.packet_id, None)
@@ -420,11 +446,12 @@ class ProtocolHandler(Generic[C]):
                 waiter_pub_comp: asyncio.Future[PubcompPacket] = asyncio.Future()
                 self._pubcomp_waiters[app_message.packet_id] = waiter_pub_comp
                 try:
-                    app_message.pubcomp_packet = await asyncio.wait_for(waiter_pub_comp, timeout=5)
+                    app_message.pubcomp_packet = await asyncio.wait_for(waiter_pub_comp,
+                                                                        timeout=self.handler_config.qos2_pubcomp_timeout)
                 except asyncio.TimeoutError:
                     msg = f"Timeout waiting for PUBCOMP for packet ID {app_message.packet_id}"
-                    self.logger.warning(msg)
-                    raise TimeoutError(msg) from None
+                    app_message.pubcomp_packet = None
+                    raise PubCompTimeoutError(msg, app_message) from None
                 finally:
                     self._pubcomp_waiters.pop(app_message.packet_id, None)
                     self.session.inflight_out.pop(app_message.packet_id, None)

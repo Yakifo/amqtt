@@ -74,3 +74,19 @@ class PubAckTimeoutError(Exception):
     def __init__(self, msg: str, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
         self.app_message = app_message
         super().__init__(msg)
+
+
+class PubRecTimeoutError(Exception):
+    """Exception thrown when publish rec is not received within timeout."""
+
+    def __init__(self, msg: str, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
+        self.app_message = app_message
+        super().__init__(msg)
+
+
+class PubCompTimeoutError(Exception):
+    """Exception thrown when publish comp is not received within timeout."""
+
+    def __init__(self, msg: str, app_message: OutgoingApplicationMessage | IncomingApplicationMessage) -> None:
+        self.app_message = app_message
+        super().__init__(msg)

@@ -8,7 +8,7 @@ import unittest
 import pytest
 
 from amqtt.adapters import BufferWriter, StreamReaderAdapter, StreamWriterAdapter
-from amqtt.errors import PubAckTimeoutError
+from amqtt.errors import PubAckTimeoutError, PubCompTimeoutError, PubRecTimeoutError
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.protocol.handler import ProtocolHandler, ProtocolHandlerConfig
 from amqtt.mqtt.puback import PubackPacket
@@ -685,3 +685,142 @@ class ProtocolHandlerTest(unittest.TestCase):
         exception = future.exception()
         if exception:
             raise exception
+
+    def test_publish_qos2_pubrec_times_out_after_configured_interval(self):
+        async def test_coro() -> None:
+            qos2_pubrec_timeout = 0.01
+            session = Session()
+            handler = ProtocolHandler(
+                self.plugin_manager,
+                session,
+                handler_config=ProtocolHandlerConfig(qos2_pubrec_timeout=qos2_pubrec_timeout),
+            )
+            handler.writer = BufferWriter()
+            message = OutgoingApplicationMessage(1, "/topic", QOS_2, b"test_data", False)
+
+            started_at = self.loop.time()
+            with pytest.raises(PubRecTimeoutError, match="Timeout waiting for PUBREC"):
+                await asyncio.wait_for(handler._handle_qos2_message_flow(message), timeout=1)
+            elapsed = self.loop.time() - started_at
+
+            assert elapsed >= qos2_pubrec_timeout
+            assert not handler._pubrec_waiters
+            assert not session.inflight_out
+            assert message.pubrec_packet is None
+
+        self.loop.run_until_complete(test_coro())
+
+    def test_publish_qos2_pubrec_timeout_is_variable(self):
+        async def publish_with_delayed_pubrec(qos2_timeout: float, pubrec_delay: float) -> OutgoingApplicationMessage:
+            session = Session()
+            handler = ProtocolHandler(
+                self.plugin_manager,
+                session,
+                handler_config=ProtocolHandlerConfig(qos2_pubrec_timeout=qos2_timeout),
+            )
+            handler.writer = BufferWriter()
+            message = OutgoingApplicationMessage(1, "/topic", QOS_2, b"test_data", False)
+
+            async def send_pubrec() -> None:
+                while 1 not in handler._pubrec_waiters:
+                    await asyncio.sleep(0)
+                await asyncio.sleep(pubrec_delay)
+                await handler.handle_pubrec(PubrecPacket.build(1))
+                while 1 not in handler._pubcomp_waiters:
+                    await asyncio.sleep(0)
+                await handler.handle_pubcomp(PubcompPacket.build(1))
+
+            pubrec_task = asyncio.create_task(send_pubrec())
+            try:
+                await handler._handle_qos2_message_flow(message)
+            finally:
+                pubrec_task.cancel()
+                await asyncio.gather(pubrec_task, return_exceptions=True)
+
+            assert not handler._pubrec_waiters
+            assert not session.inflight_out
+            return message
+
+        async def test_coro() -> None:
+            with self.assertRaisesRegex(PubRecTimeoutError, "Timeout waiting for PUBREC"):
+                await publish_with_delayed_pubrec(qos2_timeout=0.01, pubrec_delay=0.05)
+
+            message = await publish_with_delayed_pubrec(qos2_timeout=0.2, pubrec_delay=0.05)
+            assert message.pubrec_packet is not None
+
+        self.loop.run_until_complete(test_coro())
+
+    def test_publish_qos2_pubcomp_times_out_after_configured_interval(self):
+        async def test_coro() -> None:
+            qos2_pubcomp_timeout = 0.01
+            session = Session()
+            handler = ProtocolHandler(
+                self.plugin_manager,
+                session,
+                handler_config=ProtocolHandlerConfig(qos2_pubcomp_timeout=qos2_pubcomp_timeout),
+            )
+            handler.writer = BufferWriter()
+            message = OutgoingApplicationMessage(1, "/topic", QOS_2, b"test_data", False)
+
+            async def send_pubrec() -> None:
+                while 1 not in handler._pubrec_waiters:
+                    await asyncio.sleep(0)
+                await handler.handle_pubrec(PubrecPacket.build(1))
+
+            pubrec_task = asyncio.create_task(send_pubrec())
+            started_at = self.loop.time()
+            try:
+                with pytest.raises(PubCompTimeoutError, match="Timeout waiting for PUBCOMP"):
+                    await asyncio.wait_for(handler._handle_qos2_message_flow(message), timeout=1)
+            finally:
+                pubrec_task.cancel()
+                await asyncio.gather(pubrec_task, return_exceptions=True)
+            elapsed = self.loop.time() - started_at
+
+            assert elapsed >= qos2_pubcomp_timeout
+            assert not handler._pubcomp_waiters
+            assert not session.inflight_out
+            assert message.pubrec_packet is not None
+            assert message.pubcomp_packet is None
+
+        self.loop.run_until_complete(test_coro())
+
+    def test_publish_qos2_pubcomp_timeout_is_variable(self):
+        async def publish_with_delayed_pubcomp(qos2_timeout: float, pubcomp_delay: float) -> OutgoingApplicationMessage:
+            session = Session()
+            handler = ProtocolHandler(
+                self.plugin_manager,
+                session,
+                handler_config=ProtocolHandlerConfig(qos2_pubcomp_timeout=qos2_timeout),
+            )
+            handler.writer = BufferWriter()
+            message = OutgoingApplicationMessage(1, "/topic", QOS_2, b"test_data", False)
+
+            async def send_acknowledgements() -> None:
+                while 1 not in handler._pubrec_waiters:
+                    await asyncio.sleep(0)
+                await handler.handle_pubrec(PubrecPacket.build(1))
+                while 1 not in handler._pubcomp_waiters:
+                    await asyncio.sleep(0)
+                await asyncio.sleep(pubcomp_delay)
+                await handler.handle_pubcomp(PubcompPacket.build(1))
+
+            acknowledgement_task = asyncio.create_task(send_acknowledgements())
+            try:
+                await handler._handle_qos2_message_flow(message)
+            finally:
+                acknowledgement_task.cancel()
+                await asyncio.gather(acknowledgement_task, return_exceptions=True)
+
+            assert not handler._pubcomp_waiters
+            assert not session.inflight_out
+            return message
+
+        async def test_coro() -> None:
+            with self.assertRaisesRegex(PubCompTimeoutError, "Timeout waiting for PUBCOMP"):
+                await publish_with_delayed_pubcomp(qos2_timeout=0.01, pubcomp_delay=0.05)
+
+            message = await publish_with_delayed_pubcomp(qos2_timeout=0.2, pubcomp_delay=0.05)
+            assert message.pubcomp_packet is not None
+
+        self.loop.run_until_complete(test_coro())

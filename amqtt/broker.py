@@ -21,7 +21,6 @@ from amqtt.adapters import (
     WebSocketsWriter,
     WriterAdapter,
 )
-
 from amqtt.contexts import (
     Action,
     BaseContext,
@@ -516,7 +515,7 @@ class Broker:
         remote_port: int,
     ) -> tuple[BrokerProtocolHandler, Session]:
         """Initialize a client session and protocol handler."""
-        handler_config = ProtocolHandlerConfig(qos1_puback_timeout=self.config.qos1_puback_timeout)
+        handler_config = ProtocolHandlerConfig.init_from_config(self.config)
 
         # Wait for first packet and expect a CONNECT
         try:
@@ -581,7 +580,7 @@ class Broker:
         session = Session()
         session.client_id = client_id
 
-        handler_config = ProtocolHandlerConfig(qos1_puback_timeout=self.config.qos1_puback_timeout)
+        handler_config = ProtocolHandlerConfig.init_from_config(self.config)
 
         bph = BrokerProtocolHandler(self.plugins_manager, session, handler_config=handler_config)
         session.transitions.disconnect()
@@ -846,7 +845,7 @@ class Broker:
 
     async def _init_handler(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> BrokerProtocolHandler:
         """Create a BrokerProtocolHandler and attach to a session."""
-        handler_config = ProtocolHandlerConfig(qos1_puback_timeout=self.config.qos1_puback_timeout)
+        handler_config = ProtocolHandlerConfig.init_from_config(self.config)
         handler = BrokerProtocolHandler(self.plugins_manager, loop=self._loop, handler_config=handler_config)
         handler.attach(session, reader, writer)
         return handler
@@ -907,7 +906,7 @@ class Broker:
                                                   retained_message=self._retained_messages[topic_name])
 
         # [MQTT-3.3.1-10]
-        elif topic_name in self._retained_messages:
+        elif topic_name and topic_name in self._retained_messages:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"Clearing retained messages for topic '{topic_name}'")
 
