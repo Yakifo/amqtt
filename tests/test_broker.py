@@ -3,6 +3,7 @@ import logging
 import logging.config
 import secrets
 import socket
+import ssl
 import string
 import time
 from unittest.mock import MagicMock, call, patch
@@ -14,6 +15,7 @@ from amqtt.events import BrokerEvents
 from amqtt.adapters import StreamReaderAdapter, StreamWriterAdapter
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
+from amqtt.contexts import BrokerConfig, ListenerConfig, ListenerType
 from amqtt.errors import ConnectError
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHeader
@@ -119,6 +121,51 @@ async def test_start_stop(broker, mock_plugin_manager):
         any_order=True,
     )
     assert broker.transitions.is_stopped()
+
+
+@pytest.mark.asyncio
+async def test_start_listeners_uses_supplied_ssl_context(monkeypatch):
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    broker = Broker(
+        BrokerConfig(
+            listeners={
+                "default": ListenerConfig(
+                    type=ListenerType.TCP,
+                    bind="127.0.0.1:0",
+                    ssl=True,
+                    ssl_context=ssl_context,
+                ),
+            },
+            plugins={},
+        ),
+    )
+    captured = {}
+
+    async def create_server_instance(listener_name, listener_type, address, port, server_ssl_context):
+        captured.update(
+            listener_name=listener_name,
+            listener_type=listener_type,
+            address=address,
+            port=port,
+            ssl_context=server_ssl_context,
+        )
+        return MagicMock()
+
+    def create_ssl_context(_listener):
+        raise AssertionError("Broker should use the listener's supplied SSLContext")
+
+    monkeypatch.setattr(broker, "_create_server_instance", create_server_instance)
+    monkeypatch.setattr(broker, "_create_ssl_context", create_ssl_context)
+
+    await broker._start_listeners()
+
+    assert captured == {
+        "listener_name": "default",
+        "listener_type": ListenerType.TCP,
+        "address": "127.0.0.1",
+        "port": 0,
+        "ssl_context": ssl_context,
+    }
 
 
 @pytest.mark.asyncio
