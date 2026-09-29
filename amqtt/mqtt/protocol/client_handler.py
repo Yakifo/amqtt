@@ -8,7 +8,7 @@ from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHea
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.pingreq import PingReqPacket
 from amqtt.mqtt.pingresp import PingRespPacket
-from amqtt.mqtt.protocol.handler import ProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandler, ProtocolHandlerConfig
 from amqtt.mqtt.suback import SubackPacket
 from amqtt.mqtt.subscribe import SubscribePacket
 from amqtt.mqtt.unsuback import UnsubackPacket
@@ -26,8 +26,9 @@ class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
         plugins_manager: PluginManager["ClientContext"],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
+        handler_config: ProtocolHandlerConfig | None = None
     ) -> None:
-        super().__init__(plugins_manager, session, loop=loop)
+        super().__init__(plugins_manager, session, loop=loop, handler_config=handler_config)
         self._ping_task: asyncio.Task[Any] | None = None
         self._pingresp_queue: asyncio.Queue[PingRespPacket] = asyncio.Queue()
         self._subscriptions_waiter: dict[int, asyncio.Future[list[int]]] = {}

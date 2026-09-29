@@ -1,7 +1,10 @@
 import logging
+
 import socket
 import ssl
 import threading
+from collections.abc import AsyncIterator
+
 from pathlib import Path
 from typing import Any
 
@@ -25,12 +28,25 @@ from amqtt.contexts import (
     ListenerConfig,
     ListenerTLSVersion,
     ListenerType,
+    ListenerVerifyMode,
+    ListenerVerifyFlags,
     TopicConfig,
     WillConfig,
 )
 from amqtt.errors import BrokerError
 
 logger = logging.getLogger(__name__)
+
+
+def _ssl_context() -> ssl.SSLContext:
+    return ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+
+
+@pytest.fixture
+async def unstarted_broker() -> AsyncIterator[Broker]:
+    broker = Broker()
+    yield broker
+    broker._broadcast_shutdown_waiter.cancel()
 
 
 def test_entrypoint_broker_config(caplog):
@@ -80,6 +96,24 @@ def test_broker_config_from_dict_normalizes_topic_check_and_plugin_lists() -> No
     }
 
 
+def test_broker_config_from_dict_casts_listener_tls_policy_enums() -> None:
+    broker_config = BrokerConfig.from_dict(
+        {
+            "listeners": {
+                "default": {
+                    "bind": "127.0.0.1:8883",
+                    "client_cert": "required",
+                    "crl_check": "leaf",
+                },
+            },
+        },
+    )
+
+    listener_config = broker_config.listeners["default"]
+    assert listener_config.client_cert is ListenerVerifyMode.REQUIRED
+    assert listener_config.crl_check is ListenerVerifyFlags.LEAF
+
+
 def test_listener_config_requires_certfile_and_keyfile_together(tmp_path: Path) -> None:
     certfile = tmp_path / "cert.pem"
     certfile.write_text("cert", encoding="utf-8")
@@ -112,6 +146,18 @@ def test_listener_config_converts_existing_file_fields_to_paths(tmp_path: Path) 
     assert listener_config.keyfile == keyfile
 
 
+def test_listener_config_converts_existing_crl_fields_to_paths(tmp_path: Path) -> None:
+    crlfile = tmp_path / "ca.crl"
+    crlpath = tmp_path / "crls"
+    crlfile.write_text("placeholder", encoding="utf-8")
+    crlpath.mkdir()
+
+    listener_config = ListenerConfig(crlfile=str(crlfile), crlpath=str(crlpath))
+
+    assert listener_config.crlfile == crlfile
+    assert listener_config.crlpath == crlpath
+
+
 def test_listener_config_rejects_missing_file_fields(tmp_path: Path) -> None:
     keyfile = tmp_path / "key.pem"
     keyfile.write_text("key", encoding="utf-8")
@@ -137,6 +183,7 @@ def test_broker_config_from_dict_casts_listener_max_tls_version() -> None:
 
 
 def test_broker_config_from_dict_rejects_invalid_max_tls_version() -> None:
+
     with pytest.raises(ValueError, match="incorrect"):
         _ = BrokerConfig.from_dict(
             {
@@ -144,6 +191,28 @@ def test_broker_config_from_dict_rejects_invalid_max_tls_version() -> None:
                     "default": {
                         "bind": "127.0.0.1:8883",
                         "max_tls_version": "incorrect",
+                    },
+                },
+            },
+        )
+
+
+def test_listener_config_rejects_missing_crl_fields(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="crlfile"):
+        ListenerConfig(crlfile=tmp_path / "missing-ca.crl")
+
+    with pytest.raises(FileNotFoundError, match="crlpath"):
+        ListenerConfig(crlpath=tmp_path / "missing-crl-dir")
+
+
+def test_broker_config_from_dict_fails_client_cert_option() -> None:
+    with pytest.raises(ValueError, match="incorrect"):
+        _ = BrokerConfig.from_dict(
+            {
+                "listeners": {
+                    "default": {
+                        "bind": "127.0.0.1:8883",
+                        "client_cert": "incorrect",
                     },
                 },
             },
@@ -272,6 +341,61 @@ def test_broker_ssl_context_tls12_ceiling_rejects_tls13_only_client(rsa_keys: tu
     assert server_errors
     assert any(isinstance(error, ssl.SSLError) for error in server_errors)
 
+@pytest.mark.parametrize(
+    ("client_cert", "verify_mode"),
+    [
+        ("none", ssl.CERT_NONE),
+        ("optional", ssl.CERT_OPTIONAL),
+        ("required", ssl.CERT_REQUIRED),
+    ],
+)
+def test_broker_ssl_context_applies_client_cert_policy(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+    client_cert: str,
+    verify_mode: ssl.VerifyMode,
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile, client_cert=client_cert)
+
+    ssl_context = unstarted_broker._create_ssl_context(listener)
+
+    assert ssl_context.verify_mode == verify_mode
+
+
+@pytest.mark.parametrize(
+    ("crl_check", "verify_flag"),
+    [
+        ("leaf", ssl.VERIFY_CRL_CHECK_LEAF),
+        ("chain", ssl.VERIFY_CRL_CHECK_CHAIN),
+    ],
+)
+def test_broker_ssl_context_applies_crl_verify_flags(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+    crl_check: str,
+    verify_flag: ssl.VerifyFlags,
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile, crl_check=crl_check)
+
+    ssl_context = unstarted_broker._create_ssl_context(listener)
+
+    assert ssl_context.verify_flags & verify_flag
+
+
+def test_broker_ssl_context_default_crl_check_does_not_enable_crl_flags(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
+
+    ssl_context = unstarted_broker._create_ssl_context(listener)
+
+    assert not ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF
+    assert not ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN
+
 
 def test_connection_config_requires_certfile_and_keyfile_together() -> None:
     with pytest.raises(ValueError, match="both are required"):
@@ -333,3 +457,68 @@ def test_client_config_rejects_mismatched_connection_cert_and_key() -> None:
 
     with pytest.raises(ValueError, match="both"):
         ClientConfig(connection=connection)
+
+def test_external_listener_accepts_default_fields() -> None:
+    broker_config = BrokerConfig.from_dict({"listeners": {"default": {"type": "external"}}})
+
+    assert broker_config.listeners["default"].type == ListenerType.EXTERNAL
+
+
+def test_ssl_context_with_false_ssl() -> None:
+    with pytest.raises(ValueError, match="'ssl' must be True"):
+        _ = ListenerConfig(ssl=False, ssl_context=_ssl_context())
+
+
+def test_ssl_context_with_other_ssl_config(tmp_path: Path) -> None:
+    cafile = tmp_path / "ca.pem"
+    cafile.write_text("ca", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="other ssl options are not allowed"):
+        _ = ListenerConfig(ssl=True, ssl_context=_ssl_context(), cafile=cafile)
+
+
+def test_ssl_context_for_broker_config() -> None:
+    context = _ssl_context()
+    broker_config = BrokerConfig.from_dict({"listeners": {"default": {"ssl": True, "ssl_context": context}}})
+
+    assert broker_config.listeners["default"].ssl_context is context
+
+
+def test_ssl_context_listener_does_not_inherit_default_certificate_paths(tmp_path: Path) -> None:
+    certfile = tmp_path / "cert.pem"
+    keyfile = tmp_path / "key.pem"
+    certfile.write_text("cert", encoding="utf-8")
+    keyfile.write_text("key", encoding="utf-8")
+    context = _ssl_context()
+
+    broker_config = BrokerConfig(
+        listeners={
+            "default": ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile),
+            "custom": ListenerConfig(bind="127.0.0.1:1884", ssl=True, ssl_context=context),
+        },
+    )
+
+    custom = broker_config.listeners["custom"]
+    assert custom.ssl_context is context
+    assert custom.certfile is None
+    assert custom.keyfile is None
+
+
+def test_certificate_path_listener_does_not_inherit_default_ssl_context(tmp_path: Path) -> None:
+    certfile = tmp_path / "cert.pem"
+    keyfile = tmp_path / "key.pem"
+    certfile.write_text("cert", encoding="utf-8")
+    keyfile.write_text("key", encoding="utf-8")
+    context = _ssl_context()
+
+    broker_config = BrokerConfig(
+        listeners={
+            "default": ListenerConfig(ssl=True, ssl_context=context),
+            "custom": ListenerConfig(bind="127.0.0.1:1884", ssl=True, certfile=certfile, keyfile=keyfile),
+        },
+    )
+
+    custom = broker_config.listeners["custom"]
+    assert custom.ssl_context is None
+    assert custom.certfile == certfile
+    assert custom.keyfile == keyfile

@@ -113,6 +113,9 @@ listeners:
         capath: 'certificate data'
         certfile: /some/certfile
         keyfile: /some/keyfile
+        client_cert: required
+        crlfile: /some/crlfile
+        crl_check: leaf
         max_tls_version: TLSv1_2
     my-ws-1:
         bind: 0.0.0.0:8080
