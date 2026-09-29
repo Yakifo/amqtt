@@ -340,7 +340,8 @@ async def test_existing_session_reconnect_updates_ssl_object(broker, monkeypatch
 
     reconnect_handler = BrokerProtocolHandler(broker.plugins_manager, reconnect_session)
 
-    async def init_from_connect(reader, writer, plugins_manager):
+    async def init_from_connect(*_, handler_config):
+        assert handler_config is not None
         return reconnect_handler, reconnect_session
 
     monkeypatch.setattr(BrokerProtocolHandler, "init_from_connect", init_from_connect)
