@@ -203,8 +203,8 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
             if connect.proto_level != _MQTT_PROTOCOL_LEVEL_SUPPORTED:
                 # only MQTT 3.1.1 supported
                 error_msg = (
-                    f"Invalid protocol from {format_client_message(address=remote_address, port=remote_port)}:"
-                    f" {connect.proto_level}"
+                    f"invalid protocol from {format_client_message(address=remote_address, port=remote_port)} :"
+                    f" protocol {connect.proto_level} is unsupported, use level 4"
                 )
                 connack = ConnackPacket.build(0, UNACCEPTABLE_PROTOCOL_VERSION)  # [MQTT-3.2.2-4] session_parent=0
             elif not connect.username_flag and connect.password_flag:

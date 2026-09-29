@@ -498,7 +498,7 @@ class Broker:
         try:
             handler, client_session = await self._initialize_client_session(reader, writer, remote_address, remote_port)
         except (AMQTTError, MQTTError, NoDataError) as exc:
-            self.logger.warning(f"Failed to initialize client session: {exc}")
+            self.logger.warning(f"Failed to initialize client session > {exc}")
             server.release_connection()
             return
 
@@ -534,9 +534,6 @@ class Broker:
             )
             raise AMQTTError(exc) from exc
         except MQTTError as exc:
-            self.logger.warning(
-                f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
-            )
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:
