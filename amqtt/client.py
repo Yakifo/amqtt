@@ -456,9 +456,8 @@ class MQTTClient:
             self.session.broker_uri = str(urlunparse(uri))
         # Init protocol handler
         # if not self._handler:
-        handler_config = ProtocolHandlerConfig(
-            qos1_puback_timeout=self.config.qos1_puback_timeout
-        )
+        handler_config = ProtocolHandlerConfig.init_from_config(self.config)
+
         self._handler = ClientProtocolHandler(self.plugins_manager, handler_config=handler_config)
 
         connection_timeout = self.config.get("connection_timeout", None)

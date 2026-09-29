@@ -7,13 +7,28 @@ import logging
 from typing import Generic, TypeVar, cast
 
 from amqtt.adapters import ReaderAdapter, WriterAdapter
-from amqtt.contexts import BaseContext
-from amqtt.errors import AMQTTError, MQTTError, NoDataError, ProtocolHandlerError, PubAckTimeoutError
+from amqtt.contexts import BaseContext, BrokerConfig, ClientConfig
+from amqtt.errors import (
+    AMQTTError,
+    MQTTError,
+    NoDataError,
+    ProtocolHandlerError,
+    PubAckTimeoutError,
+    PubCompTimeoutError,
+    PubRecTimeoutError,
+)
 from amqtt.events import MQTTEvents
 from amqtt.mqtt import packet_class
 from amqtt.mqtt.connack import ConnackPacket
 from amqtt.mqtt.connect import ConnectPacket
-from amqtt.mqtt.constants import DEFAULT_QOS1_PUBACK_TIMEOUT, QOS_0, QOS_1, QOS_2
+from amqtt.mqtt.constants import (
+    DEFAULT_QOS1_PUBACK_TIMEOUT,
+    DEFAULT_QOS2_PUBCOMP_TIMEOUT,
+    DEFAULT_QOS2_PUBREC_TIMEOUT,
+    QOS_0,
+    QOS_1,
+    QOS_2,
+)
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.packet import (
     CONNACK,
@@ -62,6 +77,16 @@ C = TypeVar("C", bound=BaseContext)
 @dataclass(frozen=True)
 class ProtocolHandlerConfig:
     qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
+    qos2_pubrec_timeout: int | float | None = DEFAULT_QOS2_PUBREC_TIMEOUT
+    qos2_pubcomp_timeout: int | float | None = DEFAULT_QOS2_PUBCOMP_TIMEOUT
+
+    @classmethod
+    def init_from_config(cls, config: BrokerConfig | ClientConfig) -> "ProtocolHandlerConfig":
+        return cls(
+            qos1_puback_timeout=config.get("qos1_puback_timeout", DEFAULT_QOS1_PUBACK_TIMEOUT),
+            qos2_pubrec_timeout=config.get("qos2_pubrec_timeout", DEFAULT_QOS2_PUBREC_TIMEOUT),
+            qos2_pubcomp_timeout=config.get("qos2_pubcomp_timeout", DEFAULT_QOS2_PUBCOMP_TIMEOUT),
+        )
 
 
 class ProtocolHandler(Generic[C]):
@@ -72,7 +97,7 @@ class ProtocolHandler(Generic[C]):
         plugins_manager: PluginManager[C],
         session: Session | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        handler_config: ProtocolHandlerConfig | None = None,
+        handler_config: ProtocolHandlerConfig | None = None
     ) -> None:
         self.logger: logging.Logger | logging.LoggerAdapter[logging.Logger] = logging.getLogger(__name__)
         if session is not None:
@@ -91,7 +116,7 @@ class ProtocolHandler(Generic[C]):
             asyncio.set_event_loop(self._loop)
 
         self._reader_task: asyncio.Task[None] | None = None
-        self._keepalive_task: asyncio.TimerHandle | None = None
+        self._keepalive_watcher: asyncio.Task[None] | None = None
         self._reader_ready: asyncio.Event | None = None
         self._reader_stopped = asyncio.Event()
         self._puback_waiters: dict[int, asyncio.Future[PubackPacket]] = {}
@@ -128,6 +153,14 @@ class ProtocolHandler(Generic[C]):
     def _is_attached(self) -> bool:
         return bool(self.session)
 
+    async def timeout_watcher(self) -> None:
+        while self._is_attached() and self.keepalive_timeout is not None:
+            await asyncio.sleep(self.keepalive_timeout)
+            if self.session is None:
+                break
+            if self.session.last_write_at + self.keepalive_timeout <= self._loop.time():
+                self.handle_write_timeout()
+
     async def start(self) -> None:
         if not self._is_attached():
             msg = "Handler is not attached to a stream"
@@ -138,7 +171,11 @@ class ProtocolHandler(Generic[C]):
         self._reader_task = asyncio.create_task(self._reader_loop())
         await self._reader_ready.wait()
         if self._loop is not None and self.keepalive_timeout is not None:
-            self._keepalive_task = self._loop.call_later(self.keepalive_timeout, self.handle_write_timeout)
+            if self.session is None:
+                msg = "Session is not initialized."
+                raise AMQTTError(msg)
+            self.session.last_write_at = self._loop.time()
+            self._keepalive_watcher = self._loop.create_task(self.timeout_watcher())
         self.logger.debug("Handler tasks started")
         await self._retry_deliveries()
         self.logger.debug("Handler ready")
@@ -147,8 +184,8 @@ class ProtocolHandler(Generic[C]):
         self._stopping = True
         # Stop messages flow waiter
         self._stop_waiters()
-        if self._keepalive_task:
-            self._keepalive_task.cancel()
+        if self._keepalive_watcher:
+            self._keepalive_watcher.cancel()
         self.logger.debug("Waiting for tasks to be stopped")
         if self._reader_task and self._reader_task is not asyncio.current_task() and not self._reader_task.done():
             self._reader_task.cancel()
@@ -396,7 +433,12 @@ class ProtocolHandler(Generic[C]):
                 waiter_pub_rec: asyncio.Future[PubrecPacket] = asyncio.Future()
                 self._pubrec_waiters[app_message.packet_id] = waiter_pub_rec
                 try:
-                    app_message.pubrec_packet = await waiter_pub_rec
+                    app_message.pubrec_packet = await asyncio.wait_for(waiter_pub_rec,
+                                                                       timeout=self.handler_config.qos2_pubrec_timeout)
+                except asyncio.TimeoutError:
+                    msg = f"Timeout waiting for PUBREC for packet ID {app_message.packet_id}"
+                    app_message.pubrec_packet = None
+                    raise PubRecTimeoutError(msg, app_message) from None
                 finally:
                     self._pubrec_waiters.pop(app_message.packet_id, None)
                     # stop() cancels waiters during connection teardown; keep QoS 2 state so reconnect can retry.
@@ -412,7 +454,12 @@ class ProtocolHandler(Generic[C]):
                 waiter_pub_comp: asyncio.Future[PubcompPacket] = asyncio.Future()
                 self._pubcomp_waiters[app_message.packet_id] = waiter_pub_comp
                 try:
-                    app_message.pubcomp_packet = await waiter_pub_comp
+                    app_message.pubcomp_packet = await asyncio.wait_for(waiter_pub_comp,
+                                                                        timeout=self.handler_config.qos2_pubcomp_timeout)
+                except asyncio.TimeoutError:
+                    msg = f"Timeout waiting for PUBCOMP for packet ID {app_message.packet_id}"
+                    app_message.pubcomp_packet = None
+                    raise PubCompTimeoutError(msg, app_message) from None
                 finally:
                     self._pubcomp_waiters.pop(app_message.packet_id, None)
                     # Only PUBCOMP completes the flow; teardown cancellation must leave PUBREL retry state intact.
@@ -578,10 +625,8 @@ class ProtocolHandler(Generic[C]):
             if self.writer:
                 async with self._write_lock:
                     await packet.to_stream(self.writer)
-            if self._keepalive_task:
-                self._keepalive_task.cancel()
-                if self.keepalive_timeout is not None:
-                    self._keepalive_task = self._loop.call_later(self.keepalive_timeout, self.handle_write_timeout)
+            if self._keepalive_watcher and self.session is not None:
+                self.session.last_write_at = self._loop.time()
             await self.plugins_manager.fire_event(MQTTEvents.PACKET_SENT, packet=packet, session=self.session)
         except (ConnectionResetError, BrokenPipeError):
             await self.handle_connection_closed()
