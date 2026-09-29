@@ -1,6 +1,7 @@
 import logging
-from pathlib import Path
 import ssl
+from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -33,6 +34,13 @@ logger = logging.getLogger(__name__)
 
 def _ssl_context() -> ssl.SSLContext:
     return ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+
+
+@pytest.fixture
+async def unstarted_broker() -> AsyncIterator[Broker]:
+    broker = Broker()
+    yield broker
+    broker._broadcast_shutdown_waiter.cancel()
 
 
 def test_entrypoint_broker_config(caplog):
@@ -184,13 +192,14 @@ def test_broker_config_from_dict_fails_client_cert_option() -> None:
 )
 def test_broker_ssl_context_applies_client_cert_policy(
     rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
     client_cert: str,
     verify_mode: ssl.VerifyMode,
 ) -> None:
     certfile, keyfile = rsa_keys
     listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile, client_cert=client_cert)
 
-    ssl_context = Broker._create_ssl_context(listener)
+    ssl_context = unstarted_broker._create_ssl_context(listener)
 
     assert ssl_context.verify_mode == verify_mode
 
@@ -204,22 +213,26 @@ def test_broker_ssl_context_applies_client_cert_policy(
 )
 def test_broker_ssl_context_applies_crl_verify_flags(
     rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
     crl_check: str,
     verify_flag: ssl.VerifyFlags,
 ) -> None:
     certfile, keyfile = rsa_keys
     listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile, crl_check=crl_check)
 
-    ssl_context = Broker._create_ssl_context(listener)
+    ssl_context = unstarted_broker._create_ssl_context(listener)
 
     assert ssl_context.verify_flags & verify_flag
 
 
-def test_broker_ssl_context_default_crl_check_does_not_enable_crl_flags(rsa_keys: tuple[Path, Path]) -> None:
+def test_broker_ssl_context_default_crl_check_does_not_enable_crl_flags(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+) -> None:
     certfile, keyfile = rsa_keys
     listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
 
-    ssl_context = Broker._create_ssl_context(listener)
+    ssl_context = unstarted_broker._create_ssl_context(listener)
 
     assert not ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_LEAF
     assert not ssl_context.verify_flags & ssl.VERIFY_CRL_CHECK_CHAIN
