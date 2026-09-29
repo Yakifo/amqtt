@@ -22,6 +22,7 @@ from amqtt.mqtt.connect import ConnectPacket, ConnectPayload, ConnectVariableHea
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 from amqtt.mqtt.disconnect import DisconnectPacket
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandlerConfig
 from amqtt.mqtt.pubcomp import PubcompPacket
 from amqtt.mqtt.publish import PublishPacket
 from amqtt.mqtt.pubrec import PubrecPacket
@@ -325,7 +326,7 @@ async def test_client_connect_clean_session_false(broker):
 async def test_existing_session_reconnect_updates_ssl_object(broker, monkeypatch):
     client_id = "persisted-client"
     old_ssl_object = object()
-    new_ssl_object = object()
+    new_ssl_object = MagicMock(spec=ssl.SSLObject)
 
     existing_session = Session()
     existing_session.client_id = client_id
@@ -340,21 +341,22 @@ async def test_existing_session_reconnect_updates_ssl_object(broker, monkeypatch
 
     reconnect_handler = BrokerProtocolHandler(broker.plugins_manager, reconnect_session)
 
-    async def init_from_connect(reader, writer, plugins_manager):
+    async def init_from_connect(*_, handler_config: ProtocolHandlerConfig):
+        assert handler_config is not None
         return reconnect_handler, reconnect_session
 
     monkeypatch.setattr(BrokerProtocolHandler, "init_from_connect", init_from_connect)
     writer = MagicMock()
     writer.get_ssl_info.return_value = new_ssl_object
 
-    handler, session = await broker._initialize_client_session(MagicMock(), writer, "127.0.0.1", 1883)
+    handler, session = await broker._initialize_client_session(MagicMock(), writer, "127.0.0.1", 1883, "default")
 
     assert handler is reconnect_handler
     assert session is existing_session
     assert session.parent == 1
     assert session.ssl_object is new_ssl_object
     assert session.ssl_object is not old_ssl_object
-    writer.get_ssl_info.assert_called_once_with()
+    assert writer.get_ssl_info.call_count == 2
 
 
 @pytest.mark.asyncio

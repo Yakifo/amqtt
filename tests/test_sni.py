@@ -11,6 +11,7 @@ from amqtt.broker import Broker
 from amqtt.client import MQTTClient
 from amqtt.errors import AMQTTError, NoDataError
 from amqtt.mqtt.protocol.broker_handler import BrokerProtocolHandler
+from amqtt.mqtt.protocol.handler import ProtocolHandlerConfig
 from amqtt.session import Session
 
 
@@ -103,8 +104,11 @@ async def test_initialize_client_session_without_tls_leaves_inbound_sni_unset(
     incoming_session.clean_session = True
     incoming_session.keep_alive = 0
 
-    async def fake_init_from_connect(*_: object) -> tuple[BrokerProtocolHandler, Session]:
-        return BrokerProtocolHandler(broker.plugins_manager), incoming_session
+    async def fake_init_from_connect(
+        *_: object,
+        handler_config: ProtocolHandlerConfig,
+    ) -> tuple[BrokerProtocolHandler, Session]:
+        return BrokerProtocolHandler(broker.plugins_manager, handler_config=handler_config), incoming_session
 
     monkeypatch.setattr(BrokerProtocolHandler, "init_from_connect", staticmethod(fake_init_from_connect))
 
@@ -132,8 +136,11 @@ async def test_initialize_tls_session_without_sni_leaves_inbound_sni_unset(
     incoming_session.clean_session = True
     incoming_session.keep_alive = 0
 
-    async def fake_init_from_connect(*_: object) -> tuple[BrokerProtocolHandler, Session]:
-        return BrokerProtocolHandler(broker.plugins_manager), incoming_session
+    async def fake_init_from_connect(
+        *_: object,
+        handler_config: ProtocolHandlerConfig,
+    ) -> tuple[BrokerProtocolHandler, Session]:
+        return BrokerProtocolHandler(broker.plugins_manager, handler_config=handler_config), incoming_session
 
     broker._sni_callback(ssl_object, None, ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER))
     monkeypatch.setattr(BrokerProtocolHandler, "init_from_connect", staticmethod(fake_init_from_connect))
@@ -179,8 +186,11 @@ async def test_persistent_session_reconnect_refreshes_tls_metadata(
     incoming_session.remote_address = "198.51.100.10"
     incoming_session.remote_port = 1884
 
-    async def fake_init_from_connect(*_: object) -> tuple[BrokerProtocolHandler, Session]:
-        return BrokerProtocolHandler(broker.plugins_manager), incoming_session
+    async def fake_init_from_connect(
+        *_: object,
+        handler_config: ProtocolHandlerConfig,
+    ) -> tuple[BrokerProtocolHandler, Session]:
+        return BrokerProtocolHandler(broker.plugins_manager, handler_config=handler_config), incoming_session
 
     broker._sni_callback(new_ssl_object, "new.example", ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER))
     monkeypatch.setattr(BrokerProtocolHandler, "init_from_connect", staticmethod(fake_init_from_connect))
@@ -212,7 +222,11 @@ async def test_tls_early_disconnect_consumes_captured_sni(
     ssl_object = make_ssl_object()
     writer = SNIWriter(ssl_object)
 
-    async def fake_init_from_connect(*_: object) -> tuple[BrokerProtocolHandler, Session]:
+    async def fake_init_from_connect(
+        *_: object,
+        handler_config: ProtocolHandlerConfig,
+    ) -> tuple[BrokerProtocolHandler, Session]:
+        assert handler_config is not None
         raise NoDataError("No more data")
 
     broker._sni_callback(ssl_object, "early.example", ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER))
