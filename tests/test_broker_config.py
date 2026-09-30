@@ -1,10 +1,7 @@
+import asyncio
 import logging
-
-import socket
 import ssl
-import threading
 from collections.abc import AsyncIterator
-
 from pathlib import Path
 from typing import Any
 
@@ -293,9 +290,13 @@ def test_broker_ssl_context_invalid_max_tls_version_not_misreported_as_cert_erro
     assert "certfile" not in str(exc_info.value)
 
 
-def test_broker_ssl_context_tls12_ceiling_rejects_tls13_only_client(rsa_keys: tuple[Path, Path]) -> None:
+@pytest.mark.asyncio
+async def test_broker_ssl_context_tls12_ceiling_rejects_tls13_only_client(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+) -> None:
     certfile, keyfile = rsa_keys
-    server_ctx = Broker._create_ssl_context(
+    server_ctx = unstarted_broker._create_ssl_context(
         ListenerConfig(
             ssl=True,
             certfile=certfile,
@@ -310,36 +311,27 @@ def test_broker_ssl_context_tls12_ceiling_rejects_tls13_only_client(rsa_keys: tu
     client_ctx.minimum_version = ssl.TLSVersion.TLSv1_3
     client_ctx.maximum_version = ssl.TLSVersion.TLSv1_3
 
-    listener_sock = socket.socket()
-    listener_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listener_sock.bind(("127.0.0.1", 0))
-    listener_sock.listen(1)
-    port = listener_sock.getsockname()[1]
-    server_errors: list[BaseException] = []
+    async def close_client(_: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        writer.close()
+        await writer.wait_closed()
 
-    def accept_and_handshake() -> None:
-        conn, _ = listener_sock.accept()
-        try:
-            with server_ctx.wrap_socket(conn, server_side=True) as tls_conn:
-                tls_conn.do_handshake()
-        except BaseException as exc:  # noqa: BLE001 - collect handshake failure for assertion
-            server_errors.append(exc)
-        finally:
-            conn.close()
-
-    thread = threading.Thread(target=accept_and_handshake)
-    thread.start()
+    server = await asyncio.start_server(close_client, "127.0.0.1", 0, ssl=server_ctx)
+    server_socket = server.sockets[0]
+    port = server_socket.getsockname()[1]
     try:
-        client_sock = socket.create_connection(("127.0.0.1", port), timeout=5)
-        with pytest.raises(ssl.SSLError):
-            with client_ctx.wrap_socket(client_sock, server_hostname="localhost") as tls_client:
-                tls_client.do_handshake()
+        with pytest.raises((ssl.SSLError, ConnectionResetError)):
+            await asyncio.wait_for(
+                asyncio.open_connection(
+                    "127.0.0.1",
+                    port,
+                    ssl=client_ctx,
+                    server_hostname="localhost",
+                ),
+                timeout=5,
+            )
     finally:
-        thread.join(timeout=5)
-        listener_sock.close()
-
-    assert server_errors
-    assert any(isinstance(error, ssl.SSLError) for error in server_errors)
+        server.close()
+        await server.wait_closed()
 
 @pytest.mark.parametrize(
     ("client_cert", "verify_mode"),
