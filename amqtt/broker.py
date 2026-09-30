@@ -27,6 +27,7 @@ from amqtt.contexts import (
     BaseContext,
     BrokerConfig,
     ListenerConfig,
+    ListenerTLSVersion,
     ListenerType,
     ListenerVerifyFlags,
     ListenerVerifyMode,
@@ -47,6 +48,10 @@ _SniCallback: TypeAlias = Callable[[ssl.SSLObject | ssl.SSLSocket, str | None, s
 
 # Default port numbers
 DEFAULT_PORTS = {"tcp": 1883, "ws": 8883}
+_LISTENER_MAX_TLS_VERSION = {
+    ListenerTLSVersion.TLSV1_2: ssl.TLSVersion.TLSv1_2,
+    ListenerTLSVersion.TLSV1_3: ssl.TLSVersion.TLSv1_3,
+}
 AMQTT_MAGIC_VALUE_RET_SUBSCRIBED = 0x80
 _BROADCAST_SHUTDOWN_TIMEOUT = 5
 _CLIENT_CERT_VERIFY_MODE = {
@@ -377,6 +382,17 @@ class Broker:
         except FileNotFoundError as fnfe:
             msg = f"Can't read cert files '{listener['certfile']}' or '{listener['keyfile']}' : {fnfe}"
             raise BrokerError(msg) from fnfe
+
+        if listener.max_tls_version is not None:
+            try:
+                ssl_context.maximum_version = _LISTENER_MAX_TLS_VERSION[listener.max_tls_version]
+            except KeyError as ke:
+                accepted = ", ".join(version.value for version in ListenerTLSVersion)
+                msg = (
+                    f"Invalid listener max_tls_version {listener.max_tls_version!r}; "
+                    f"expected one of: {accepted}"
+                )
+                raise BrokerError(msg) from ke
         return ssl_context
 
     async def _create_server_instance(

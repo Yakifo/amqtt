@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import ssl
 from collections.abc import AsyncIterator
@@ -22,12 +23,14 @@ from amqtt.contexts import (
     ClientConfig,
     ConnectionConfig,
     ListenerConfig,
+    ListenerTLSVersion,
     ListenerType,
-    ListenerVerifyFlags,
     ListenerVerifyMode,
+    ListenerVerifyFlags,
     TopicConfig,
     WillConfig,
 )
+from amqtt.errors import BrokerError
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +163,37 @@ def test_listener_config_rejects_missing_file_fields(tmp_path: Path) -> None:
         ListenerConfig(certfile=tmp_path / "missing-cert.pem", keyfile=keyfile)
 
 
+def test_broker_config_from_dict_casts_listener_max_tls_version() -> None:
+    broker_config = BrokerConfig.from_dict(
+        {
+            "listeners": {
+                "default": {
+                    "bind": "127.0.0.1:8883",
+                    "max_tls_version": "TLSv1_2",
+                },
+            },
+        },
+    )
+
+    listener_config = broker_config.listeners["default"]
+    assert listener_config.max_tls_version is ListenerTLSVersion.TLSV1_2
+
+
+def test_broker_config_from_dict_rejects_invalid_max_tls_version() -> None:
+
+    with pytest.raises(ValueError, match="incorrect"):
+        _ = BrokerConfig.from_dict(
+            {
+                "listeners": {
+                    "default": {
+                        "bind": "127.0.0.1:8883",
+                        "max_tls_version": "incorrect",
+                    },
+                },
+            },
+        )
+
+
 def test_listener_config_rejects_missing_crl_fields(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="crlfile"):
         ListenerConfig(crlfile=tmp_path / "missing-ca.crl")
@@ -181,6 +215,128 @@ def test_broker_config_from_dict_fails_client_cert_option() -> None:
             },
         )
 
+
+def test_listener_config_normalizes_max_tls_version_string(tmp_path: Path) -> None:
+    certfile = tmp_path / "cert.pem"
+    keyfile = tmp_path / "key.pem"
+    certfile.write_text("cert", encoding="utf-8")
+    keyfile.write_text("key", encoding="utf-8")
+
+    listener = ListenerConfig(
+        certfile=certfile,
+        keyfile=keyfile,
+        max_tls_version="TLSv1_2",
+    )
+
+    assert listener.max_tls_version is ListenerTLSVersion.TLSV1_2
+
+
+def test_listener_config_rejects_invalid_max_tls_version_string() -> None:
+    with pytest.raises(ValueError, match="expected one of"):
+        ListenerConfig(max_tls_version="bogus")
+
+
+def test_listener_config_rejects_legacy_tls_max_tls_versions() -> None:
+    with pytest.raises(ValueError, match="expected one of"):
+        ListenerConfig(max_tls_version="TLSv1")
+
+
+@pytest.mark.parametrize(
+    ("max_tls_version", "tls_version"),
+    [
+        (ListenerTLSVersion.TLSV1_2, ssl.TLSVersion.TLSv1_2),
+        (ListenerTLSVersion.TLSV1_3, ssl.TLSVersion.TLSv1_3),
+    ],
+)
+def test_broker_ssl_context_applies_max_tls_version(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+    max_tls_version: ListenerTLSVersion,
+    tls_version: ssl.TLSVersion,
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(
+        ssl=True,
+        certfile=certfile,
+        keyfile=keyfile,
+        max_tls_version=max_tls_version,
+    )
+
+    ssl_context = unstarted_broker._create_ssl_context(listener)
+
+    assert ssl_context.maximum_version == tls_version
+
+
+def test_broker_ssl_context_default_max_tls_version_unchanged(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
+    default_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+
+    ssl_context = unstarted_broker._create_ssl_context(listener)
+
+    assert ssl_context.maximum_version == default_ctx.maximum_version
+
+
+def test_broker_ssl_context_invalid_max_tls_version_not_misreported_as_cert_error(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+) -> None:
+    certfile, keyfile = rsa_keys
+    listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
+    # Bypass __post_init__ normalization to prove lookup errors are attributed correctly.
+    listener.max_tls_version = "bogus"  # type: ignore[assignment]
+
+    with pytest.raises(BrokerError, match="Invalid listener max_tls_version") as exc_info:
+        unstarted_broker._create_ssl_context(listener)
+
+    assert "certfile" not in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_broker_ssl_context_tls12_ceiling_rejects_tls13_only_client(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+) -> None:
+    certfile, keyfile = rsa_keys
+    server_ctx = unstarted_broker._create_ssl_context(
+        ListenerConfig(
+            ssl=True,
+            certfile=certfile,
+            keyfile=keyfile,
+            max_tls_version=ListenerTLSVersion.TLSV1_2,
+        ),
+    )
+
+    client_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    client_ctx.check_hostname = False
+    client_ctx.verify_mode = ssl.CERT_NONE
+    client_ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+    client_ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+
+    async def close_client(_: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        writer.close()
+        await writer.wait_closed()
+
+    server = await asyncio.start_server(close_client, "127.0.0.1", 0, ssl=server_ctx)
+    server_socket = server.sockets[0]
+    port = server_socket.getsockname()[1]
+    try:
+        with pytest.raises((ssl.SSLError, ConnectionResetError)):
+            await asyncio.wait_for(
+                asyncio.open_connection(
+                    "127.0.0.1",
+                    port,
+                    ssl=client_ctx,
+                    server_hostname="localhost",
+                ),
+                timeout=5,
+            )
+    finally:
+        server.close()
+        await server.wait_closed()
 
 @pytest.mark.parametrize(
     ("client_cert", "verify_mode"),
