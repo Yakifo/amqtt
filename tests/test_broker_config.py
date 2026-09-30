@@ -250,6 +250,7 @@ def test_listener_config_rejects_legacy_tls_max_tls_versions() -> None:
 )
 def test_broker_ssl_context_applies_max_tls_version(
     rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
     max_tls_version: ListenerTLSVersion,
     tls_version: ssl.TLSVersion,
 ) -> None:
@@ -261,23 +262,27 @@ def test_broker_ssl_context_applies_max_tls_version(
         max_tls_version=max_tls_version,
     )
 
-    ssl_context = Broker._create_ssl_context(listener)
+    ssl_context = unstarted_broker._create_ssl_context(listener)
 
     assert ssl_context.maximum_version == tls_version
 
 
-def test_broker_ssl_context_default_max_tls_version_unchanged(rsa_keys: tuple[Path, Path]) -> None:
+def test_broker_ssl_context_default_max_tls_version_unchanged(
+    rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
+) -> None:
     certfile, keyfile = rsa_keys
     listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
     default_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 
-    ssl_context = Broker._create_ssl_context(listener)
+    ssl_context = unstarted_broker._create_ssl_context(listener)
 
     assert ssl_context.maximum_version == default_ctx.maximum_version
 
 
 def test_broker_ssl_context_invalid_max_tls_version_not_misreported_as_cert_error(
     rsa_keys: tuple[Path, Path],
+    unstarted_broker: Broker,
 ) -> None:
     certfile, keyfile = rsa_keys
     listener = ListenerConfig(ssl=True, certfile=certfile, keyfile=keyfile)
@@ -285,7 +290,7 @@ def test_broker_ssl_context_invalid_max_tls_version_not_misreported_as_cert_erro
     listener.max_tls_version = "bogus"  # type: ignore[assignment]
 
     with pytest.raises(BrokerError, match="Invalid listener max_tls_version") as exc_info:
-        Broker._create_ssl_context(listener)
+        unstarted_broker._create_ssl_context(listener)
 
     assert "certfile" not in str(exc_info.value)
 
