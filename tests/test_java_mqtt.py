@@ -13,7 +13,10 @@ from amqtt.client import MQTTClient
 from amqtt.mqtt.constants import QOS_1, QOS_2
 
 
-pytestmark = pytest.mark.extended
+pytestmark = [
+    pytest.mark.extended,
+    pytest.mark.timeout(60),
+]
 
 JAVA_CLIENT_SOURCE = Path(__file__).parent / "support" / "MqttInteropClient.java"
 JAVA_CLIENT_TIMEOUT_SECONDS = 10
