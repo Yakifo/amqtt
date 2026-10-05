@@ -570,9 +570,6 @@ class Broker:
             raise AMQTTError(exc) from exc
         except MQTTError as exc:
             self._pop_inbound_sni(ssl_object)
-            self.logger.warning(
-                f"Invalid connection from {format_client_message(address=remote_address, port=remote_port)}",
-            )
             await writer.close()
             raise MQTTError(exc) from exc
         except NoDataError as exc:

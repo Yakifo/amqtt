@@ -479,3 +479,34 @@ async def test_allowable_dollar_topics():
     await asyncio.sleep(0.1)
     await broker.shutdown()
     await asyncio.sleep(0.1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.sample("broker_connect_info_plugin.py")
+async def test_broker_connect_info_plugin():
+    broker_custom_plugin_script = SAMPLES_DIR / "broker_connect_info_plugin.py"
+    process = subprocess.Popen([sys.executable, broker_custom_plugin_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    await asyncio.sleep(2)
+
+    mqtt_31_connect = b"\x10\x1d\x00\x06MQIsdp\x03\x02\x00\x3c\x00\x0ftest-client-123"
+    reader, writer = await asyncio.open_connection("127.0.0.1", 1883)
+    try:
+        writer.write(mqtt_31_connect)
+        await writer.drain()
+        assert await reader.read() == b""
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+    process.send_signal(signal.SIGINT)
+    stdout, stderr = process.communicate()
+    stderr_text = stderr.decode("utf-8")
+    logger.debug(stderr_text)
+    assert (
+        "Client test-client-123 had invalid connection: "
+        "incorrect protocol name [MQIsdp] (must be MQTT), "
+        "incorrect protocol level [3] (must be 4)"
+    ) in stderr_text
+    assert "Broker closed" in stderr_text
+    assert "ERROR" not in stderr_text
+    assert "Exception" not in stderr_text
