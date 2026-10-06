@@ -75,6 +75,8 @@ logging.config.dictConfig(LOGGING_CONFIG)
 
 log = logging.getLogger(__name__)
 
+MQTT_31_CONNECT = b"\x10\x1b\x00\x04MQTT\x03\x02\x00\x3c\x00\x0ftest-client-123"
+
 
 # monkey patch MagicMock
 # taken from https://stackoverflow.com/questions/51394411/python-object-magicmock-cant-be-used-in-await-expression
@@ -204,6 +206,26 @@ async def test_client_connect(broker, mock_plugin_manager):
     events = [c[0][0] for c in broker.plugins_manager.fire_event.call_args_list]
     assert BrokerEvents.CLIENT_CONNECTED in events
     assert BrokerEvents.CLIENT_DISCONNECTED in events
+
+
+@pytest.mark.asyncio
+async def test_invalid_protocol_version_logs_one_warning(broker, caplog):
+    caplog.set_level(logging.WARNING, logger="amqtt.broker")
+    caplog.clear()
+
+    conn_reader, conn_writer = await asyncio.open_connection("127.0.0.1", 1883)
+    try:
+        conn_writer.write(MQTT_31_CONNECT)
+        await conn_writer.drain()
+
+        assert await conn_reader.read() == b"\x20\x02\x00\x01"
+    finally:
+        conn_writer.close()
+        await conn_writer.wait_closed()
+
+    warning_records = [record for record in caplog.records if record.name == "amqtt.broker" and record.levelno == logging.WARNING]
+    assert len(warning_records) == 1
+    assert "protocol 3 is unsupported, use level 4" in warning_records[0].message
 
 
 @pytest.mark.asyncio
