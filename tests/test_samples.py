@@ -498,6 +498,7 @@ async def test_broker_connect_info_plugin():
         writer.close()
         await writer.wait_closed()
 
+    await asyncio.sleep(1)
     process.send_signal(signal.SIGINT)
     stdout, stderr = process.communicate()
     stderr_text = stderr.decode("utf-8")
