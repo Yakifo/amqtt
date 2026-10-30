@@ -737,13 +737,7 @@ class Broker:
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
-                if disconnect_waiter in done:
-                    # handle the disconnection: normal or abnormal result, either way, the client is no longer connected
-                    await self._handle_disconnect(client_session, handler, disconnect_waiter)
-                    connected = False
-
-                    # no need to reschedule the `disconnect_waiter` since we're exiting the message loop
-
+                
                 if subscribe_waiter in done:
                     await self._handle_subscription(client_session, handler, subscribe_waiter)
                     subscribe_waiter = asyncio.ensure_future(handler.get_next_pending_subscription())
@@ -758,6 +752,12 @@ class Broker:
                     if not await self._handle_message_delivery(client_session, handler, wait_deliver):
                         break
                     wait_deliver = asyncio.ensure_future(handler.mqtt_deliver_next_message())
+                if disconnect_waiter in done:
+                    # handle the disconnection: normal or abnormal result, either way, the client is no longer connected
+                    await self._handle_disconnect(client_session, handler, disconnect_waiter)
+                    connected = False
+
+                    # no need to reschedule the `disconnect_waiter` since we're exiting the message loop
 
             except asyncio.CancelledError:
                 if self.logger.isEnabledFor(logging.DEBUG):
