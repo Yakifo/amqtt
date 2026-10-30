@@ -742,7 +742,7 @@ class Broker:
                     await self._handle_disconnect(client_session, handler, disconnect_waiter)
                     connected = False
 
-                    # no need to reschedule the `disconnect_waiter` since we're exiting the message loop
+                    continue
 
                 if subscribe_waiter in done:
                     await self._handle_subscription(client_session, handler, subscribe_waiter)
@@ -768,8 +768,25 @@ class Broker:
         for waiter in pending_waiters:
             waiter.cancel()
         await asyncio.gather(*pending_waiters, return_exceptions=True)
-
     async def _handle_disconnect(
+        self,
+        client_session: Session,
+        handler: BrokerProtocolHandler,
+        disconnect_waiter: asyncio.Future[Any],
+    ) -> None:
+        """Run disconnect cleanup once for this connection."""
+        if handler.disconnect_cleanup_task is None:
+            handler.disconnect_cleanup_task = asyncio.create_task(
+                self._finish_disconnect(
+                    client_session,
+                    handler,
+                    disconnect_waiter,
+                )
+            )
+
+        # Cancelling one caller must not cancel shared connection cleanup.
+        await asyncio.shield(handler.disconnect_cleanup_task)
+    async def _finish_disconnect(
         self,
         client_session: Session,
         handler: BrokerProtocolHandler,
@@ -819,6 +836,57 @@ class Broker:
                                               client_id=client_session.client_id,
                                               client_session=client_session)
 
+    async def disconnect_session(
+        self,
+        client_id: str,
+        *,
+        reason: str | None = None,
+    ) -> bool:
+        """Disconnect a connected client through the broker lifecycle.
+
+        Returns False if the client is absent or already disconnected.
+        Returns True after disconnect cleanup completes.
+
+        Forced disconnection follows the abnormal-disconnect path:
+        a configured Last Will may be published.
+
+        The reason is logged locally; it is not sent to the MQTT client.
+        """
+        entry = self._sessions.get(client_id)
+        if entry is None:
+            return False
+
+        session, handler = entry
+
+        # Another caller may already be disconnecting this connection.
+        if handler.disconnect_cleanup_task is not None:
+            await asyncio.shield(handler.disconnect_cleanup_task)
+            return True
+
+        if not session.transitions.is_connected():
+            return False
+
+        self.logger.info(
+            "Disconnecting client %s: %s",
+            client_id,
+            reason or "administrative disconnect",
+        )
+
+        # Wake the connection's message loop so it exits.
+        await handler.handle_disconnect(None)
+
+        # Use the existing abnormal-disconnect cleanup.
+        disconnect_waiter: asyncio.Future[Any] = (
+            asyncio.get_running_loop().create_future()
+        )
+        disconnect_waiter.set_result(None)
+
+        await self._handle_disconnect(
+            session,
+            handler,
+            disconnect_waiter,
+        )
+        return True
     async def _handle_subscription(
         self,
         client_session: Session,
