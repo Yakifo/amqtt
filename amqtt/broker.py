@@ -742,7 +742,7 @@ class Broker:
                     await self._handle_disconnect(client_session, handler, disconnect_waiter)
                     connected = False
 
-                    continue
+                    # no need to reschedule the `disconnect_waiter` since we're exiting the message loop
 
                 if subscribe_waiter in done:
                     await self._handle_subscription(client_session, handler, subscribe_waiter)
