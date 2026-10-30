@@ -39,7 +39,7 @@ class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
         super()._init_session(session)
 
         # client should use keep alive with a timeout margin so that pings are sent before keep alive times out
-        self._keepalive_timeout: float | None = self.session.keep_alive - self.handler_config.ping_margin
+        self._keepalive_timeout: float | None = self.session.keep_alive - self.handler_config.ping_margin  # type: ignore[union-attr] # handled in super()
         if self._keepalive_timeout is not None and self._keepalive_timeout <= 0:
             self._keepalive_timeout = None
 

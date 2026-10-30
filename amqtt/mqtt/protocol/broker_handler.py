@@ -58,12 +58,11 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
         self._pending_subscriptions: Queue[Subscription] = Queue()
         self._pending_unsubscriptions: Queue[UnSubscription] = Queue()
 
-
     def _init_session(self, session: Session) -> None:
         super()._init_session(session)
 
         # broker should use keep alive timeout factor [MQTT 3.1.1 §3.1.2.10]
-        self._keepalive_timeout: float | None = self.session.keep_alive * _BROKER_KEEP_ALIVE_TIMEOUT_FACTOR
+        self._keepalive_timeout: float | None = self.session.keep_alive * _BROKER_KEEP_ALIVE_TIMEOUT_FACTOR  # type: ignore[union-attr] # handled in super()
         if self._keepalive_timeout is not None and self._keepalive_timeout <= 0:
             self._keepalive_timeout = None
 

@@ -131,7 +131,6 @@ class ProtocolHandler(Generic[C]):
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
 
-
     def _init_session(self, session: Session) -> None:
         if not session:
             msg = "Session cannot be None"

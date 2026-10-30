@@ -414,7 +414,8 @@ class ClientConfig(Dictable):
     ping_delay: int | None = None
     """*Deprecated* Use `ping_margin` instead"""
     ping_margin: int = 1
-    """Auto-ping before keep-alive times out. Setting to 0 will send ping equal to the connection's keep-alive value which may lead to premature broker disconnection."""
+    """Auto-ping before keep-alive times out. Setting to 0 will send ping equal to the connection's
+     keep-alive value which may lead to premature broker disconnection."""
     default_qos: int | None = QOS_0
     """Default QoS for messages published."""
     default_retain: bool | None = False
@@ -489,10 +490,10 @@ class ClientConfig(Dictable):
         if d is None:
             return ClientConfig()
 
-        if 'ping_delay' in d and 'ping_margin' in d:
-            warnings.warn("'ping_delay' is deprecated and should not be used in conjunction with `ping_margin`. ",
+        if "ping_delay" in d and "ping_margin" in d:
+            warnings.warn("'ping_delay' is deprecated and should not be used in conjunction with 'ping_margin'. ",
                           DeprecationWarning, stacklevel=1)
-            del d['ping_delay']
+            del d["ping_delay"]
 
         return dict_to_dataclass(data_class=ClientConfig,
                                  data=d,
