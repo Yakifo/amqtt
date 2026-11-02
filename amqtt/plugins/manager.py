@@ -78,7 +78,6 @@ class PluginManager(Generic[C]):
 
         self._load_plugins(namespace)
 
-
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
 
