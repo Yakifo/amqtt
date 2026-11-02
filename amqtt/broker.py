@@ -1137,9 +1137,10 @@ class Broker:
                         task.result()
                     except CancelledError:
                         self.logger.info(f"Task has been cancelled: {task}")
+                    except PubAckTimeoutError as exc:
+                        self.logger.info(f"Task timed out awaiting PUBACK during shutdown: {exc}")
                     except Exception:  # pylint: disable=W0718
                         self.logger.exception(f"Task failed during broadcast shutdown: {task}")
-
                 if pending:
                     self.logger.warning(f"{len(pending)} broadcast task(s) still pending after shutdown")
 
