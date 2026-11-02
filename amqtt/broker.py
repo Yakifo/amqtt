@@ -737,7 +737,6 @@ class Broker:
                     return_when=asyncio.FIRST_COMPLETED,
                 )
 
-                
                 if subscribe_waiter in done:
                     await self._handle_subscription(client_session, handler, subscribe_waiter)
                     subscribe_waiter = asyncio.ensure_future(handler.get_next_pending_subscription())
@@ -768,6 +767,7 @@ class Broker:
         for waiter in pending_waiters:
             waiter.cancel()
         await asyncio.gather(*pending_waiters, return_exceptions=True)
+
     async def _handle_disconnect(
         self,
         client_session: Session,
@@ -786,6 +786,7 @@ class Broker:
 
         # Cancelling one caller must not cancel shared connection cleanup.
         await asyncio.shield(handler.disconnect_cleanup_task)
+
     async def _finish_disconnect(
         self,
         client_session: Session,
@@ -887,6 +888,7 @@ class Broker:
             disconnect_waiter,
         )
         return True
+
     async def _handle_subscription(
         self,
         client_session: Session,
