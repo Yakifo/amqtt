@@ -78,10 +78,6 @@ class PluginManager(Generic[C]):
 
         self._load_plugins(namespace)
 
-        if self.get_plugin("BrokerSysPlugin"):
-            warnings.warn("`BrokerSysPlugin`: `psutil` will be removed as a project-level dependency in future versions. "
-                          "Please explicitly update your environment to use the optional dependency "
-                          "to ensure compatibility: 'amqtt[dollarsys]'", DeprecationWarning, stacklevel=4)
 
         self._fired_events: list[asyncio.Future[Any]] = []
         plugins_manager[namespace] = self
