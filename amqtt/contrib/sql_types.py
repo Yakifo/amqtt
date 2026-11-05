@@ -45,4 +45,3 @@ class DataClassListJSON(TypeDecorator[list[dict[str, Any]]]):
     def python_type(self) -> type:
         # Required by TypeEngine to indicate the expected Python type.
         return list
-    
