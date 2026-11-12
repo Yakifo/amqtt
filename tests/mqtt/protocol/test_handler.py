@@ -127,6 +127,7 @@ class ProtocolHandlerTest(unittest.TestCase):
             session.keep_alive = 30
             handler = ProtocolHandler(self.plugin_manager)
             handler.attach(session, BlockingReader(), BufferWriter())
+            handler._keepalive_timeout = 1
 
             before_start = self.loop.time()
             await handler.start()

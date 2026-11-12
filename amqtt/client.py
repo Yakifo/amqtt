@@ -616,7 +616,7 @@ class MQTTClient:
 
         session.clean_session = self.config.get("cleansession", True)
 
-        session.keep_alive = self.config["keep_alive"] - self.config["ping_delay"]
+        session.keep_alive = self.config["keep_alive"]
 
         if "will" in self.config:
             session.will_flag = True

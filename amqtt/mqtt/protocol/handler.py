@@ -79,6 +79,7 @@ class ProtocolHandlerConfig:
     qos1_puback_timeout: int | float | None = DEFAULT_QOS1_PUBACK_TIMEOUT
     qos2_pubrec_timeout: int | float | None = DEFAULT_QOS2_PUBREC_TIMEOUT
     qos2_pubcomp_timeout: int | float | None = DEFAULT_QOS2_PUBCOMP_TIMEOUT
+    ping_margin: int = 0
 
     @classmethod
     def init_from_config(cls, config: BrokerConfig | ClientConfig) -> "ProtocolHandlerConfig":
@@ -86,6 +87,7 @@ class ProtocolHandlerConfig:
             qos1_puback_timeout=config.get("qos1_puback_timeout", DEFAULT_QOS1_PUBACK_TIMEOUT),
             qos2_pubrec_timeout=config.get("qos2_pubrec_timeout", DEFAULT_QOS2_PUBREC_TIMEOUT),
             qos2_pubcomp_timeout=config.get("qos2_pubcomp_timeout", DEFAULT_QOS2_PUBCOMP_TIMEOUT),
+            ping_margin=config.get("ping_margin", 0)
         )
 
 
@@ -100,23 +102,15 @@ class ProtocolHandler(Generic[C]):
         handler_config: ProtocolHandlerConfig | None = None
     ) -> None:
         self.logger: logging.Logger | logging.LoggerAdapter[logging.Logger] = logging.getLogger(__name__)
-        if session is not None:
-            self._init_session(session)
-        else:
-            self.session: Session | None = None
+        self.handler_config = handler_config or ProtocolHandlerConfig()
+        self.plugins_manager: PluginManager[C] = plugins_manager
+
         self.reader: ReaderAdapter | None = None
         self.writer: WriterAdapter | None = None
-        self.plugins_manager: PluginManager[C] = plugins_manager
-        self.handler_config = handler_config or ProtocolHandlerConfig()
-
-        try:
-            self._loop = loop if loop is not None else asyncio.get_running_loop()
-        except RuntimeError:
-            self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
 
         self._reader_task: asyncio.Task[None] | None = None
         self._keepalive_watcher: asyncio.Task[None] | None = None
+        self._keepalive_timeout: float | None = None
         self._reader_ready: asyncio.Event | None = None
         self._reader_stopped = asyncio.Event()
         self._puback_waiters: dict[int, asyncio.Future[PubackPacket]] = {}
@@ -126,6 +120,17 @@ class ProtocolHandler(Generic[C]):
         self._write_lock = asyncio.Lock()
         self._stopping = False
 
+        if session is not None:
+            self._init_session(session)
+        else:
+            self.session: Session | None = None
+
+        try:
+            self._loop = loop if loop is not None else asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
+
     def _init_session(self, session: Session) -> None:
         if not session:
             msg = "Session cannot be None"
@@ -133,9 +138,6 @@ class ProtocolHandler(Generic[C]):
         log = logging.getLogger(__name__)
         self.session = session
         self.logger = logging.LoggerAdapter(log, {"client_id": self.session.client_id})
-        self.keepalive_timeout: int | None = self.session.keep_alive
-        if self.keepalive_timeout <= 0:
-            self.keepalive_timeout = None
 
     def attach(self, session: Session, reader: ReaderAdapter, writer: WriterAdapter) -> None:
         if self.session:
@@ -154,11 +156,11 @@ class ProtocolHandler(Generic[C]):
         return bool(self.session)
 
     async def timeout_watcher(self) -> None:
-        while self._is_attached() and self.keepalive_timeout is not None:
-            await asyncio.sleep(self.keepalive_timeout)
+        while self._is_attached() and self._keepalive_timeout is not None:
+            await asyncio.sleep(self._keepalive_timeout)
             if self.session is None:
                 break
-            if self.session.last_write_at + self.keepalive_timeout <= self._loop.time():
+            if self.session.last_write_at + self._keepalive_timeout <= self._loop.time():
                 self.handle_write_timeout()
 
     async def start(self) -> None:
@@ -170,7 +172,7 @@ class ProtocolHandler(Generic[C]):
         self._reader_stopped = asyncio.Event()
         self._reader_task = asyncio.create_task(self._reader_loop())
         await self._reader_ready.wait()
-        if self._loop is not None and self.keepalive_timeout is not None:
+        if self._loop is not None and self._keepalive_timeout is not None:
             if self.session is None:
                 msg = "Session is not initialized."
                 raise AMQTTError(msg)
@@ -505,9 +507,6 @@ class ProtocolHandler(Generic[C]):
 
         self.logger.debug(f"{self.session.client_id} Starting reader coro")
         running_tasks: collections.deque[asyncio.Task[None]] = collections.deque()
-        keepalive_timeout: int | None = self.session.keep_alive
-        if keepalive_timeout is not None and keepalive_timeout <= 0:
-            keepalive_timeout = None
         while True:
             try:
                 self._reader_ready.set()
@@ -518,7 +517,7 @@ class ProtocolHandler(Generic[C]):
                 if self.reader is None:
                     self.logger.warning("Reader is not initialized!")
                     break
-                fixed_header = await asyncio.wait_for(MQTTFixedHeader.from_stream(self.reader), timeout=keepalive_timeout)
+                fixed_header = await asyncio.wait_for(MQTTFixedHeader.from_stream(self.reader), timeout=self._keepalive_timeout)
                 if not fixed_header:
                     self.logger.debug(f"{self.session.client_id} No more data (EOF received), stopping reader coro")
                     break

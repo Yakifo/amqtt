@@ -411,8 +411,11 @@ class ClientConfig(Dictable):
 
     keep_alive: int | None = 10
     """Keep-alive timeout sent to the broker."""
-    ping_delay: int | None = 1
-    """Auto-ping delay before keep-alive timeout. Setting to 0 will disable which may lead to broker disconnection."""
+    ping_delay: int | None = None
+    """*Deprecated* Use `ping_margin` instead"""
+    ping_margin: int = 1
+    """Auto-ping before keep-alive times out. Setting to 0 will send ping equal to the connection's
+     keep-alive value which may lead to premature broker disconnection."""
     default_qos: int | None = QOS_0
     """Default QoS for messages published."""
     default_retain: bool | None = False
@@ -471,6 +474,12 @@ class ClientConfig(Dictable):
                           DeprecationWarning, stacklevel=2)
             self.connection = self.broker
 
+        if self.ping_delay is not None:
+            warnings.warn("'ping_delay' is deprecated, please use 'ping_margin' instead. "
+                          "Support for 'ping_delay' will be removed in a future release.",
+                          DeprecationWarning, stacklevel=2)
+            self.ping_margin = self.ping_delay
+
         if bool(not self.connection.keyfile) ^ bool(not self.connection.certfile):
             msg = "Connection key and certificate files are _both_ required."
             raise ValueError(msg)
@@ -480,6 +489,11 @@ class ClientConfig(Dictable):
         """Create a client config from a dictionary."""
         if d is None:
             return ClientConfig()
+
+        if "ping_delay" in d and "ping_margin" in d:
+            warnings.warn("'ping_delay' is deprecated and should not be used in conjunction with 'ping_margin'. ",
+                          DeprecationWarning, stacklevel=1)
+            del d["ping_delay"]
 
         return dict_to_dataclass(data_class=ClientConfig,
                                  data=d,

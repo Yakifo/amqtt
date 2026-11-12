@@ -35,6 +35,14 @@ class ClientProtocolHandler(ProtocolHandler["ClientContext"]):
         self._unsubscriptions_waiter: dict[int, asyncio.Future[Any]] = {}
         self._disconnect_waiter: asyncio.Future[Any] | None = asyncio.Future()
 
+    def _init_session(self, session: Session) -> None:
+        super()._init_session(session)
+
+        # client should use keep alive with a timeout margin so that pings are sent before keep alive times out
+        self._keepalive_timeout: float | None = self.session.keep_alive - self.handler_config.ping_margin  # type: ignore[union-attr] # handled in super()
+        if self._keepalive_timeout is not None and self._keepalive_timeout <= 0:
+            self._keepalive_timeout = None
+
     async def start(self) -> None:
         await super().start()
         if self._disconnect_waiter and self._disconnect_waiter.cancelled():
