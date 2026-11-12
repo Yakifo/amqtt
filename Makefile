@@ -1,7 +1,7 @@
 # Image name and tag
 IMAGE_NAME := amqtt
 IMAGE_TAG := latest
-VERSION_TAG := 0.12.1
+VERSION_TAG := 0.12.2
 REGISTRY := amqtt/$(IMAGE_NAME)
 
 # Platforms to build for
