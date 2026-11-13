@@ -45,6 +45,7 @@ nav:
           - Custom: plugins/custom_plugins.md
           - Contributed:
             - plugins/contrib.md
+            - Throttle: plugins/throttle.md
             - Database Auth: plugins/auth_db.md
             - HTTP Auth: plugins/http.md
             - LDAP Auth: plugins/ldap.md
