@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.12.2
+
+- [PR #403](https://github.com/Yakifo/amqtt/pull/403) session object includes inbound SNI [#400](https://github.com/Yakifo/amqtt/issues/400)
+- [PR #402](https://github.com/Yakifo/amqtt/pull/402) message retry for QoS 1 & 2 on broker/client reconnection [#401](https://github.com/Yakifo/amqtt/issues/401)
+- [PR #399](https://github.com/Yakifo/amqtt/pull/399) for a session that persists, refresh the ssl object to the latest [#389](https://github.com/Yakifo/amqtt/issues/389)
+- [PR #397](https://github.com/Yakifo/amqtt/pull/397) configurable qos1 puback timeout [#391](https://github.com/Yakifo/amqtt/issues/391)
+- [PR #396](https://github.com/Yakifo/amqtt/pull/396) add ssl context to ListenerConfig API [#390](https://github.com/Yakifo/amqtt/issues/390)
+- [PR #395](https://github.com/Yakifo/amqtt/pull/395) example for reloadable TLS [#394](https://github.com/Yakifo/amqtt/issues/394)
+- [PR #393](https://github.com/Yakifo/amqtt/pull/393) adding config to SYS plugin enabling setting of QoS [#392](https://github.com/Yakifo/amqtt/pull/392)
+- [PR #388](https://github.com/Yakifo/amqtt/pull/388) configurable mTLS client certificate policy and CRL support [#387](https://github.com/Yakifo/amqtt/issues/387)
+- [PR #386](https://github.com/Yakifo/amqtt/pull/386) performance improvement: prevent f-string rendering when debug is disabled 
+- [PR #385](https://github.com/Yakifo/amqtt/pull/385) performance improvement: timeout task create/cancels
+- [PR #416](https://github.com/Yakifo/amqtt/pull/416) client and broker keep-alive timeout values
+- [PR #408](https://github.com/Yakifo/amqtt/pull/408) code scanning vulnerabilities (documentation only)
+- [PR #407](https://github.com/Yakifo/amqtt/pull/407) reduce noise and clarify warning messages
+- [PR #406](https://github.com/Yakifo/amqtt/pull/406) add listener maximum_version TLS ceiling option
+- [PR #405](https://github.com/Yakifo/amqtt/pull/405) distinguish acquire vs release connection log messages
+
+### Test Coverage
+
+All pull requests are accompanied by tests that cover new functionality; regression tests are also included.
+
+### Deprecations & Migrations
+
+Client configuration option `ping_delay` has been marked as deprecated and will be removed in a future release; it has been renamed to `ping_margin`; both are acceptable options in v0.12.2
+
+### Retired
+
+none
+
 ## 0.12.1
 
 This is a security and maintenance release addressing a vulnerability in the handling of QoS2 messages.
