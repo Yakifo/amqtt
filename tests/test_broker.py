@@ -1320,3 +1320,80 @@ async def test_client_without_peer_info(broker, mock_plugin_manager):
         with pytest.raises(ConnectError):
             await client.connect("mqtt://127.0.0.1/")
             await asyncio.sleep(0.01)
+
+
+@pytest.mark.asyncio
+async def test_disconnect_session_closes_only_selected_client(
+    broker, mock_plugin_manager
+):
+    target = MQTTClient(
+        client_id="disconnect-target",
+        config={"auto_reconnect": False},
+    )
+    other = MQTTClient(
+        client_id="disconnect-other",
+        config={"auto_reconnect": False},
+    )
+
+    async def wait_for_disconnect():
+        while target.session.transitions.is_connected():
+            await asyncio.sleep(0.01)
+
+    try:
+        await target.connect("mqtt://127.0.0.1:1883")
+        await other.connect("mqtt://127.0.0.1:1883")
+        await other.subscribe([("test/disconnect", QOS_1)])
+
+        # Establish that both connections work before disconnection.
+        await target.publish("test/disconnect", b"before", qos=QOS_1)
+        message = await other.deliver_message(timeout_duration=2)
+        assert message is not None
+        assert message.data == b"before"
+
+        target_session = broker.sessions["disconnect-target"][0]
+
+        result = await asyncio.wait_for(
+            broker.disconnect_session(
+                "disconnect-target",
+                reason="certificate revoked",
+            ),
+            timeout=2,
+        )
+
+        assert result is True
+        assert target_session.transitions.is_disconnected()
+
+        # Verify the client actually observes the connection closing.
+        await asyncio.wait_for(wait_for_disconnect(), timeout=2)
+
+        # Verify another connection remains usable.
+        await other.publish("test/disconnect", b"after", qos=QOS_1)
+        message = await other.deliver_message(timeout_duration=2)
+        assert message is not None
+        assert message.data == b"after"
+
+        # Verify the broker notified its plugin manager exactly once.
+        disconnect_events = [
+            event_call
+            for event_call in
+            mock_plugin_manager.return_value.fire_event.call_args_list
+            if event_call.args
+            and event_call.args[0] == BrokerEvents.CLIENT_DISCONNECTED
+            and event_call.kwargs.get("client_id") == "disconnect-target"
+        ]
+        assert len(disconnect_events) == 1
+        assert (
+            disconnect_events[0].kwargs["client_session"]
+            is target_session
+        )
+
+    finally:
+        for client in (target, other):
+            if client.session and client.session.transitions.is_connected():
+                await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_session_unknown_client(broker):
+    result = await broker.disconnect_session("does-not-exist")
+    assert result is False

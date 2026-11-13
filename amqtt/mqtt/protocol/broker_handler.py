@@ -55,6 +55,7 @@ class BrokerProtocolHandler(ProtocolHandler["BrokerContext"]):
     ) -> None:
         super().__init__(plugins_manager, session, loop, handler_config)
         self._disconnect_waiter: asyncio.Future[DisconnectPacket | None] | None = None
+        self.disconnect_cleanup_task: asyncio.Task[None] | None = None
         self._pending_subscriptions: Queue[Subscription] = Queue()
         self._pending_unsubscriptions: Queue[UnSubscription] = Queue()
 
