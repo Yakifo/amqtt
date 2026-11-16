@@ -323,7 +323,7 @@ async def test_broker_sys_plugin_without_interval_set(caplog) -> None:
 
 
 @pytest.mark.asyncio
-async def test_broker_sys_psutil_deprecation_warning() -> None:
+async def test_broker_sys_no_psutil_deprecation_warning() -> None:
 
 
     with_sys_config = {
@@ -345,8 +345,7 @@ async def test_broker_sys_psutil_deprecation_warning() -> None:
         ]
     }
 
-
-    with pytest.warns(DeprecationWarning):
+    with does_not_warn(DeprecationWarning):
         _ = Broker(plugin_namespace='tests.mock_plugins', config=with_sys_config)
 
     with does_not_warn():
