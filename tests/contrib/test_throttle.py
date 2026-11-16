@@ -1,10 +1,14 @@
 
+import asyncio
 import logging
 
 import pytest
 
+from amqtt.broker import Broker
+from amqtt.client import MQTTClient
 from amqtt.contexts import Action, BaseContext
 from amqtt.contrib.throttle.plugin import ThrottlePlugin
+from amqtt.mqtt.constants import QOS_0
 from amqtt.session import Session
 from amqtt.contrib.throttle.limiters import (
     TokenBucketRateLimiter,
@@ -240,3 +244,65 @@ def test_window_limiter_slides_over_time(monkeypatch):
     current_time[0] = 10
     assert limiter.allow("client-1") is True  # t=0 has expired
     assert limiter.allow("client-1") is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("algorithm", ["token_bucket", "sliding_window"])
+async def test_throttle_plugin_limits_publications_per_client(algorithm):
+    config = {
+        "listeners": {
+            "default": {"type": "tcp", "bind": "127.0.0.1:0"},
+        },
+        "plugins": {
+            "amqtt.plugins.authentication.AnonymousAuthPlugin": {"allow_anonymous": True},
+            "amqtt.contrib.throttle.plugin.ThrottlePlugin": {
+                "algorithm": algorithm,
+                "message_limit": 1,
+                "time_window": 60,
+                "max_tokens": 1,
+            },
+        },
+    }
+    broker = Broker(config=config)
+    clients: list[MQTTClient] = []
+
+    try:
+        await broker.start()
+        throttle_plugin = broker.plugins_manager.get_plugin("ThrottlePlugin")
+        assert isinstance(throttle_plugin, ThrottlePlugin)
+
+        port = broker._servers["default"].instance.sockets[0].getsockname()[1]
+        broker_uri = f"mqtt://127.0.0.1:{port}/"
+
+        subscriber = MQTTClient(client_id="throttle-subscriber", config={"auto_reconnect": False})
+        await subscriber.connect(broker_uri)
+        clients.append(subscriber)
+        assert await subscriber.subscribe([("throttle/test", QOS_0)]) == [QOS_0]
+
+        publisher_one = MQTTClient(client_id="throttle-publisher-one", config={"auto_reconnect": False})
+        await publisher_one.connect(broker_uri)
+        clients.append(publisher_one)
+
+        publisher_two = MQTTClient(client_id="throttle-publisher-two", config={"auto_reconnect": False})
+        await publisher_two.connect(broker_uri)
+        clients.append(publisher_two)
+
+        await publisher_one.publish("throttle/test", b"first", QOS_0)
+        message = await subscriber.deliver_message(timeout_duration=1)
+        assert message is not None
+        assert message.data == b"first"
+
+        await publisher_one.publish("throttle/test", b"limited", QOS_0)
+        with pytest.raises(asyncio.TimeoutError):
+            await subscriber.deliver_message(timeout_duration=0.1)
+
+        await publisher_two.publish("throttle/test", b"independent", QOS_0)
+        message = await subscriber.deliver_message(timeout_duration=1)
+        assert message is not None
+        assert message.data == b"independent"
+    finally:
+        try:
+            await asyncio.gather(*(client.disconnect() for client in clients), return_exceptions=True)
+        finally:
+            if broker.transitions.is_started():
+                await broker.shutdown()
