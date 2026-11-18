@@ -13,8 +13,8 @@ from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from amqtt.contexts import Action
-from amqtt.contrib import DataClassListJSON
 from amqtt.contrib.auth_db.hasher import LegacyPasslibPBKDF2Hasher, LegacyPasslibScryptHasher
+from amqtt.contrib.sql_types import DataClassListJSON
 from amqtt.plugins import TopicMatcher
 
 logger = logging.getLogger(__name__)

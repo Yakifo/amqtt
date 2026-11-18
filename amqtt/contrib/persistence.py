@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from amqtt.broker import BrokerContext, RetainedApplicationMessage
-from amqtt.contrib import DataClassListJSON
+from amqtt.contrib.sql_types import DataClassListJSON
 from amqtt.errors import PluginError, PluginInitError
 from amqtt.plugins.base import BasePlugin
 from amqtt.session import Session
