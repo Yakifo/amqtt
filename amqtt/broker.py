@@ -236,6 +236,10 @@ class Broker:
         self._init_states()
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
+        # Filters of _subscriptions that contain a wildcard. Only these need matching
+        # against a published topic; any other filter matches only an identical topic,
+        # which is a dictionary lookup.
+        self._wildcard_filters: set[str] = set()
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
 
         # Broadcast queue for outgoing messages
@@ -279,6 +283,7 @@ class Broker:
         try:
             self._sessions.clear()
             self._subscriptions.clear()
+            self._wildcard_filters.clear()
             self._retained_messages.clear()
             self.transitions.start()
             if self.logger.isEnabledFor(logging.DEBUG):
@@ -1013,6 +1018,8 @@ class Broker:
         qos = min(qos, max_qos)
         if topic_filter not in self._subscriptions:
             self._subscriptions[topic_filter] = []
+            if "+" in topic_filter or "#" in topic_filter:
+                self._wildcard_filters.add(topic_filter)
         if all(s.client_id != session.client_id for s, _ in self._subscriptions[topic_filter]):
             self._subscriptions[topic_filter].append((session, qos))
         else:
@@ -1065,6 +1072,7 @@ class Broker:
         for topic in filter_queue:
             if not self._subscriptions[topic]:
                 del self._subscriptions[topic]
+                self._wildcard_filters.discard(topic)
 
     def _del_subscription(self, a_filter: str, session: Session) -> int:
         """Delete a session subscription on a given topic.
@@ -1150,7 +1158,7 @@ class Broker:
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(f"Processing broadcast message: {broadcast}")
 
-        for k_filter, subscriptions in self._subscriptions.items():
+        for k_filter, subscriptions in self._candidate_subscriptions(broadcast["topic"]):
 
             # Skip all subscriptions which do not match the topic
             if not self._matches(broadcast["topic"], k_filter):
@@ -1200,6 +1208,24 @@ class Broker:
                         ),
                     )
                     running_tasks.append(task)
+
+    def _candidate_subscriptions(self, topic: str) -> list[tuple[str, list[tuple[Session, int]]]]:
+        """Topic filters that can match `topic`, with their subscriptions.
+
+        A filter without a wildcard matches only the identical topic, so it is found
+        by lookup; only wildcard filters are tested. The cost per message is then
+        independent of the number of distinct exact filters (one per device in a
+        typical deployment). Callers still apply `_matches` to every candidate.
+        """
+        candidates = []
+        exact = self._subscriptions.get(topic)
+        if exact is not None:
+            candidates.append((topic, exact))
+        for k_filter in self._wildcard_filters:
+            subscriptions = self._subscriptions.get(k_filter)
+            if subscriptions is not None:
+                candidates.append((k_filter, subscriptions))
+        return candidates
 
     async def _retain_broadcast_message(self, broadcast: dict[str, Any], qos: int, target_session: Session) -> None:
         if self.logger.isEnabledFor(logging.DEBUG):

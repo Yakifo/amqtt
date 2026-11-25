@@ -1320,3 +1320,44 @@ async def test_client_without_peer_info(broker, mock_plugin_manager):
         with pytest.raises(ConnectError):
             await client.connect("mqtt://127.0.0.1/")
             await asyncio.sleep(0.01)
+
+
+@pytest.mark.asyncio
+async def test_exact_and_wildcard_subscribers_receive_only_matching_topics(broker):
+    exact_1, exact_2, wildcard = MQTTClient(), MQTTClient(), MQTTClient()
+    await exact_1.connect("mqtt://127.0.0.1")
+    await exact_2.connect("mqtt://127.0.0.1")
+    await wildcard.connect("mqtt://127.0.0.1")
+    assert await exact_1.subscribe([("devices/1/cmd", QOS_0)]) == [QOS_0]
+    assert await exact_2.subscribe([("devices/2/cmd", QOS_0)]) == [QOS_0]
+    assert await wildcard.subscribe([("devices/+/cmd", QOS_0)]) == [QOS_0]
+
+    await _client_publish("devices/1/cmd", b"one", QOS_0)
+    await _client_publish("devices/3/cmd", b"three", QOS_0)
+
+    message = await exact_1.deliver_message(timeout_duration=2)
+    assert message is not None and message.topic == "devices/1/cmd"
+    received = {(await wildcard.deliver_message(timeout_duration=2)).topic for _ in range(2)}
+    assert received == {"devices/1/cmd", "devices/3/cmd"}
+    with pytest.raises(asyncio.TimeoutError):
+        await exact_2.deliver_message(timeout_duration=0.5)
+
+    for client in (exact_1, exact_2, wildcard):
+        await client.disconnect()
+    await asyncio.sleep(0.1)
+
+
+@pytest.mark.asyncio
+async def test_wildcard_filter_index_follows_subscriptions(broker):
+    client = MQTTClient()
+    await client.connect("mqtt://127.0.0.1", cleansession=True)
+    await client.subscribe([("a/b", QOS_0), ("a/#", QOS_0), ("+/b", QOS_0)])
+    assert broker._wildcard_filters == {"a/#", "+/b"}
+    assert [f for f, _ in broker._candidate_subscriptions("a/b")][0] == "a/b"
+    assert {f for f, _ in broker._candidate_subscriptions("a/b")} == {"a/b", "a/#", "+/b"}
+    assert {f for f, _ in broker._candidate_subscriptions("x/y")} == {"a/#", "+/b"}
+
+    await client.disconnect()
+    await asyncio.sleep(1.5)  # the session monitor removes clean sessions once a second
+    assert broker._subscriptions == {}
+    assert broker._wildcard_filters == set()
