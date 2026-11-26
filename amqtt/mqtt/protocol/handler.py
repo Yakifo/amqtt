@@ -1,6 +1,7 @@
 import asyncio
 from asyncio import InvalidStateError, QueueFull
 import collections
+from contextlib import suppress
 from dataclasses import dataclass
 import itertools
 import logging
@@ -497,6 +498,22 @@ class ProtocolHandler(Generic[C]):
         else:
             self.logger.debug("Unknown direction!")
 
+    async def _read_fixed_header(self, reader: ReaderAdapter) -> MQTTFixedHeader | None:
+        # A keep-alive check must not discard bytes already consumed from a
+        # fragmented fixed header. Only cancel this read when the reader stops.
+        read_task = asyncio.create_task(MQTTFixedHeader.from_stream(reader))
+        try:
+            while True:
+                done, _ = await asyncio.wait((read_task,), timeout=self._keepalive_timeout)
+                if done:
+                    return read_task.result()
+                self.handle_read_timeout()
+        finally:
+            if not read_task.done():
+                read_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await read_task
+
     async def _reader_loop(self) -> None:
         if self.session is None:
             msg = "Session is not initialized."
@@ -517,7 +534,7 @@ class ProtocolHandler(Generic[C]):
                 if self.reader is None:
                     self.logger.warning("Reader is not initialized!")
                     break
-                fixed_header = await asyncio.wait_for(MQTTFixedHeader.from_stream(self.reader), timeout=self._keepalive_timeout)
+                fixed_header = await self._read_fixed_header(self.reader)
                 if not fixed_header:
                     self.logger.debug(f"{self.session.client_id} No more data (EOF received), stopping reader coro")
                     break
