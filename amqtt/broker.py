@@ -896,7 +896,9 @@ class Broker:
             self.logger.warning(
                 f"[MQTT-4.7.2-1] - {client_session.client_id} cannot use a topic with a leading $ character."
             )
-            return False
+            # Plugins may consume reserved topics (for example $shadow).
+            # Skip forwarding, but keep servicing this client's next packet.
+            return True
 
         permitted = await self._topic_filtering(client_session, topic=app_message.topic, action=Action.PUBLISH)
         if not permitted:
