@@ -8,7 +8,7 @@ from math import floor
 import ssl
 import time
 from typing import Any, ClassVar, TypeAlias, cast
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, WeakValueDictionary
 
 from transitions import Machine, MachineError
 import websockets.asyncio.server
@@ -235,6 +235,8 @@ class Broker:
         self._servers: dict[str, Server] = {}
         self._init_states()
         self._sessions: dict[str, tuple[Session, BrokerProtocolHandler]] = {}
+        self._client_tasks: dict[BrokerProtocolHandler, asyncio.Task[Any]] = {}
+        self._session_locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
         self._subscriptions: dict[str, list[tuple[Session, int]]] = {}
         self._retained_messages: dict[str, RetainedApplicationMessage] = {}
 
@@ -555,6 +557,7 @@ class Broker:
         except (AMQTTError, MQTTError, NoDataError) as exc:
             self.logger.warning(f"Error while handling client session: {exc}")
         finally:
+            self._client_tasks.pop(handler, None)
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug(f"{client_session.client_id} Client disconnected")
             server.release_connection()
@@ -603,7 +606,29 @@ class Broker:
         client_session.ssl_object = ssl_object
         client_session.inbound_sni = self._pop_inbound_sni(ssl_object)
 
-        if client_session.clean_session:
+        if client_session.clean_session and not client_session.client_id:
+            client_session.client_id = gen_client_id()
+
+        timeout_disconnect_delay = self.config.get("timeout-disconnect-delay", 0)
+        if client_session.keep_alive > 0 and isinstance(timeout_disconnect_delay, int):
+            client_session.keep_alive += timeout_disconnect_delay
+
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Keep-alive timeout={client_session.keep_alive}")
+        return handler, client_session
+
+    async def _resume_client_session(self, client_session: Session) -> Session:
+        """Finish an old connection before reusing or discarding its session."""
+        previous = self._sessions.get(client_session.client_id or "")
+        if previous is not None:
+            _, old_handler = previous
+            old_task = self._client_tasks.get(old_handler)
+            if old_task is not None:
+                await old_handler.handle_connection_closed()
+                await self._stop_handler(old_handler)
+                await old_task
+
+        if client_session.clean_session or (previous is not None and previous[0].clean_session):
             # Delete existing session and create a new one
             if client_session.client_id is not None and client_session.client_id != "":
                 await self._delete_session(client_session.client_id)
@@ -622,6 +647,7 @@ class Broker:
             existing_client_session.will_message = client_session.will_message
             existing_client_session.will_topic = client_session.will_topic
             existing_client_session.will_qos = client_session.will_qos
+            existing_client_session.will_retain = client_session.will_retain
             existing_client_session.keep_alive = client_session.keep_alive
             existing_client_session.username = client_session.username
             existing_client_session.password = client_session.password
@@ -631,20 +657,12 @@ class Broker:
             existing_client_session.ssl_object = client_session.ssl_object
             existing_client_session.inbound_sni = client_session.inbound_sni
 
-            existing_client_session.ssl_object = writer.get_ssl_info()
-
             client_session = existing_client_session
             client_session.parent = 1
         else:
             client_session.parent = 0
 
-        timeout_disconnect_delay = self.config.get("timeout-disconnect-delay", 0)
-        if client_session.keep_alive > 0 and isinstance(timeout_disconnect_delay, int):
-            client_session.keep_alive += timeout_disconnect_delay
-
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug(f"Keep-alive timeout={client_session.keep_alive}")
-        return handler, client_session
+        return client_session
 
     def create_offline_session(self, client_id: str) -> tuple[BrokerProtocolHandler, Session]:
         session = Session()
@@ -672,36 +690,32 @@ class Broker:
             msg = "Client ID was not correctly created/set."
             raise BrokerError(msg)
 
-        while True:
-            try:
-                client_session.transitions.connect()
-                break
-            except (MachineError, ValueError):
-                if client_session.transitions.is_connected():
-                    self.logger.warning(f"Client {client_session.client_id} is already connected, performing take-over.")
-                    old_session = self._sessions[client_session.client_id]
-                    await old_session[1].handle_connection_closed()
-                    await old_session[1].stop()
-                    break
-                self.logger.warning(f"Client {client_session.client_id} is reconnecting too quickly, make it wait")
-                await asyncio.sleep(1)
-
-        handler.attach(client_session, reader, writer)
-        self._sessions[client_session.client_id] = (client_session, handler)
-
-        await handler.mqtt_connack_authorize(authenticated)
-
         if not authenticated:
+            handler.attach(client_session, reader, writer)
+            await handler.mqtt_connack_authorize(authorize=False)
             await writer.close()
             return
 
-        await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
-                                              client_id=client_session.client_id,
-                                              client_session=client_session)
+        # Serialize replacement connections for this ID, including teardown of
+        # the previous connection. Different client IDs can connect concurrently.
+        client_id = client_session.client_id
+        lock = self._session_locks.setdefault(client_id, asyncio.Lock())
+        async with lock:
+            client_session = await self._resume_client_session(client_session)
+            client_session.transitions.connect()
+            handler.attach(client_session, reader, writer)
+            self._sessions[client_id] = (client_session, handler)
+            task = asyncio.current_task()
+            if task is not None:
+                self._client_tasks[handler] = task
+            await handler.mqtt_connack_authorize(authorize=True)
+            await self.plugins_manager.fire_event(BrokerEvents.CLIENT_CONNECTED,
+                                                  client_id=client_session.client_id,
+                                                  client_session=client_session)
+            await handler.start()
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(f"{client_session.client_id} Start messages handling")
-        await handler.start()
 
         # publish messages that were retained because the client session was disconnected
         if self.logger.isEnabledFor(logging.DEBUG):

@@ -390,11 +390,13 @@ async def test_existing_session_reconnect_updates_ssl_object(broker, monkeypatch
     handler, session = await broker._initialize_client_session(MagicMock(), writer, "127.0.0.1", 1883, "default")
 
     assert handler is reconnect_handler
+    assert session is reconnect_session
+    session = await broker._resume_client_session(session)
     assert session is existing_session
     assert session.parent == 1
     assert session.ssl_object is new_ssl_object
     assert session.ssl_object is not old_ssl_object
-    assert writer.get_ssl_info.call_count == 2
+    assert writer.get_ssl_info.call_count == 1
 
 
 @pytest.mark.asyncio
