@@ -203,6 +203,8 @@ async def test_persistent_session_reconnect_refreshes_tls_metadata(
         "mqtts",
     )
 
+    assert session is incoming_session
+    session = await broker._resume_client_session(session)
     assert session is existing_session
     assert session.remote_address == "198.51.100.10"
     assert session.remote_port == 1884
